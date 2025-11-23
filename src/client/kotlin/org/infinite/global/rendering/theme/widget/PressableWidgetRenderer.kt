@@ -12,6 +12,7 @@ import net.minecraft.client.gui.widget.TexturedButtonWidget
 import org.infinite.InfiniteClient
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.graphics.Graphics2D
+import org.infinite.utils.rendering.transparent
 
 class PressableWidgetRenderer(
     val widget: PressableWidget,
@@ -30,18 +31,25 @@ class PressableWidgetRenderer(
         val active = widget.active
         val hovered = widget.isHovered
         val colors: ThemeColors = InfiniteClient.currentColors()
-
+        val alpha = widget.alpha
+        val transparent = 255 * alpha
         // --- (背景とボーダーの描画ロジックは変更なし) ---
-        var backgroundColor = colors.backgroundColor
-        val borderColor = colors.primaryColor
-        val textColor = colors.foregroundColor
-        if (hovered) {
-            backgroundColor = colors.primaryColor
-        }
+        val borderColor = colors.primaryColor.transparent(transparent)
+        val textColor = colors.foregroundColor.transparent(transparent)
+        val backgroundColor =
+            when {
+                hovered -> {
+                    colors.primaryColor
+                }
 
-        if (!active) {
-            backgroundColor = colors.secondaryColor
-        }
+                active -> {
+                    colors.backgroundColor
+                }
+
+                else -> {
+                    colors.secondaryColor
+                }
+            }.transparent(transparent)
 
         graphics2D.fill(x, y, width, height, backgroundColor)
         val borderWidth = 1
