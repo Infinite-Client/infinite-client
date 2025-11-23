@@ -20,22 +20,13 @@ class QuickMove : ConfigurableFeature() {
         get() {
             val player = player ?: return MoveMode.None
             return when {
-                // 最も優先度の高い状態からチェック
                 player.hasVehicle() && allowWithVehicle.value -> MoveMode.Vehicle
-
                 allowOnSwimming.value && player.isSwimming -> MoveMode.Swimming
-
-                // 泳ぎを水よりも優先
                 allowOnGliding.value && player.isGliding -> MoveMode.Gliding
-
                 player.isOnGround && allowOnGround.value -> MoveMode.Ground
-
                 player.isInLava && allowInLava.value -> MoveMode.Lava
-
                 player.isTouchingWater && allowInWater.value -> MoveMode.Water
-
                 !player.isOnGround && allowInAir.value -> MoveMode.Air
-
                 else -> MoveMode.None
             }
         }
@@ -95,12 +86,10 @@ class QuickMove : ConfigurableFeature() {
                 }
 
                 MoveMode.Lava -> {
-                    // 溶岩
                     0.5
                 }
 
                 MoveMode.Air, MoveMode.Gliding -> {
-                    // 空中/滑空
                     0.98
                 }
 
