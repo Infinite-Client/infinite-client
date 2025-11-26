@@ -363,8 +363,7 @@
   "infinite.feature.server.anti_cheat.debug_hud.description": "Displays debug information for Anti-cheat.",
   "infinite.feature.server.anti_cheat.enable_for_quick_move.description": "Enables anti-cheat for quick movement.",
   "infinite.feature.server.anti_cheat.quick_move_tolerance.description": "Sets the tolerance for quick movement anti-cheat.",
-  "infinite.feature.server.anti_cheat.quick_move_latency_multiplier.description": "Sets the latency multiplier for quick movement anti-cheat."
-},
+  "infinite.feature.server.anti_cheat.quick_move_latency_multiplier.description": "Sets the latency multiplier for quick movement anti-cheat.",
   "key.infinite-client.toggle.server.anti_cheat": "Toggle Anti cheat",
   "infinite.feature.utils.hyper_map.description": "Displays a mini-map on the screen.",
   "infinite.feature.utils.hyper_map.radius.description": "Sets the radius of the mini-map display.",

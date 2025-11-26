@@ -235,7 +235,7 @@ class QuickMove : ConfigurableFeature() {
         val player = player ?: return Vec3d.ZERO
         val options = options
         val velocity = velocity ?: return Vec3d.ZERO // 現在のベロシティ
-
+        if (currentMode == MoveMode.None) return velocity
         var forwardInput = 0.0
         var strafeInput = 0.0
 
@@ -368,24 +368,17 @@ class QuickMove : ConfigurableFeature() {
         val newVelZ = cosYaw * localVelForward + sinYaw * localVelStrafe
 
         // X, Z成分のみを更新して返す
-        return Vec3d(newVelX, 0.0, newVelZ)
+        return Vec3d(newVelX, this.velocity?.y ?: player.velocity.y, newVelZ)
     }
 
     override fun onTick() {
         // 加速度更新をTickの最初に行う
-        if (InfiniteClient.isFeatureEnabled(AntiCheat::class.java)) return
         updatePlayerAccelerationSpeed()
-        if (currentMode == MoveMode.None) return
         val player = player ?: return
         val vehicle = player.vehicle
-
-        // 車両が有効な場合は、プレイヤーのYawを車両に適用
         vehicle?.yaw = player.yaw
-
-        // calculateVelocityを呼び出し、新しい水平ベロシティを取得
-        val newVelocityXZ = calculateVelocity()
-
-        // 既存のY成分を保持し、XとZ成分を更新
-        this.velocity = Vec3d(newVelocityXZ.x, this.velocity?.y ?: player.velocity.y, newVelocityXZ.z)
+        if (InfiniteClient.isSettingEnabled(AntiCheat::class.java, "EnableForQuickMove")) return
+        val newVelocity = calculateVelocity()
+        this.velocity = Vec3d(newVelocity.x, newVelocity.y, newVelocity.z)
     }
 }

@@ -410,7 +410,7 @@ object InfiniteCommand {
                 null
             }
 
-        when {
+        return when {
             cat == null -> {
                 InfiniteClient.featureCategories.forEach { c ->
                     c.features.forEach { f ->
@@ -418,32 +418,49 @@ object InfiniteCommand {
                         f.instance.settings.forEach { it.reset() }
                     }
                 }
+                InfiniteClient.info(Text.translatable("command.infinite.config.reset.all").string)
+                1
             }
 
             feat == null -> {
-                InfiniteClient.featureCategories.find { it.name == cat }?.features?.forEach { f ->
+                val category =
+                    InfiniteClient.featureCategories.find { it.name == cat }
+                        ?: return sendError("command.infinite.category.notfound", cat)
+
+                category.features.forEach { f ->
                     f.instance.reset()
                     f.instance.settings.forEach { it.reset() }
                 }
-                    ?: return 0
+                InfiniteClient.info(Text.translatable("command.infinite.config.reset.category", cat).string)
+                1
             }
 
             key == null -> {
-                InfiniteClient.searchFeature(cat, feat)?.let {
-                    it.reset()
-                    it.settings.forEach { setting ->
+                val feature =
+                    InfiniteClient.searchFeature(cat, feat)
+                        ?: return sendError("command.infinite.feature.notfound", cat, feat)
 
-                        setting.reset()
-                    }
-                } ?: return 0
+                feature.reset()
+                feature.settings.forEach { setting ->
+                    setting.reset()
+                }
+                InfiniteClient.info(Text.translatable("command.infinite.config.reset.feature", feat).string)
+                1
             }
 
             else -> {
-                InfiniteClient.searchFeature(cat, feat)?.getSetting(key)?.reset() ?: return 0
+                val feature =
+                    InfiniteClient.searchFeature(cat, feat)
+                        ?: return sendError("command.infinite.feature.notfound", cat, feat)
+                val setting =
+                    feature.getSetting(key)
+                        ?: return sendError("command.infinite.setting.notfound", key, feat)
+
+                setting.reset()
+                InfiniteClient.info(Text.translatable("command.infinite.config.reset.setting", key, feat).string)
+                1
             }
         }
-        InfiniteClient.info(Text.translatable("command.infinite.config.reset.all").string)
-        return 1
     }
 
     private fun getVersion(): Int =

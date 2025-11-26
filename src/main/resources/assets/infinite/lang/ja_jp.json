@@ -364,7 +364,7 @@
   "infinite.feature.server.anti_cheat.enable_for_quick_move.description": "クイックムーブメントのアンチチートを有効にします。",
   "infinite.feature.server.anti_cheat.quick_move_tolerance.description": "クイックムーブメントのアンチチートの許容範囲を設定します。",
   "infinite.feature.server.anti_cheat.quick_move_latency_multiplier.description": "クイックムーブメントのアンチチートの遅延乗数を設定します。",
-  "key.infinite-client.toggle.server.anti_cheat": "Anti cheatを切り替える",,
+  "key.infinite-client.toggle.server.anti_cheat": "Anti cheatを切り替える",
   "infinite.feature.utils.hyper_map.description": "画面にミニマップを表示します。",
   "infinite.feature.utils.hyper_map.radius.description": "ミニマップ表示の半径を設定します。",
   "infinite.feature.utils.hyper_map.height.description": "ミニマップに表示する垂直高さ範囲を設定します。",
