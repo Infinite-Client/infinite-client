@@ -7,7 +7,7 @@ import net.minecraft.entity.vehicle.BoatEntity
 import net.minecraft.util.math.Vec3d
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
-import org.infinite.features.server.anti.AntiVulcan
+import org.infinite.features.server.anti.AntiCheat
 import org.infinite.settings.FeatureSetting
 import kotlin.math.cos
 import kotlin.math.pow
@@ -58,9 +58,10 @@ class QuickMove : ConfigurableFeature() {
                 }
 
                 else -> {
-                    attributes.getValue(
-                        EntityAttributes.MOVEMENT_SPEED,
-                    )
+                    (if (player.isSprinting) 1.3 else 1.0) *
+                        attributes.getValue(
+                            EntityAttributes.MOVEMENT_SPEED,
+                        )
                 }
             }
         }
@@ -214,10 +215,10 @@ class QuickMove : ConfigurableFeature() {
         lastVelocity = player?.velocity ?: Vec3d.ZERO
     }
 
-    private var lastVelocity: Vec3d = Vec3d.ZERO
+    var lastVelocity: Vec3d = Vec3d.ZERO
     var playerAccelerationSpeed: Double = 0.0
 
-    private fun updatePlayerAccelerationSpeed() {
+    fun updatePlayerAccelerationSpeed() {
         val player = player ?: return
         val v = player.velocity
         val l = lastVelocity
@@ -372,7 +373,7 @@ class QuickMove : ConfigurableFeature() {
 
     override fun onTick() {
         // 加速度更新をTickの最初に行う
-        if (InfiniteClient.isFeatureEnabled(AntiVulcan::class.java)) return
+        if (InfiniteClient.isFeatureEnabled(AntiCheat::class.java)) return
         updatePlayerAccelerationSpeed()
         if (currentMode == MoveMode.None) return
         val player = player ?: return

@@ -3,6 +3,7 @@
   "package": "org.infinite.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "features.fighting.counterattack.DamageListenerMixin",
     "features.fighting.gunner.GunnerNetworkMixin",
     "features.fighting.hypermace.HyperMaceMixin",
     "features.fighting.noattack.NoAttackMixin",
@@ -48,6 +49,8 @@
     "features.server.DisconnectedScreenMixin",
     "features.server.MultiPlayerScreenMixin",
     "features.utils.afk.WorldRendererMixin",
+    "infinite.client.network.ClientCommonNetworkHandlerMixin",
+    "infinite.client.network.ClientConnectionMixin",
     "infinite.client.player.ClientPlayerInteractionManagerMixin",
     "infinite.graphics.InGameHudMixin",
     "infinite.graphics.WorldRendererMixin",
@@ -55,14 +58,12 @@
     "infinite.gui.LoadingWidgetMixin",
     "infinite.gui.PlayerSkinWidgetMixin",
     "infinite.gui.PressableWidgetMixin",
+    "infinite.gui.ScrollableWidgetMixin",
     "infinite.gui.SliderWidgetMixin",
     "infinite.gui.TextFieldWidgetMixin",
-    "infinite.gui.ScrollableWidgetMixin",
     "infinite.interfaces.WorldRendererMixin",
     "infinite.settings.OptionsScreenMixin",
-    "infinite.world.ClientPlayNetworkHandlerMixin",
-    "features.fighting.counterattack.DamageListenerMixin",
-    "infinite.client.network.ClientConnectionMixin"
+    "infinite.world.ClientPlayNetworkHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

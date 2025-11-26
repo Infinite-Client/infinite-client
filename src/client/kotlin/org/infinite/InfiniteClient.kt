@@ -21,6 +21,7 @@ import org.infinite.features.movement.MovementFeatureCategory
 import org.infinite.features.rendering.RenderingFeatureCategory
 import org.infinite.features.server.ServerFeatureCategory
 import org.infinite.features.utils.UtilsFeatureCategory
+import org.infinite.global.ConfigurableGlobalFeature
 import org.infinite.global.GlobalFeatureCategory
 import org.infinite.global.rendering.GlobalRenderingFeatureCategory
 import org.infinite.global.rendering.theme.ThemeSetting
@@ -410,9 +411,14 @@ object InfiniteClient : ClientModInitializer {
         return featureInstances[featureClass] as? T
     }
 
-    fun <T : ConfigurableFeature> getGlobalFeature(featureClass: Class<T>): T? {
+    fun <T : ConfigurableGlobalFeature> getGlobalFeature(featureClass: Class<T>): T? {
         @Suppress("UNCHECKED_CAST")
         return globalFeatureInstances[featureClass] as? T
+    }
+
+    fun <T : ConfigurableGlobalFeature> isGlobalFeatureEnabled(featureClass: Class<T>): Boolean {
+        val feature = getGlobalFeature(featureClass) ?: return false
+        return feature.isEnabled()
     }
 
     fun searchFeature(
