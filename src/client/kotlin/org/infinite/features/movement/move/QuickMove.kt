@@ -5,7 +5,9 @@ import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.attribute.EntityAttributes
 import net.minecraft.entity.vehicle.BoatEntity
 import net.minecraft.util.math.Vec3d
+import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
+import org.infinite.features.server.anti.AntiVulcan
 import org.infinite.settings.FeatureSetting
 import kotlin.math.cos
 import kotlin.math.pow
@@ -31,10 +33,8 @@ class QuickMove : ConfigurableFeature() {
                 else -> MoveMode.None
             }
         }
-    private val reductionThreshold =
-        FeatureSetting.DoubleSetting("ReductionThreshold", 10.0, 0.0, 100.0)
-    private val itemUseBoost =
-        FeatureSetting.DoubleSetting("BoostWhenUseItem", 0.5, 0.0, 1.0)
+    private val reductionThreshold = FeatureSetting.DoubleSetting("ReductionThreshold", 10.0, 0.0, 100.0)
+    private val itemUseBoost = FeatureSetting.DoubleSetting("BoostWhenUseItem", 0.5, 0.0, 1.0)
     private val currentAcceleration: Double
         get() {
             val player = player ?: return 0.0
@@ -81,8 +81,7 @@ class QuickMove : ConfigurableFeature() {
                 } else {
                     1f
                 }
-            val poseFriction =
-                if (player.isSneaking) attributes.getValue(EntityAttributes.SNEAKING_SPEED) else 1.0
+            val poseFriction = if (player.isSneaking) attributes.getValue(EntityAttributes.SNEAKING_SPEED) else 1.0
             val airFriction = 0.91
             val waterFriction = Blocks.WATER.slipperiness
             val lavaFriction = Blocks.LAVA.slipperiness
@@ -117,7 +116,14 @@ class QuickMove : ConfigurableFeature() {
         get() {
             val acceleration = currentAcceleration
             val friction = currentFriction
-            return acceleration / (1.0 - friction)
+            // 摩擦(friction)が1.0の場合、分母が0になる可能性があるためチェック
+            return if (friction < 1.0) {
+                acceleration / (1.0 - friction)
+            } else {
+                // 摩擦が1.0以上の場合は無限大に近い値を返すか、最大値を設ける
+                // ここでは安全のため、大きな固定値を返す
+                100.0
+            }
         }
 
     // 移動モードを定義し、処理の優先順位と状態を明確にする
@@ -146,8 +152,7 @@ class QuickMove : ConfigurableFeature() {
             1.0,
             2.0,
         )
-    private val friction =
-        FeatureSetting.DoubleSetting("Friction", 1.0, 0.0, 1.0)
+    private val friction = FeatureSetting.DoubleSetting("Friction", 1.0, 0.0, 1.0)
 
     // --- 速度設定値 ---
     private val speed =
@@ -157,18 +162,13 @@ class QuickMove : ConfigurableFeature() {
             0.0,
             2.0,
         )
-    private val antiFrictionBoost =
-        FeatureSetting.DoubleSetting("AntiFrictionBoost", 1.0, 0.0, 5.0)
-    private val antiFrictionPoint =
-        FeatureSetting.DoubleSetting("AntiFrictionPoint", 0.75, 0.0, 1.0)
+    private val antiFrictionBoost = FeatureSetting.DoubleSetting("AntiFrictionBoost", 1.0, 0.0, 5.0)
+    private val antiFrictionPoint = FeatureSetting.DoubleSetting("AntiFrictionPoint", 0.75, 0.0, 1.0)
 
     // --- Allow設定値 ---
-    private val allowOnGround =
-        FeatureSetting.BooleanSetting("AllowOnGround", true)
-    private val allowInWater =
-        FeatureSetting.BooleanSetting("AllowInWater", false)
-    private val allowInLava =
-        FeatureSetting.BooleanSetting("AllowInLava", false)
+    private val allowOnGround = FeatureSetting.BooleanSetting("AllowOnGround", true)
+    private val allowInWater = FeatureSetting.BooleanSetting("AllowInWater", false)
+    private val allowInLava = FeatureSetting.BooleanSetting("AllowInLava", false)
     private val allowWithVehicle =
         FeatureSetting.BooleanSetting(
             "AllowWithVehicle",
@@ -221,18 +221,19 @@ class QuickMove : ConfigurableFeature() {
         val player = player ?: return
         val v = player.velocity
         val l = lastVelocity
+        // 水平方向の加速度を計算
         playerAccelerationSpeed = sqrt((v.x - l.x).pow(2) + (v.z - l.z).pow(2))
         lastVelocity = player.velocity
     }
 
-    override fun onTick() {
-        updatePlayerAccelerationSpeed()
-        if (currentMode == MoveMode.None) return
-        val player = player ?: return
+    /**
+     * 現在の状態と設定に基づき、プレイヤーまたは車両の新しいベロシティ（水平成分）を計算します。
+     * @return 新しい水平ベロシティ成分 (Vec3d(newVelX, 0.0, newVelZ))。Y成分は無視されます。
+     */
+    fun calculateVelocity(): Vec3d {
+        val player = player ?: return Vec3d.ZERO
         val options = options
-        val vehicle = player.vehicle
-        // 車両が有効な場合は、プレイヤーのYawを車両に適用
-        vehicle?.yaw = player.yaw
+        val velocity = velocity ?: return Vec3d.ZERO // 現在のベロシティ
 
         var forwardInput = 0.0
         var strafeInput = 0.0
@@ -241,8 +242,6 @@ class QuickMove : ConfigurableFeature() {
         if (options.backKey.isPressed) forwardInput--
         if (options.leftKey.isPressed) strafeInput++
         if (options.rightKey.isPressed) strafeInput--
-
-        var velocity = velocity ?: return
 
         val tickSpeedLimit = currentMaxSpeed * speed.value
         val baseAcceleration = accelerationConstant.value // 設定された基本の加速度
@@ -276,11 +275,15 @@ class QuickMove : ConfigurableFeature() {
                 localVelStrafe *= friction.value
             }
         }
+
+        // 3. 速度制限と加速の計算
         val currentMoveSpeed = sqrt(localVelForward * localVelForward + localVelStrafe * localVelStrafe)
         val delta = reductionThreshold.value / 100.0
-        val currentFriction = currentFriction
+        val currentFriction = currentFriction // 環境摩擦
         val antiFrictionBoost = antiFrictionBoost.value
         val antiFrictionPoint = antiFrictionPoint.value
+
+        // 環境摩擦(currentFriction)が設定値(antiFrictionPoint)より低い場合に、加速ブーストを適用
         val antiFrictionFactor = (
             1 + (antiFrictionPoint - currentFriction) *
                 (1.0 / antiFrictionPoint).coerceIn(
@@ -293,43 +296,45 @@ class QuickMove : ConfigurableFeature() {
         val itemUseFactor =
             if (isApplyingCorrection) {
                 val baseMovementReductionFactor = 0.15
-                // boostの値を0.0から1.0の間に制限する（安全のため）
+                // boostの値を0.0から1.0の間に制限する
                 val boost = itemUseBoost.value.coerceIn(0.0, 1.0)
-                // アイテム使用後の最終的な移動速度 (FINAL_SPEED) を計算する
-                // boost=0.0の時: FINAL_SPEED = 1.0 (緩和なし -> 速度低下なし)
-                // boost=1.0の時: FINAL_SPEED = 0.15 (最大緩和 -> 速度を1.0に戻すための計算の土台)
+                // 最終速度を決定する分母を計算
                 val finalSpeedDenominator = boost * (baseMovementReductionFactor - 1.0) + 1.0
-                // 速度低下を打ち消すための乗数 (補正係数) を計算
-                // 例: boost=1.0の時, 1.0 / 0.15 ≈ 6.667 となり、低下分を完全に打ち消す係数となる
+                // 速度低下を打ち消すための補正係数を計算
                 1.0 / finalSpeedDenominator
             } else {
-                // 補正条件を満たさない場合は補正なし (係数1.0)
+                // 補正なし
                 1.0
             }
 
+        // 速度による加速度の調整
         val startSpeed = tickSpeedLimit * antiFrictionFactor * (1 - delta) // 減速開始速度
         val endSpeed = tickSpeedLimit * antiFrictionFactor // 加速0到達速度
 
         val accelerationFactor: Double =
             when {
-                // 最高速度制限未満の場合はフル加速
+                // 最高速度制限未満の場合はフル加速 (加速係数1.0)
                 currentMoveSpeed <= startSpeed -> {
                     1.0
                 }
 
                 // 減速区間: 速度が startSpeed と endSpeed の間
                 currentMoveSpeed < endSpeed -> {
-                    // 線形補間: (1.0 - (現在速度 - 開始速度) / (終了速度 - 開始速度))
+                    // 線形補間: 速度が endSpeed に近づくにつれて加速係数が 1.0 から 0.0 に線形に減少
                     val ratio = (currentMoveSpeed - startSpeed) / (endSpeed - startSpeed)
                     1.0 - ratio
                 }
 
-                // 速度が endSpeed 以上になったら加速はゼロ
+                // 速度が endSpeed 以上になったら加速はゼロ (加速係数0.0)
                 else -> {
                     0.0
                 }
             }
+
+        // 加速上限 (tickSpeedLimitを超えないようにする)
         val accelerationLimit = (endSpeed - currentMoveSpeed).coerceAtLeast(0.0)
+
+        // 最終的な加速度の計算
         val currentAcceleration =
             (
                 baseAcceleration * antiFrictionFactor *
@@ -338,22 +343,48 @@ class QuickMove : ConfigurableFeature() {
                         1.0,
                     ) * itemUseFactor
             ).coerceAtMost(
-                accelerationLimit,
+                accelerationLimit, // 速度超過を防ぐ上限
             )
+
+        // 4. 加速の適用
         if (currentAcceleration > 0.0) {
             val inputMagnitude = sqrt(forwardInput * forwardInput + strafeInput * strafeInput).coerceAtLeast(1.0)
             val normalizedForward = forwardInput / inputMagnitude
             val normalizedStrafe = strafeInput / inputMagnitude
-            // ローカルベロシティに計算された加速度を加算
+
+            // a. 基本の加速を加算
             localVelForward += normalizedForward * currentAcceleration
             localVelStrafe += normalizedStrafe * currentAcceleration
+
+            // b. 既存の加速度に応じたブーストを加算
             val accelerationMultiplier = accelerationMultiplier.value
             localVelForward += normalizedForward * playerAccelerationSpeed * (accelerationMultiplier - 1)
             localVelStrafe += normalizedStrafe * playerAccelerationSpeed * (accelerationMultiplier - 1)
         }
+
+        // 5. ローカル速度をグローバル座標系に戻す
         val newVelX = -sinYaw * localVelForward + cosYaw * localVelStrafe
         val newVelZ = cosYaw * localVelForward + sinYaw * localVelStrafe
-        velocity = Vec3d(newVelX, velocity.y, newVelZ)
-        this.velocity = velocity
+
+        // X, Z成分のみを更新して返す
+        return Vec3d(newVelX, 0.0, newVelZ)
+    }
+
+    override fun onTick() {
+        // 加速度更新をTickの最初に行う
+        if (InfiniteClient.isFeatureEnabled(AntiVulcan::class.java)) return
+        updatePlayerAccelerationSpeed()
+        if (currentMode == MoveMode.None) return
+        val player = player ?: return
+        val vehicle = player.vehicle
+
+        // 車両が有効な場合は、プレイヤーのYawを車両に適用
+        vehicle?.yaw = player.yaw
+
+        // calculateVelocityを呼び出し、新しい水平ベロシティを取得
+        val newVelocityXZ = calculateVelocity()
+
+        // 既存のY成分を保持し、XとZ成分を更新
+        this.velocity = Vec3d(newVelocityXZ.x, this.velocity?.y ?: player.velocity.y, newVelocityXZ.z)
     }
 }
