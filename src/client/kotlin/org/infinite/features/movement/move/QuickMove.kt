@@ -1,13 +1,14 @@
 package org.infinite.features.movement.move
 
+import net.minecraft.block.Blocks
 import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.attribute.EntityAttributes
 import net.minecraft.entity.vehicle.BoatEntity
 import net.minecraft.util.math.Vec3d
 import org.infinite.feature.ConfigurableFeature
-import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -69,47 +70,47 @@ class QuickMove : ConfigurableFeature() {
             val world = world ?: return 0.0
             val entity = player.vehicle ?: player
             val attributes = player.attributes
-            return when (currentMode) {
-                MoveMode.Ground -> {
+            val blockPos = entity.supportingBlockPos
+
+            val blockFriction =
+                if (blockPos != null && blockPos.isPresent) {
                     world
                         .getBlockState(
-                            entity.blockPos.add(
-                                0,
-                                -1,
-                                0,
-                            ),
-                        ).block.slipperiness * if (player.isSneaking) attributes.getValue(EntityAttributes.SNEAKING_SPEED) else 1.0
+                            blockPos.get(),
+                        ).block.slipperiness
+                } else {
+                    1f
+                }
+            val poseFriction =
+                if (player.isSneaking) attributes.getValue(EntityAttributes.SNEAKING_SPEED) else 1.0
+            val airFriction = 0.91
+            val waterFriction = Blocks.WATER.slipperiness
+            val lavaFriction = Blocks.LAVA.slipperiness
+            return when (currentMode) {
+                MoveMode.Ground -> {
+                    return blockFriction * poseFriction * airFriction
                 }
 
                 MoveMode.Swimming, MoveMode.Water -> {
-                    0.8
+                    waterFriction.pow(2) * poseFriction
                 }
 
                 MoveMode.Lava -> {
-                    0.5
+                    lavaFriction.pow(2) * poseFriction
                 }
 
                 MoveMode.Air, MoveMode.Gliding -> {
-                    0.98
+                    airFriction * poseFriction
                 }
 
                 // 例: 空気抵抗に近い高い摩擦（低い減速）
                 MoveMode.Vehicle -> {
-                    // 乗り物
-                    world
-                        .getBlockState(
-                            player.vehicle!!.blockPos.add(
-                                0,
-                                -1,
-                                0,
-                            ),
-                        ).block.slipperiness
-                        .toDouble()
+                    blockFriction * poseFriction * airFriction
                 }
 
                 MoveMode.None -> {
                     1.0
-                } // 動きがない、またはデフォルト
+                }
             }
         }
     private val currentMaxSpeed: Double
@@ -131,14 +132,20 @@ class QuickMove : ConfigurableFeature() {
         Vehicle,
     }
 
-    private val acceleration =
+    private val accelerationConstant =
         FeatureSetting.DoubleSetting(
-            "Acceleration",
+            "AccelerationConstant",
             0.02,
             0.0,
             1.0,
         )
-
+    private val accelerationMultiplier =
+        FeatureSetting.DoubleSetting(
+            "AccelerationMultiplier",
+            1.1,
+            1.0,
+            2.0,
+        )
     private val friction =
         FeatureSetting.DoubleSetting("Friction", 1.0, 0.0, 1.0)
 
@@ -186,7 +193,8 @@ class QuickMove : ConfigurableFeature() {
 
     override val settings: List<FeatureSetting<*>> =
         listOf(
-            acceleration,
+            accelerationConstant,
+            accelerationMultiplier,
             friction,
             speed,
             reductionThreshold,
@@ -202,12 +210,27 @@ class QuickMove : ConfigurableFeature() {
             allowWithVehicle,
         )
 
+    override fun onEnabled() {
+        lastVelocity = player?.velocity ?: Vec3d.ZERO
+    }
+
+    private var lastVelocity: Vec3d = Vec3d.ZERO
+    var playerAccelerationSpeed: Double = 0.0
+
+    private fun updatePlayerAccelerationSpeed() {
+        val player = player ?: return
+        val v = player.velocity
+        val l = lastVelocity
+        playerAccelerationSpeed = sqrt((v.x - l.x).pow(2) + (v.z - l.z).pow(2))
+        lastVelocity = player.velocity
+    }
+
     override fun onTick() {
+        updatePlayerAccelerationSpeed()
         if (currentMode == MoveMode.None) return
         val player = player ?: return
         val options = options
         val vehicle = player.vehicle
-
         // 車両が有効な場合は、プレイヤーのYawを車両に適用
         vehicle?.yaw = player.yaw
 
@@ -222,7 +245,7 @@ class QuickMove : ConfigurableFeature() {
         var velocity = velocity ?: return
 
         val tickSpeedLimit = currentMaxSpeed * speed.value
-        val baseAcceleration = acceleration.value // 設定された基本の加速度
+        val baseAcceleration = accelerationConstant.value // 設定された基本の加速度
 
         // 1. グローバル速度をプレイヤーのローカル座標系に変換
         val yaw = Math.toRadians(player.yaw.toDouble())
@@ -317,8 +340,6 @@ class QuickMove : ConfigurableFeature() {
             ).coerceAtMost(
                 accelerationLimit,
             )
-        // -----------------------------------------------------------
-        // 3. 入力に基づいた加速の適用 (計算された加速度を使用)
         if (currentAcceleration > 0.0) {
             val inputMagnitude = sqrt(forwardInput * forwardInput + strafeInput * strafeInput).coerceAtLeast(1.0)
             val normalizedForward = forwardInput / inputMagnitude
@@ -326,16 +347,13 @@ class QuickMove : ConfigurableFeature() {
             // ローカルベロシティに計算された加速度を加算
             localVelForward += normalizedForward * currentAcceleration
             localVelStrafe += normalizedStrafe * currentAcceleration
+            val accelerationMultiplier = accelerationMultiplier.value
+            localVelForward += normalizedForward * playerAccelerationSpeed * (accelerationMultiplier - 1)
+            localVelStrafe += normalizedStrafe * playerAccelerationSpeed * (accelerationMultiplier - 1)
         }
-
-        // 4. ローカル速度のクランプ (最大速度制限) - 加速ロジックが速度超過を抑止しているため、ここでは**不要**
-        // 5. ローカル速度をグローバル座標系に戻す
         val newVelX = -sinYaw * localVelForward + cosYaw * localVelStrafe
         val newVelZ = cosYaw * localVelForward + sinYaw * localVelStrafe
         velocity = Vec3d(newVelX, velocity.y, newVelZ)
         this.velocity = velocity
-    }
-
-    override fun render2d(graphics2D: Graphics2D) {
     }
 }
