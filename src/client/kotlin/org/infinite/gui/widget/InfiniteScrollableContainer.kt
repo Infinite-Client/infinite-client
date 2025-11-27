@@ -108,13 +108,13 @@ class InfiniteScrollableContainer(
                 y,
                 scrollbarX + scrollbarWidth,
                 y + height,
-                InfiniteClient.theme().colors.backgroundColor,
+                InfiniteClient.currentColors().backgroundColor,
             )
 
             val interpolatedColor =
                 InfiniteClient
-                    .theme()
-                    .colors.primaryColor
+                    .currentColors()
+                    .primaryColor
 
             context.fill(
                 scrollbarX,

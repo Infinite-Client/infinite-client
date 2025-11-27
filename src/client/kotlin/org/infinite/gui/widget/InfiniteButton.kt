@@ -5,6 +5,7 @@ import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.widget.ButtonWidget
 import net.minecraft.text.Text
 import org.infinite.InfiniteClient
+import org.infinite.libs.graphics.Graphics2D
 
 class InfiniteButton(
     x: Int,
@@ -20,13 +21,15 @@ class InfiniteButton(
         mouseY: Int,
         delta: Float,
     ) {
+        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+
         val borderWidth = 1 // 1px border
 
         // Animation colors (same as InfiniteScreen)
         val interpolatedColor =
             InfiniteClient
-                .theme()
-                .colors.primaryColor
+                .currentColors()
+                .primaryColor
 
         // Button rendering logic (similar to InfiniteScreen)
         // 1. Outer background
@@ -36,8 +39,8 @@ class InfiniteButton(
             x + width,
             y + height,
             InfiniteClient
-                .theme()
-                .colors.backgroundColor,
+                .currentColors()
+                .backgroundColor,
         )
 
         // 2. Animated border
@@ -56,23 +59,23 @@ class InfiniteButton(
             x + width - borderWidth * 2,
             y + height - borderWidth * 2,
             InfiniteClient
-                .theme()
-                .colors.backgroundColor,
+                .currentColors()
+                .backgroundColor,
         )
 
         // Draw button text
         val textColor =
             if (isHovered) {
-                InfiniteClient.theme().colors.primaryColor
+                InfiniteClient.currentColors().primaryColor
             } else {
-                InfiniteClient.theme().colors.foregroundColor // Darker foreground when hovered, foreground otherwise
+                InfiniteClient.currentColors().foregroundColor // Darker foreground when hovered, foreground otherwise
             }
-        context.drawCenteredTextWithShadow(
-            MinecraftClient.getInstance().textRenderer, // Use MinecraftClient's textRenderer
+        graphics2D.centeredText(
             message,
             x + width / 2,
-            y + (height - MinecraftClient.getInstance().textRenderer.fontHeight) / 2, // Center text vertically, 8 is approx text height
+            y + height / 2,
             textColor,
+            true, // shadow = true
         )
     }
 }

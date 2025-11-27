@@ -11,13 +11,14 @@ import net.minecraft.registry.Registries
 import net.minecraft.text.Text
 import net.minecraft.util.math.MathHelper
 import org.infinite.InfiniteClient
+import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.drawBorder
 import org.lwjgl.glfw.GLFW
 import kotlin.math.max
 import kotlin.math.min
 
 class InfiniteTextField(
-    private val textRenderer: TextRenderer,
+    textRenderer: TextRenderer,
     x: Int,
     y: Int,
     width: Int,
@@ -28,12 +29,10 @@ class InfiniteTextField(
     private var suggestions: List<String> = emptyList()
     private var suggestionIndex: Int = -1
 
-    // --- 【追加】サジェストスクロール関連の変数 ---
+    // --- サジェストスクロール関連の変数 ---
     private var suggestionScrollY: Double = 0.0
     private val maxVisibleSuggestions = 5
     private val suggestionItemHeight = textRenderer.fontHeight + 2
-
-    // ------------------------------------------
 
     enum class InputType {
         ANY_TEXT,
@@ -51,22 +50,38 @@ class InfiniteTextField(
 
     override fun charTyped(input: CharInput): Boolean {
         if (!isFocused) return false
-        val chr = input.toString().toCharArray().first()
-        // ID入力時は、IDに使用可能な文字のみ許可する
-        if (inputType == InputType.BLOCK_ID || inputType == InputType.ENTITY_ID) {
-            if (chr.isLetterOrDigit() || chr == ':' || chr == '_' || chr == '/') {
-                val result = super.charTyped(input)
-                updateSuggestions()
-                return result
+        val inputString = input.asString()
+        if (inputString.isEmpty()) return false
+        val chr = inputString.toCharArray().first()
+        val canType =
+            when (inputType) {
+                InputType.BLOCK_ID, InputType.ENTITY_ID -> {
+                    chr.isLetterOrDigit() || chr == ':' || chr == '_' || chr == '/'
+                }
+
+                InputType.HEX_COLOR -> {
+                    chr.isDigit() || (chr.lowercaseChar() in 'a'..'f')
+                }
+
+                InputType.NUMERIC -> {
+                    chr.isDigit() || chr == '-'
+                }
+
+                InputType.FLOAT -> {
+                    chr.isDigit() || chr == '-' || chr == '.'
+                }
+
+                else -> {
+                    true
+                }
             }
-            return false
-        } else if (inputType == InputType.HEX_COLOR) {
-            if (chr.isDigit() || (chr.lowercaseChar() >= 'a' && chr.lowercaseChar() <= 'f')) {
-                return super.charTyped(input)
-            }
+        if (canType) {
+            super.write(input.asString())
+            updateSuggestions()
+            return true
+        } else {
             return false
         }
-        return super.charTyped(input)
     }
 
     private fun updateSuggestions() {
@@ -79,16 +94,25 @@ class InfiniteTextField(
 
         suggestions =
             when (inputType) {
-                InputType.BLOCK_ID -> Registries.BLOCK.ids.map { it.toString() }
-                InputType.ENTITY_ID -> Registries.ENTITY_TYPE.ids.map { it.toString() }
-                InputType.PLAYER_NAME ->
+                InputType.BLOCK_ID -> {
+                    Registries.BLOCK.ids.map { it.toString() }
+                }
+
+                InputType.ENTITY_ID -> {
+                    Registries.ENTITY_TYPE.ids.map { it.toString() }
+                }
+
+                InputType.PLAYER_NAME -> {
                     MinecraftClient
                         .getInstance()
                         .networkHandler
                         ?.playerList
                         ?.map { it.profile.name } ?: emptyList()
+                }
 
-                else -> emptyList()
+                else -> {
+                    emptyList()
+                }
             }.filter { it.startsWith(text, ignoreCase = true) }
                 .sorted()
 
@@ -97,10 +121,12 @@ class InfiniteTextField(
     }
 
     override fun keyPressed(input: KeyInput): Boolean {
-        if (!isFocused) return super.keyPressed(input)
-
-        // Tabキーでのオートコンプリート処理 (スクロール調整付き)
         val keyCode = input.key
+        if (!isFocused) {
+            return super.keyPressed(input)
+        }
+
+        // --- Tabキーによるオートコンプリート処理 ---
         if (keyCode == GLFW.GLFW_KEY_TAB && (inputType == InputType.BLOCK_ID || inputType == InputType.ENTITY_ID)) {
             if (suggestions.isNotEmpty()) {
                 suggestionIndex =
@@ -112,7 +138,7 @@ class InfiniteTextField(
                         (suggestionIndex + 1) % suggestions.size
                     }
 
-                // Tabキーで選択が移動した際、スクロールを調整して選択項目を表示圏内に保つ
+                // スクロールを調整して選択項目を表示圏内に保つ
                 val maxScrollIndex = max(0, suggestions.size - maxVisibleSuggestions).toDouble()
                 if (suggestionIndex < suggestionScrollY.toInt()) {
                     suggestionScrollY = suggestionIndex.toDouble()
@@ -123,24 +149,29 @@ class InfiniteTextField(
 
                 text = suggestions[suggestionIndex]
                 setCursorToEnd(false)
+                return true // 処理完了。親クラスの処理をスキップ
             }
-            return true
         }
 
-        // Enterキーでサジェストが選択されていたら、それを採用して終了
+        // --- Enterキーによるサジェスト採用処理 ---
         if (keyCode == GLFW.GLFW_KEY_ENTER && suggestionIndex != -1 && suggestions.isNotEmpty()) {
             text = suggestions[suggestionIndex]
             suggestions = emptyList()
             setCursorToEnd(false)
-            return true
+            return true // 処理完了。親クラスの処理をスキップ
         }
 
-        // 共通の編集キーなどの処理
+        // --- それ以外のキー処理は親クラスに委譲し、結果を取得 ---
         val result = super.keyPressed(input)
-        if ((inputType == InputType.BLOCK_ID || inputType == InputType.ENTITY_ID) &&
-            (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE || input.hasCtrl())
-        ) {
-            updateSuggestions()
+
+        // キー入力の結果、テキストが変更された可能性がある場合、サジェストを更新
+        if (result && (inputType == InputType.BLOCK_ID || inputType == InputType.ENTITY_ID)) {
+            // BACKSPACE, DELETE, Ctrl + V/X/Aなどの操作後にサジェストを更新
+            if (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE || input.hasCtrl()) {
+                updateSuggestions()
+            }
+            // その他のキー処理では charTyped で更新されるためここでは不要だが、
+            // 念のため、一般的なキー入力ではない場合に処理を限定する。
         }
         return result
     }
@@ -154,7 +185,7 @@ class InfiniteTextField(
     ): Boolean {
         // サジェストリストが表示されている領域を判定
         val suggestionAreaY = y + height + 2
-        val suggestionAreaHeight = maxVisibleSuggestions * suggestionItemHeight
+        val suggestionAreaHeight = min(suggestions.size, maxVisibleSuggestions) * suggestionItemHeight
         val suggestionAreaBottom = suggestionAreaY + suggestionAreaHeight
 
         if (isFocused &&
@@ -185,9 +216,16 @@ class InfiniteTextField(
         mouseY: Int,
         deltaTicks: Float,
     ) {
-        context.fill(x, y, x + width, y + height, InfiniteClient.theme().colors.backgroundColor)
-        context.drawBorder(x, y, width, height, InfiniteClient.theme().colors.primaryColor)
+        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+
+        // 1. テキストフィールドの背景と枠線の描画
+        context.fill(x, y, x + width, y + height, InfiniteClient.currentColors().backgroundColor)
+        context.drawBorder(x, y, width, height, InfiniteClient.currentColors().primaryColor)
+
+        // 2. 親クラスの描画（テキスト、カーソル、選択範囲）
         super.renderWidget(context, mouseX, mouseY, deltaTicks)
+
+        // 3. サジェストリストの描画
         if (isFocused && suggestions.isNotEmpty() && (inputType == InputType.BLOCK_ID || inputType == InputType.ENTITY_ID)) {
             val suggestionX = x
             val suggestionY = y + height + 2
@@ -195,7 +233,7 @@ class InfiniteTextField(
             val contentCount = suggestions.size
 
             // 表示する最大領域の高さ
-            val displayHeight = min(contentCount, maxVisibleSuggestions) * suggestionItemHeight
+            val displayHeight = min(suggestions.size, maxVisibleSuggestions) * suggestionItemHeight
 
             // スクロールコンテナの背景
             context.fill(
@@ -203,7 +241,7 @@ class InfiniteTextField(
                 suggestionY,
                 suggestionX + suggestionWidth,
                 suggestionY + displayHeight,
-                InfiniteClient.theme().colors.backgroundColor,
+                InfiniteClient.currentColors().backgroundColor,
             )
 
             // クリップ (Scissor) を設定して、枠外の描画を防ぐ
@@ -222,24 +260,10 @@ class InfiniteTextField(
                 val currentY = suggestionY + relativeY
 
                 val isSelected = i == suggestionIndex
-                val backgroundColor =
-                    if (isSelected) {
-                        InfiniteClient
-                            .theme()
-                            .colors.secondaryColor
-                    } else {
-                        InfiniteClient.theme().colors.backgroundColor
-                    }
-                val textColor =
-                    if (isSelected) {
-                        InfiniteClient
-                            .theme()
-                            .colors.secondaryColor
-                    } else {
-                        InfiniteClient
-                            .theme()
-                            .colors.foregroundColor
-                    }
+
+                // 選択色と非選択色
+                val selectedBgColor = InfiniteClient.currentColors().secondaryColor
+                val defaultTextColor = InfiniteClient.currentColors().foregroundColor
 
                 // 選択されている候補の背景をハイライト
                 if (isSelected) {
@@ -248,12 +272,13 @@ class InfiniteTextField(
                         currentY,
                         suggestionX + suggestionWidth,
                         currentY + suggestionItemHeight,
-                        backgroundColor,
+                        selectedBgColor,
                     )
                 }
 
                 // テキストの描画
-                context.drawTextWithShadow(textRenderer, suggestion, suggestionX + 2, currentY + 2, textColor)
+                val textColor = if (isSelected) selectedBgColor else defaultTextColor
+                graphics2D.drawText(suggestion, suggestionX + 2, currentY + 2, textColor, true)
             }
 
             context.disableScissor()
@@ -277,8 +302,8 @@ class InfiniteTextField(
                     scrollbarX + scrollbarWidth,
                     suggestionY + displayHeight,
                     InfiniteClient
-                        .theme()
-                        .colors.backgroundColor,
+                        .currentColors()
+                        .backgroundColor,
                 )
                 // スクロールつまみ (サム)
                 context.fill(
@@ -287,48 +312,42 @@ class InfiniteTextField(
                     scrollbarX + scrollbarWidth,
                     (scrollbarY + scrollbarHeight).toInt(),
                     InfiniteClient
-                        .theme()
-                        .colors.foregroundColor,
+                        .currentColors()
+                        .foregroundColor,
                 )
             }
         }
     }
-    // -----------------------------------------------------
 
-    // --- mouseClicked: フォーカス解除ロジックを修正 ---
+    // --- mouseClicked: サジェスト選択とフォーカス管理 ---
     override fun mouseClicked(
         click: Click,
         doubled: Boolean,
     ): Boolean {
-        // 1. サジェストリスト内のクリック処理
-        val suggestionAreaY = y + height + 2
-        val suggestionAreaHeight = min(suggestions.size, maxVisibleSuggestions) * suggestionItemHeight
-        val suggestionAreaBottom = suggestionAreaY + suggestionAreaHeight
         val mouseX = click.x
         val mouseY = click.y
-        if (isFocused &&
-            suggestions.isNotEmpty() &&
-            (inputType == InputType.BLOCK_ID || inputType == InputType.ENTITY_ID) &&
-            mouseX >= x &&
-            mouseX < x + width &&
-            mouseY >= suggestionAreaY &&
-            mouseY < suggestionAreaBottom
-        ) {
-            val relativeMouseY = mouseY - suggestionAreaY
-            val clickedVisibleIndex = (relativeMouseY / suggestionItemHeight).toInt()
-            val clickedSuggestionIndex = suggestionScrollY.toInt() + clickedVisibleIndex
 
-            if (clickedSuggestionIndex >= 0 && clickedSuggestionIndex < suggestions.size) {
-                text = suggestions[clickedSuggestionIndex]
-                setCursorToEnd(false)
-                suggestions = emptyList() // 選択後はサジェストを非表示
-                return true
+        // 1. サジェストリスト内のクリック処理
+        if (isFocused && suggestions.isNotEmpty() && (inputType == InputType.BLOCK_ID || inputType == InputType.ENTITY_ID)) {
+            val suggestionAreaY = y + height + 2
+            val suggestionAreaHeight = min(suggestions.size, maxVisibleSuggestions) * suggestionItemHeight
+            val suggestionAreaBottom = suggestionAreaY + suggestionAreaHeight
+
+            if (mouseX >= x && mouseX < x + width && mouseY >= suggestionAreaY && mouseY < suggestionAreaBottom) {
+                val relativeMouseY = mouseY - suggestionAreaY
+                val clickedVisibleIndex = (relativeMouseY / suggestionItemHeight).toInt()
+                val clickedSuggestionIndex = suggestionScrollY.toInt() + clickedVisibleIndex
+
+                if (clickedSuggestionIndex >= 0 && clickedSuggestionIndex < suggestions.size) {
+                    text = suggestions[clickedSuggestionIndex]
+                    setCursorToEnd(false)
+                    suggestions = emptyList() // 選択後はサジェストを非表示
+                    return true // クリックイベントを消費
+                }
             }
         }
-
         // 2. 通常のクリック処理
-        // super.mouseClicked() がクリック位置に基づいて isFocused を適切に設定/解除します。
+        // super.mouseClicked() が isFocused の設定/解除とカーソルの位置設定を行います。
         return super.mouseClicked(click, doubled)
     }
-    // -----------------------------------------------------------
 }

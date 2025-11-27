@@ -9,6 +9,7 @@ import net.minecraft.client.input.CharInput
 import net.minecraft.client.input.KeyInput
 import net.minecraft.text.Text
 import org.infinite.InfiniteClient
+import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
 import org.lwjgl.glfw.GLFW
 
@@ -173,6 +174,8 @@ class InfiniteBlockListField(
         mouseY: Int,
         delta: Float,
     ) {
+        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+
         if (!isScrollableContainerInitialized) {
             updateScrollableContainer()
             isScrollableContainerInitialized = true
@@ -184,28 +187,28 @@ class InfiniteBlockListField(
         scrollableContainer.render(context, mouseX, mouseY, delta)
 
         val labelX = x + padding
-        context.drawTextWithShadow(
-            textRenderer,
+        graphics2D.drawText(
             Text.translatable(setting.name),
             labelX,
             y + padding,
             InfiniteClient
-                .theme()
-                .colors.foregroundColor,
+                .currentColors()
+                .foregroundColor,
+            true, // shadow = true
         )
         if (setting.descriptionKey.isNotBlank()) {
-            context.drawTextWithShadow(
-                textRenderer,
+            graphics2D.drawText(
                 Text.translatable(setting.descriptionKey),
                 labelX,
                 y + padding + baseLabelHeight + 2,
-                InfiniteClient.theme().colors.foregroundColor,
+                InfiniteClient.currentColors().foregroundColor,
+                true, // shadow = true
             )
         }
 
         // TextFieldの位置を調整
         val textFieldX = x + padding
-        val textFieldY = y + totalLabelHeight + padding
+        val textFieldY = y + totalLabelHeight + padding + (inputFieldHeight - textField.height) / 2 // 垂直中央揃え
         textField.x = textFieldX
         textField.y = textFieldY
         textField.render(context, mouseX, mouseY, delta)
@@ -221,23 +224,22 @@ class InfiniteBlockListField(
             textFieldY + buttonSize,
             if (isAddButtonHovered) {
                 InfiniteClient
-                    .theme()
-                    .colors.primaryColor
+                    .currentColors()
+                    .primaryColor
             } else {
                 InfiniteClient
-                    .theme()
-                    .colors.greenAccentColor
+                    .currentColors()
+                    .greenAccentColor
             },
         )
-        context.drawText(
-            textRenderer,
+        graphics2D.drawText(
             "+",
             addButtonX + buttonSize / 2 - 3,
             textFieldY + buttonSize / 2 - 4,
             InfiniteClient
-                .theme()
-                .colors.foregroundColor,
-            false,
+                .currentColors()
+                .foregroundColor,
+            false, // shadow = false
         )
     }
 
@@ -320,6 +322,5 @@ class InfiniteBlockListField(
 
     override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
         textField.appendNarrations(builder)
-        // Removed: scrollableContainer.appendClickableNarrations(builder) as it's a protected method.
     }
 }

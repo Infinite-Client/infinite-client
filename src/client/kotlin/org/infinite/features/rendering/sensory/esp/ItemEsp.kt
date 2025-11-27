@@ -3,6 +3,7 @@ package org.infinite.features.rendering.sensory.esp
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.render.entity.state.ItemEntityRenderState
 import net.minecraft.entity.ItemEntity
+import net.minecraft.item.ItemStack
 import net.minecraft.util.Rarity
 import net.minecraft.util.math.Box
 import net.minecraft.util.math.MathHelper
@@ -55,33 +56,40 @@ object ItemEsp {
         graphics3d.renderLinedColorBoxes(renderBoxes, true)
     }
 
-    private fun rarityColor(entity: ItemEntity): Int =
-        when (entity.stack.rarity) {
-            Rarity.COMMON ->
+    fun rarityColor(stack: ItemStack): Int =
+        when (stack.rarity) {
+            Rarity.COMMON -> {
                 org.infinite.InfiniteClient
                     .theme()
                     .colors.foregroundColor
+            }
 
-            Rarity.UNCOMMON ->
+            Rarity.UNCOMMON -> {
                 org.infinite.InfiniteClient
                     .theme()
                     .colors.yellowAccentColor
+            }
 
-            Rarity.RARE ->
+            Rarity.RARE -> {
                 org.infinite.InfiniteClient
                     .theme()
                     .colors.aquaAccentColor
+            }
 
-            Rarity.EPIC ->
+            Rarity.EPIC -> {
                 org.infinite.InfiniteClient
                     .theme()
                     .colors.magentaAccentColor
+            }
 
-            else ->
+            else -> {
                 org.infinite.InfiniteClient
                     .theme()
                     .colors.foregroundColor
+            }
         }
+
+    fun rarityColor(entity: ItemEntity): Int = rarityColor(entity.stack)
 
     private fun itemBox(
         entity: ItemEntity,

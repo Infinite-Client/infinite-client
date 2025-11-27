@@ -7,7 +7,6 @@ import net.minecraft.client.input.CharInput
 import net.minecraft.client.input.KeyInput
 import net.minecraft.text.Text
 import org.infinite.InfiniteClient
-import org.infinite.featureCategories
 import org.lwjgl.glfw.GLFW
 import kotlin.math.PI
 import kotlin.math.abs
@@ -56,7 +55,7 @@ class InfiniteScreen(
         val dynamicSections = mutableListOf<UISection>()
         dynamicSections.add(UISection("main", this))
 
-        featureCategories.forEach { category ->
+        InfiniteClient.featureCategories.forEach { category ->
             dynamicSections.add(UISection(category.name.lowercase() + "-settings", this, category.features))
         }
 
@@ -132,7 +131,13 @@ class InfiniteScreen(
         renderedSections.sortByDescending { it.z3d }
 
         if (animationProgress >= 1.0f) {
-            context.drawCenteredTextWithShadow(textRenderer, title, width / 2, startY + 15, 0xFFFFFF)
+            context.drawCenteredTextWithShadow(
+                textRenderer,
+                title,
+                width / 2,
+                startY + 15,
+                InfiniteClient.currentColors().foregroundColor,
+            )
         }
 
         val minZ = zOffset - radius

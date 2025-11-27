@@ -8,6 +8,7 @@ import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.text.Text
 import net.minecraft.util.math.MathHelper
 import org.infinite.InfiniteClient
+import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
 
 class InfiniteSlider<T : Number>(
@@ -42,18 +43,20 @@ class InfiniteSlider<T : Number>(
         mouseY: Int,
         delta: Float,
     ) {
+        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+
         val textX = x + 5 // Padding from left edge
         var currentY = y + 2 // Start drawing text from top with small padding
 
         // --- 設定名 (左上) ---
-        context.drawTextWithShadow(
-            textRenderer,
+        graphics2D.drawText(
             Text.translatable(setting.name),
             textX,
             currentY,
             InfiniteClient
-                .theme()
-                .colors.foregroundColor,
+                .currentColors()
+                .foregroundColor,
+            true, // shadow = true
         )
 
         // --- 値の描画 (右上) ---
@@ -68,28 +71,28 @@ class InfiniteSlider<T : Number>(
         val valueTextWidth = textRenderer.getWidth(valueText)
         val valueTextX = x + width - 5 - valueTextWidth // 右端から5pxパディング
 
-        context.drawTextWithShadow(
-            textRenderer,
+        graphics2D.drawText(
             valueText,
             valueTextX,
             currentY, // 設定名と同じY座標
             InfiniteClient
-                .theme()
-                .colors.primaryColor, // 例としてプライマリカラーを使用
+                .currentColors()
+                .primaryColor, // 例としてプライマリカラーを使用
+            true, // shadow = true
         )
         // -----------------------
 
         currentY += textRenderer.fontHeight + 2 // Move Y down for description
 
         if (setting.descriptionKey.isNotBlank()) {
-            context.drawTextWithShadow(
-                textRenderer,
+            graphics2D.drawText(
                 Text.translatable(setting.descriptionKey),
                 textX,
                 currentY,
                 InfiniteClient
-                    .theme()
-                    .colors.secondaryColor,
+                    .currentColors()
+                    .secondaryColor,
+                true, // shadow = true
             )
             // textRenderer.fontHeight + 2 // Move Y down after description - この行はコメントアウトまたは削除
         }
@@ -102,8 +105,8 @@ class InfiniteSlider<T : Number>(
             x + width - 5,
             sliderBackgroundY + 2,
             InfiniteClient
-                .theme()
-                .colors.secondaryColor,
+                .currentColors()
+                .secondaryColor,
         )
 
         // Draw slider knob
@@ -118,8 +121,8 @@ class InfiniteSlider<T : Number>(
             knobX.toInt() + knobWidth,
             knobY + 6,
             InfiniteClient
-                .theme()
-                .colors.primaryColor,
+                .currentColors()
+                .primaryColor,
         )
     }
 
@@ -140,7 +143,9 @@ class InfiniteSlider<T : Number>(
                 (setting.value - setting.min).toFloat() / range
             }
 
-            else -> throw IllegalStateException("InfiniteSlider can only be used with IntSetting or FloatSetting")
+            else -> {
+                throw IllegalStateException("InfiniteSlider can only be used with IntSetting or FloatSetting")
+            }
         }
 
     private fun setValueFromMouse(mouseX: Double) {
@@ -172,7 +177,9 @@ class InfiniteSlider<T : Number>(
                 (setting as FeatureSetting.DoubleSetting).value = newValue
             }
 
-            else -> throw IllegalStateException("InfiniteSlider can only be used with IntSetting or FloatSetting")
+            else -> {
+                throw IllegalStateException("InfiniteSlider can only be used with IntSetting or FloatSetting")
+            }
         }
         updateMessage()
     }

@@ -6,7 +6,7 @@ import net.minecraft.entity.Entity
 import net.minecraft.entity.LivingEntity
 import net.minecraft.util.hit.EntityHitResult
 import net.minecraft.util.math.MathHelper
-import org.infinite.ConfigurableFeature
+import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import kotlin.math.sqrt
 
@@ -22,21 +22,19 @@ class ImpactAttack : ConfigurableFeature(initialEnabled = false) {
         listOf(
             FeatureSetting.FloatSetting(
                 "Range",
-                "feature.fighting.impactattack.range.description",
                 4.2f,
                 3.0f,
                 7.0f,
             ),
             FeatureSetting.IntSetting(
                 "CPS",
-                "feature.fighting.impactattack.cps.description",
                 10,
                 1,
                 20,
             ),
         )
 
-    override fun tick() {
+    override fun onTick() {
         val client = MinecraftClient.getInstance()
         val player = client.player ?: return
         val interactionManager = client.interactionManager ?: return
@@ -130,8 +128,8 @@ class ImpactAttack : ConfigurableFeature(initialEnabled = false) {
         attackDelayTimer = 0
     }
 
-    override fun disabled() {
-        super.disabled()
+    override fun onDisabled() {
+        super.onDisabled()
         stopAttack()
     }
 

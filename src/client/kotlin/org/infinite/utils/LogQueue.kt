@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 object LogQueue : ClientTickEvents.EndTick {
     // プレイヤーに送信待ちのメッセージを格納するスレッドセーフなキュー
     private val messageQueue = ConcurrentLinkedQueue<MutableText>()
-    private const val MESSAGES_PER_TICK = 1 // 1ティックあたりに処理するメッセージの数
+    private const val MESSAGES_PER_TICK = 8 // 1ティックあたりに処理するメッセージの数
 
     /**
      * キューにメッセージを追加します。
@@ -26,20 +26,17 @@ object LogQueue : ClientTickEvents.EndTick {
      * キューからメッセージを取り出し、プレイヤーに送信します。
      */
     override fun onEndTick(client: MinecraftClient) {
-        if (client.player == null) {
-            // プレイヤーがいない場合（タイトル画面など）はキューを処理しない
-            return
-        }
-
-        // 1ティックあたり最大N個のメッセージを処理
-        for (i in 0 until MESSAGES_PER_TICK) {
+        repeat(MESSAGES_PER_TICK) {
             val message = messageQueue.poll() // キューからメッセージを取り出す
             if (message != null) {
-                // 'false' はメッセージがチャット履歴に残らないことを意味します
-                client.player!!.sendMessage(message, false)
+                val player = client.player
+                if (player == null) {
+                    println(message.string)
+                } else {
+                    player.sendMessage(message, false)
+                }
             } else {
-                // キューが空になったらループを終了
-                break
+                return
             }
         }
     }

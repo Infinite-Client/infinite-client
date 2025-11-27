@@ -7,11 +7,12 @@ import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.registry.Registries
 import net.minecraft.util.Identifier
-import org.infinite.ConfigurableFeature
-import org.infinite.FeatureLevel
 import org.infinite.InfiniteClient
-import org.infinite.libs.client.player.inventory.InventoryManager
-import org.infinite.libs.client.player.inventory.InventoryManager.InventoryIndex
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.features.utils.backpack.BackPackManager
+import org.infinite.libs.client.inventory.InventoryManager
+import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
+import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.settings.FeatureSetting
 import org.infinite.settings.Property
@@ -42,27 +43,23 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
     private val fireMode: FeatureSetting.EnumSetting<FireMode> =
         FeatureSetting.EnumSetting(
             "FireMode",
-            "feature.fighting.gunner.firemode.description",
             FireMode.FULL_AUTO,
             FireMode.entries,
         )
     private val fastReload: FeatureSetting.BooleanSetting =
         FeatureSetting.BooleanSetting(
             "FastReload",
-            "feature.fighting.gunner.fastreload.description",
             false,
         )
     private val changeMode: FeatureSetting.EnumSetting<ChangeMode> =
         FeatureSetting.EnumSetting(
             "ChangeMode",
-            "feature.fighting.gunner.changemode.description",
             ChangeMode.Fixed,
             ChangeMode.entries,
         )
     private val additionalInterval: FeatureSetting.IntSetting =
         FeatureSetting.IntSetting(
             "AdditionalInterval",
-            "feature.fighting.gunner.additionalinterval.description",
             3,
             0,
             10,
@@ -70,7 +67,7 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
     override val settings: List<FeatureSetting<*>> = listOf(fireMode, fastReload, changeMode, additionalInterval)
     var state: GunnerState = GunnerState.IDLE
     var mode: GunnerMode = GunnerMode.RELOAD
-    override val level = FeatureLevel.CHEAT
+    override val level = FeatureLevel.Cheat
 
     fun gunnerCount(): Int {
         // クロスボウで使用可能なアイテムのIdentifierを取得
@@ -88,7 +85,7 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
         return arrowCount + tippedArrowCount + spectralArrowCount + fireworkCount
     }
 
-    override fun start() {
+    override fun onStart() {
         state = GunnerState.IDLE
         mode = GunnerMode.RELOAD
     }
@@ -100,44 +97,67 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
 
     private var intervalCount = 0
 
-    override fun tick() {
+    override fun onTick() {
+        if (client.currentScreen != null) return
         switchMode()
         val manager = InventoryManager
-        when (mode) {
-            GunnerMode.SHOT -> {
-                val mainHandItem = manager.get(InventoryIndex.MainHand())
-                if (isLoadedCrossbow(mainHandItem)) {
-                    state = GunnerState.READY
-                } else {
-                    state = GunnerState.IDLE
-                    val loadedCrossbow = findFirstLoadedCrossbow()
-                    val readyToSet =
-                        (fireMode.value == FireMode.FULL_AUTO && intervalCount == 0) ||
-                            (fireMode.value == FireMode.SEMI_AUTO && !InfiniteClient.playerInterface.options.useKey.isPressed)
-                    if (loadedCrossbow != null && readyToSet) {
-                        intervalCount = additionalInterval.value
-                        manager.swap(InventoryIndex.MainHand(), loadedCrossbow)
+        val backPackManager = InfiniteClient.getFeature(BackPackManager::class.java)
+
+        backPackManager?.register {
+            // --- 👇 追加された花火オフハンドのロジック ---
+            val offHand = manager.get(InventoryIndex.OffHand())
+            val fireworkRocketItem = Registries.ITEM.get(Identifier.of("minecraft:firework_rocket"))
+
+            // オフハンドが花火アイテムでない、かつ、花火アイテムがある場合
+            if (offHand.item != fireworkRocketItem) {
+                val fireworkIndex = findFirstStarFirework() // 星付き花火を検索
+
+                if (fireworkIndex != null) {
+                    // オフハンドと花火をスワップ
+                    manager.swap(InventoryIndex.OffHand(), fireworkIndex)
+                    // スワップ後は、クロスボウ関連のtick処理をスキップ
+                    return@register
+                }
+            }
+            // --- 👆 ここまで追加された花火オフハンドのロジック ---
+
+            // tick()全体をregisterで囲む
+            when (mode) {
+                GunnerMode.SHOT -> {
+                    val mainHandItem = manager.get(InventoryIndex.MainHand())
+                    if (isLoadedCrossbow(mainHandItem)) {
+                        state = GunnerState.READY
                     } else {
-                        if (intervalCount > 0) intervalCount--
-                        val emptySlot = manager.findFirstEmptyBackpackSlot()
-                        if (emptySlot != null) {
-                            manager.swap(InventoryIndex.MainHand(), emptySlot)
+                        state = GunnerState.IDLE
+                        val loadedCrossbow = findFirstLoadedCrossbow()
+                        val readyToSet =
+                            (fireMode.value == FireMode.FULL_AUTO && intervalCount == 0) ||
+                                (fireMode.value == FireMode.SEMI_AUTO && !options.useKey.isPressed)
+                        if (loadedCrossbow != null && readyToSet) {
+                            intervalCount = additionalInterval.value
+                            manager.swap(InventoryIndex.MainHand(), loadedCrossbow)
+                        } else {
+                            if (intervalCount > 0) intervalCount--
+                            val emptySlot = manager.findFirstEmptyBackpackSlot()
+                            if (emptySlot != null) {
+                                manager.swap(InventoryIndex.MainHand(), emptySlot)
+                            }
                         }
                     }
                 }
-            }
 
-            GunnerMode.RELOAD -> {
-                state = GunnerState.IDLE
-                val mainHandItem = manager.get(InventoryIndex.MainHand())
-                if (!isUnloadedCrossbow(mainHandItem)) {
-                    val loadedCrossbow = findFirstUnloadedCrossbow()
-                    if (loadedCrossbow != null) {
-                        manager.swap(InventoryIndex.MainHand(), loadedCrossbow)
-                    } else {
-                        val emptySlot = manager.findFirstEmptyBackpackSlot()
-                        if (emptySlot != null) {
-                            manager.swap(InventoryIndex.MainHand(), emptySlot)
+                GunnerMode.RELOAD -> {
+                    state = GunnerState.IDLE
+                    val mainHandItem = manager.get(InventoryIndex.MainHand())
+                    if (!isUnloadedCrossbow(mainHandItem)) {
+                        val loadedCrossbow = findFirstUnloadedCrossbow()
+                        if (loadedCrossbow != null) {
+                            manager.swap(InventoryIndex.MainHand(), loadedCrossbow)
+                        } else {
+                            val emptySlot = manager.findFirstEmptyBackpackSlot()
+                            if (emptySlot != null) {
+                                manager.swap(InventoryIndex.MainHand(), emptySlot)
+                            }
                         }
                     }
                 }
@@ -153,13 +173,14 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
                 .getInstance()
                 .options.sneakKey.isPressed
         when (changeMode.value) {
-            ChangeMode.Fixed ->
+            ChangeMode.Fixed -> {
                 mode =
                     if (isKeyPressed) {
                         GunnerMode.RELOAD
                     } else {
                         GunnerMode.SHOT
                     }
+            }
 
             ChangeMode.Toggle -> {
                 if (isKeyPressed && !beforeSneaked) {
@@ -249,6 +270,50 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
         }
 
         return null
+    }
+
+    // --- 👇 追加された花火ロジック関連のプライベート関数 ---
+
+    /**
+     * ItemStackが、星（ペイロード）を持つ花火アイテムであるか判定する。
+     * * NOTE: 厳密には FireworkExplosion の Type を確認するべきだが、ここでは
+     * 花火ロケットであり、何らかのペイロードを持っていること（ロケット花火として機能すること）
+     * をもって「星の入った花火」と見なす。
+     */
+    private fun isStarFirework(stack: ItemStack): Boolean {
+        // 1. アイテムが花火ロケットか確認
+        val fireworkRocketItem = Registries.ITEM.get(Identifier.of("minecraft:firework_rocket"))
+        if (stack.item != fireworkRocketItem) return false
+
+        // 2. ペイロード（花火の星）のコンポーネントを取得
+        val firework = stack.get(DataComponentTypes.FIREWORKS)
+        // ペイロードが null でない、かつ、花火の星リストが空でないことを確認
+        return firework != null && !firework.explosions.isEmpty()
+    }
+
+    /**
+     * インベントリ（バックパックとホットバー）から最初の星付き花火を検索する。
+     */
+    private fun findFirstStarFirework(): InventoryIndex? {
+        // バックパック (0-26)
+        for (i in 0 until 27) {
+            val index = InventoryIndex.Backpack(i)
+            val stack = InventoryManager.get(index)
+            if (isStarFirework(stack)) return index
+        }
+        // ホットバー (0-8)
+        for (i in 0 until 9) {
+            val index = InventoryIndex.Hotbar(i)
+            val stack = InventoryManager.get(index)
+            if (isStarFirework(stack)) return index
+        }
+        return null
+    }
+
+    // --- 👆 ここまで追加された花火ロジック関連のプライベート関数 ---
+
+    override fun render2d(graphics2D: Graphics2D) {
+        GunnerRenderer.renderInfo(graphics2D)
     }
 
     override fun render3d(graphics3D: Graphics3D) {

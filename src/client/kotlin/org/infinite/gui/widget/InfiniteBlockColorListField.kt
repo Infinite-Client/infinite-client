@@ -9,6 +9,7 @@ import net.minecraft.client.input.CharInput
 import net.minecraft.client.input.KeyInput
 import net.minecraft.text.Text
 import org.infinite.InfiniteClient
+import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
 import org.lwjgl.glfw.GLFW
 
@@ -172,6 +173,8 @@ class InfiniteBlockColorListField(
         mouseY: Int,
         delta: Float,
     ) {
+        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+
         if (!isScrollableContainerInitialized) {
             updateScrollableContainer()
             isScrollableContainerInitialized = true
@@ -183,22 +186,22 @@ class InfiniteBlockColorListField(
         scrollableContainer.render(context, mouseX, mouseY, delta)
 
         val labelX = x + padding
-        context.drawTextWithShadow(
-            textRenderer,
+        graphics2D.drawText(
             Text.translatable(setting.name),
             labelX,
             y + padding,
             InfiniteClient
-                .theme()
-                .colors.foregroundColor,
+                .currentColors()
+                .foregroundColor,
+            true, // shadow = true
         )
         if (setting.descriptionKey.isNotBlank()) {
-            context.drawTextWithShadow(
-                textRenderer,
+            graphics2D.drawText(
                 Text.translatable(setting.descriptionKey),
                 labelX,
                 y + padding + baseLabelHeight + 2,
-                InfiniteClient.theme().colors.foregroundColor,
+                InfiniteClient.currentColors().foregroundColor,
+                true, // shadow = true
             )
         }
 
@@ -206,14 +209,14 @@ class InfiniteBlockColorListField(
         val blockIdTextFieldX = x + padding
         val blockIdTextFieldY = y + totalLabelHeight + padding
         blockIdTextField.x = blockIdTextFieldX
-        blockIdTextField.y = blockIdTextFieldY
+        blockIdTextField.y = blockIdTextFieldY + (inputFieldHeight - blockIdTextField.height) / 2
         blockIdTextField.render(context, mouseX, mouseY, delta)
 
         // Color TextField
         val colorTextFieldX = blockIdTextFieldX + blockIdTextField.width + padding
         val colorTextFieldY = y + totalLabelHeight + padding
         colorTextField.x = colorTextFieldX
-        colorTextField.y = colorTextFieldY
+        colorTextField.y = colorTextFieldY + (inputFieldHeight - colorTextField.height) / 2
         colorTextField.render(context, mouseX, mouseY, delta)
 
         // Add Button
@@ -229,23 +232,22 @@ class InfiniteBlockColorListField(
             addButtonY + buttonSize,
             if (isAddButtonHovered) {
                 InfiniteClient
-                    .theme()
-                    .colors.primaryColor
+                    .currentColors()
+                    .primaryColor
             } else {
                 InfiniteClient
-                    .theme()
-                    .colors.greenAccentColor
+                    .currentColors()
+                    .greenAccentColor
             },
         )
-        context.drawText(
-            textRenderer,
+        graphics2D.drawText(
             "+",
             addButtonX + buttonSize / 2 - 3,
             addButtonY + buttonSize / 2 - 4,
             InfiniteClient
-                .theme()
-                .colors.foregroundColor,
-            false,
+                .currentColors()
+                .foregroundColor,
+            false, // shadow = false
         )
     }
 

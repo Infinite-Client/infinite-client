@@ -10,9 +10,9 @@ import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.client.input.CharInput
 import net.minecraft.client.input.KeyInput
 import net.minecraft.text.Text
-import net.minecraft.util.math.ColorHelper
-import org.infinite.Feature
 import org.infinite.InfiniteClient
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.features.Feature
 import org.infinite.gui.widget.FeatureSearchWidget
 import org.infinite.gui.widget.InfiniteButton
 import org.infinite.gui.widget.InfiniteFeatureToggle
@@ -23,7 +23,7 @@ import org.infinite.utils.rendering.transparent
 class UISection(
     val id: String,
     private val screen: Screen,
-    featureList: List<Feature>? = null,
+    featureList: List<Feature<out ConfigurableFeature>>? = null,
 ) {
     private var closeButton: InfiniteButton? = null
     val widgets = mutableListOf<ClickableWidget>()
@@ -33,7 +33,7 @@ class UISection(
     init {
         when (id) {
             "main" -> {
-                // Initialization moved to renderMain
+                // Theme selection buttons will be initialized in renderMain
             }
 
             else -> {
@@ -44,7 +44,7 @@ class UISection(
         }
     }
 
-    private fun setupFeatureWidgets(features: List<Feature>) {
+    private fun setupFeatureWidgets(features: List<Feature<out ConfigurableFeature>>) {
         val featureWidgets =
             features.map { feature ->
                 feature.name
@@ -109,12 +109,16 @@ class UISection(
 
         val titleText =
             when (id) {
-                "main" -> "Main"
-                else ->
+                "main" -> {
+                    "Main"
+                }
+
+                else -> {
                     id
                         .replace("-settings", "")
                         .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() } +
                         " Settings"
+                }
             }
 
         if (id == "main") {
@@ -171,16 +175,19 @@ class UISection(
         renderTitle(context, x, y, width, textRenderer, "Main", isSelected)
         if (!renderContent) return
 
+        // Initialize theme buttons if not already initialized or if context changes
         if (!isMainSectionInitialized) {
-            featureSearchWidget = FeatureSearchWidget(x + 20, y + 50, width - 40, height - 70, screen)
+            featureSearchWidget = FeatureSearchWidget(x + 20, y + 10, width - 40, height - 80, screen)
             isMainSectionInitialized = true
         }
 
+        // Update positions and render theme buttons
+        val currentY = y + 50
         featureSearchWidget?.let {
             it.x = x + 20
-            it.y = y + 50
+            it.y = currentY + 10
             it.width = width - 40
-            it.height = height - 70
+            it.height = height - (currentY + 10 - y) // Adjust height based on theme buttons
             it.render(context, mouseX, mouseY, delta)
         }
     }
@@ -237,24 +244,9 @@ class UISection(
                     .theme()
                     .colors.foregroundColor
             } else {
-                ColorHelper.getArgb(
-                    255,
-                    ColorHelper.getRed(
-                        InfiniteClient
-                            .theme()
-                            .colors.foregroundColor,
-                    ) / 2,
-                    ColorHelper.getGreen(
-                        InfiniteClient
-                            .theme()
-                            .colors.foregroundColor,
-                    ) / 2,
-                    ColorHelper.getBlue(
-                        InfiniteClient
-                            .theme()
-                            .colors.foregroundColor,
-                    ) / 2,
-                )
+                InfiniteClient
+                    .theme()
+                    .colors.secondaryColor
             }
         context.drawTextWithShadow(textRenderer, title, textX, textY, color)
     }
@@ -277,7 +269,7 @@ class UISection(
             return true
         }
 
-        // 2. 他のウィジェットのクリック
+        // 3. 他のウィジェットのクリック
         for (widget in widgets) {
             if (widget.mouseClicked(click, doubled)) {
                 return true // ★ 最初に応答したウィジェットで停止し、フォーカスを与える

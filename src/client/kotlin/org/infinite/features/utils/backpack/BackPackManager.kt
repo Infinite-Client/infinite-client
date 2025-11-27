@@ -2,19 +2,17 @@ package org.infinite.features.utils.backpack
 
 import net.minecraft.client.MinecraftClient
 import net.minecraft.item.ItemStack
-import org.infinite.ConfigurableFeature
-import org.infinite.FeatureLevel
-import org.infinite.libs.client.player.inventory.InventoryManager
-import org.infinite.libs.client.player.inventory.InventoryManager.InventoryIndex
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.client.inventory.InventoryManager
+import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
 import org.infinite.settings.FeatureSetting
 
 class BackPackManager : ConfigurableFeature() {
-    override val level: FeatureLevel = FeatureLevel.EXTEND
+    override val level: FeatureLevel = FeatureLevel.Extend
 
     private val sortEnabled =
         FeatureSetting.BooleanSetting(
             "SortEnabled",
-            "feature.utils.backpackInventoryManager.sort_enabled.description",
             true,
         )
 
@@ -22,19 +20,16 @@ class BackPackManager : ConfigurableFeature() {
     private val autoMoveToBackpackEnabled =
         FeatureSetting.BooleanSetting(
             "AutoMoveToBackpack",
-            "feature.utils.backpackInventoryManager.auto_move_to_backpack_enabled.description",
             true,
         )
     private val autoReplenishHotbarEnabled =
         FeatureSetting.BooleanSetting(
             "AutoReplenishHotbar",
-            "feature.utils.backpackInventoryManager.auto_replenish_hotbar_enabled.description",
             true,
         )
     private val sortInterval =
         FeatureSetting.IntSetting(
             "SortInterval",
-            "feature.utils.backpackInventoryManager.sort_interval.description",
             20 * 5,
             20,
             20 * 60,
@@ -52,59 +47,40 @@ class BackPackManager : ConfigurableFeature() {
     private var previousInventory: List<ItemStack> = emptyList()
     private var isInventoryOpen = false // インベントリが開いているかどうかを追跡するフラグ
 
+    fun updateSlotsInfo(): List<ItemStack> {
+        val player = player ?: return emptyList()
+        previousInventory = (0 until player.inventory.size()).map { player.inventory.getStack(it).copy() }
+        emptyHotbarSlots =
+            (0 until 9)
+                .filter { player.inventory.getStack(it).isEmpty }
+                .toSet()
+        return previousInventory
+    }
+
     // 起動時/リセット時に空だったホットバーのスロットインデックス (0-8) を保持
     private var emptyHotbarSlots: Set<Int> = emptySet()
 
-    /**
-     * 現在のホットバーの状態に基づいて `emptyHotbarSlots` を初期化/更新します。
-     * Hotbar: 0-8
-     */
-    private fun registerEmptyHotbarSlots() {
-        val player = MinecraftClient.getInstance().player
-        if (player != null) {
-            // ホットバー (0-8) の空きスロットインデックスを収集
-            emptyHotbarSlots =
-                (0 until 9)
-                    .filter { player.inventory.getStack(it).isEmpty }
-                    .toSet()
-        }
+    fun register(registeredProcess: () -> Unit) {
+        registeredProcess()
+        updateSlotsInfo()
     }
 
-    override fun start() {
+    override fun onStart() {
         // 【修正点】: 起動時に空きホットバーを登録
-        registerEmptyHotbarSlots()
+        updateSlotsInfo()
     }
 
-    override fun tick() {
-        val client = MinecraftClient.getInstance()
-        val player = client.player ?: return
-
-        val currentScreen = client.currentScreen
-
-        // インベントリが閉じられた瞬間を検出
-        if (isInventoryOpen && currentScreen == null) {
-            // インベントリが閉じられたので、previousInventoryを更新し、空きホットバーを再登録
-            previousInventory = (0 until player.inventory.size()).map { player.inventory.getStack(it).copy() }
-            registerEmptyHotbarSlots() // 【修正点】: インベントリが閉じられたら、ホットバーの情報を登録し直し
-        }
-        isInventoryOpen = (currentScreen != null)
-
-        // インベントリが開いている間は処理を停止
-        if (currentScreen != null) {
-            return
-        }
+    private fun process() {
+        val player = player ?: return
+        val world = world ?: return
         // --- 1. 定期ソート機能 ---
-        // バックパックのアイテムを左上から順番にソートします。
-        if (sortEnabled.value && (client.world?.time?.minus(lastSortTick) ?: 0) >= sortInterval.value) {
+        if (sortEnabled.value && world.time.minus(lastSortTick) >= sortInterval.value) {
             InventoryManager.sort()
-            lastSortTick = client.world?.time ?: 0
-            previousInventory =
-                (0 until player.inventory.size()).map { player.inventory.getStack(it).copy() }
-            return // 1回のtickで1つの操作のみ
+            lastSortTick = world.time
+            updateSlotsInfo()
         }
 
         // --- 2. 空であるはずの場所への自動移動機能 (autoMoveToBackpackEnabledの新しい動作) ---
-        // 【修正点】: 毎ティックホットバーを調べて、空であるはずの場所にアイテムがあったらバックパックに移動
         if (autoMoveToBackpackEnabled.value && emptyHotbarSlots.isNotEmpty()) {
             // ホットバーのスロット (0-8) をチェック
             for (i in 0 until 9) {
@@ -119,16 +95,14 @@ class BackPackManager : ConfigurableFeature() {
                         InventoryManager.swap(emptyBackpackSlot, InventoryIndex.Hotbar(i))
 
                         // インベントリ状態を更新
-                        previousInventory =
-                            (0 until player.inventory.size()).map { player.inventory.getStack(it).copy() }
-                        return // 1回のtickで1つの移動のみ
+                        updateSlotsInfo()
                     }
                 }
             }
         }
         // --- 3. ホットバーのアイテム補充機能 (既存) ---
         if (autoReplenishHotbarEnabled.value) {
-            val currentInventory = (0 until player.inventory.size()).map { player.inventory.getStack(it).copy() }
+            val currentInventory = updateSlotsInfo()
 
             if (previousInventory.isNotEmpty()) {
                 for (i in 0 until 9) { // ホットバーのスロット
@@ -143,9 +117,7 @@ class BackPackManager : ConfigurableFeature() {
                         if (foundIndex != null) {
                             // ホットバーのスロットと見つかったアイテムのスロットをスワップ
                             InventoryManager.replenish(foundIndex, InventoryIndex.Hotbar(i))
-                            previousInventory =
-                                (0 until player.inventory.size()).map { player.inventory.getStack(it).copy() }
-                            return // 1回のtickで1つの補充のみ
+                            updateSlotsInfo()
                         }
                     }
                 }
@@ -153,10 +125,24 @@ class BackPackManager : ConfigurableFeature() {
             previousInventory = currentInventory // ホットバー補充後に更新
         }
         // 何も操作が行われなかった場合、次のティックのために状態を更新
-        previousInventory = (0 until player.inventory.size()).map { player.inventory.getStack(it).copy() }
+        updateSlotsInfo()
     }
 
-    override fun enabled() {
+    override fun onTick() {
+        val currentScreen = client.currentScreen
+        if (isInventoryOpen && currentScreen == null) {
+            updateSlotsInfo()
+            return
+        }
+        isInventoryOpen = (currentScreen != null)
+        if (isInventoryOpen) {
+            return
+        }
+
+        process()
+    }
+
+    override fun onEnabled() {
         // Featureが有効になったときにインベントリの状態を初期化
         val player = MinecraftClient.getInstance().player
         previousInventory =
@@ -164,6 +150,6 @@ class BackPackManager : ConfigurableFeature() {
                 player?.inventory?.getStack(it)?.copy() ?: ItemStack.EMPTY
             }
         isInventoryOpen = (MinecraftClient.getInstance().currentScreen != null)
-        registerEmptyHotbarSlots() // 有効化時にも初期化
+        updateSlotsInfo() // 有効化時にも初期化
     }
 }

@@ -1,0 +1,21 @@
+package org.infinite.features.server
+
+import org.infinite.features.Feature
+import org.infinite.features.FeatureCategory
+import org.infinite.features.server.anti.AntiCheat
+import org.infinite.features.server.connection.AutoConnect
+import org.infinite.features.server.connection.AutoLeave
+import org.infinite.features.server.detect.DetectServer
+import org.infinite.features.server.info.ServerInfo
+
+class ServerFeatureCategory :
+    FeatureCategory(
+        "Server",
+        mutableListOf(
+            Feature(ServerInfo()),
+            Feature(AutoConnect()),
+            Feature(DetectServer()),
+            Feature(AutoLeave()),
+            Feature(AntiCheat()),
+        ),
+    )

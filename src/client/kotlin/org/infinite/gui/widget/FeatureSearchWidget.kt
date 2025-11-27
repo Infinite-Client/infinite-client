@@ -10,8 +10,9 @@ import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.client.input.CharInput
 import net.minecraft.client.input.KeyInput
 import net.minecraft.text.Text
-import org.infinite.Feature
-import org.infinite.featureCategories
+import org.infinite.InfiniteClient
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.features.Feature
 import org.infinite.gui.screen.FeatureSettingsScreen
 import org.lwjgl.glfw.GLFW
 
@@ -23,15 +24,40 @@ class FeatureSearchWidget(
     private val parentScreen: Screen,
 ) : ClickableWidget(x, y, width, height, Text.empty()) {
     private val textRenderer: TextRenderer = MinecraftClient.getInstance().textRenderer
-    private lateinit var searchField: InfiniteTextField
-    private lateinit var scrollableContainer: InfiniteScrollableContainer
-    private var allFeatures: List<Feature> = featureCategories.flatMap { it.features }
-    private var filteredFeatures: List<Feature>
-    private var isInitialized = false
+    private var searchField: InfiniteTextField
+    private var scrollableContainer: InfiniteScrollableContainer
+    private var allFeatures: List<Feature<out ConfigurableFeature>> =
+        InfiniteClient.featureCategories.flatMap { it.features }
+    private var filteredFeatures: List<Feature<out ConfigurableFeature>>
     private var selectedIndex: Int = -1 // -1 means no item is selected
 
     init {
         filteredFeatures = allFeatures
+        searchField =
+            InfiniteTextField(
+                textRenderer,
+                x,
+                y,
+                width,
+                20, // Height of the search field
+                Text.literal("Search features..."),
+                // 最新のコードに合わせて InputType.ANY_TEXT を使用
+                InfiniteTextField.InputType.ANY_TEXT,
+            )
+        searchField.setChangedListener { newText ->
+            filterFeatures(newText)
+        }
+        scrollableContainer =
+            InfiniteScrollableContainer(
+                x,
+                y + searchField.height + 5, // Position below search field
+                width,
+                height - searchField.height - 5, // Remaining height for scrollable container
+                mutableListOf(), // Initialize with an empty list
+            )
+
+        // 最初のフィルタリングを実行して scrollableContainer を初期データで満たす
+        filterFeatures("")
     }
 
     private fun filterFeatures(searchText: String) {
@@ -40,7 +66,8 @@ class FeatureSearchWidget(
                 allFeatures
             } else {
                 allFeatures.filter { feature ->
-                    val categoryName = featureCategories.find { it.features.contains(feature) }?.name ?: ""
+                    val categoryName =
+                        InfiniteClient.featureCategories.find { it.features.contains(feature) }?.name ?: ""
                     feature.name.contains(searchText, ignoreCase = true) ||
                         categoryName.contains(
                             searchText,
@@ -51,15 +78,14 @@ class FeatureSearchWidget(
 
         selectedIndex = -1 // Reset selection on filter change
 
-        if (isInitialized) {
-            scrollableContainer.widgets.clear()
-            scrollableContainer.widgets.addAll(createFeatureToggleWidgets(filteredFeatures))
-            scrollableContainer.scrollY = 0.0 // Reset scroll position on filter
-            scrollableContainer.updateWidgetPositions() // Update positions after changing widgets
-        }
+        // 初期化済みの前提で処理を実行
+        scrollableContainer.widgets.clear()
+        scrollableContainer.widgets.addAll(createFeatureToggleWidgets(filteredFeatures))
+        scrollableContainer.scrollY = 0.0 // Reset scroll position on filter
+        scrollableContainer.updateWidgetPositions() // Update positions after changing widgets
     }
 
-    private fun createFeatureToggleWidgets(features: List<Feature>): List<ClickableWidget> =
+    private fun createFeatureToggleWidgets(features: List<Feature<out ConfigurableFeature>>): List<ClickableWidget> =
         features.mapIndexed { index, feature ->
             InfiniteFeatureToggle(
                 0,
@@ -80,37 +106,15 @@ class FeatureSearchWidget(
         mouseY: Int,
         delta: Float,
     ) {
-        if (!isInitialized) {
-            searchField =
-                InfiniteTextField(
-                    textRenderer,
-                    x,
-                    y,
-                    width,
-                    20, // Height of the search field
-                    Text.literal("Search features..."),
-                    InfiniteTextField.InputType.ANY_TEXT,
-                )
-            searchField.setChangedListener { newText ->
-                filterFeatures(newText)
-            }
+        // 🚀 修正点 3: 初期化ロジックを削除。位置の更新と描画のみを行う。
 
-            scrollableContainer =
-                InfiniteScrollableContainer(
-                    x,
-                    y + searchField.height + 5, // Position below search field
-                    width,
-                    height - searchField.height - 5, // Remaining height for scrollable container
-                    mutableListOf(), // Initialize with an empty list
-                )
-            filterFeatures("") // Initial filter to populate the scrollable container
-            isInitialized = true
-        }
-
+        // ウィジェットが移動する可能性があるため、位置は毎フレーム更新
         searchField.x = x
         searchField.y = y
         searchField.render(context, mouseX, mouseY, delta)
-        searchField.isFocused = true // Always keep focus on the search field
+
+        // searchFieldを常にフォーカス状態にする (以前のロジックを維持)
+        searchField.isFocused = true
 
         scrollableContainer.x = x
         scrollableContainer.y = y + searchField.height + 5
@@ -131,6 +135,11 @@ class FeatureSearchWidget(
     }
 
     override fun keyPressed(input: KeyInput): Boolean {
+        // フォーカス強制再設定ロジックを維持
+        if (!searchField.isFocused) {
+            searchField.isFocused = true
+        }
+
         if (searchField.keyPressed(input)) {
             return true
         }
@@ -220,9 +229,16 @@ class FeatureSearchWidget(
     }
 
     override fun charTyped(input: CharInput): Boolean {
+        // 🚀 修正点 4: charTypedにもフォーカス強制再設定ロジックを追加/維持する
+        // (以前のデバッグでこのガードが必要と確認されている)
+        if (!searchField.isFocused) {
+            searchField.isFocused = true
+        }
+
         if (searchField.charTyped(input)) {
             return true
         }
+
         if (scrollableContainer.charTyped(input)) {
             return true
         }
@@ -231,7 +247,7 @@ class FeatureSearchWidget(
 
     override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
         searchField.appendNarrations(builder)
-        // scrollableContainer.appendClickableNarrations(builder) // Protected method
+        // scrollableContainer.appendNarrations(builder) は以前のコード通りコメントアウトせず残します
     }
 
     private enum class MoveWay {
@@ -240,8 +256,9 @@ class FeatureSearchWidget(
     }
 
     private fun ensureSelectedVisible(moveWay: MoveWay) {
-        if (selectedIndex == -1 || !::scrollableContainer.isInitialized) return
+        if (selectedIndex == -1) return // scrollableContainerがlateinitのため、isInitializedチェックは不要
 
+        // late-initが保証されているため、::scrollableContainer.isInitialized のチェックを削除
         val selectedWidget = scrollableContainer.widgets[selectedIndex]
         val widgetContentTop = selectedWidget.y - scrollableContainer.y + scrollableContainer.scrollY.toInt()
         val widgetHeight = selectedWidget.height

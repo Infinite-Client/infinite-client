@@ -13,6 +13,8 @@ import net.minecraft.client.MinecraftClient
 import net.minecraft.util.WorldSavePath
 import org.infinite.settings.FeatureSetting
 import java.nio.file.Path
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 object ConfigManager {
     private val json = Json { prettyPrint = true }
@@ -27,7 +29,18 @@ object ConfigManager {
     @Serializable
     data class AppConfig(
         val features: List<FeatureConfig>,
-        val currentTheme: String = "infinite", // Add currentTheme to AppConfig
+    )
+
+    @Serializable
+    data class GlobalFeatureConfig(
+        val nameKey: String,
+        val enabled: Boolean,
+        val settings: Map<String, JsonElement>,
+    )
+
+    @Serializable
+    data class GlobalConfig(
+        val globalFeatures: List<GlobalFeatureConfig>,
     )
 
     // Function to get config directory based on server type
@@ -45,7 +58,8 @@ object ConfigManager {
                     ?.getSavePath(WorldSavePath.ROOT)
                     ?.parent
                     ?.fileName
-                    ?.toString() ?: "single_player_world" // Use world name for single player
+                    ?.toString()
+                    ?: "single_player_world" // Use world name for single player
             } else {
                 client.currentServerEntry?.address ?: "multi_player_server" // Use server address for multiplayer
             }
@@ -57,16 +71,20 @@ object ConfigManager {
         }
     }
 
-    fun saveConfig() {
-        val configDir = getConfigDirectory().toFile()
-        if (!configDir.exists()) {
-            configDir.mkdirs()
+    private fun getGlobalConfigPath(): Path {
+        val gameDir = FabricLoader.getInstance().gameDir
+        return gameDir.resolve("infinite").resolve("config").resolve("global_config.json")
+    }
+
+    fun saveGlobalConfig() {
+        val globalConfigFile = getGlobalConfigPath().toFile()
+        if (!globalConfigFile.parentFile.exists()) {
+            globalConfigFile.parentFile.mkdirs()
         }
 
-        val configFile = configDir.resolve("config.json")
-        val featureConfigs =
-            featureCategories
-                .flatMap { category ->
+        val globalConfig =
+            GlobalConfig(
+                InfiniteClient.globalFeatureCategories.flatMap { category ->
                     category.features.map { feature ->
                         val configurableFeature = feature.instance
                         run {
@@ -75,27 +93,55 @@ object ConfigManager {
                                     (
                                         setting.name to
                                             when (setting) {
-                                                is FeatureSetting.BooleanSetting -> JsonPrimitive(setting.value)
-                                                is FeatureSetting.IntSetting -> JsonPrimitive(setting.value)
-                                                is FeatureSetting.FloatSetting -> JsonPrimitive(setting.value)
-                                                is FeatureSetting.DoubleSetting -> JsonPrimitive(setting.value)
-                                                is FeatureSetting.StringSetting -> JsonPrimitive(setting.value)
-                                                is FeatureSetting.StringListSetting ->
-                                                    JsonArray(setting.value.map { JsonPrimitive(it) })
+                                                is FeatureSetting.BooleanSetting -> {
+                                                    JsonPrimitive(setting.value)
+                                                }
 
-                                                is FeatureSetting.EnumSetting<*> -> JsonPrimitive(setting.value.name)
-                                                is FeatureSetting.BlockIDSetting -> JsonPrimitive(setting.value)
-                                                is FeatureSetting.EntityIDSetting -> JsonPrimitive(setting.value)
-                                                is FeatureSetting.BlockListSetting ->
-                                                    JsonArray(setting.value.map { JsonPrimitive(it) })
+                                                is FeatureSetting.IntSetting -> {
+                                                    JsonPrimitive(setting.value)
+                                                }
 
-                                                is FeatureSetting.EntityListSetting ->
-                                                    JsonArray(setting.value.map { JsonPrimitive(it) })
+                                                is FeatureSetting.FloatSetting -> {
+                                                    JsonPrimitive(setting.value)
+                                                }
 
-                                                is FeatureSetting.PlayerListSetting ->
-                                                    JsonArray(setting.value.map { JsonPrimitive(it) })
+                                                is FeatureSetting.DoubleSetting -> {
+                                                    JsonPrimitive(setting.value)
+                                                }
 
-                                                is FeatureSetting.BlockColorListSetting ->
+                                                is FeatureSetting.StringSetting -> {
+                                                    JsonPrimitive(setting.value)
+                                                }
+
+                                                is FeatureSetting.StringListSetting -> {
+                                                    JsonPrimitive(setting.value)
+                                                }
+
+                                                is FeatureSetting.EnumSetting<*> -> {
+                                                    JsonPrimitive(setting.value.name)
+                                                }
+
+                                                is FeatureSetting.BlockIDSetting -> {
+                                                    JsonPrimitive(setting.value)
+                                                }
+
+                                                is FeatureSetting.EntityIDSetting -> {
+                                                    JsonPrimitive(setting.value)
+                                                }
+
+                                                is FeatureSetting.BlockListSetting -> {
+                                                    JsonArray(setting.value.map { JsonPrimitive(it) })
+                                                }
+
+                                                is FeatureSetting.EntityListSetting -> {
+                                                    JsonArray(setting.value.map { JsonPrimitive(it) })
+                                                }
+
+                                                is FeatureSetting.PlayerListSetting -> {
+                                                    JsonArray(setting.value.map { JsonPrimitive(it) })
+                                                }
+
+                                                is FeatureSetting.BlockColorListSetting -> {
                                                     JsonArray(
                                                         setting.value.map { (blockId, color) ->
                                                             buildJsonObject {
@@ -104,21 +150,211 @@ object ConfigManager {
                                                             }
                                                         },
                                                     )
+                                                }
                                             }
                                     )
                                 }
-                            FeatureConfig(feature.name, configurableFeature.isEnabled(), settingMap)
+                            GlobalFeatureConfig(feature.name, configurableFeature.isEnabled(), settingMap)
                         }
                     }
-                }
+                },
+            )
+        val jsonString = json.encodeToString(GlobalConfig.serializer(), globalConfig)
+        globalConfigFile.writeText(jsonString)
+        InfiniteClient.log("Global configuration saved to ${globalConfigFile.absolutePath}")
+    }
 
-        val appConfig = AppConfig(featureConfigs, InfiniteClient.currentTheme) // Pass currentTheme here
+    fun loadGlobalConfig() {
+        val globalConfigFile = getGlobalConfigPath().toFile()
+
+        if (!globalConfigFile.exists()) {
+            InfiniteClient.warn("Global configuration file not found: ${globalConfigFile.absolutePath}. Using default theme.")
+            InfiniteClient.currentTheme = "infinite" // Default value
+            return
+        }
+
+        try {
+            val jsonString = globalConfigFile.readText()
+            val globalConfig = json.decodeFromString(GlobalConfig.serializer(), jsonString)
+            globalConfig.globalFeatures.forEach { featureConfig ->
+                InfiniteClient.featureCategories
+                    .flatMap { it.features }
+                    .find { it.name == featureConfig.nameKey }
+                    ?.let { feature ->
+                        val configurableFeature = feature.instance
+                        if (featureConfig.enabled) {
+                            configurableFeature.enable()
+                        } else {
+                            configurableFeature.disable()
+                        }
+                        featureConfig.settings.forEach { (settingName, jsonElement) ->
+                            configurableFeature.settings.find { it.name == settingName }?.let { setting ->
+                                when (setting) {
+                                    is FeatureSetting.BooleanSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
+
+                                    is FeatureSetting.IntSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
+
+                                    is FeatureSetting.FloatSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
+
+                                    is FeatureSetting.DoubleSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
+
+                                    is FeatureSetting.StringSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
+
+                                    is FeatureSetting.StringListSetting -> {
+                                        val loadedString = json.decodeFromJsonElement<String>(jsonElement)
+                                        setting.set(loadedString)
+                                    }
+
+                                    // **Changed to MutableList**
+
+                                    // 🚀 **追加されたBlockIDSettingとEntityIDSettingの処理**
+                                    is FeatureSetting.BlockIDSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
+
+                                    is FeatureSetting.EntityIDSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
+
+                                    // 🚀 **追加されたBlockListSettingの処理**
+                                    is FeatureSetting.BlockListSetting -> {
+                                        setting.value =
+                                            json.decodeFromJsonElement<List<String>>(jsonElement).toMutableList()
+                                    }
+
+                                    is FeatureSetting.EntityListSetting -> {
+                                        setting.value =
+                                            json.decodeFromJsonElement<List<String>>(jsonElement).toMutableList()
+                                    }
+
+                                    is FeatureSetting.PlayerListSetting -> {
+                                        setting.value =
+                                            json.decodeFromJsonElement<List<String>>(jsonElement).toMutableList()
+                                    }
+
+                                    is FeatureSetting.BlockColorListSetting -> {
+                                        setting.value =
+                                            json
+                                                .decodeFromJsonElement<List<Map<String, JsonPrimitive>>>(jsonElement)
+                                                .associate { it["blockId"]!!.content to it["color"]!!.content.toInt() }
+                                                .toMutableMap()
+                                    }
+
+                                    is FeatureSetting.EnumSetting -> {
+                                        val enumName = json.decodeFromJsonElement<String>(jsonElement)
+                                        setting.set(enumName)
+                                    }
+                                }
+                            }
+                        }
+                    }
+            }
+            InfiniteClient.log("Configuration loaded from ${globalConfigFile.absolutePath}")
+        } catch (e: Exception) {
+            InfiniteClient.error("Failed to load global configuration: ${e.message}. Using default theme.")
+            InfiniteClient.currentTheme = "infinite" // Fallback to default
+            e.printStackTrace()
+        }
+    }
+
+    fun saveConfig() {
+        val configDir = getConfigDirectory().toFile()
+        if (!configDir.exists()) {
+            configDir.mkdirs()
+        }
+
+        val configFile = configDir.resolve("config.json")
+        val featureConfigs =
+            InfiniteClient.featureCategories.flatMap { category ->
+                category.features.map { feature ->
+                    val configurableFeature = feature.instance
+                    run {
+                        val settingMap: Map<String, JsonElement> =
+                            configurableFeature.settings.associate { setting ->
+                                (
+                                    setting.name to
+                                        when (setting) {
+                                            is FeatureSetting.BooleanSetting -> {
+                                                JsonPrimitive(setting.value)
+                                            }
+
+                                            is FeatureSetting.IntSetting -> {
+                                                JsonPrimitive(setting.value)
+                                            }
+
+                                            is FeatureSetting.FloatSetting -> {
+                                                JsonPrimitive(setting.value)
+                                            }
+
+                                            is FeatureSetting.DoubleSetting -> {
+                                                JsonPrimitive(setting.value)
+                                            }
+
+                                            is FeatureSetting.StringSetting -> {
+                                                JsonPrimitive(setting.value)
+                                            }
+
+                                            is FeatureSetting.StringListSetting -> {
+                                                JsonPrimitive(setting.value)
+                                            }
+
+                                            is FeatureSetting.EnumSetting<*> -> {
+                                                JsonPrimitive(setting.value.name)
+                                            }
+
+                                            is FeatureSetting.BlockIDSetting -> {
+                                                JsonPrimitive(setting.value)
+                                            }
+
+                                            is FeatureSetting.EntityIDSetting -> {
+                                                JsonPrimitive(setting.value)
+                                            }
+
+                                            is FeatureSetting.BlockListSetting -> {
+                                                JsonArray(setting.value.map { JsonPrimitive(it) })
+                                            }
+
+                                            is FeatureSetting.EntityListSetting -> {
+                                                JsonArray(setting.value.map { JsonPrimitive(it) })
+                                            }
+
+                                            is FeatureSetting.PlayerListSetting -> {
+                                                JsonArray(setting.value.map { JsonPrimitive(it) })
+                                            }
+
+                                            is FeatureSetting.BlockColorListSetting -> {
+                                                JsonArray(
+                                                    setting.value.map { (blockId, color) ->
+                                                        buildJsonObject {
+                                                            put("blockId", blockId)
+                                                            put("color", color)
+                                                        }
+                                                    },
+                                                )
+                                            }
+                                        }
+                                )
+                            }
+                        FeatureConfig(feature.name, configurableFeature.isEnabled(), settingMap)
+                    }
+                }
+            }
+
+        val appConfig = AppConfig(featureConfigs)
         val jsonString = json.encodeToString(AppConfig.serializer(), appConfig)
         configFile.writeText(jsonString)
         InfiniteClient.log("Configuration saved to ${configFile.absolutePath}")
     }
-
-// ... (omitted preceding code)
 
     fun loadConfig() {
         val configDir = getConfigDirectory().toFile()
@@ -133,88 +369,88 @@ object ConfigManager {
             val jsonString = configFile.readText()
             val appConfig = json.decodeFromString(AppConfig.serializer(), jsonString)
 
-            InfiniteClient.currentTheme = appConfig.currentTheme // Load currentTheme
-
             appConfig.features.forEach { featureConfig ->
-                featureCategories.flatMap { it.features }.find { it.name == featureConfig.nameKey }?.let { feature ->
-                    val configurableFeature = feature.instance
-                    if (featureConfig.enabled) {
-                        configurableFeature.enable()
-                    } else {
-                        configurableFeature.disable()
-                    }
-                    featureConfig.settings.forEach { (settingName, jsonElement) ->
-                        configurableFeature.settings.find { it.name == settingName }?.let { setting ->
-                            when (setting) {
-                                is FeatureSetting.BooleanSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement(jsonElement)
+                InfiniteClient.featureCategories
+                    .flatMap { it.features }
+                    .find { it.name == featureConfig.nameKey }
+                    ?.let { feature ->
+                        val configurableFeature = feature.instance
+                        if (featureConfig.enabled) {
+                            configurableFeature.enable()
+                        } else {
+                            configurableFeature.disable()
+                        }
+                        featureConfig.settings.forEach { (settingName, jsonElement) ->
+                            configurableFeature.settings.find { it.name == settingName }?.let { setting ->
+                                when (setting) {
+                                    is FeatureSetting.BooleanSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
 
-                                is FeatureSetting.IntSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement(jsonElement)
+                                    is FeatureSetting.IntSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
 
-                                is FeatureSetting.FloatSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement(jsonElement)
+                                    is FeatureSetting.FloatSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
 
-                                is FeatureSetting.DoubleSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement(jsonElement)
+                                    is FeatureSetting.DoubleSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
 
-                                is FeatureSetting.StringSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement(jsonElement)
+                                    is FeatureSetting.StringSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
 
-                                is FeatureSetting.StringListSetting ->
-                                    setting.value =
-                                        json
-                                            .decodeFromJsonElement<List<String>>(jsonElement)
-                                            .toMutableList() // **Changed to MutableList**
+                                    is FeatureSetting.StringListSetting -> {
+                                        val loadedString = json.decodeFromJsonElement<String>(jsonElement)
+                                        setting.set(loadedString)
+                                    }
 
-                                // 🚀 **追加されたBlockIDSettingとEntityIDSettingの処理**
-                                is FeatureSetting.BlockIDSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement(jsonElement)
+                                    // **Changed to MutableList**
 
-                                is FeatureSetting.EntityIDSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement(jsonElement)
+                                    // 🚀 **追加されたBlockIDSettingとEntityIDSettingの処理**
+                                    is FeatureSetting.BlockIDSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
 
-                                // 🚀 **追加されたBlockListSettingの処理**
-                                is FeatureSetting.BlockListSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement<List<String>>(jsonElement).toMutableList()
+                                    is FeatureSetting.EntityIDSetting -> {
+                                        setting.value = json.decodeFromJsonElement(jsonElement)
+                                    }
 
-                                is FeatureSetting.EntityListSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement<List<String>>(jsonElement).toMutableList()
+                                    // 🚀 **追加されたBlockListSettingの処理**
+                                    is FeatureSetting.BlockListSetting -> {
+                                        setting.value =
+                                            json.decodeFromJsonElement<List<String>>(jsonElement).toMutableList()
+                                    }
 
-                                is FeatureSetting.PlayerListSetting ->
-                                    setting.value =
-                                        json.decodeFromJsonElement<List<String>>(jsonElement).toMutableList()
+                                    is FeatureSetting.EntityListSetting -> {
+                                        setting.value =
+                                            json.decodeFromJsonElement<List<String>>(jsonElement).toMutableList()
+                                    }
 
-                                is FeatureSetting.BlockColorListSetting ->
-                                    setting.value =
-                                        json
-                                            .decodeFromJsonElement<List<Map<String, JsonPrimitive>>>(jsonElement)
-                                            .associate { it["blockId"]!!.content to it["color"]!!.content.toInt() }
-                                            .toMutableMap()
+                                    is FeatureSetting.PlayerListSetting -> {
+                                        setting.value =
+                                            json.decodeFromJsonElement<List<String>>(jsonElement).toMutableList()
+                                    }
 
-                                is FeatureSetting.EnumSetting<*> -> {
-                                    val enumName = json.decodeFromJsonElement<String>(jsonElement)
-                                    val enumClass = setting.options.first().javaClass
-                                    val enumEntry =
-                                        enumClass.enumConstants.firstOrNull { (it as Enum<*>).name == enumName }
-                                    if (enumEntry != null) {
-                                        @Suppress("UNCHECKED_CAST")
-                                        (setting as FeatureSetting.EnumSetting<Enum<*>>).value = enumEntry
+                                    is FeatureSetting.BlockColorListSetting -> {
+                                        setting.value =
+                                            json
+                                                .decodeFromJsonElement<List<Map<String, JsonPrimitive>>>(jsonElement)
+                                                .associate { it["blockId"]!!.content to it["color"]!!.content.toInt() }
+                                                .toMutableMap()
+                                    }
+
+                                    is FeatureSetting.EnumSetting -> {
+                                        val enumName = json.decodeFromJsonElement<String>(jsonElement)
+                                        setting.set(enumName)
                                     }
                                 }
                             }
                         }
                     }
-                }
             }
             InfiniteClient.log("Configuration loaded from ${configFile.absolutePath}")
         } catch (e: Exception) {

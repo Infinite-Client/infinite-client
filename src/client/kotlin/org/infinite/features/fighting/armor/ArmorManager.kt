@@ -6,13 +6,12 @@ import net.minecraft.enchantment.Enchantments
 import net.minecraft.entity.EquipmentSlot
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket
 import net.minecraft.registry.Registries
-import org.infinite.ConfigurableFeature
-import org.infinite.FeatureLevel
 import org.infinite.InfiniteClient
-import org.infinite.libs.client.player.inventory.InventoryManager
-import org.infinite.libs.client.player.inventory.InventoryManager.InventoryIndex
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.features.utils.backpack.BackPackManager
+import org.infinite.libs.client.inventory.InventoryManager
+import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
 import org.infinite.settings.FeatureSetting
 import org.infinite.settings.FeatureSetting.BooleanSetting
 import org.infinite.settings.FeatureSetting.IntSetting
@@ -61,11 +60,11 @@ private val ARMOR_TOUGHNESS_VALUES =
 
 class ArmorManager : ConfigurableFeature(initialEnabled = false) {
     private val autoEquip: BooleanSetting =
-        BooleanSetting("AutoEquip", "feature.fighting.armormanager.autoequip.description", true)
-    private val elytraSwitch: BooleanSetting =
-        BooleanSetting("ElytraSwitch", "feature.fighting.armormanager.autoelytra.description", true)
+        BooleanSetting("AutoEquip", true)
+    val elytraSwitch: BooleanSetting =
+        BooleanSetting("ElytraSwitch", true)
     private val durabilityThreshold: IntSetting =
-        IntSetting("DurabilityThreshold", "feature.fighting.armormanager.ignorebelow.description", 5, 0, 100)
+        IntSetting("DurabilityThreshold", 5, 0, 100)
 
     override val settings: List<FeatureSetting<*>> =
         listOf(
@@ -80,13 +79,15 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
     private var shouldSendElytraPacket: Boolean = false
     private var floatTick: Int = 0
 
+    // 前のティックでジャンプキーが押されていたかを追跡
+    private var wasJumpKeyPressed: Boolean = false
+    private var wasTouchingWater: Boolean = false
     override val level: FeatureLevel
-        get() = FeatureLevel.EXTEND
+        get() = FeatureLevel.Extend
 
-    override fun tick() {
-        val player = InfiniteClient.playerInterface.player ?: return
+    override fun onTick() {
+        val player = player ?: return
         val invManager = InventoryManager
-        val client = InfiniteClient.playerInterface.client
 
         // Skip if a screen is open (e.g., inventory GUI)
         if (client.currentScreen != null) return
@@ -114,7 +115,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
 
         // Handle elytra packet sending for immediate gliding
         if (shouldSendElytraPacket && currentChestStack.item == Items.ELYTRA) {
-            sendStartFallFlyingPacket(player)
+//            sendStartFallFlyingPacket(player)
             shouldSendElytraPacket = false
         }
     }
@@ -127,8 +128,9 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
         val currentChestStack = invManager.get(chestSlotIndex)
         val isCurrentElytra = currentChestStack.item == Items.ELYTRA
         val options = MinecraftClient.getInstance().options ?: return
-        // ★追加: Zキーによる手動解除のチェック
         val isReleaseElytraPressed = options.sneakKey.isPressed && options.sprintKey.isPressed
+        val backPackManager = InfiniteClient.getFeature(BackPackManager::class.java)
+
         // Handle elytra unequip logic (自動解除 または 手動解除)
         if (isElytraEquippedByHack) {
             if (!isCurrentElytra) {
@@ -139,32 +141,37 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
             val shouldAutoUnequip = player.isOnGround || player.isTouchingWater
 
             if (shouldAutoUnequip || isReleaseElytraPressed) {
-                var swapped = false
-                // 優先: 以前のアイテムがまだpreviousSlotにあるか確認してからスワップ
-                if (previousSlot != null && !previousChestplate.isEmpty) {
-                    val itemInPreviousSlot = invManager.get(previousSlot!!)
-                    if (itemInPreviousSlot.item == previousChestplate.item) {
-                        swapped = invManager.swap(chestSlotIndex, previousSlot!!)
-                    }
-                }
-                if (!swapped) {
-                    val originalChestSlot = invManager.findFirst(previousChestplate.item)
-                    if (originalChestSlot != null) {
-                        swapped = invManager.swap(chestSlotIndex, originalChestSlot)
-                    } else {
-                        val emptySlot = invManager.findFirstEmptyBackpackSlot()
-                        if (emptySlot != null) {
-                            swapped = invManager.swap(chestSlotIndex, emptySlot)
-                        } else {
-                            invManager.drop(chestSlotIndex)
-                            swapped = true
+                // ★ BackPackManagerの一時停止/再開をregisterで置き換え
+                backPackManager?.register {
+                    var swapped = false
+                    // 優先: 以前のアイテムがまだpreviousSlotにあるか確認してからスワップ
+                    if (previousSlot != null && !previousChestplate.isEmpty) {
+                        val itemInPreviousSlot = invManager.get(previousSlot!!)
+                        if (itemInPreviousSlot.item == previousChestplate.item) {
+                            swapped = invManager.swap(chestSlotIndex, previousSlot!!)
                         }
                     }
-                }
+                    if (!swapped) {
+                        val originalChestSlot = invManager.findFirst(previousChestplate.item)
+                        if (originalChestSlot != null) {
+                            swapped = invManager.swap(chestSlotIndex, originalChestSlot)
+                        } else {
+                            val emptySlot = invManager.findFirstEmptyBackpackSlot()
+                            if (emptySlot != null) {
+                                swapped = invManager.swap(chestSlotIndex, emptySlot)
+                            } else {
+                                invManager.drop(chestSlotIndex)
+                                swapped = true
+                            }
+                        }
+                    }
 
-                if (swapped) {
-                    resetElytraState() // 成功したら状態をリセット
+                    if (swapped) {
+                        resetElytraState() // 成功したら状態をリセット
+                    }
                 }
+                // UnEquip時はwasJumpKeyPressedをリセット
+                wasJumpKeyPressed = options.jumpKey.isPressed
                 return // Exit to avoid multiple operations in one tick
             }
         }
@@ -173,8 +180,24 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
         floatTick = if (player.isOnGround) 0 else floatTick + 1
 
         // Trigger elytra equip if jumping in mid-air
-        val jumpInput = InfiniteClient.playerInterface.client.options.jumpKey.isPressed
-        val shouldAttemptElytra = jumpInput && !player.isOnGround && floatTick > 2 && !isCurrentElytra
+        val jumpInput = options.jumpKey.isPressed
+
+        // ★追加: 水中脱出の例外条件
+        // ピッチ角が-70.0度以下（-90度が真上）の場合を「上を向いている」と判断
+        val isLookingUpward = player.pitch <= -70.0f
+        // 水中でジャンプキーが押されていて、真上を向いている場合、キー長押しを許可
+        val isWaterEscapeAttempt = jumpInput && player.isTouchingWater && isLookingUpward && !wasTouchingWater
+
+        // デフォルトの空中ジャンプ条件: 水中でない かつ 新規ジャンプ入力が必要
+        val isAirJumpAttempt = (jumpInput && !wasJumpKeyPressed) && !player.isTouchingWater
+
+        // エリトラ装着を試みるべき最終条件:
+        // (新規ジャンプ または 水中脱出) かつ (空中浮遊中) かつ (遅延後) かつ (エリトラ未装着)
+        val shouldAttemptElytra =
+            (isAirJumpAttempt || isWaterEscapeAttempt) &&
+                !player.isOnGround &&
+                floatTick > 2 &&
+                !isCurrentElytra
 
         if (shouldAttemptElytra && !isElytraEquippedByHack) {
             val elytraSlot = findBestElytraSlot(invManager)
@@ -183,16 +206,25 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
                 previousChestplate = currentChestStack.copy()
                 previousSlot = elytraSlot
 
-                if (invManager.swap(chestSlotIndex, elytraSlot)) {
-                    isElytraEquippedByHack = true
-                    shouldSendElytraPacket = true
-                    return // Exit to ensure swap completes before further actions
-                } else {
-                    // スワップ失敗時は状態をリセット
-                    resetElytraState()
+                // ★ BackPackManagerの一時停止/再開をregisterで置き換え
+                backPackManager?.register {
+                    if (invManager.swap(chestSlotIndex, elytraSlot)) {
+                        isElytraEquippedByHack = true
+                        shouldSendElytraPacket = true
+                        // 装備に成功した場合は、次のティックのために状態を更新
+                        wasJumpKeyPressed = true
+                    } else {
+                        // スワップ失敗時は状態をリセット
+                        resetElytraState()
+                    }
                 }
+                return // Exit to ensure swap completes before further actions
             }
         }
+
+        // 次のティックのためにジャンプキーの状態を更新
+        wasJumpKeyPressed = jumpInput
+        wasTouchingWater = player.isTouchingWater
     }
 
     private fun resetElytraState() {
@@ -200,11 +232,6 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
         previousChestplate = ItemStack.EMPTY
         isElytraEquippedByHack = false
         shouldSendElytraPacket = false
-    }
-
-    private fun sendStartFallFlyingPacket(player: ClientPlayerEntity) {
-        val packet = ClientCommandC2SPacket(player, ClientCommandC2SPacket.Mode.START_FALL_FLYING)
-        player.networkHandler.sendPacket(packet)
     }
 
     private fun handleAutoEquip(invManager: InventoryManager) {
@@ -224,7 +251,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
                     EquipmentSlot.HEAD -> InventoryIndex.Armor.Head()
                     EquipmentSlot.CHEST -> InventoryIndex.Armor.Chest()
                     EquipmentSlot.LEGS -> InventoryIndex.Armor.Legs()
-                    EquipmentSlot.FEET -> InventoryIndex.Armor.Feet()
+                    EquipmentSlot.FEET -> InventoryIndex.Armor.Foots()
                     else -> continue
                 }
 
@@ -252,6 +279,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
             }
         }
 
+        val backPackManager = InfiniteClient.getFeature(BackPackManager::class.java)
         for (slot in slots.shuffled()) {
             val data = bestArmorData[slot] ?: continue
             if (data.invSlot == -1) continue
@@ -266,12 +294,15 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
                     EquipmentSlot.HEAD -> InventoryIndex.Armor.Head()
                     EquipmentSlot.CHEST -> InventoryIndex.Armor.Chest()
                     EquipmentSlot.LEGS -> InventoryIndex.Armor.Legs()
-                    EquipmentSlot.FEET -> InventoryIndex.Armor.Feet()
+                    EquipmentSlot.FEET -> InventoryIndex.Armor.Foots()
                     else -> continue
                 }
 
-            if (invManager.swap(armorSlot, inventoryIndex)) {
-                return // Process one swap per tick
+            // ★ BackPackManagerの一時停止/再開をregisterで置き換え
+            backPackManager?.register {
+                if (invManager.swap(armorSlot, inventoryIndex)) {
+                    return@register // Process one swap per tick
+                }
             }
         }
     }

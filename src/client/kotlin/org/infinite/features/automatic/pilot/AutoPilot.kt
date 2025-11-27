@@ -18,14 +18,15 @@ import net.minecraft.util.math.Box
 import net.minecraft.util.math.MathHelper
 import net.minecraft.util.math.Vec3d
 import net.minecraft.world.Heightmap
-import org.infinite.ConfigurableFeature
 import org.infinite.InfiniteClient
-import org.infinite.features.movement.boat.HoverBoat
-import org.infinite.libs.client.player.fighting.AimInterface
-import org.infinite.libs.client.player.fighting.aim.AimTaskConditionReturn
-import org.infinite.libs.client.player.fighting.aim.CameraRoll
-import org.infinite.libs.client.player.inventory.InventoryManager
-import org.infinite.libs.client.player.inventory.InventoryManager.InventoryIndex
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.features.movement.vehicle.HoverVehicle
+import org.infinite.features.utils.backpack.BackPackManager
+import org.infinite.libs.client.aim.AimInterface
+import org.infinite.libs.client.aim.camera.CameraRoll
+import org.infinite.libs.client.aim.task.condition.AimTaskConditionReturn
+import org.infinite.libs.client.inventory.InventoryManager
+import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.render.RenderUtils
@@ -72,7 +73,7 @@ enum class PilotState {
 
 // AutoPilot メイン機能クラス
 class AutoPilot : ConfigurableFeature(initialEnabled = false) {
-    override fun disabled() {
+    override fun onDisabled() {
         MinecraftClient
             .getInstance()
             .options.jumpKey.isPressed = false
@@ -85,7 +86,6 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     val fallDir =
         FeatureSetting.DoubleSetting(
             "FallDirection",
-            "feature.automatic.autopilot.falldirection.description",
             defaultFallDir,
             defaultFallDir - 10,
             defaultFallDir + 10,
@@ -93,7 +93,6 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     val riseDir =
         FeatureSetting.DoubleSetting(
             "RiseDirection",
-            "feature.automatic.autopilot.risingdirection.description",
             defaultRiseDir,
             defaultRiseDir - 10,
             defaultRiseDir + 10,
@@ -101,7 +100,6 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     val glidingDir =
         FeatureSetting.DoubleSetting(
             "GlidingDirection",
-            "feature.automatic.autopilot.glidingdirection.description",
             20.0,
             bestGlidingDir,
             defaultFallDir,
@@ -109,7 +107,6 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     val elytraThreshold =
         FeatureSetting.IntSetting(
             "ElytraThreshold",
-            "feature.automatic.autopilot.elytrathreshold.description",
             5,
             1,
             50,
@@ -117,13 +114,11 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     private val swapElytra =
         FeatureSetting.BooleanSetting(
             "SwapElytra",
-            "feature.automatic.autopilot.swapelytra.description",
             true,
         )
     val standardHeight =
         FeatureSetting.IntSetting(
             "StandardHeight",
-            "feature.automatic.autopilot.standardheight.description",
             512,
             256,
             1024,
@@ -131,7 +126,6 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     val landingDir =
         FeatureSetting.DoubleSetting(
             "LandingDirectory",
-            "feature.automatic.autopilot.landingdirectory.description",
             -14.0,
             -45.0,
             0.0,
@@ -139,7 +133,6 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     val emergencyLandingThreshold =
         FeatureSetting.IntSetting(
             "EmergencyLandingThreshold",
-            "feature.automatic.autopilot.emergencylandingthreshold.description",
             60,
             10,
             300,
@@ -147,7 +140,6 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     val collisionDetectionDistance =
         FeatureSetting.IntSetting(
             "CollisionDetectionDistance",
-            "feature.automatic.autopilot.collisiondetectiondistance.description",
             10,
             3,
             30,
@@ -155,13 +147,11 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     val jetFlightMode =
         FeatureSetting.BooleanSetting(
             "JetFlight",
-            "feature.automatic.autopilot.jetflight.description",
             false,
         )
     val jetSpeedLimit =
         FeatureSetting.DoubleSetting(
             "JetSpeedLimit",
-            "feature.automatic.autopilot.jetspeedlimit.description",
             30.0,
             10.0,
             50.0,
@@ -169,15 +159,14 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
     val jetAcceleration =
         FeatureSetting.DoubleSetting(
             "JetAcceleration",
-            "feature.automatic.autopilot.jetacceleration.description",
             0.5,
             0.0,
             1.0,
         )
     private val targetX =
-        FeatureSetting.IntSetting("TargetX", "feature.automatic.autopilot.targetx.description", 0, -30000000, 30000000)
+        FeatureSetting.IntSetting("TargetX", 0, -30000000, 30000000)
     private val targetZ =
-        FeatureSetting.IntSetting("TargetZ", "feature.automatic.autopilot.targetz.description", 0, -30000000, 30000000)
+        FeatureSetting.IntSetting("TargetZ", 0, -30000000, 30000000)
     override val settings: List<FeatureSetting<*>> =
         listOf(
             targetX,
@@ -274,7 +263,7 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
         return blockState.isOf(Blocks.WATER)
     }
 
-    override fun start() {
+    override fun onStart() {
         reconnectInterval = 20
         aimTaskCallBack = null // AimTaskの状態をリセット
         state = PilotState.Idle // 状態を適切に初期化
@@ -283,7 +272,7 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
         bestLandingSpot = null // 着陸地点をリセット
     }
 
-    override fun tick() {
+    override fun onTick() {
         if (reconnectInterval > 0) {
             if (player != null) {
                 reconnectInterval--
@@ -291,7 +280,7 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
             return
         }
         if (jetFlightMode.value) {
-            if (!InfiniteClient.isFeatureEnabled(HoverBoat::class.java)) {
+            if (!InfiniteClient.isFeatureEnabled(HoverVehicle::class.java)) {
                 InfiniteClient.error(Text.translatable("autopilot.error.hoverboat").string)
                 disable()
                 return
@@ -423,30 +412,34 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
         val equippedElytraStack = invManager.get(InventoryIndex.Armor.Chest())
         val isElytraEquipped = isElytra(equippedElytraStack)
         val currentDurability = if (isElytraEquipped) elytraDurability() else 0.0
+        val backPackManager = InfiniteClient.getFeature(BackPackManager::class.java)
 
         val needsSwap = !isElytraEquipped || (currentDurability <= elytraThreshold.value)
         if (needsSwap) {
             val bestElytra = findBestElytraInInventory()
             if (bestElytra != null) {
-                if (invManager.swap(InventoryIndex.Armor.Chest(), bestElytra.index)) {
-                    val swapMessage =
-                        if (isElytraEquipped) {
-                            Text
-                                .translatable(
-                                    "autopilot.elytra.swapped.low_durability",
-                                    currentDurability.roundToInt(),
-                                    bestElytra.durability.roundToInt(),
-                                ).string
-                        } else {
-                            Text
-                                .translatable(
-                                    "autopilot.elytra.swapped.not_equipped",
-                                    bestElytra.durability.roundToInt(),
-                                ).string
-                        }
-                    InfiniteClient.info(swapMessage)
-                } else {
-                    InfiniteClient.error(Text.translatable("autopilot.elytra.swap_failed").string)
+                // ★ BackPackManagerの一時停止/再開をregisterで置き換え
+                backPackManager?.register {
+                    if (invManager.swap(InventoryIndex.Armor.Chest(), bestElytra.index)) {
+                        val swapMessage =
+                            if (isElytraEquipped) {
+                                Text
+                                    .translatable(
+                                        "autopilot.elytra.swapped.low_durability",
+                                        currentDurability.roundToInt(),
+                                        bestElytra.durability.roundToInt(),
+                                    ).string
+                            } else {
+                                Text
+                                    .translatable(
+                                        "autopilot.elytra.swapped.not_equipped",
+                                        bestElytra.durability.roundToInt(),
+                                    ).string
+                            }
+                        InfiniteClient.info(swapMessage)
+                    } else {
+                        InfiniteClient.error(Text.translatable("autopilot.elytra.swap_failed").string)
+                    }
                 }
             } else if (player?.vehicle !is BoatEntity) {
                 if (isElytraEquipped) {
@@ -472,7 +465,7 @@ class AutoPilot : ConfigurableFeature(initialEnabled = false) {
         }
     }
 
-    override fun enabled() {
+    override fun onEnabled() {
         moveSpeedAverage = moveSpeed
         riseSpeedAverage = riseSpeed
         state = if (player?.vehicle is BoatEntity && isBoatOnWater()) PilotState.TakingOff else PilotState.Idle

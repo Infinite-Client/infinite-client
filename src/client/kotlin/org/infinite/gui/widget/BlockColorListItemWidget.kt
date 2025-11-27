@@ -13,6 +13,7 @@ import net.minecraft.registry.Registries
 import net.minecraft.text.Text
 import net.minecraft.util.Identifier
 import org.infinite.InfiniteClient
+import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.drawBorder
 
 class BlockColorListItemWidget(
@@ -62,6 +63,8 @@ class BlockColorListItemWidget(
         mouseY: Int,
         delta: Float,
     ) {
+        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+
         // 1. アイテム全体の背景 (ホバー時のみ)
         if (this.isHovered) {
             context.fill(
@@ -70,8 +73,8 @@ class BlockColorListItemWidget(
                 this.x + this.width,
                 this.y + this.height,
                 InfiniteClient
-                    .theme()
-                    .colors.primaryColor,
+                    .currentColors()
+                    .primaryColor,
             )
         }
 
@@ -82,18 +85,17 @@ class BlockColorListItemWidget(
         // 2. アイコンの描画
         val itemStack = getItemStackFromId(blockId)
         context.drawItem(itemStack, iconX, iconY)
-
         // 3. テキストの描画
         val textX = iconX + iconTotalWidth
         val textY = y + this.height / 2 - 4
-        context.drawTextWithShadow(
-            textRenderer,
+        graphics2D.drawText(
             Text.literal(blockId),
             textX,
             textY,
             InfiniteClient
-                .theme()
-                .colors.foregroundColor,
+                .currentColors()
+                .foregroundColor,
+            true, // shadow = true
         )
 
         // 4. カラーボックスの描画
@@ -112,8 +114,8 @@ class BlockColorListItemWidget(
             colorBoxSize,
             colorBoxSize,
             InfiniteClient
-                .theme()
-                .colors.backgroundColor,
+                .currentColors()
+                .backgroundColor,
         )
 
         // 5. 削除ボタンの描画
@@ -121,12 +123,12 @@ class BlockColorListItemWidget(
 
         val baseColor =
             InfiniteClient
-                .theme()
-                .colors.errorColor
+                .currentColors()
+                .errorColor
         val hoverColor =
             InfiniteClient
-                .theme()
-                .colors.errorColor
+                .currentColors()
+                .errorColor
         val removeColor = if (isRemoveButtonHovered) hoverColor else baseColor
 
         context.fill(
@@ -142,20 +144,19 @@ class BlockColorListItemWidget(
             removeButtonWidth,
             removeButtonHeight,
             InfiniteClient
-                .theme()
-                .colors.backgroundColor,
+                .currentColors()
+                .backgroundColor,
         )
 
         // 削除テキスト 'x' の描画
-        context.drawText(
-            textRenderer,
+        graphics2D.drawText(
             "x",
             removeButtonX + removeButtonWidth / 2 - 3,
             removeButtonY + this.height / 2 - 4,
             InfiniteClient
-                .theme()
-                .colors.foregroundColor,
-            false,
+                .currentColors()
+                .foregroundColor,
+            false, // shadow = false
         )
     }
 

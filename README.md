@@ -12,8 +12,8 @@
 
 ## 🌐 Links
 
-- [GitHub Repository](https://github.com/The-Infinitys/minecraft.infinite-client)  
-- [Official Homepage](https://the-infinitys.f5.si/minecraft/infinite-client)
+- [GitHub Repositories](https://github.com/Infinite-Client/)  
+- [Official Homepage](https://infinite-client.infinityon.com/)
 
 ---
 

@@ -1,8 +1,6 @@
 package org.infinite.features.fighting.gun
 
 import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.render.RenderTickCounter
 import net.minecraft.client.world.ClientWorld
 import net.minecraft.entity.Entity
 import net.minecraft.util.hit.HitResult
@@ -10,7 +8,6 @@ import net.minecraft.util.math.Box
 import net.minecraft.util.math.Vec3d
 import net.minecraft.world.RaycastContext
 import org.infinite.InfiniteClient
-import org.infinite.features.rendering.detailinfo.DetailInfo
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.utils.rendering.getRainbowColor
@@ -20,14 +17,9 @@ import kotlin.math.sin
 object GunnerRenderer {
     private fun gunner(): Gunner? = InfiniteClient.getFeature(Gunner::class.java)
 
-    fun renderInfo(
-        context: DrawContext,
-        tickCounter: RenderTickCounter,
-    ) {
-        val graphics2D = Graphics2D(context, tickCounter)
-        val scaledWidth = context.scaledWindowWidth
-        val scaledHeight = context.scaledWindowHeight // 注意: getScaledWindowHeight() を使用（DrawContextのメソッド）
-
+    fun renderInfo(graphics2D: Graphics2D) {
+        val width = graphics2D.width
+        val height = graphics2D.height
         val gunner = gunner() ?: return
         val gunnerCount = gunner.gunnerCount()
         val totalCrossbow = gunner.totalCrossbows()
@@ -43,8 +35,8 @@ object GunnerRenderer {
             }.toInt()
 
         // ホットバーの位置を模倣: 中央X = scaledWidth / 2, Y = scaledHeight - 22 (ホットバー背景のY)
-        val hotbarY = scaledHeight - 22
-        val centerX = scaledWidth / 2
+        val hotbarY = height - 22
+        val centerX = width / 2
 
         // ホットバー背景を描画（mixinで標準ホットバーを取り消しているため、カスタム背景を追加）
         // ホットバー幅182px、高さ22pxを基準に
@@ -54,7 +46,7 @@ object GunnerRenderer {
         graphics2D.fill(hotbarX, hotbarY, hotbarWidth, hotbarHeight, 0x80000000.toInt()) // 半透明黒背景（標準ホットバーの代わり）
 
         // クロスボウ状況テキスト: ホットバー中央に配置（アイテム描画位置を参考にY調整）
-        val itemRenderY = scaledHeight - 16 - 3 // hotbarコードのo位置
+        val itemRenderY = height - 16 - 3 // hotbarコードのo位置
         val bowText = "$loadedCrossbow / $totalCrossbow"
         val bowTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(bowText)
         graphics2D.drawText(
@@ -95,77 +87,6 @@ object GunnerRenderer {
             // 進捗バー
             val filledWidth = (barWidth * progress).toInt()
             graphics2D.fill(barX, barY, filledWidth, barHeight, bowColor)
-        }
-    }
-
-    fun renderSight(
-        context: DrawContext,
-        tickCounter: RenderTickCounter,
-    ) {
-        val graphics2D = Graphics2D(context, tickCounter)
-        val rainbowColor = getRainbowColor()
-        val scaledWidth = context.scaledWindowWidth
-        val scaledHeight = context.scaledWindowHeight
-        val boxSize = 16
-        val detailInfo = InfiniteClient.getFeature(DetailInfo::class.java) ?: return
-        val cameraEntity = MinecraftClient.getInstance().cameraEntity ?: return
-        val reach = 10.0
-        val targetHit = detailInfo.findCrosshairTarget(cameraEntity, reach, reach)
-        when (targetHit.type) {
-            HitResult.Type.ENTITY -> {
-                graphics2D.drawBorder(
-                    scaledWidth / 2 - boxSize / 2,
-                    scaledHeight / 2 - boxSize / 2,
-                    boxSize,
-                    boxSize,
-                    rainbowColor,
-                )
-                graphics2D.drawLine(
-                    scaledWidth / 2f - boxSize,
-                    scaledHeight / 2f,
-                    scaledWidth / 2f + boxSize,
-                    scaledHeight / 2f,
-                    rainbowColor,
-                    2,
-                )
-                graphics2D.drawLine(
-                    scaledWidth / 2f,
-                    scaledHeight / 2f - boxSize,
-                    scaledWidth / 2f,
-                    scaledHeight / 2f + boxSize,
-                    rainbowColor,
-                    2,
-                )
-            }
-
-            HitResult.Type.BLOCK -> {
-                graphics2D.drawBorder(
-                    scaledWidth / 2 - boxSize / 2,
-                    scaledHeight / 2 - boxSize / 2,
-                    boxSize,
-                    boxSize,
-                    rainbowColor,
-                )
-            }
-
-            HitResult.Type.MISS -> {
-                graphics2D.drawLine(
-                    scaledWidth / 2f - boxSize,
-                    scaledHeight / 2f,
-                    scaledWidth / 2f + boxSize,
-                    scaledHeight / 2f,
-                    0xFF888888.toInt(),
-                    2,
-                )
-                graphics2D.drawLine(
-                    scaledWidth / 2f,
-                    scaledHeight / 2f - boxSize,
-                    scaledWidth / 2f,
-                    scaledHeight / 2f + boxSize,
-                    0xFF888888.toInt(),
-                    2,
-                )
-            }
         }
     }
 
@@ -230,8 +151,16 @@ object GunnerRenderer {
             // 距離に基づいてアルファ値を計算
             val alpha: Int =
                 when {
-                    drawTick < fadeStart -> 0xFF // 10fまで不透明
-                    drawTick >= fadeEnd -> 0x00 // 20f以降は完全に透明
+                    drawTick < fadeStart -> {
+                        0xFF
+                    }
+
+                    // 10fまで不透明
+                    drawTick >= fadeEnd -> {
+                        0x00
+                    }
+
+                    // 20f以降は完全に透明
                     else -> {
                         // 10f から 20f の間で線形に減衰
                         // progress は 0.0 (fadeStart) から 1.0 (fadeEnd) へ

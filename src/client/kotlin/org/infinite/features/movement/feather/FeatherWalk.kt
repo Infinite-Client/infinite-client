@@ -4,33 +4,29 @@ import net.minecraft.client.MinecraftClient
 import net.minecraft.registry.Registries
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Vec3i
-import org.infinite.ConfigurableFeature
-import org.infinite.FeatureLevel
+import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 // FeatherWalk Featureの定義
 class FeatherWalk : ConfigurableFeature(initialEnabled = false) {
-    override val level: FeatureLevel = FeatureLevel.UTILS
+    override val level: FeatureLevel = FeatureLevel.Utils
 
     // フィーチャーのロジックで利用する設定
     private val blockList: FeatureSetting.BlockListSetting =
         FeatureSetting.BlockListSetting(
-            name = "Allowed Blocks",
-            descriptionKey = "feature.movement.featherwalk.allowedblocks.description",
-            defaultValue = mutableListOf("minecraft:farmland", "minecraft:gravel"), // 例として砂と砂利を設定
+            name = "AllowedBlocks",
+            defaultValue = mutableListOf("minecraft:farmland"),
         )
 
     private val disableJump: FeatureSetting.BooleanSetting =
         FeatureSetting.BooleanSetting(
-            name = "Disable Jump",
-            descriptionKey = "feature.movement.featherwalk.disablejump.description",
+            name = "DisableJump",
             defaultValue = true,
         )
 
     private val disableSprint: FeatureSetting.BooleanSetting =
         FeatureSetting.BooleanSetting(
-            name = "Disable Sprint",
-            descriptionKey = "feature.movement.featherwalk.disablesprint.description",
+            name = "DisableSprint",
             defaultValue = true,
         )
     override val settings: List<FeatureSetting<*>> =
@@ -45,7 +41,7 @@ class FeatherWalk : ConfigurableFeature(initialEnabled = false) {
     // 例: Minecraft client object
     private var mc = MinecraftClient.getInstance()
 
-    override fun tick() {
+    override fun onTick() {
         var isWalkingOnFeatherBlock = false
 
         // 1. プレイヤーの現在のブロック座標を取得

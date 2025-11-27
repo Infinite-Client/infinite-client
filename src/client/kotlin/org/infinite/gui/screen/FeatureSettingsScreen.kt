@@ -7,28 +7,34 @@ import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.client.input.CharInput
 import net.minecraft.client.input.KeyInput
 import net.minecraft.text.Text
-import org.infinite.Feature
+import org.infinite.InfiniteClient
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.features.Feature
 import org.infinite.gui.widget.InfiniteBlockColorListField
 import org.infinite.gui.widget.InfiniteBlockListField
 import org.infinite.gui.widget.InfiniteButton
 import org.infinite.gui.widget.InfiniteEntityListField
 import org.infinite.gui.widget.InfinitePlayerListField
 import org.infinite.gui.widget.InfiniteScrollableContainer
-import org.infinite.gui.widget.InfiniteSelectionList
+import org.infinite.gui.widget.InfiniteSelectionListField
 import org.infinite.gui.widget.InfiniteSettingTextField
 import org.infinite.gui.widget.InfiniteSettingToggle
 import org.infinite.gui.widget.InfiniteSlider
-import org.infinite.gui.widget.InfiniteStringListField
 import org.infinite.settings.FeatureSetting
+import org.infinite.utils.rendering.transparent
 
 class FeatureSettingsScreen(
     private val parent: Screen,
-    private val feature: Feature,
+    private val feature: Feature<out ConfigurableFeature>,
 ) : Screen(Text.literal(feature.name)) {
     private var savedPageIndex: Int = 0
 
     // 遅延初期化を維持
     private lateinit var scrollableContainer: InfiniteScrollableContainer
+
+    override fun close() {
+        client?.setScreen(parent)
+    }
 
     override fun init() {
         super.init()
@@ -71,12 +77,28 @@ class FeatureSettingsScreen(
                 }
 
                 is FeatureSetting.StringListSetting -> {
-                    settingWidgets.add(InfiniteStringListField(20, currentY, widgetWidth, defaultWidgetHeight, setting))
+                    settingWidgets.add(
+                        InfiniteSelectionListField(
+                            20,
+                            currentY,
+                            widgetWidth,
+                            defaultWidgetHeight,
+                            setting,
+                        ),
+                    )
                     currentY += defaultWidgetHeight + padding
                 }
 
                 is FeatureSetting.EnumSetting<*> -> {
-                    settingWidgets.add(InfiniteSelectionList(20, currentY, widgetWidth, defaultWidgetHeight, setting))
+                    settingWidgets.add(
+                        InfiniteSelectionListField(
+                            20,
+                            currentY,
+                            widgetWidth,
+                            defaultWidgetHeight,
+                            setting,
+                        ),
+                    )
                     currentY += defaultWidgetHeight + padding
                 }
 
@@ -239,21 +261,34 @@ class FeatureSettingsScreen(
         delta: Float,
     ) {
         // 背景の描画 (半透明の黒)
-        context.fill(0, 0, width, height, 0x80000000.toInt())
+        context.fill(
+            0,
+            0,
+            width,
+            height,
+            InfiniteClient
+                .currentColors()
+                .backgroundColor
+                .transparent(128),
+        )
 
         context.drawCenteredTextWithShadow(
             textRenderer,
             Text.literal(feature.name),
             width / 2,
             20,
-            0xFFFFFFFF.toInt(),
+            InfiniteClient
+                .currentColors()
+                .foregroundColor,
         )
         context.drawCenteredTextWithShadow(
             textRenderer,
             Text.translatable(feature.descriptionKey),
             width / 2,
             35,
-            0xFFAAAAAA.toInt(),
+            InfiniteClient
+                .currentColors()
+                .secondaryColor,
         )
 
         // ウィジェットの描画 (scrollableContainerを含む)

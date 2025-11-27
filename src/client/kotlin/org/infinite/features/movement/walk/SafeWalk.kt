@@ -2,7 +2,7 @@ package org.infinite.features.movement.walk
 
 import net.minecraft.client.option.KeyBinding
 import net.minecraft.util.math.Box
-import org.infinite.ConfigurableFeature
+import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class SafeWalk : ConfigurableFeature(initialEnabled = false) {
@@ -14,12 +14,12 @@ class SafeWalk : ConfigurableFeature(initialEnabled = false) {
     // --- 内部状態 ---
     private var sneaking = false
 
-    override fun enabled() {
+    override fun onEnabled() {
         sneaking = false
     }
 
     // Wurst Clientの onDisable に相当する処理
-    override fun disabled() {
+    override fun onDisabled() {
         if (sneaking) {
             setSneaking(false)
         }

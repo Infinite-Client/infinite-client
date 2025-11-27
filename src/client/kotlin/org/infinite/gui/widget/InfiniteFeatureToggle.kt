@@ -6,8 +6,10 @@ import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
 import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.text.Text
-import org.infinite.Feature
 import org.infinite.InfiniteClient
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.features.Feature
+import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.drawBorder
 
 class InfiniteFeatureToggle(
@@ -15,14 +17,13 @@ class InfiniteFeatureToggle(
     y: Int,
     width: Int,
     height: Int,
-    val feature: Feature,
+    val feature: Feature<out ConfigurableFeature>,
     private val isSelected: Boolean, // New parameter
     val onSettings: () -> Unit, // Made public
 ) : ClickableWidget(x, y, width, height, Text.literal(feature.name)) {
     val toggleButton: InfiniteToggleButton
     private val settingsButton: InfiniteButton
     private val resetButton: InfiniteButton // New reset button
-    private val textRenderer = MinecraftClient.getInstance().textRenderer
 
     init {
         val buttonWidth = 50
@@ -84,15 +85,17 @@ class InfiniteFeatureToggle(
         mouseY: Int,
         delta: Float,
     ) {
+        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+
         // Draw button text
-        context.drawTextWithShadow(
-            textRenderer,
+        graphics2D.drawText(
             Text.literal(feature.name),
             x + 60,
             y + (height - 8) / 2,
             InfiniteClient
-                .theme()
-                .colors.foregroundColor,
+                .currentColors()
+                .foregroundColor,
+            true, // shadow = true
         )
 
         toggleButton.x = x + width - toggleButton.width
@@ -110,8 +113,8 @@ class InfiniteFeatureToggle(
         if (isSelected) {
             val interpolatedColor =
                 InfiniteClient
-                    .theme()
-                    .colors.primaryColor
+                    .currentColors()
+                    .primaryColor
             context.drawBorder(x, y, width, height, interpolatedColor)
         }
     }

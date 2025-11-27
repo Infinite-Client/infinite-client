@@ -3,17 +3,16 @@ package org.infinite.features.fighting.lockon
 import net.minecraft.client.MinecraftClient
 import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.player.PlayerEntity
-import org.infinite.ConfigurableFeature
-import org.infinite.FeatureLevel
 import org.infinite.InfiniteClient
+import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.fighting.aimassist.AimAssist
-import org.infinite.libs.client.player.fighting.AimInterface
-import org.infinite.libs.client.player.fighting.aim.AimCalculateMethod
-import org.infinite.libs.client.player.fighting.aim.AimPriority
-import org.infinite.libs.client.player.fighting.aim.AimTarget
-import org.infinite.libs.client.player.fighting.aim.AimTask
-import org.infinite.libs.client.player.fighting.aim.AimTaskCondition
-import org.infinite.libs.client.player.fighting.aim.AimTaskConditionReturn
+import org.infinite.libs.client.aim.AimInterface
+import org.infinite.libs.client.aim.task.AimTask
+import org.infinite.libs.client.aim.task.condition.AimTaskConditionInterface
+import org.infinite.libs.client.aim.task.condition.AimTaskConditionReturn
+import org.infinite.libs.client.aim.task.config.AimCalculateMethod
+import org.infinite.libs.client.aim.task.config.AimPriority
+import org.infinite.libs.client.aim.task.config.AimTarget
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.settings.FeatureSetting
@@ -22,43 +21,45 @@ import org.infinite.utils.rendering.getRainbowColor
 import org.lwjgl.glfw.GLFW
 import kotlin.math.acos
 
-// Graphics3D.kt で使用するため、ここで定義するか、適切なパッケージからインポート
 class LockOn : ConfigurableFeature(initialEnabled = false) {
-    override val level: FeatureLevel = FeatureLevel.CHEAT
+    override val level: FeatureLevel = FeatureLevel.Utils
     override val toggleKeyBind: Property<Int>
         get() = Property(GLFW.GLFW_KEY_K)
     private val range: FeatureSetting.FloatSetting =
         FeatureSetting.FloatSetting(
             "Range",
-            "feature.fighting.lockon.range.description",
-            7f,
+            16f,
             3.0f,
-            25.0f,
+            256.0f,
         )
     private val players: FeatureSetting.BooleanSetting =
         FeatureSetting.BooleanSetting(
             "Players",
-            "feature.fighting.lockon.players.description",
             true,
         )
+
+    enum class Priority {
+        Direction, // 角度優先
+        Distance, // 距離優先
+        Both, // 両方
+    }
+
+    private val priority = FeatureSetting.EnumSetting("Priority", Priority.Both, Priority.entries)
     private val mobs: FeatureSetting.BooleanSetting =
         FeatureSetting.BooleanSetting(
             "Mobs",
-            "feature.fighting.lockon.mobs.description",
             true,
         )
     private val fov: FeatureSetting.FloatSetting =
         FeatureSetting.FloatSetting(
             "FOV",
-            "feature.fighting.lockon.fov.description",
             90.0f,
             10.0f,
-            180.0f,
+            360.0f,
         )
     private val speed: FeatureSetting.FloatSetting =
         FeatureSetting.FloatSetting(
             "Speed",
-            "feature.fighting.lockon.speed.description",
             1.0f,
             0.5f,
             10f,
@@ -66,7 +67,6 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
     private val method: FeatureSetting.EnumSetting<AimCalculateMethod> =
         FeatureSetting.EnumSetting(
             "Method",
-            "feature.fighting.lockon.method.description",
             AimCalculateMethod.Linear,
             AimCalculateMethod.entries,
         )
@@ -78,6 +78,7 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
             fov,
             speed,
             method,
+            priority,
         )
 
     var lockedEntity: LivingEntity? = null
@@ -85,12 +86,12 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
     // 🎯 座標変換の結果を格納するプライベートフィールド
     private var screenPos: Graphics2D.DisplayPos? = null
 
-    override fun enabled() {
+    override fun onEnabled() {
         findAndLockTarget()
         screenPos = null // 有効化時にクリア
     }
 
-    override fun disabled() {
+    override fun onDisabled() {
         lockedEntity = null
         screenPos = null // 無効化時にクリア
     }
@@ -119,16 +120,60 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
         }
     }
 
-    override fun tick() {
+    override fun onTick() {
         exec()
     }
 
+    // ----------------------------------------------------------------------
+    // ターゲット選択のヘルパー関数
+    // ----------------------------------------------------------------------
+
+    /**
+     * ターゲットへの角度 (FOV) を取得します。
+     * AimAssistが利用できない場合は Double.MAX_VALUE を返して優先度を下げます。
+     */
+    fun getAngle(
+        player: PlayerEntity,
+        target: LivingEntity,
+    ): Double = InfiniteClient.getFeature(AimAssist::class.java)?.calcFov(player, target) ?: Double.MAX_VALUE
+
+    /**
+     * 角度と距離を正規化し、重み付けして総合スコアを計算します (低い方が優先)。
+     */
+    private fun calculateCombinedScore(
+        player: PlayerEntity,
+        target: LivingEntity,
+    ): Double {
+        val distance = player.distanceTo(target).toDouble()
+        val angle = getAngle(player, target)
+
+        // 角度を少し優先させる (例: 60% 角度, 40% 距離)
+        val angleWeight = 0.6
+        val distanceWeight = 0.4
+
+        // 正規化された角度 (0 から 1)
+        // fov.value は FOV の全角なので、最大角度はその半分。0.001 で除算エラーを防止。
+        val maxFovAngle = (fov.value / 2.0).coerceAtLeast(0.001)
+        val normalizedAngle = (angle / maxFovAngle).coerceIn(0.0, 1.0)
+
+        // 正規化された距離 (0 から 1)
+        // range.value は最大距離。0.001 で除算エラーを防止。
+        val maxRange = range.value.toDouble().coerceAtLeast(0.001)
+        val normalizedDistance = (distance / maxRange).coerceIn(0.0, 1.0)
+
+        // 総合スコア (低い方が優先)
+        return (angleWeight * normalizedAngle) + (distanceWeight * normalizedDistance)
+    }
+
+    // ----------------------------------------------------------------------
+    // ターゲット検索とロックオン
+    // ----------------------------------------------------------------------
     private fun findAndLockTarget() {
         val client = MinecraftClient.getInstance()
         val player = client.player ?: return
         val world = client.world ?: return
 
-        val target =
+        val candidates =
             world.entities
                 .filter { it is LivingEntity }
                 .filter { it != player && it.isAlive }
@@ -136,9 +181,13 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
                     (players.value && it is PlayerEntity) || (mobs.value && it !is PlayerEntity)
                 }.filter { player.distanceTo(it) <= range.value }
                 .filter { isWithinFOV(player, it as LivingEntity, fov.value) }
-                .minByOrNull {
-                    InfiniteClient.getFeature(AimAssist::class.java)?.calcFov(player, it as LivingEntity) ?: 0.0
-                }
+
+        val target =
+            when (priority.value) {
+                Priority.Direction -> candidates.minByOrNull { getAngle(player, it as LivingEntity) }
+                Priority.Distance -> candidates.minByOrNull { player.distanceTo(it) }
+                Priority.Both -> candidates.minByOrNull { calculateCombinedScore(player, it as LivingEntity) }
+            }
 
         lockedEntity = target as? LivingEntity
     }
@@ -170,10 +219,10 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
         val x = pos.x
         val y = pos.y
         val rainbowColor = getRainbowColor()
-        val boxSize = 8
+        val boxSize = 8.0
         graphics2D.drawBorder(
-            (x - boxSize / 2).toInt(),
-            (y - boxSize / 2).toInt(),
+            x - boxSize / 2.0,
+            y - boxSize / 2.0,
             boxSize,
             boxSize,
             rainbowColor,
@@ -208,7 +257,8 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
 
         // 1. 座標変換を実行し、プライベートフィールドに格納
         // ターゲットの目の高さの中央をターゲット座標とする
-        val targetPos = target.eyePos
+        val targetPos =
+            target.getLerpedPos(graphics3D.tickProgress).add(0.0, target.getEyeHeight(target.pose).toDouble(), 0.0)
         screenPos = graphics3D.toDisplayPos(targetPos)
 
         // 画面外の場合は、screenPos が null になり、2D 描画はスキップされる
@@ -235,7 +285,7 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
     }
 }
 
-class LockOnCondition : AimTaskCondition {
+class LockOnCondition : AimTaskConditionInterface {
     override fun check(): AimTaskConditionReturn {
         val lockOn = InfiniteClient.getFeature(LockOn::class.java) ?: return AimTaskConditionReturn.Failure
         return if (lockOn.isEnabled()) {

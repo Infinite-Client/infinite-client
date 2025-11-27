@@ -3,9 +3,8 @@ package org.infinite.features.movement.fly
 import net.minecraft.client.MinecraftClient
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket
 import net.minecraft.util.math.Vec3d
-import org.infinite.ConfigurableFeature
-import org.infinite.FeatureLevel
-import org.infinite.libs.client.player.fighting.aim.CameraRoll
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.client.aim.camera.CameraRoll
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.toRadians
 import kotlin.math.cos
@@ -18,22 +17,20 @@ enum class FlyMethod {
 }
 
 class SuperFly : ConfigurableFeature(initialEnabled = false) {
-    override val level: FeatureLevel = FeatureLevel.CHEAT
+    override val level: FeatureLevel = FeatureLevel.Cheat
     private val method: FeatureSetting.EnumSetting<FlyMethod> =
         FeatureSetting.EnumSetting(
             "Method",
-            "feature.movement.superfly.method.description",
             FlyMethod.Acceleration,
             FlyMethod.entries,
         )
     private val keepFly: FeatureSetting.BooleanSetting =
         FeatureSetting.BooleanSetting(
             "KeepFlying",
-            "feature.movement.superfly.keepflying.description",
             true,
         )
     private val power: FeatureSetting.FloatSetting =
-        FeatureSetting.FloatSetting("Power", "feature.movement.superfly.power.description", 1.0f, 0.5f, 5.0f)
+        FeatureSetting.FloatSetting("Power", 1.0f, 0.5f, 5.0f)
     override val settings: List<FeatureSetting<*>> =
         listOf(
             method,
@@ -41,7 +38,7 @@ class SuperFly : ConfigurableFeature(initialEnabled = false) {
             keepFly,
         )
 
-    override fun tick() {
+    override fun onTick() {
         val client = MinecraftClient.getInstance()
         val player = client.player ?: return
 
@@ -100,8 +97,6 @@ class SuperFly : ConfigurableFeature(initialEnabled = false) {
             player.networkHandler?.sendPacket(packet)
         }
     }
-
-// --- ACCELERATION METHOD IMPLEMENTATIONS (Refactored from original) ---
 
     private fun controlAccelerationSpeed(client: MinecraftClient) {
         val player = client.player ?: return

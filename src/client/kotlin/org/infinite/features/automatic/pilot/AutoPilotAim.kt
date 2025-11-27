@@ -5,13 +5,13 @@ import net.minecraft.client.network.ClientPlayerEntity
 import net.minecraft.entity.vehicle.BoatEntity
 import net.minecraft.util.math.MathHelper
 import org.infinite.InfiniteClient
-import org.infinite.libs.client.player.fighting.aim.AimCalculateMethod
-import org.infinite.libs.client.player.fighting.aim.AimPriority
-import org.infinite.libs.client.player.fighting.aim.AimTarget
-import org.infinite.libs.client.player.fighting.aim.AimTask
-import org.infinite.libs.client.player.fighting.aim.AimTaskCondition
-import org.infinite.libs.client.player.fighting.aim.AimTaskConditionReturn
-import org.infinite.libs.client.player.fighting.aim.CameraRoll
+import org.infinite.libs.client.aim.camera.CameraRoll
+import org.infinite.libs.client.aim.task.AimTask
+import org.infinite.libs.client.aim.task.condition.AimTaskConditionInterface
+import org.infinite.libs.client.aim.task.condition.AimTaskConditionReturn
+import org.infinite.libs.client.aim.task.config.AimCalculateMethod
+import org.infinite.libs.client.aim.task.config.AimPriority
+import org.infinite.libs.client.aim.task.config.AimTarget
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -31,8 +31,12 @@ class AutoPilotAimTask(
         AimCalculateMethod.Linear,
         when (state) {
             PilotState.EmergencyLanding -> 16.0
+
             PilotState.Landing -> 4.0
-            PilotState.TakingOff -> 2.0 // 【新規】離陸時のスムーズな移動
+
+            PilotState.TakingOff -> 2.0
+
+            // 【新規】離陸時のスムーズな移動
             else -> 2.0
         },
     )
@@ -43,7 +47,7 @@ class AutoPilotAimTask(
  */
 class AutoPilotCondition(
     val state: PilotState,
-) : AimTaskCondition {
+) : AimTaskConditionInterface {
     private val autoPilot: AutoPilot
         get() = InfiniteClient.getFeature(AutoPilot::class.java)!!
     private val player: ClientPlayerEntity?
@@ -245,19 +249,32 @@ class PilotAimTarget(
             return CameraRoll(
                 when (state) {
                     PilotState.Circling -> calculateCirclingYaw()
+
                     PilotState.Landing -> calculateLandingYaw()
+
                     PilotState.EmergencyLanding -> calculateEmergencyYaw()
-                    PilotState.TakingOff -> calculateTargetYaw() // 【新規】離陸時はターゲット方向
+
+                    PilotState.TakingOff -> calculateTargetYaw()
+
+                    // 【新規】離陸時はターゲット方向
                     else -> calculateTargetYaw()
                 },
                 when (state) {
                     PilotState.Landing -> handleLandingPitch()
+
                     PilotState.EmergencyLanding -> handleEmergencyLandingPitch()
+
                     PilotState.Circling -> autoPilot.glidingDir.value / 2.0
+
                     PilotState.FallFlying -> autoPilot.fallDir.value
+
                     PilotState.RiseFlying -> autoPilot.riseDir.value
+
                     PilotState.Gliding -> autoPilot.glidingDir.value
-                    PilotState.TakingOff -> autoPilot.riseDir.value // 【新規】離陸時は上昇ピッチ
+
+                    PilotState.TakingOff -> autoPilot.riseDir.value
+
+                    // 【新規】離陸時は上昇ピッチ
                     else -> 0.0
                 },
             )
