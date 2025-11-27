@@ -468,5 +468,18 @@
   "key.infinite-client.action.movement.builder.move_left": "Builder: Move left",
   "key.infinite-client.action.movement.builder.move_right": "Builder: Move right",
   "infinite.general_feature.rendering.font_setting.description": "Customize Fonts",
-  "infinite.general_feature.server.protocol_spoofing_setting.description":"Make as Vanilla"
+  "infinite.general_feature.server.protocol_spoofing_setting.description": "Make as Vanilla",
+  "doc.infinite.description_title": "Feature Description",
+  "doc.infinite.settings_section_title": "Settings",
+  "doc.infinite.setting_description_title": "Description",
+  "doc.infinite.setting_info_title": "Setting Information",
+  "doc.infinite.setting_type": "Type",
+  "doc.infinite.setting_default": "Default Value",
+  "doc.infinite.setting_current": "Current Value",
+  "doc.infinite.setting_min": "Minimum Value",
+  "doc.infinite.setting_max": "Maximum Value",
+  "doc.infinite.setting_options": "Options",
+  "doc.infinite.setting_current_value": "Current Selected Value",
+  "doc.infinite.setting_list_count": "Item Count",
+  "doc.infinite.setting_list_type": "List Type"
 }

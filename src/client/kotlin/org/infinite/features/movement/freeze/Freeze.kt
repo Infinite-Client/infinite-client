@@ -1,6 +1,5 @@
 package org.infinite.features.movement.freeze
 
-import net.minecraft.client.MinecraftClient
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
@@ -22,8 +21,6 @@ class Freeze : ConfigurableFeature(initialEnabled = false) {
     private var fakePlayer: FakePlayerEntity? = null
 
     private var freezeStartTime: Long = 0L
-
-    private val mc: MinecraftClient = MinecraftClient.getInstance()
 
     // --- 設定 ---
     private val durationSetting =
@@ -51,7 +48,6 @@ class Freeze : ConfigurableFeature(initialEnabled = false) {
         cleanup()
         // 偽プレイヤーを作成し、本物のプレイヤーの位置を維持
         fakePlayer = FakePlayerEntity()
-
         // 注: Mixinがすでにパケット送信をフックしているため、ここではイベントリスナーの追加は不要
     }
 
@@ -90,7 +86,7 @@ class Freeze : ConfigurableFeature(initialEnabled = false) {
      * 蓄積された全てのパケットを順番に送信し、瞬間移動を実行する
      */
     private fun sendQueuedPackets() {
-        val networkHandler = mc.player?.networkHandler ?: return
+        val networkHandler = networkHandler ?: return
         // キューから全てのパケットを取り出し、送信
         packets.forEach { networkHandler.sendPacket(it) }
     }
