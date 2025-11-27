@@ -10,9 +10,10 @@ import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.client.input.CharInput
 import net.minecraft.client.input.KeyInput
 import net.minecraft.text.Text
+import net.minecraft.util.math.ColorHelper
+import org.infinite.ConfigManager
+import org.infinite.Feature
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
-import org.infinite.features.Feature
 import org.infinite.gui.widget.FeatureSearchWidget
 import org.infinite.gui.widget.InfiniteButton
 import org.infinite.gui.widget.InfiniteFeatureToggle
@@ -23,17 +24,33 @@ import org.infinite.utils.rendering.transparent
 class UISection(
     val id: String,
     private val screen: Screen,
-    featureList: List<Feature<out ConfigurableFeature>>? = null,
+    featureList: List<Feature>? = null,
 ) {
     private var closeButton: InfiniteButton? = null
     val widgets = mutableListOf<ClickableWidget>()
     private var featureSearchWidget: FeatureSearchWidget? = null
     private var isMainSectionInitialized = false
+    private var themeTiles: List<ThemeTile> = emptyList()
+    private var themeScrollOffset: Double = 0.0
+    private var themeAreaX: Int = 0
+    private var themeAreaY: Int = 0
+    private var themeAreaWidth: Int = 0
+    private var themeAreaHeight: Int = 0
+    private var themeContentHeight: Int = 0
+    private var reloadButton: InfiniteButton? = null
+
+    private data class ThemeTile(
+        val name: String,
+        var x: Int,
+        var y: Int,
+        var width: Int,
+        val height: Int,
+    )
 
     init {
         when (id) {
             "main" -> {
-                // Theme selection buttons will be initialized in renderMain
+                // Initialization moved to renderMain
             }
 
             else -> {
@@ -44,7 +61,7 @@ class UISection(
         }
     }
 
-    private fun setupFeatureWidgets(features: List<Feature<out ConfigurableFeature>>) {
+    private fun setupFeatureWidgets(features: List<Feature>) {
         val featureWidgets =
             features.map { feature ->
                 feature.name
@@ -109,16 +126,12 @@ class UISection(
 
         val titleText =
             when (id) {
-                "main" -> {
-                    "Main"
-                }
-
-                else -> {
+                "main" -> "Main"
+                else ->
                     id
                         .replace("-settings", "")
                         .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() } +
                         " Settings"
-                }
             }
 
         if (id == "main") {
@@ -175,19 +188,53 @@ class UISection(
         renderTitle(context, x, y, width, textRenderer, "Main", isSelected)
         if (!renderContent) return
 
-        // Initialize theme buttons if not already initialized or if context changes
+        val chipStartX = x + 20
+        val chipStartY = y + 48
+        val chipAreaWidth = width - 40
+        val minThemeHeight = kotlin.math.min(120, height / 2)
+        val maxThemeHeight = kotlin.math.max(120, height / 2)
+        val themeAreaHeightLocal = (height * 0.35f).toInt().coerceIn(minThemeHeight, maxThemeHeight)
+        themeAreaX = chipStartX
+        themeAreaY = chipStartY
+        themeAreaWidth = chipAreaWidth
+        themeAreaHeight = themeAreaHeightLocal
+
+        context.drawTextWithShadow(
+            textRenderer,
+            Text.literal("Themes"),
+            chipStartX,
+            chipStartY - 14,
+            InfiniteClient.theme().colors.foregroundColor,
+        )
+        ensureReloadButton(chipStartX + chipAreaWidth - 70, chipStartY - 18)
+        reloadButton?.render(context, mouseX, mouseY, delta)
+
+        val tilesBottom = layoutThemeTiles(chipStartX, chipStartY, chipAreaWidth, textRenderer)
+        themeContentHeight = tilesBottom - chipStartY
+        val maxScroll = (themeContentHeight - themeAreaHeight).coerceAtLeast(0)
+        if (themeScrollOffset > maxScroll) themeScrollOffset = maxScroll.toDouble()
+
+        context.enableScissor(chipStartX, chipStartY, chipStartX + chipAreaWidth, chipStartY + themeAreaHeight)
+        drawThemeTiles(context, textRenderer, mouseX, mouseY, chipStartY, themeAreaHeight)
+        context.disableScissor()
+
         if (!isMainSectionInitialized) {
-            featureSearchWidget = FeatureSearchWidget(x + 20, y + 10, width - 40, height - 80, screen)
+            featureSearchWidget =
+                FeatureSearchWidget(
+                    x + 20,
+                    chipStartY + themeAreaHeight + 16,
+                    width - 40,
+                    height - (themeAreaHeight + (chipStartY - y)) - 32,
+                    screen,
+                )
             isMainSectionInitialized = true
         }
 
-        // Update positions and render theme buttons
-        val currentY = y + 50
         featureSearchWidget?.let {
             it.x = x + 20
-            it.y = currentY + 10
+            it.y = chipStartY + themeAreaHeight + 16
             it.width = width - 40
-            it.height = height - (currentY + 10 - y) // Adjust height based on theme buttons
+            it.height = height - (themeAreaHeight + (chipStartY - y)) - 32
             it.render(context, mouseX, mouseY, delta)
         }
     }
@@ -224,6 +271,132 @@ class UISection(
         }
     }
 
+    private fun layoutThemeTiles(
+        startX: Int,
+        startY: Int,
+        availableWidth: Int,
+        textRenderer: TextRenderer,
+    ): Int {
+        val themes = InfiniteClient.themes
+
+        val tileHeight = 40
+        val verticalGap = 10
+        val horizontalGap = 12
+        val tileWidth = ((availableWidth - horizontalGap) / 2).coerceAtLeast(160)
+
+        val tiles = mutableListOf<ThemeTile>()
+        var cursorX = startX
+        var cursorY = startY
+        var column = 0
+
+        for (theme in themes) {
+            tiles.add(ThemeTile(theme.name, cursorX, cursorY, tileWidth, tileHeight))
+            column++
+            if (column >= 2) {
+                column = 0
+                cursorX = startX
+                cursorY += tileHeight + verticalGap
+            } else {
+                cursorX += tileWidth + horizontalGap
+            }
+        }
+        themeTiles = tiles
+
+        val lastTileBottom = themeTiles.maxOfOrNull { it.y + it.height } ?: startY
+        return lastTileBottom
+    }
+
+    private fun drawThemeTiles(
+        context: DrawContext,
+        textRenderer: TextRenderer,
+        mouseX: Int,
+        mouseY: Int,
+        areaTop: Int,
+        areaHeight: Int,
+    ) {
+        val theme = InfiniteClient.theme()
+        val textColor = theme.colors.foregroundColor
+        val offset = themeScrollOffset.toInt()
+
+        for (tile in themeTiles) {
+            val visualY = tile.y - offset
+            val isVisible = visualY + tile.height >= areaTop && visualY <= areaTop + areaHeight
+            if (!isVisible) continue
+
+            val isCurrent = InfiniteClient.currentTheme.equals(tile.name, ignoreCase = true)
+            val hovered = mouseX in tile.x..(tile.x + tile.width) && mouseY in visualY..(visualY + tile.height)
+
+            val baseColor =
+                if (isCurrent) {
+                    theme.colors.primaryColor.transparent(150)
+                } else {
+                    theme.colors.backgroundColor.transparent(if (hovered) 180 else 140)
+                }
+            val borderColor =
+                if (isCurrent) {
+                    theme.colors.primaryColor
+                } else {
+                    theme.colors.foregroundColor.transparent(160)
+                }
+
+            context.fill(tile.x, visualY, tile.x + tile.width, visualY + tile.height, baseColor)
+            context.drawBorder(tile.x, visualY, tile.width, tile.height, borderColor)
+
+            // color swatches
+            val swatchSize = 12
+            val swatchY = visualY + tile.height - swatchSize - 6
+            val swatchStartX = tile.x + tile.width - (swatchSize + 6) * 4
+            val colors =
+                listOf(
+                    theme.colors.backgroundColor,
+                    theme.colors.foregroundColor,
+                    theme.colors.primaryColor,
+                    theme.colors.secondaryColor,
+                )
+            colors.forEachIndexed { idx, c ->
+                val sx = swatchStartX + idx * (swatchSize + 6)
+                context.fill(sx, swatchY, sx + swatchSize, swatchY + swatchSize, c.transparent(220))
+                context.drawBorder(sx, swatchY, swatchSize, swatchSize, borderColor)
+            }
+
+            context.drawTextWithShadow(
+                textRenderer,
+                Text.literal(tile.name),
+                tile.x + 10,
+                visualY + 8,
+                textColor,
+            )
+            context.drawTextWithShadow(
+                textRenderer,
+                Text.literal(if (isCurrent) "Active" else "Click to apply"),
+                tile.x + 10,
+                visualY + 20,
+                textColor.transparent(200),
+            )
+        }
+    }
+
+    private fun ensureReloadButton(
+        x: Int,
+        y: Int,
+    ) {
+        if (reloadButton == null) {
+            reloadButton =
+                InfiniteButton(
+                    x,
+                    y,
+                    64,
+                    16,
+                    Text.literal("Reload"),
+                ) {
+                    InfiniteClient.reloadThemes()
+                }
+        } else {
+            reloadButton?.x = x
+            reloadButton?.y = y
+        }
+    }
+
     private fun renderTitle(
         context: DrawContext,
         x: Int,
@@ -244,9 +417,24 @@ class UISection(
                     .theme()
                     .colors.foregroundColor
             } else {
-                InfiniteClient
-                    .theme()
-                    .colors.secondaryColor
+                ColorHelper.getArgb(
+                    255,
+                    ColorHelper.getRed(
+                        InfiniteClient
+                            .theme()
+                            .colors.foregroundColor,
+                    ) / 2,
+                    ColorHelper.getGreen(
+                        InfiniteClient
+                            .theme()
+                            .colors.foregroundColor,
+                    ) / 2,
+                    ColorHelper.getBlue(
+                        InfiniteClient
+                            .theme()
+                            .colors.foregroundColor,
+                    ) / 2,
+                )
             }
         context.drawTextWithShadow(textRenderer, title, textX, textY, color)
     }
@@ -261,6 +449,26 @@ class UISection(
         if (!isSelected) return false
 
         if (id == "main") {
+            if (reloadButton?.mouseClicked(click, doubled) == true) {
+                return true
+            }
+
+            val clickedTile =
+                themeTiles.firstOrNull { tile ->
+                    val visualY = tile.y - themeScrollOffset.toInt()
+                    click.x >= tile.x && click.x <= tile.x + tile.width &&
+                        click.y >= visualY && click.y <= visualY + tile.height
+                }
+            if (clickedTile != null) {
+                val theme = InfiniteClient.themes.find { it.name.equals(clickedTile.name, ignoreCase = true) }
+                if (theme != null) {
+                    InfiniteClient.currentTheme = theme.name
+                    ConfigManager.saveConfig()
+                    InfiniteClient.info(Text.translatable("command.infinite.theme.changed", theme.name).string)
+                }
+                return true
+            }
+
             featureSearchWidget?.mouseClicked(click, doubled)?.let { if (it) return true }
         }
 
@@ -269,7 +477,7 @@ class UISection(
             return true
         }
 
-        // 3. 他のウィジェットのクリック
+        // 2. 他のウィジェットのクリック
         for (widget in widgets) {
             if (widget.mouseClicked(click, doubled)) {
                 return true // ★ 最初に応答したウィジェットで停止し、フォーカスを与える
@@ -303,6 +511,23 @@ class UISection(
         if (!isSelected) return false
 
         if (id == "main") {
+            // theme scroll region bounds
+            val themeStartX = themeAreaX
+            val themeEndX = themeAreaX + themeAreaWidth
+            val themeStartY = themeAreaY
+            val themeAreaHeightLocal = themeAreaHeight
+            val maxScroll = (themeContentHeight - themeAreaHeightLocal).coerceAtLeast(0)
+
+            if (mouseX in themeStartX.toDouble()..themeEndX.toDouble() &&
+                mouseY in themeStartY.toDouble()..(themeStartY + themeAreaHeightLocal).toDouble()
+            ) {
+                val old = themeScrollOffset
+                themeScrollOffset = (themeScrollOffset - verticalAmount * 12).coerceIn(0.0, maxScroll.toDouble())
+                if (themeScrollOffset != old) {
+                    return true
+                }
+            }
+
             featureSearchWidget
                 ?.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
                 ?.let { if (it) return true }
@@ -351,6 +576,10 @@ class UISection(
         if (!isSelected) return false
 
         if (id == "main") {
+            if (reloadButton?.mouseReleased(click) == true) {
+                return true
+            }
+
             featureSearchWidget?.mouseReleased(click)?.let { if (it) return true }
         }
 
