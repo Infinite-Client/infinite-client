@@ -468,5 +468,18 @@
   "key.infinite-client.action.movement.builder.move_left": "Builder: 左へ移動",
   "key.infinite-client.action.movement.builder.move_right": "Builder: 右へ移動",
   "infinite.general_feature.rendering.font_setting.description": "フォントをカスタマイズできます。",
-  "infinite.general_feature.server.protocol_spoofing_setting.description": "バニラクライアントを模倣する"
+  "infinite.general_feature.server.protocol_spoofing_setting.description": "バニラクライアントを模倣する",
+  "doc.infinite.description_title": "機能の説明",
+  "doc.infinite.settings_section_title": "設定",
+  "doc.infinite.setting_description_title": "説明",
+  "doc.infinite.setting_info_title": "設定情報",
+  "doc.infinite.setting_type": "タイプ",
+  "doc.infinite.setting_default": "デフォルト値",
+  "doc.infinite.setting_current": "現在の値",
+  "doc.infinite.setting_min": "最小値",
+  "doc.infinite.setting_max": "最大値",
+  "doc.infinite.setting_options": "選択肢",
+  "doc.infinite.setting_current_value": "現在の選択値",
+  "doc.infinite.setting_list_count": "項目数",
+  "doc.infinite.setting_list_type": "リストのタイプ"
 }

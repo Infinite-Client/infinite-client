@@ -26,9 +26,11 @@ open class Feature<T : ConfigurableFeature>(
     lateinit var descriptionKey: String
 
     fun generateKey(category: String): String {
-        val snakeCategory = toSnakeCase(category)
-        val snakeFeatureName = toSnakeCase(name)
-        descriptionKey = "infinite.feature.$snakeCategory.$snakeFeatureName.description"
+        if (!::descriptionKey.isInitialized) {
+            val snakeCategory = toSnakeCase(category)
+            val snakeFeatureName = toSnakeCase(name)
+            descriptionKey = "infinite.feature.$snakeCategory.$snakeFeatureName.description"
+        }
         return descriptionKey
     }
 }
