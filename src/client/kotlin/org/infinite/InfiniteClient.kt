@@ -107,7 +107,7 @@ object InfiniteClient : ClientModInitializer {
         }
         for (category in globalFeatureCategories) {
             for (feature in category.features) {
-                val key = feature.descriptionKey
+                val key = feature.generateKey(category.name)
                 if (Text.translatable(key).string == key) {
                     result.add(key)
                 }

@@ -93,7 +93,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
         if (client.currentScreen != null) return
         val chestSlotIndex = InventoryIndex.Armor.Chest()
         val currentChestStack = invManager.get(chestSlotIndex)
-        val previousChestplate = previousChestplate?:return
+        val previousChestplate = previousChestplate ?: return
         if (currentChestStack.item == Items.ELYTRA) {
             isElytraEquippedByHack = true
         }
@@ -131,7 +131,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
         val options = MinecraftClient.getInstance().options ?: return
         val isReleaseElytraPressed = options.sneakKey.isPressed && options.sprintKey.isPressed
         val backPackManager = InfiniteClient.getFeature(BackPackManager::class.java)
-        val previousChestplate = previousChestplate?:return
+        val previousChestplate = previousChestplate ?: return
 
         // Handle elytra unequip logic (自動解除 または 手動解除)
         if (isElytraEquippedByHack) {
