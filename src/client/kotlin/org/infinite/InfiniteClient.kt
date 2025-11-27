@@ -89,7 +89,7 @@ object InfiniteClient : ClientModInitializer {
         }
     }
 
-    private fun checkTranslations(): List<String> {
+    fun genTranslations(): List<String> {
         val result = mutableListOf<String>()
         for (category in featureCategories) {
             for (feature in category.features) {
@@ -159,7 +159,7 @@ object InfiniteClient : ClientModInitializer {
     var hasLoadedAddons = false
 
     private fun debugTranslations() {
-        val lackedTranslations = checkTranslations() + InfiniteKeyBind.checkTranslations()
+        val lackedTranslations = genTranslations() + InfiniteKeyBind.checkTranslations()
         if (lackedTranslations.isEmpty()) {
             log("Mod initialized successfully.")
         } else {
