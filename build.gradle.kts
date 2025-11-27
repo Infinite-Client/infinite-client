@@ -14,6 +14,10 @@ version = property("mod_version")!!
 
 repositories {
     maven {
+        name = "LocalCache"
+        url = uri("$rootDir/local-m2")
+    }
+    maven {
         name = "Modrinth"
         url = uri("https://api.modrinth.com/maven")
     }

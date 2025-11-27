@@ -1,0 +1,8 @@
+{
+  "name": "modern",
+  "backgroundColor": "#12141A",
+  "foregroundColor": "#F4F6FD",
+  "primaryColor": "#63A4FF",
+  "secondaryColor": "#1E2735",
+  "icon": "infinite:icon.png"
+}

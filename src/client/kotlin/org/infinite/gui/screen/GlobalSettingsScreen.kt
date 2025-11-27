@@ -30,11 +30,21 @@ class GlobalSettingsScreen(
     parentScreen: Screen?,
 ) : Screen(Text.literal("Infinite Client Global Settings")) {
     companion object {
-        fun create(parent: net.minecraft.client.gui.screen.Screen): net.minecraft.client.gui.screen.Screen = GlobalSettingsScreen(parent)
+        @JvmStatic
+        fun create(parent: net.minecraft.client.gui.screen.Screen): net.minecraft.client.gui.screen.Screen =
+            GlobalSettingsScreen(parent)
+
+        fun create(
+            parent: net.minecraft.client.gui.screen.Screen,
+            initialCategory: String? = null,
+        ): net.minecraft.client.gui.screen.Screen = GlobalSettingsScreen(parent).apply {
+            this.initialCategoryName = initialCategory
+        }
     }
 
     private val parent: Screen? = parentScreen
     private var selectedCategory: GlobalFeatureCategory? = null
+    private var initialCategoryName: String? = null
     private val sections: MutableMap<GlobalFeatureCategory, Section> = mutableMapOf()
     private val categories = InfiniteClient.globalFeatureCategories
 
@@ -82,7 +92,10 @@ class GlobalSettingsScreen(
             // コンテンツコンテナはinitではaddSelectableChildせず、renderとupdateCategoryContentで管理する
         }
 
-        selectedCategory = categories.firstOrNull()
+        selectedCategory =
+            initialCategoryName
+                ?.let { desired -> categories.find { it.name.equals(desired, ignoreCase = true) } }
+                ?: categories.firstOrNull()
         updateCategoryContent() // 初回実行時にコンテンツを有効化
         updateTabButtonStates()
     }

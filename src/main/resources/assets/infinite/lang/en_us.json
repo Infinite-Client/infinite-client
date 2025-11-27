@@ -468,5 +468,8 @@
   "key.infinite-client.action.movement.builder.move_left": "Builder: Move left",
   "key.infinite-client.action.movement.builder.move_right": "Builder: Move right",
   "infinite.general_feature.rendering.font_setting.description": "Customize Fonts",
-  "infinite.general_feature.server.protocol_spoofing_setting.description":"Make as Vanilla"
+  "infinite.general_feature.server.protocol_spoofing_setting.description":"Make as Vanilla",
+  "infinite.global_category.rendering": "Rendering",
+  "infinite.global_category.server": "Server",
+  "infinite.general_feature.rendering.theme_setting.description": "Pick a built-in or custom theme."
 }
