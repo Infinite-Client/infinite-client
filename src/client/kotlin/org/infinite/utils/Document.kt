@@ -93,11 +93,11 @@ class Document(
 
             // ローカル機能のドキュメントを生成
             generateFeaturesListDocs(
-                dir = langDir.resolve("local_features"), // スネークケース
+                dir = langDir.resolve("local-features"), // スネークケース
                 data = data.local,
                 langCode = langCode,
             )
-            generateFeaturesListDocs(langDir.resolve("global_features"), data.global, langCode) // スネークケース
+            generateFeaturesListDocs(langDir.resolve("global-features"), data.global, langCode) // スネークケース
 
             println("✅ $langCode のドキュメントを $langDir に生成しました。")
         }
@@ -109,7 +109,7 @@ class Document(
         langCode: String,
     ) {
         // 1. ベースディレクトリの _category_.json を生成
-        val isLocal = dir.fileName.toString() == "local_features"
+        val isLocal = dir.fileName.toString() == "local-features"
         val label =
             if (isLocal) {
                 if (langCode == "ja_jp") "ローカル機能" else "Local Features"
@@ -134,7 +134,7 @@ class Document(
         // 2. 各カテゴリの処理を委譲
         data.forEach { category ->
             generateCategoryDocs(
-                parentDir = dir, // 親ディレクトリ (local_features/ または global_features/) を渡す
+                parentDir = dir, // 親ディレクトリ (local-features/ または global-features/) を渡す
                 category = category,
                 langCode = langCode,
             )
@@ -151,15 +151,16 @@ class Document(
         langCode: String,
     ) {
         // カテゴリ名で新しいディレクトリを解決 (スネークケース)
-        val categoryFolderName = toSnakeCase(category.name)
+        val categoryFolderName = toKebabCase(category.name)
         val categoryDir = parentDir.resolve(categoryFolderName)
 
         // 1. Docusaurus用メタファイル (_category_.json) を生成
         val label = translate(category.name, langCode)
+        val isLocal = parentDir.fileName?.toString() == "local-features"
         categoryDir.resolve("_category_.json").writeText(
             """
             {
-              "label": "$label",
+              "label": "$label(${if (isLocal) "Local" else "Global"})",
               "link": {
                 "type": "generated-index", 
                 "title": "$label 機能一覧"
@@ -192,7 +193,7 @@ class Document(
         langCode: String,
     ) {
         // ファイル名を決定
-        val featureFileName = toSnakeCase(data.name) + ".mdx"
+        val featureFileName = toKebabCase(data.name) + ".mdx"
         val featurePath = dir.resolve(featureFileName)
 
         val featureContent = StringBuilder()
@@ -242,7 +243,6 @@ class Document(
                         )
                     }**: `${setting.defaultValue}`\n",
                 )
-                featureContent.append("* **${translate("doc.infinite.setting_current", langCode)}**: `${setting.value}`\n")
 
                 when (setting) {
                     // 範囲設定 (Int, Float, Double)
@@ -313,14 +313,6 @@ class Document(
                                 )
                             }**: ${setting.options.joinToString(", ") { "`$it`" }}\n",
                         )
-                        featureContent.append(
-                            "* **${
-                                translate(
-                                    "doc.infinite.setting_current_value",
-                                    langCode,
-                                )
-                            }**: `${setting.value}`\n",
-                        )
                     }
 
                     is FeatureSetting.EnumSetting<*> -> {
@@ -344,7 +336,14 @@ class Document(
                                 )
                             }**: ${setting.defaultValue.size}\n",
                         )
-                        featureContent.append("* **${translate("doc.infinite.setting_list_type", langCode)}**: Block IDs\n")
+                        featureContent.append(
+                            "* **${
+                                translate(
+                                    "doc.infinite.setting_list_type",
+                                    langCode,
+                                )
+                            }**: Block IDs\n",
+                        )
                     }
 
                     is FeatureSetting.EntityListSetting -> {
@@ -438,7 +437,7 @@ class Document(
         return translations[lang]?.get(key) ?: key // 翻訳が見つからない場合はキーそのものを返す
     }
 
-    // ... (initializeDocsDirectory, getTranslations, generateData, toSnakeCase 関数は省略) ...
+    // ... (initializeDocsDirectory, getTranslations, generateData, toKebabCase 関数は省略) ...
 
     /**
      * docs/、docs/ja_jp/、docs/en_us/ などのディレクトリ構造を作成します。
@@ -455,25 +454,25 @@ class Document(
         val data = documentData ?: return // documentDataがnullならここで抜ける
 
         supportedLocales.forEach { langCode ->
-            val localFeaturesDir = docsBaseDir.resolve(langCode).resolve("local_features") // スネークケース
+            val localFeaturesDir = docsBaseDir.resolve(langCode).resolve("local-features") // スネークケース
 
-            // local_features のベースディレクトリを作成
+            // local-features のベースディレクトリを作成
             localFeaturesDir.createDirectories()
             println("作成されたDocsディレクトリ: $localFeaturesDir")
 
             // カテゴリごとのサブディレクトリを作成
             data.local.forEach { category ->
-                val categoryDir = localFeaturesDir.resolve(toSnakeCase(category.name))
+                val categoryDir = localFeaturesDir.resolve(toKebabCase(category.name))
                 categoryDir.createDirectories()
                 println("  - カテゴリディレクトリ作成: $categoryDir")
             }
 
             // グローバル機能についても同様にカテゴリディレクトリを作成
-            val globalFeaturesDir = docsBaseDir.resolve(langCode).resolve("global_features") // スネークケース
+            val globalFeaturesDir = docsBaseDir.resolve(langCode).resolve("global-features") // スネークケース
             globalFeaturesDir.createDirectories()
 
             data.global.forEach { category ->
-                val categoryDir = globalFeaturesDir.resolve(toSnakeCase(category.name))
+                val categoryDir = globalFeaturesDir.resolve(toKebabCase(category.name))
                 categoryDir.createDirectories()
                 println("  - カテゴリディレクトリ作成: $categoryDir")
             }
