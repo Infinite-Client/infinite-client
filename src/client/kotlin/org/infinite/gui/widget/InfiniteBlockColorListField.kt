@@ -36,7 +36,7 @@ class InfiniteBlockColorListField(
     private val blockIdTextField: InfiniteTextField
     private val colorTextField: InfiniteTextField
     private lateinit var scrollableContainer: InfiniteScrollableContainer
-    private var isScrollableContainerInitialized = false
+
     private val blockColorItemWidgets = mutableListOf<BlockColorListItemWidget>()
 
     init {
@@ -80,7 +80,22 @@ class InfiniteBlockColorListField(
             currentColorInput = newText.trim()
         }
 
-        // Initialize scrollableContainer
+        // Initialize scrollableContainer ONCE here
+        scrollableContainer =
+            InfiniteScrollableContainer(
+                x + padding,
+                y + headerHeight,
+                width - padding * 2, // Use calculated width
+                scrollableListHeight,
+                mutableListOf(), // Initialize with an empty list
+            )
+
+        // Add change listener to update the scrollable container when the setting value changes externally
+        setting.addChangeListener {
+            updateScrollableContainer()
+        }
+
+        // Perform initial population
         updateScrollableContainer()
     }
 
@@ -88,20 +103,16 @@ class InfiniteBlockColorListField(
     private var currentColorInput: String = ""
 
     private fun updateScrollableContainer() {
-        blockColorItemWidgets.clear()
+        val scrolledY = scrollableContainer.scrollY // Get current scroll position from existing container
 
-        val scrolledY =
-            if (::scrollableContainer.isInitialized) {
-                scrollableContainer.scrollY
-            } else {
-                0.0
-            }
+        // Clear existing widgets
+        scrollableContainer.widgets.clear()
 
         val containerWidth = width - padding * 2
         val itemWidth = containerWidth - padding * 2
 
         setting.value.forEach { (blockId, color) ->
-            blockColorItemWidgets.add(
+            scrollableContainer.widgets.add( // Add to existing container's widgets list
                 BlockColorListItemWidget(
                     0,
                     0,
@@ -115,16 +126,9 @@ class InfiniteBlockColorListField(
             )
         }
 
-        scrollableContainer =
-            InfiniteScrollableContainer(
-                x + padding,
-                y + headerHeight,
-                containerWidth,
-                scrollableListHeight,
-                blockColorItemWidgets.toMutableList(),
-            )
-
+        // Restore scroll position and update widget positions
         scrollableContainer.scrollY = scrolledY
+        scrollableContainer.updateWidgetPositions()
     }
 
     private fun addIdToList() {
@@ -174,11 +178,6 @@ class InfiniteBlockColorListField(
         delta: Float,
     ) {
         val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
-
-        if (!isScrollableContainerInitialized) {
-            updateScrollableContainer()
-            isScrollableContainerInitialized = true
-        }
 
         val containerX = x + padding
         val containerY = y + totalLabelHeight + padding * 2 + blockIdTextField.height

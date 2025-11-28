@@ -1,0 +1,8 @@
+{
+  "name": "forest",
+  "backgroundColor": "#0E1411",
+  "foregroundColor": "#E9F6EC",
+  "primaryColor": "#4CAF50",
+  "secondaryColor": "#1F2D24",
+  "icon": "infinite:icon.png"
+}
