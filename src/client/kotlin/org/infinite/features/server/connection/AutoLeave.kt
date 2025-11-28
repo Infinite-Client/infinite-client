@@ -50,13 +50,7 @@ class AutoLeave : ConfigurableFeature(initialEnabled = false) {
         val isLowHp = player.health <= hpThreshold.value
 
         if (isLowHp) {
-            val reasonKey =
-                when {
-//                isLowHp && isLowTotems -> "lowhp_and_lowtotems"
-                    isLowHp -> "lowhp"
-
-                    else -> "lowtotems"
-                }
+            val reasonKey = "lowhp"
             // サーバーを抜ける理由メッセージを作成
             val reason = Text.translatable("feature.server.autoleave.reason.$reasonKey").string
             leaveServer(reason, handler, player)
