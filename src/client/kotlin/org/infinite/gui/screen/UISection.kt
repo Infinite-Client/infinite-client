@@ -13,14 +13,14 @@ import net.minecraft.text.Text
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.Feature
+import org.infinite.global.rendering.theme.ThemeSetting
 import org.infinite.gui.widget.FeatureSearchWidget
 import org.infinite.gui.widget.InfiniteButton
 import org.infinite.gui.widget.InfiniteFeatureToggle
 import org.infinite.gui.widget.InfiniteScrollableContainer
+import org.infinite.gui.widget.ThemeTileButton
 import org.infinite.utils.rendering.drawBorder
 import org.infinite.utils.rendering.transparent
-import org.infinite.global.rendering.theme.ThemeSetting
-import org.infinite.gui.widget.ThemeTileButton
 
 class UISection(
     val id: String,
@@ -40,6 +40,7 @@ class UISection(
             "main" -> {
                 // Theme selection buttons will be initialized in renderMain
             }
+
             "themes" -> {
                 themeSettingRef = InfiniteClient.getGlobalFeature(ThemeSetting::class.java)
                 buildThemeTiles()
@@ -118,13 +119,20 @@ class UISection(
 
         val titleText =
             when (id) {
-                "main" -> "Main"
-                "themes" -> "Themes"
-                else ->
+                "main" -> {
+                    "Main"
+                }
+
+                "themes" -> {
+                    "Themes"
+                }
+
+                else -> {
                     id
                         .replace("-settings", "")
                         .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() } +
                         " Settings"
+                }
             }
 
         if (id == "main") {
@@ -315,6 +323,7 @@ class UISection(
             "main" -> {
                 featureSearchWidget?.mouseClicked(click, doubled)?.let { if (it) return true }
             }
+
             "themes" -> {
                 reloadThemesButton?.mouseClicked(click, doubled)?.let { if (it) return true }
                 themeTiles?.mouseClicked(click, doubled)?.let { if (it) return true }
@@ -343,7 +352,10 @@ class UISection(
         if (!isSelected) return
 
         when (id) {
-            "main" -> featureSearchWidget?.keyPressed(input)
+            "main" -> {
+                featureSearchWidget?.keyPressed(input)
+            }
+
             "themes" -> {
                 reloadThemesButton?.keyPressed(input)
                 themeTiles?.keyPressed(input)
@@ -388,6 +400,7 @@ class UISection(
                     ?.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
                     ?.let { if (it) return true }
             }
+
             "themes" -> {
                 reloadThemesButton
                     ?.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
@@ -419,6 +432,7 @@ class UISection(
             "main" -> {
                 featureSearchWidget?.mouseDragged(click, offsetX, offsetY)?.let { if (it) return true }
             }
+
             "themes" -> {
                 reloadThemesButton?.mouseDragged(click, offsetX, offsetY)?.let { if (it) return true }
                 themeTiles?.mouseDragged(click, offsetX, offsetY)?.let { if (it) return true }
@@ -450,6 +464,7 @@ class UISection(
             "main" -> {
                 featureSearchWidget?.mouseReleased(click)?.let { if (it) return true }
             }
+
             "themes" -> {
                 reloadThemesButton?.mouseReleased(click)?.let { if (it) return true }
                 themeTiles?.mouseReleased(click)?.let { if (it) return true }
@@ -480,6 +495,7 @@ class UISection(
             "main" -> {
                 featureSearchWidget?.charTyped(input)?.let { if (it) return true }
             }
+
             "themes" -> {
                 reloadThemesButton?.charTyped(input)?.let { if (it) return true }
                 themeTiles?.charTyped(input)?.let { if (it) return true }

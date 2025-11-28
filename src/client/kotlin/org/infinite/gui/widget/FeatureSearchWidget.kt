@@ -87,17 +87,17 @@ class FeatureSearchWidget(
 
     private fun createFeatureToggleWidgets(features: List<Feature<out ConfigurableFeature>>): List<ClickableWidget> =
         features.mapIndexed { index, feature ->
-        InfiniteFeatureToggle(
-            0,
-            0,
-            scrollableContainer.width - scrollableContainer.internalPadding * 2,
-            20,
-            feature,
-            index == selectedIndex, // isSelected
-        ) {
-            // onSettings lambda
-            MinecraftClient.getInstance().setScreen(FeatureSettingsScreen(parentScreen, feature))
-        }
+            InfiniteFeatureToggle(
+                0,
+                0,
+                scrollableContainer.width - scrollableContainer.internalPadding * 2,
+                20,
+                feature,
+                index == selectedIndex, // isSelected
+            ) {
+                // onSettings lambda
+                MinecraftClient.getInstance().setScreen(FeatureSettingsScreen(parentScreen, feature))
+            }
         }
 
     override fun renderWidget(

@@ -26,9 +26,9 @@ import org.infinite.global.GlobalFeatureCategory
 import org.infinite.global.rendering.GlobalRenderingFeatureCategory
 import org.infinite.global.rendering.theme.ThemeSetting
 import org.infinite.global.server.GlobalServerFeatureCategory
+import org.infinite.gui.theme.CustomThemeLoader
 import org.infinite.gui.theme.Theme
 import org.infinite.gui.theme.ThemeColors
-import org.infinite.gui.theme.CustomThemeLoader
 import org.infinite.gui.theme.official.officialThemes
 import org.infinite.libs.ai.AiInterface
 import org.infinite.libs.client.async.AsyncInterface
@@ -63,7 +63,12 @@ object InfiniteClient : ClientModInitializer {
     var currentTheme: String = "infinite"
     var loadedAddons: MutableList<InfiniteAddon> = mutableListOf()
     var loadedThemes: MutableList<Theme> = mutableListOf()
-    private val customThemesDir: Path = FabricLoader.getInstance().gameDir.resolve("infinite").resolve("themes")
+    private val customThemesDir: Path =
+        FabricLoader
+            .getInstance()
+            .gameDir
+            .resolve("infinite")
+            .resolve("themes")
     private val addonFeatureMap: MutableMap<InfiniteAddon, List<FeatureCategory>> = mutableMapOf()
     private val addonGlobalFeatureMap: MutableMap<InfiniteAddon, List<GlobalFeatureCategory>> = mutableMapOf()
     private val featureInstances: MutableMap<Class<out ConfigurableFeature>, ConfigurableFeature> = mutableMapOf()
@@ -580,7 +585,11 @@ object InfiniteClient : ClientModInitializer {
         val diskThemes = CustomThemeLoader.load(customThemesDir.toFile())
 
         // Dev convenience: also load themes from the project-level /themes directory when present.
-        val devThemesDir = FabricLoader.getInstance().gameDir.parent?.resolve("themes")
+        val devThemesDir =
+            FabricLoader
+                .getInstance()
+                .gameDir.parent
+                ?.resolve("themes")
         val devThemes =
             devThemesDir
                 ?.takeIf { it.toFile().exists() }

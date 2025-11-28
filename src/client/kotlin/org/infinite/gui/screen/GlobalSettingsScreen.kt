@@ -31,15 +31,15 @@ class GlobalSettingsScreen(
 ) : Screen(Text.literal("Infinite Client Global Settings")) {
     companion object {
         @JvmStatic
-        fun create(parent: net.minecraft.client.gui.screen.Screen): net.minecraft.client.gui.screen.Screen =
-            GlobalSettingsScreen(parent)
+        fun create(parent: net.minecraft.client.gui.screen.Screen): net.minecraft.client.gui.screen.Screen = GlobalSettingsScreen(parent)
 
         fun create(
             parent: net.minecraft.client.gui.screen.Screen,
             initialCategory: String? = null,
-        ): net.minecraft.client.gui.screen.Screen = GlobalSettingsScreen(parent).apply {
-            this.initialCategoryName = initialCategory
-        }
+        ): net.minecraft.client.gui.screen.Screen =
+            GlobalSettingsScreen(parent).apply {
+                this.initialCategoryName = initialCategory
+            }
     }
 
     private val parent: Screen? = parentScreen

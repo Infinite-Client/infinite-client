@@ -66,7 +66,7 @@ object CustomThemeLoader {
                 6 -> cleaned.toLong(16) or 0xFF000000
                 8 -> cleaned.toLong(16)
                 else -> throw IllegalArgumentException("Color must be 6 or 8 hex digits: $raw")
-        }
+            }
         return value.toInt()
     }
 
