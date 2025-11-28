@@ -31,10 +31,7 @@ public abstract class SplashOverlayMixin {
   // Suppress vanilla splash drawing while keeping its logic (progress, completion) intact.
   @Redirect(
       method = "render",
-      at =
-          @At(
-              value = "INVOKE",
-              target = "Lnet/minecraft/client/gui/DrawContext;fill(IIIII)V"))
+      at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;fill(IIIII)V"))
   private void infiniteClient$skipVanillaFill(
       DrawContext instance, int x1, int y1, int x2, int y2, int color) {
     // no-op to hide Mojang background
@@ -90,7 +87,8 @@ public abstract class SplashOverlayMixin {
               value = "INVOKE",
               target =
                   "Lcom/mojang/blaze3d/systems/CommandEncoder;clearColorTexture(Lcom/mojang/blaze3d/textures/GpuTexture;I)V"))
-  private void infiniteClient$skipVanillaClear(CommandEncoder encoder, GpuTexture texture, int argb) {
+  private void infiniteClient$skipVanillaClear(
+      CommandEncoder encoder, GpuTexture texture, int argb) {
     // no-op to avoid the brand red clear
   }
 }

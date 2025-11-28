@@ -100,7 +100,13 @@ object InfiniteLoadingScreenRenderer {
 
         val titleAlpha = (255 * alpha).roundToInt()
         val title = Text.literal("Infinite Client")
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, originY + spinnerAreaHeight + 12, ColorHelper.getArgb(titleAlpha, 255, 255, 255))
+        context.drawCenteredTextWithShadow(
+            textRenderer,
+            title,
+            width / 2,
+            originY + spinnerAreaHeight + 12,
+            ColorHelper.getArgb(titleAlpha, 255, 255, 255),
+        )
 
         val subtitleText =
             if (reloading) {
@@ -248,8 +254,8 @@ object InfiniteLoadingScreenRenderer {
         return RGBA(a, r, g, b)
     }
 
-    private fun parsePathFrames(values: String): List<List<Pair<Float, Float>>> {
-        return values
+    private fun parsePathFrames(values: String): List<List<Pair<Float, Float>>> =
+        values
             .trim()
             .lines()
             .filter { it.isNotBlank() }
@@ -266,14 +272,16 @@ object InfiniteLoadingScreenRenderer {
                         null
                     }
                 }
-            }
-            .filter { it.isNotEmpty() }
-    }
+            }.filter { it.isNotEmpty() }
 
-    private fun parseKeyTimes(values: String): List<Float> =
-        values.trim().split(";").mapNotNull { it.trim().toFloatOrNull() }
+    private fun parseKeyTimes(values: String): List<Float> = values.trim().split(";").mapNotNull { it.trim().toFloatOrNull() }
 
-    private data class RGBA(val alpha: Int, val r: Int, val g: Int, val b: Int)
+    private data class RGBA(
+        val alpha: Int,
+        val r: Int,
+        val g: Int,
+        val b: Int,
+    )
 
     private val STOP0_COLORS =
         listOf(
