@@ -54,7 +54,6 @@ class InfiniteScreen(
 
         val dynamicSections = mutableListOf<UISection>()
         dynamicSections.add(UISection("main", this))
-        dynamicSections.add(UISection("themes", this))
 
         InfiniteClient.featureCategories.forEach { category ->
             dynamicSections.add(UISection(category.name.lowercase() + "-settings", this, category.features))
