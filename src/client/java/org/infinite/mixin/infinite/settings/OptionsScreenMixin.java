@@ -57,6 +57,6 @@ public abstract class OptionsScreenMixin extends Screen {
     adder.add(
         this.createButton(
             Text.literal("Infinite Client Settings"),
-            () -> GlobalSettingsScreen.Companion.create((OptionsScreen) (Object) this)));
+            () -> new GlobalSettingsScreen((OptionsScreen) (Object) this)));
   }
 }

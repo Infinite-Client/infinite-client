@@ -83,6 +83,12 @@ class InfiniteSettingTextField(
                 else -> {} // Handle BlockColorListSetting and other unhandled types
             }
         }
+        setting.addChangeListener {
+            // setting.value が変更されたときに textField のテキストを更新
+            textField.text = it.toString()
+            // カーソル位置を調整する必要がある場合、ここに追加
+            // textField.setCursorToEnd(false)
+        }
     }
 
     override fun renderWidget(

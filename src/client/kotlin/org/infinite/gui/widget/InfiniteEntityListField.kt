@@ -40,7 +40,7 @@ class InfiniteEntityListField(
 
     private val textField: InfiniteTextField
     private lateinit var scrollableContainer: InfiniteScrollableContainer
-    private var isScrollableContainerInitialized = false
+
     private val entityItemWidgets = mutableListOf<EntityListItemWidget>()
 
     init {
@@ -69,38 +69,41 @@ class InfiniteEntityListField(
             currentInput = newText.trim()
         }
 
-        // Initialize scrollableContainer
+        // Initialize scrollableContainer ONCE here
+        scrollableContainer =
+            InfiniteScrollableContainer(
+                x + padding,
+                y + headerHeight,
+                width - padding * 2, // Use calculated width
+                scrollableListHeight,
+                mutableListOf(), // Initialize with an empty list
+            )
+
+        // Add change listener to update the scrollable container when the setting value changes externally
+        setting.addChangeListener {
+            updateScrollableContainer()
+        }
+
+        // Perform initial population
         updateScrollableContainer()
     }
 
     private var currentInput: String = ""
 
     private fun updateScrollableContainer() {
-        entityItemWidgets.clear()
+        val scrolledY = scrollableContainer.scrollY // Get current scroll position from existing container
 
-        // 既存のscrollableContainerがあればそのscrollYを取得、なければ0.0を使用
-        val scrolledY =
-            if (::scrollableContainer.isInitialized) {
-                scrollableContainer.scrollY
-            } else {
-                // Use 0.0 if not initialized (as requested)
-                0.0
-            }
+        // Clear existing widgets
+        scrollableContainer.widgets.clear()
 
-        // 1. スクロールコンテナの利用可能幅を先に計算
         val containerWidth = width - padding * 2
-
-        // 3. 子ウィジェットの幅を計算
-        // ScrollContainerの内部ロジックを信頼し、コンテナの幅（containerWidth）から
-        // 便宜上のパディングを引いた値を子の幅とします。
         val itemWidth = containerWidth - padding * 2
 
         setting.value.forEach { id ->
-            entityItemWidgets.add(
+            scrollableContainer.widgets.add( // Add to existing container's widgets list
                 EntityListItemWidget(
                     0, // x will be set by scrollable container
                     0, // y will be set by scrollable container
-                    // 親の ScrollContainer の幅に依存する形で itemWidth を設定
                     itemWidth,
                     textRenderer.fontHeight + padding * 2, // Height of each item
                     id,
@@ -110,22 +113,9 @@ class InfiniteEntityListField(
             )
         }
 
-        // 4. 正しいリストで ScrollableContainer を初期化（または再初期化）
-        // 既存の scrollableContainer が null 許容型でない場合（元のコードの文脈からそうではない可能性が高いですが）、
-        // ここで上書きして問題ありません。
-        scrollableContainer =
-            InfiniteScrollableContainer(
-                x + padding,
-                y + headerHeight,
-                containerWidth,
-                scrollableListHeight,
-                entityItemWidgets.toMutableList(),
-            )
-
-        // 5. スクロール位置を復元
-        // scrollableContainer が null 許容型で定義されていることを前提とします。
-        // もし null でなければ、安全に scrollY を設定します。
+        // Restore scroll position and update widget positions
         scrollableContainer.scrollY = scrolledY
+        scrollableContainer.updateWidgetPositions()
     }
 
     private fun addIdToList() {
@@ -176,10 +166,6 @@ class InfiniteEntityListField(
     ) {
         val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
 
-        if (!isScrollableContainerInitialized) {
-            updateScrollableContainer()
-            isScrollableContainerInitialized = true
-        }
         // ScrollableContainerを描画
         val containerX = x + padding
         val containerY = y + totalLabelHeight + padding * 2 + textField.height

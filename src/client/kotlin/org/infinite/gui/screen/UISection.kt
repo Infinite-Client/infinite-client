@@ -13,12 +13,10 @@ import net.minecraft.text.Text
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.Feature
-import org.infinite.global.rendering.theme.ThemeSetting
 import org.infinite.gui.widget.FeatureSearchWidget
 import org.infinite.gui.widget.InfiniteButton
 import org.infinite.gui.widget.InfiniteFeatureToggle
 import org.infinite.gui.widget.InfiniteScrollableContainer
-import org.infinite.gui.widget.ThemeTileButton
 import org.infinite.utils.rendering.drawBorder
 import org.infinite.utils.rendering.transparent
 
@@ -30,20 +28,12 @@ class UISection(
     private var closeButton: InfiniteButton? = null
     val widgets = mutableListOf<ClickableWidget>()
     private var featureSearchWidget: FeatureSearchWidget? = null
-    private var themeTiles: InfiniteScrollableContainer? = null
-    private var reloadThemesButton: InfiniteButton? = null
-    private var themeSettingRef: ThemeSetting? = null
     private var isMainSectionInitialized = false
 
     init {
         when (id) {
             "main" -> {
                 // Theme selection buttons will be initialized in renderMain
-            }
-
-            "themes" -> {
-                themeSettingRef = InfiniteClient.getGlobalFeature(ThemeSetting::class.java)
-                buildThemeTiles()
             }
 
             else -> {
@@ -137,8 +127,6 @@ class UISection(
 
         if (id == "main") {
             renderMain(context, x, y, width, height, textRenderer, isSelected, mouseX, mouseY, delta, renderContent)
-        } else if (id == "themes") {
-            renderThemes(context, x, y, width, height, textRenderer, isSelected, mouseX, mouseY, delta, renderContent)
         } else {
             renderSettings(
                 context,
@@ -205,49 +193,6 @@ class UISection(
             it.width = width - 40
             it.height = height - (currentY + 10 - y) // Adjust height based on theme buttons
             it.render(context, mouseX, mouseY, delta)
-        }
-    }
-
-    private fun renderThemes(
-        context: DrawContext,
-        x: Int,
-        y: Int,
-        width: Int,
-        height: Int,
-        textRenderer: TextRenderer,
-        isSelected: Boolean,
-        mouseX: Int,
-        mouseY: Int,
-        delta: Float,
-        renderContent: Boolean,
-    ) {
-        renderTitle(context, x, y, width, textRenderer, "Themes", isSelected)
-        if (!renderContent) return
-
-        if (reloadThemesButton == null) {
-            reloadThemesButton =
-                InfiniteButton(
-                    x + 20,
-                    y + 50,
-                    120,
-                    20,
-                    Text.literal("Reload Themes"),
-                ) {
-                    InfiniteClient.reloadThemes()
-                    themeSettingRef?.syncOptions()
-                    buildThemeTiles()
-                }
-        }
-        reloadThemesButton?.x = x + 20
-        reloadThemesButton?.y = y + 50
-        reloadThemesButton?.render(context, mouseX, mouseY, delta)
-
-        themeTiles?.let { container ->
-            container.x = x + 20
-            container.y = y + 80
-            container.width = width - 40
-            container.height = height - 110
-            container.render(context, mouseX, mouseY, delta)
         }
     }
 
@@ -323,11 +268,6 @@ class UISection(
             "main" -> {
                 featureSearchWidget?.mouseClicked(click, doubled)?.let { if (it) return true }
             }
-
-            "themes" -> {
-                reloadThemesButton?.mouseClicked(click, doubled)?.let { if (it) return true }
-                themeTiles?.mouseClicked(click, doubled)?.let { if (it) return true }
-            }
         }
 
         // 1. closeButtonのクリック
@@ -355,34 +295,10 @@ class UISection(
             "main" -> {
                 featureSearchWidget?.keyPressed(input)
             }
-
-            "themes" -> {
-                reloadThemesButton?.keyPressed(input)
-                themeTiles?.keyPressed(input)
-            }
         }
 
         // keyPressed は一般的に全ての子に転送されます
         widgets.forEach { it.keyPressed(input) }
-    }
-
-    private fun buildThemeTiles() {
-        val themeSetting = themeSettingRef ?: return
-        val buttons =
-            InfiniteClient.themes.map { theme ->
-                ThemeTileButton(
-                    0,
-                    0,
-                    260,
-                    36,
-                    theme,
-                    { themeSetting.themeSetting.value == theme.name },
-                ) {
-                    themeSetting.themeSetting.value = theme.name
-                    InfiniteClient.currentTheme = theme.name
-                }
-            }
-        themeTiles = InfiniteScrollableContainer(0, 0, 300, 200, buttons.toMutableList())
     }
 
     fun mouseScrolled(
@@ -397,15 +313,6 @@ class UISection(
         when (id) {
             "main" -> {
                 featureSearchWidget
-                    ?.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
-                    ?.let { if (it) return true }
-            }
-
-            "themes" -> {
-                reloadThemesButton
-                    ?.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
-                    ?.let { if (it) return true }
-                themeTiles
                     ?.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
                     ?.let { if (it) return true }
             }
@@ -431,11 +338,6 @@ class UISection(
         when (id) {
             "main" -> {
                 featureSearchWidget?.mouseDragged(click, offsetX, offsetY)?.let { if (it) return true }
-            }
-
-            "themes" -> {
-                reloadThemesButton?.mouseDragged(click, offsetX, offsetY)?.let { if (it) return true }
-                themeTiles?.mouseDragged(click, offsetX, offsetY)?.let { if (it) return true }
             }
         }
 
@@ -464,11 +366,6 @@ class UISection(
             "main" -> {
                 featureSearchWidget?.mouseReleased(click)?.let { if (it) return true }
             }
-
-            "themes" -> {
-                reloadThemesButton?.mouseReleased(click)?.let { if (it) return true }
-                themeTiles?.mouseReleased(click)?.let { if (it) return true }
-            }
         }
 
         // closeButtonの mouseReleased を処理
@@ -494,11 +391,6 @@ class UISection(
         when (id) {
             "main" -> {
                 featureSearchWidget?.charTyped(input)?.let { if (it) return true }
-            }
-
-            "themes" -> {
-                reloadThemesButton?.charTyped(input)?.let { if (it) return true }
-                themeTiles?.charTyped(input)?.let { if (it) return true }
             }
         }
 

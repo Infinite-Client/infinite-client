@@ -24,6 +24,9 @@ class InfiniteSlider<T : Number>(
 
     init {
         updateMessage()
+        setting.addChangeListener {
+            updateMessage()
+        }
     }
 
     private fun updateMessage() {

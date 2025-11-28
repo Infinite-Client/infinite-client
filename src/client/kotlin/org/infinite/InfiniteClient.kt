@@ -161,6 +161,7 @@ object InfiniteClient : ClientModInitializer {
                 addon.onInit()
             }
         }
+        sortCategoriesAndFeatures() // Sort after all addons are loaded and categories/features are potentially modified
         reloadThemes()
         updateFeatureInstances()
     }
@@ -178,12 +179,26 @@ object InfiniteClient : ClientModInitializer {
     }
 
     override fun onInitializeClient() {
+        initializeCoreComponents()
+        setupGlobalFeatureLifecycleEvents()
+        setupGlobalFeatureTickEvents()
+        setupFeatureLifecycleEvents()
+        setupCommonTickEvents()
+        setupCommandsAndManagers()
+        setupFeatureTickEvents()
+    }
+
+    private fun initializeCoreComponents() {
         LogQueue.registerTickEvent()
         AsyncInterface.init()
         updateFeatureInstances()
         InfiniteKeyBind.registerKeybindings()
+    }
+
+    private fun setupGlobalFeatureLifecycleEvents() {
         ClientLifecycleEvents.CLIENT_STARTED.register { _ ->
             loadAddons() // ここで loadedThemes が更新される
+            sortCategoriesAndFeatures() // カテゴリとフィーチャーをソート
             reloadThemes()
             ConfigManager.loadGlobalConfig()
             for (globalFeatureCategory in globalFeatureCategories) {
@@ -194,26 +209,6 @@ object InfiniteClient : ClientModInitializer {
                         setting.generateKey(globalFeatureCategory.name, globalFeature.name, setting.name)
                     }
                     feature.onInit()
-                }
-            }
-        }
-        ClientTickEvents.END_CLIENT_TICK.register { _ ->
-            for (globalFeatureCategory in globalFeatureCategories) {
-                for (globalFeature in globalFeatureCategory.features) {
-                    val feature = globalFeature.instance
-                    if (feature.tickTiming == ConfigurableFeature.Timing.End) {
-                        feature.onTick()
-                    }
-                }
-            }
-        }
-        ClientTickEvents.START_CLIENT_TICK.register { _ ->
-            for (globalFeatureCategory in globalFeatureCategories) {
-                for (globalFeature in globalFeatureCategory.features) {
-                    val feature = globalFeature.instance
-                    if (feature.tickTiming == ConfigurableFeature.Timing.Start) {
-                        feature.onTick()
-                    }
                 }
             }
         }
@@ -260,6 +255,32 @@ object InfiniteClient : ClientModInitializer {
                 }
             }
         }
+    }
+
+    private fun setupGlobalFeatureTickEvents() {
+        ClientTickEvents.END_CLIENT_TICK.register { _ ->
+            for (globalFeatureCategory in globalFeatureCategories) {
+                for (globalFeature in globalFeatureCategory.features) {
+                    val feature = globalFeature.instance
+                    if (feature.tickTiming == ConfigurableFeature.Timing.End) {
+                        feature.onTick()
+                    }
+                }
+            }
+        }
+        ClientTickEvents.START_CLIENT_TICK.register { _ ->
+            for (globalFeatureCategory in globalFeatureCategories) {
+                for (globalFeature in globalFeatureCategory.features) {
+                    val feature = globalFeature.instance
+                    if (feature.tickTiming == ConfigurableFeature.Timing.Start) {
+                        feature.onTick()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setupFeatureLifecycleEvents() {
         ClientPlayConnectionEvents.JOIN.register { _, _, _ ->
             ConfigManager.loadConfig()
             debugTranslations()
@@ -290,12 +311,21 @@ object InfiniteClient : ClientModInitializer {
                 }
             }
         }
+    }
+
+    private fun setupCommonTickEvents() {
         ClientTickEvents.END_CLIENT_TICK.register { _ -> handleWorldSystem() }
         ClientTickEvents.START_CLIENT_TICK.register { _ -> ControllerInterface.tick() }
         ClientTickEvents.START_CLIENT_TICK.register { _ -> AiInterface.tick() }
+    }
+
+    private fun setupCommandsAndManagers() {
         PlayerStatsManager.init()
         ClientCommandRegistrationCallback.EVENT.register(InfiniteCommand::registerCommands)
         worldManager = WorldManager()
+    }
+
+    private fun setupFeatureTickEvents() {
         ClientTickEvents.START_CLIENT_TICK.register { _ ->
             for (category in featureCategories) {
                 for (feature in category.features) {
@@ -313,6 +343,22 @@ object InfiniteClient : ClientModInitializer {
                     }
                 }
             }
+        }
+    }
+
+    private fun sortCategoriesAndFeatures() {
+        // Feature Categoriesを名前でソート
+        featureCategories.sortBy { it.name }
+        // 各Feature Category内のFeatureを名前でソート
+        featureCategories.forEach { category ->
+            category.features.sortBy { it.name }
+        }
+
+        // Global Feature Categoriesを名前でソート
+        globalFeatureCategories.sortBy { it.name }
+        // 各Global Feature Category内のFeatureを名前でソート
+        globalFeatureCategories.forEach { category ->
+            category.features.sortBy { it.name }
         }
     }
 

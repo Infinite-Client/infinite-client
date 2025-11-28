@@ -1,9 +1,11 @@
 package org.infinite.gui.screen
 
+import net.minecraft.client.gui.Click
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.screen.Screen
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
 import net.minecraft.client.gui.widget.ClickableWidget
+import net.minecraft.client.input.CharInput
 import net.minecraft.client.input.KeyInput
 import net.minecraft.text.Text
 import org.infinite.InfiniteClient
@@ -21,6 +23,7 @@ import org.infinite.gui.widget.InfiniteSettingTextField
 import org.infinite.gui.widget.InfiniteSettingToggle
 import org.infinite.gui.widget.InfiniteSlider
 import org.infinite.gui.widget.TabButton
+import org.infinite.gui.widget.ThemeTileContainer
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.rendering.transparent
@@ -29,24 +32,11 @@ import org.lwjgl.glfw.GLFW
 class GlobalSettingsScreen(
     parentScreen: Screen?,
 ) : Screen(Text.literal("Infinite Client Global Settings")) {
-    companion object {
-        @JvmStatic
-        fun create(parent: net.minecraft.client.gui.screen.Screen): net.minecraft.client.gui.screen.Screen = GlobalSettingsScreen(parent)
-
-        fun create(
-            parent: net.minecraft.client.gui.screen.Screen,
-            initialCategory: String? = null,
-        ): net.minecraft.client.gui.screen.Screen =
-            GlobalSettingsScreen(parent).apply {
-                this.initialCategoryName = initialCategory
-            }
-    }
-
     private val parent: Screen? = parentScreen
     private var selectedCategory: GlobalFeatureCategory? = null
     private var initialCategoryName: String? = null
     private val sections: MutableMap<GlobalFeatureCategory, Section> = mutableMapOf()
-    private val categories = InfiniteClient.globalFeatureCategories
+    private val categories = InfiniteClient.globalFeatureCategories.toMutableList()
 
     class Section(
         val tab: TabButton,
@@ -56,6 +46,7 @@ class GlobalSettingsScreen(
     override fun init() {
         super.init()
         sections.clear()
+
         val tabSpacing = 2
         // タブの幅を計算。最小幅を確保しつつ、テキストに合わせて調整
         val tabWidth =
@@ -79,24 +70,20 @@ class GlobalSettingsScreen(
                     updateTabButtonStates()
                 }
 
-            // スクロール可能なコンテナを生成
-            val contents =
-                InfiniteScrollableContainer(0, tabHeight, width, height - tabHeight, generateWidgets(category))
+            val contents = InfiniteScrollableContainer(0, tabHeight, width, height - tabHeight, generateWidgets(category))
 
             x += tabWidth + tabSpacing
             sections[category] = Section(tabButton, contents)
 
             // タブボタンのみをselectableChildとして追加
             addSelectableChild(tabButton)
-
-            // コンテンツコンテナはinitではaddSelectableChildせず、renderとupdateCategoryContentで管理する
         }
 
         selectedCategory =
             initialCategoryName
                 ?.let { desired -> categories.find { it.name.equals(desired, ignoreCase = true) } }
                 ?: categories.firstOrNull()
-        updateCategoryContent() // 初回実行時にコンテンツを有効化
+        updateCategoryContent()
         updateTabButtonStates()
     }
 
@@ -125,7 +112,11 @@ class GlobalSettingsScreen(
 
     private fun getCategoryDisplayName(category: GlobalFeatureCategory?): String =
         category?.let {
-            Text.translatable("infinite.global_category.${it.name.lowercase()}").string
+            if (it.name == "Themes") {
+                "Themes"
+            } else {
+                Text.translatable("infinite.global_category.${it.name.lowercase()}").string
+            }
         } ?: ""
 
     override fun render(
@@ -159,13 +150,46 @@ class GlobalSettingsScreen(
 
     override fun keyPressed(input: KeyInput): Boolean {
         when (input.key) {
-            GLFW.GLFW_KEY_ESCAPE -> this.close()
-            GLFW.GLFW_KEY_LEFT -> selectPreviousCategory()
-            GLFW.GLFW_KEY_RIGHT -> selectNextCategory()
-            else -> return super.keyPressed(input)
+            GLFW.GLFW_KEY_ESCAPE -> {
+                this.close()
+            }
+
+            GLFW.GLFW_KEY_LEFT -> {
+                selectPreviousCategory()
+            }
+
+            GLFW.GLFW_KEY_RIGHT -> {
+                selectNextCategory()
+            }
+
+            else -> {
+                return super.keyPressed(input)
+            }
         }
         return true
     }
+
+    override fun mouseClicked(
+        click: Click,
+        doubled: Boolean,
+    ): Boolean = super.mouseClicked(click, doubled)
+
+    override fun mouseScrolled(
+        mouseX: Double,
+        mouseY: Double,
+        horizontalAmount: Double,
+        verticalAmount: Double,
+    ): Boolean = super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
+
+    override fun mouseDragged(
+        click: Click,
+        offsetX: Double,
+        offsetY: Double,
+    ): Boolean = super.mouseDragged(click, offsetX, offsetY)
+
+    override fun mouseReleased(click: Click): Boolean = super.mouseReleased(click)
+
+    override fun charTyped(input: CharInput): Boolean = super.charTyped(input)
 
     private fun selectPreviousCategory() {
         if (categories.isEmpty()) return
@@ -296,6 +320,15 @@ class GlobalSettingsScreen(
                 }
             }
         }
+        val customWidgets =
+            feature.instance.getCustomWidgets().map { widget ->
+                if (widget is ThemeTileContainer) {
+                    widget.width = widgetWidth
+                    widget.height = widget.calculateHeight(widgetWidth)
+                }
+                widget
+            }
+        settingWidgets.addAll(customWidgets) // Add custom widgets
         return settingWidgets
     }
 
