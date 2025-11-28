@@ -156,10 +156,11 @@ class Document(
 
         // 1. Docusaurus用メタファイル (_category_.json) を生成
         val label = translate(category.name, langCode)
+        val isLocal = parentDir.parent?.fileName?.toString() == "local-features"
         categoryDir.resolve("_category_.json").writeText(
             """
             {
-              "label": "$label",
+              "label": "$label(${if (isLocal) "Local" else "Global"})",
               "link": {
                 "type": "generated-index", 
                 "title": "$label 機能一覧"
@@ -242,7 +243,6 @@ class Document(
                         )
                     }**: `${setting.defaultValue}`\n",
                 )
-                featureContent.append("* **${translate("doc.infinite.setting_current", langCode)}**: `${setting.value}`\n")
 
                 when (setting) {
                     // 範囲設定 (Int, Float, Double)
@@ -344,7 +344,14 @@ class Document(
                                 )
                             }**: ${setting.defaultValue.size}\n",
                         )
-                        featureContent.append("* **${translate("doc.infinite.setting_list_type", langCode)}**: Block IDs\n")
+                        featureContent.append(
+                            "* **${
+                                translate(
+                                    "doc.infinite.setting_list_type",
+                                    langCode,
+                                )
+                            }**: Block IDs\n",
+                        )
                     }
 
                     is FeatureSetting.EntityListSetting -> {
