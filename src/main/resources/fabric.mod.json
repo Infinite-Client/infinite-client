@@ -4,9 +4,7 @@
   "version": "${version}",
   "name": "Infinite Client",
   "description": "Infinite Ultimate Utilities",
-  "authors": [
-    "The Infinity's"
-  ],
+  "authors": ["The Infinity's"],
   "contact": {
     "homepage": "https://the-infinitys.f5.si/minecraft/",
     "sources": "https://github.com/The-Infinitys/minecraft.infinite-client"
@@ -27,9 +25,7 @@
         "adapter": "kotlin"
       }
     ],
-    "modmenu": [
-      "org.infinite.libs.mods.modmenu.InfiniteModMenuApi"
-    ]
+    "modmenu": ["org.infinite.libs.mods.modmenu.InfiniteModMenuApi"]
   },
   "mixins": [
     {
@@ -51,9 +47,7 @@
         "modmenu.discord": "https://discord.gg/Xc3p52yDgK",
         "modmenu.issues": "https://github.com/The-Infinitys/minecraft.infinite-client/issues"
       },
-      "badges": [
-        "client"
-      ],
+      "badges": ["client"],
       "configuredScreen": "org.infinite.gui.screen.GlobalSettingsScreen::create",
       "update_checker": true
     }

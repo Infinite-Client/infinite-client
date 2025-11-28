@@ -55,7 +55,7 @@ object PlayerStatsManager : ClientInterface() {
         newStats: PlayerStats,
     ) {
         val stats = stats ?: return
-        val isSprinting = player.isSprinting
+        val isSprinting = player.isSprinting && player.isOnGround
         val isInWater = player.isTouchingWater
         val isJumped = player.isJumping && !stats.isJumping
         val isDamaged = newStats.hpProgress < stats.hpProgress
