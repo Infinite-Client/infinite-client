@@ -78,6 +78,8 @@ object InfiniteLoadingScreenRenderer {
             0f,
             displaySize,
             displaySize,
+            displaySize,
+            displaySize,
             TEXTURE_SIZE,
             TEXTURE_SIZE,
         )
