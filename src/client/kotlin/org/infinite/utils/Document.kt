@@ -313,14 +313,6 @@ class Document(
                                 )
                             }**: ${setting.options.joinToString(", ") { "`$it`" }}\n",
                         )
-                        featureContent.append(
-                            "* **${
-                                translate(
-                                    "doc.infinite.setting_current_value",
-                                    langCode,
-                                )
-                            }**: `${setting.value}`\n",
-                        )
                     }
 
                     is FeatureSetting.EnumSetting<*> -> {
