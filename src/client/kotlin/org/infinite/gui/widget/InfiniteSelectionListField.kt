@@ -45,6 +45,11 @@ class InfiniteSelectionListField(
             ) {
                 cycleOption()
             }
+
+        // Add change listener to update the button's message when the setting value changes externally
+        setting.addChangeListener {
+            cycleButton.message = getCurrentSettingValueAsText()
+        }
     }
 
     private fun getCurrentSettingValueAsText(): Text =
@@ -59,24 +64,10 @@ class InfiniteSelectionListField(
             // FeatureSetting.EnumSetting<*> の代わりに、ローカル変数として val enumSetting を定義し、
             // 以下のブロックで安全にキャストできることをコンパイラに伝えます。
             is FeatureSetting.EnumSetting<*> -> {
-                // 安全性確保のためのアンチェックキャスト（非推奨だが、このパターンでは必要になることが多い）
-                // setting を一旦 EnumSetting<Enum<*>> として扱うことで、T の情報を回復させる
-                // 実際には T は特定の Enum 型です
-                @Suppress("UNCHECKED_CAST")
-                val enumSetting = setting
-
-                // 1. 現在のインデックスを取得
-                val currentIndex = enumSetting.options.indexOf(enumSetting.value)
-
-                // 2. 次のインデックスを計算（循環）
-                val nextIndex = (currentIndex + 1) % enumSetting.options.size
-
-                // 3. 修正: options リストから次の「値」を取得して代入
-                // これで、enumSetting.value が期待する型 (Enum<*>) の値が代入されます。
-                enumSetting.updateValueFromEnumStar(enumSetting.options[nextIndex])
-
-                // 4. ボタンのメッセージを更新
-                cycleButton.message = Text.literal(enumSetting.value.name)
+                val currentIndex = setting.options.indexOf(setting.value)
+                val nextIndex = (currentIndex + 1) % setting.options.size
+                setting.updateValueFromEnumStar(setting.options[nextIndex])
+                cycleButton.message = Text.literal(setting.value.name)
             }
 
             is FeatureSetting.StringListSetting -> {

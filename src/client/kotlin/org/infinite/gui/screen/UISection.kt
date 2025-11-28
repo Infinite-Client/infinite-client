@@ -113,6 +113,10 @@ class UISection(
                     "Main"
                 }
 
+                "themes" -> {
+                    "Themes"
+                }
+
                 else -> {
                     id
                         .replace("-settings", "")
@@ -181,8 +185,8 @@ class UISection(
             isMainSectionInitialized = true
         }
 
-        // Update positions and render theme buttons
         val currentY = y + 50
+        // Update positions and render feature search
         featureSearchWidget?.let {
             it.x = x + 20
             it.y = currentY + 10
@@ -260,8 +264,10 @@ class UISection(
     ): Boolean { // ★ 戻り値を Boolean に変更
         if (!isSelected) return false
 
-        if (id == "main") {
-            featureSearchWidget?.mouseClicked(click, doubled)?.let { if (it) return true }
+        when (id) {
+            "main" -> {
+                featureSearchWidget?.mouseClicked(click, doubled)?.let { if (it) return true }
+            }
         }
 
         // 1. closeButtonのクリック
@@ -285,8 +291,10 @@ class UISection(
     ) {
         if (!isSelected) return
 
-        if (id == "main") {
-            featureSearchWidget?.keyPressed(input)
+        when (id) {
+            "main" -> {
+                featureSearchWidget?.keyPressed(input)
+            }
         }
 
         // keyPressed は一般的に全ての子に転送されます
@@ -302,10 +310,12 @@ class UISection(
     ): Boolean {
         if (!isSelected) return false
 
-        if (id == "main") {
-            featureSearchWidget
-                ?.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
-                ?.let { if (it) return true }
+        when (id) {
+            "main" -> {
+                featureSearchWidget
+                    ?.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
+                    ?.let { if (it) return true }
+            }
         }
 
         for (widget in widgets) {
@@ -325,8 +335,10 @@ class UISection(
     ): Boolean { // ★ 戻り値は Boolean
         if (!isSelected) return false
 
-        if (id == "main") {
-            featureSearchWidget?.mouseDragged(click, offsetX, offsetY)?.let { if (it) return true }
+        when (id) {
+            "main" -> {
+                featureSearchWidget?.mouseDragged(click, offsetX, offsetY)?.let { if (it) return true }
+            }
         }
 
         // closeButtonへのドラッグを処理
@@ -350,8 +362,10 @@ class UISection(
     ): Boolean { // ★ 戻り値は Boolean
         if (!isSelected) return false
 
-        if (id == "main") {
-            featureSearchWidget?.mouseReleased(click)?.let { if (it) return true }
+        when (id) {
+            "main" -> {
+                featureSearchWidget?.mouseReleased(click)?.let { if (it) return true }
+            }
         }
 
         // closeButtonの mouseReleased を処理
@@ -374,8 +388,10 @@ class UISection(
     ): Boolean {
         if (!isSelected) return false
 
-        if (id == "main") {
-            featureSearchWidget?.charTyped(input)?.let { if (it) return true }
+        when (id) {
+            "main" -> {
+                featureSearchWidget?.charTyped(input)?.let { if (it) return true }
+            }
         }
 
         for (widget in widgets) {

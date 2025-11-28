@@ -1,0 +1,8 @@
+{
+  "name": "ocean",
+  "backgroundColor": "#0A0F1A",
+  "foregroundColor": "#E8F6FF",
+  "primaryColor": "#3FB3FF",
+  "secondaryColor": "#123B54",
+  "icon": "infinite:icon.png"
+}

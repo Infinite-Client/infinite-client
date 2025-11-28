@@ -1,0 +1,8 @@
+{
+  "name": "sunset",
+  "backgroundColor": "#15131F",
+  "foregroundColor": "#FDF5E6",
+  "primaryColor": "#FF8A5C",
+  "secondaryColor": "#2C3040",
+  "icon": "infinite:icon.png"
+}

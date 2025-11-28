@@ -26,6 +26,7 @@ import org.infinite.global.GlobalFeatureCategory
 import org.infinite.global.rendering.GlobalRenderingFeatureCategory
 import org.infinite.global.rendering.theme.ThemeSetting
 import org.infinite.global.server.GlobalServerFeatureCategory
+import org.infinite.gui.theme.CustomThemeLoader
 import org.infinite.gui.theme.Theme
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.gui.theme.official.officialThemes
@@ -40,6 +41,7 @@ import org.infinite.libs.infinite.InfiniteCommand
 import org.infinite.libs.infinite.InfiniteKeyBind
 import org.infinite.libs.world.WorldManager
 import org.infinite.utils.LogQueue
+import java.nio.file.Path
 
 object InfiniteClient : ClientModInitializer {
     val featureCategories: MutableList<FeatureCategory> =
@@ -61,6 +63,12 @@ object InfiniteClient : ClientModInitializer {
     var currentTheme: String = "infinite"
     var loadedAddons: MutableList<InfiniteAddon> = mutableListOf()
     var loadedThemes: MutableList<Theme> = mutableListOf()
+    private val customThemesDir: Path =
+        FabricLoader
+            .getInstance()
+            .gameDir
+            .resolve("infinite")
+            .resolve("themes")
     private val addonFeatureMap: MutableMap<InfiniteAddon, List<FeatureCategory>> = mutableMapOf()
     private val addonGlobalFeatureMap: MutableMap<InfiniteAddon, List<GlobalFeatureCategory>> = mutableMapOf()
     private val featureInstances: MutableMap<Class<out ConfigurableFeature>, ConfigurableFeature> = mutableMapOf()
@@ -153,6 +161,8 @@ object InfiniteClient : ClientModInitializer {
                 addon.onInit()
             }
         }
+        sortCategoriesAndFeatures() // Sort after all addons are loaded and categories/features are potentially modified
+        reloadThemes()
         updateFeatureInstances()
     }
 
@@ -169,13 +179,27 @@ object InfiniteClient : ClientModInitializer {
     }
 
     override fun onInitializeClient() {
+        initializeCoreComponents()
+        setupGlobalFeatureLifecycleEvents()
+        setupGlobalFeatureTickEvents()
+        setupFeatureLifecycleEvents()
+        setupCommonTickEvents()
+        setupCommandsAndManagers()
+        setupFeatureTickEvents()
+    }
+
+    private fun initializeCoreComponents() {
         LogQueue.registerTickEvent()
         AsyncInterface.init()
         updateFeatureInstances()
         InfiniteKeyBind.registerKeybindings()
+    }
+
+    private fun setupGlobalFeatureLifecycleEvents() {
         ClientLifecycleEvents.CLIENT_STARTED.register { _ ->
             loadAddons() // ここで loadedThemes が更新される
-            themes = officialThemes + loadedThemes // officialThemesとloadedThemesを結合
+            sortCategoriesAndFeatures() // カテゴリとフィーチャーをソート
+            reloadThemes()
             ConfigManager.loadGlobalConfig()
             for (globalFeatureCategory in globalFeatureCategories) {
                 for (globalFeature in globalFeatureCategory.features) {
@@ -185,26 +209,6 @@ object InfiniteClient : ClientModInitializer {
                         setting.generateKey(globalFeatureCategory.name, globalFeature.name, setting.name)
                     }
                     feature.onInit()
-                }
-            }
-        }
-        ClientTickEvents.END_CLIENT_TICK.register { _ ->
-            for (globalFeatureCategory in globalFeatureCategories) {
-                for (globalFeature in globalFeatureCategory.features) {
-                    val feature = globalFeature.instance
-                    if (feature.tickTiming == ConfigurableFeature.Timing.End) {
-                        feature.onTick()
-                    }
-                }
-            }
-        }
-        ClientTickEvents.START_CLIENT_TICK.register { _ ->
-            for (globalFeatureCategory in globalFeatureCategories) {
-                for (globalFeature in globalFeatureCategory.features) {
-                    val feature = globalFeature.instance
-                    if (feature.tickTiming == ConfigurableFeature.Timing.Start) {
-                        feature.onTick()
-                    }
                 }
             }
         }
@@ -251,6 +255,32 @@ object InfiniteClient : ClientModInitializer {
                 }
             }
         }
+    }
+
+    private fun setupGlobalFeatureTickEvents() {
+        ClientTickEvents.END_CLIENT_TICK.register { _ ->
+            for (globalFeatureCategory in globalFeatureCategories) {
+                for (globalFeature in globalFeatureCategory.features) {
+                    val feature = globalFeature.instance
+                    if (feature.tickTiming == ConfigurableFeature.Timing.End) {
+                        feature.onTick()
+                    }
+                }
+            }
+        }
+        ClientTickEvents.START_CLIENT_TICK.register { _ ->
+            for (globalFeatureCategory in globalFeatureCategories) {
+                for (globalFeature in globalFeatureCategory.features) {
+                    val feature = globalFeature.instance
+                    if (feature.tickTiming == ConfigurableFeature.Timing.Start) {
+                        feature.onTick()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setupFeatureLifecycleEvents() {
         ClientPlayConnectionEvents.JOIN.register { _, _, _ ->
             ConfigManager.loadConfig()
             debugTranslations()
@@ -281,12 +311,21 @@ object InfiniteClient : ClientModInitializer {
                 }
             }
         }
+    }
+
+    private fun setupCommonTickEvents() {
         ClientTickEvents.END_CLIENT_TICK.register { _ -> handleWorldSystem() }
         ClientTickEvents.START_CLIENT_TICK.register { _ -> ControllerInterface.tick() }
         ClientTickEvents.START_CLIENT_TICK.register { _ -> AiInterface.tick() }
+    }
+
+    private fun setupCommandsAndManagers() {
         PlayerStatsManager.init()
         ClientCommandRegistrationCallback.EVENT.register(InfiniteCommand::registerCommands)
         worldManager = WorldManager()
+    }
+
+    private fun setupFeatureTickEvents() {
         ClientTickEvents.START_CLIENT_TICK.register { _ ->
             for (category in featureCategories) {
                 for (feature in category.features) {
@@ -304,6 +343,22 @@ object InfiniteClient : ClientModInitializer {
                     }
                 }
             }
+        }
+    }
+
+    private fun sortCategoriesAndFeatures() {
+        // Feature Categoriesを名前でソート
+        featureCategories.sortBy { it.name }
+        // 各Feature Category内のFeatureを名前でソート
+        featureCategories.forEach { category ->
+            category.features.sortBy { it.name }
+        }
+
+        // Global Feature Categoriesを名前でソート
+        globalFeatureCategories.sortBy { it.name }
+        // 各Global Feature Category内のFeatureを名前でソート
+        globalFeatureCategories.forEach { category ->
+            category.features.sortBy { it.name }
         }
     }
 
@@ -567,5 +622,33 @@ object InfiniteClient : ClientModInitializer {
                 globalFeatureInstances[feature.instance.javaClass] = feature.instance
             }
         }
+    }
+
+    fun reloadThemes() {
+        if (!customThemesDir.toFile().exists()) {
+            customThemesDir.toFile().mkdirs()
+        }
+        val diskThemes = CustomThemeLoader.load(customThemesDir.toFile())
+
+        // Dev convenience: also load themes from the project-level /themes directory when present.
+        val devThemesDir =
+            FabricLoader
+                .getInstance()
+                .gameDir.parent
+                ?.resolve("themes")
+        val devThemes =
+            devThemesDir
+                ?.takeIf { it.toFile().exists() }
+                ?.let { CustomThemeLoader.load(it.toFile()) }
+                ?: emptyList()
+
+        val bundledThemes = CustomThemeLoader.loadBundled()
+        val addonThemes = loadedThemes.toList()
+
+        // Earlier items take priority when names collide.
+        val merged =
+            (diskThemes + devThemes + bundledThemes + officialThemes + addonThemes).distinctBy { it.name.lowercase() }
+
+        themes = merged
     }
 }

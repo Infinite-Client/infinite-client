@@ -32,6 +32,11 @@ class InfiniteSettingToggle(
             ) { newState ->
                 setting.value = newState
             }
+
+        // Add change listener to update the toggle button's state when the setting value changes externally
+        setting.addChangeListener {
+            toggleButton.setState(it)
+        }
     }
 
     override fun renderWidget(

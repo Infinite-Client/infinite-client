@@ -4,9 +4,31 @@ import org.infinite.utils.toSnakeCase
 
 sealed class FeatureSetting<T>(
     val name: String,
-    var value: T,
+    initialValue: T,
     val defaultValue: T,
 ) {
+    // リスナーのリスト
+    private val changeListeners: MutableList<(T) -> Unit> = mutableListOf()
+
+    var value: T = initialValue
+        set(newValue) {
+            if (field != newValue) { // 値が本当に変更された場合のみ処理
+                field = newValue
+                // 値が変更されたらリスナーに通知
+                changeListeners.forEach { it(newValue) }
+            }
+        }
+
+    // リスナーを追加するメソッド
+    fun addChangeListener(listener: (T) -> Unit) {
+        changeListeners.add(listener)
+    }
+
+    // リスナーを削除するメソッド (必要な場合)
+    fun removeChangeListener(listener: (T) -> Unit) {
+        changeListeners.remove(listener)
+    }
+
     lateinit var descriptionKey: String
 
     init {
@@ -79,7 +101,7 @@ sealed class FeatureSetting<T>(
         val options: MutableList<String>,
     ) : FeatureSetting<String>(name, defaultValue, defaultValue) {
         fun set(value: String) {
-            this.value = options.find { it == value } ?: return
+            this.value = options.find { it == value } ?: throw IllegalArgumentException("$value is invalid option: $options")
         }
     }
 

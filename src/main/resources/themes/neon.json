@@ -1,0 +1,8 @@
+{
+  "name": "neon",
+  "backgroundColor": "#0B0E16",
+  "foregroundColor": "#ECF5FF",
+  "primaryColor": "#7C3BFF",
+  "secondaryColor": "#0F1F33",
+  "icon": "infinite:icon.png"
+}
