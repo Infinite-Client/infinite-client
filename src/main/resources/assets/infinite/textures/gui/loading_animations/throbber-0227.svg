@@ -1,0 +1,24 @@
+<svg
+    viewBox="0 0 120 120" version="1.1"
+    xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink">
+
+    <defs>
+        <!-- 時間によって変化する単色を表現するための線形グラデーションを定義 -->
+        <!-- 始点と終点の両方に計算された stroke_color を設定することで、パス全体を均一に塗ります -->
+        <linearGradient id="animated-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#79ffff" />
+            <stop offset="50%" stop-color="#7979ff" />
+            <stop offset="100%" stop-color="#ff79ff" />
+        </linearGradient>
+    </defs>
+    
+    <path
+        d="M 62.2222,25.5556 L 70.0000,10.0000 L 88.3333,10.0000 L 100.0000,10.0000 L 106.1111,22.2222 L 110.0000,30.0000 L 103.8889,42.2222 L 100.0000,50.0000 L 81.6667,50.0000 L 70.0000,50.0000 L 57.7778,25.5556 L 50.0000,10.0000 L 31.6667,10.0000"
+        fill="none"
+        stroke="url(#animated-gradient)"
+        stroke-width="8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+    />
+</svg>
