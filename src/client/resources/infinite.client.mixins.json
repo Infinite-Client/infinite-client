@@ -62,7 +62,6 @@
     "infinite.gui.SliderWidgetMixin",
     "infinite.gui.TextFieldWidgetMixin",
     "infinite.gui.SplashOverlayMixin",
-    "infinite.gui.TitleScreenMixin",
     "infinite.interfaces.WorldRendererMixin",
     "infinite.settings.OptionsScreenMixin",
     "infinite.world.ClientPlayNetworkHandlerMixin"
