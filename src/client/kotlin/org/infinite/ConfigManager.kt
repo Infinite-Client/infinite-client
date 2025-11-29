@@ -177,7 +177,7 @@ object ConfigManager {
             val jsonString = globalConfigFile.readText()
             val globalConfig = json.decodeFromString(GlobalConfig.serializer(), jsonString)
             globalConfig.globalFeatures.forEach { featureConfig ->
-                InfiniteClient.featureCategories
+                InfiniteClient.globalFeatureCategories
                     .flatMap { it.features }
                     .find { it.name == featureConfig.nameKey }
                     ?.let { feature ->

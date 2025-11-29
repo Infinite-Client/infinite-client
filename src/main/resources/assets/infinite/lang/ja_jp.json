@@ -468,6 +468,7 @@
   "key.infinite-client.action.movement.builder.move_left": "Builder: 左へ移動",
   "key.infinite-client.action.movement.builder.move_right": "Builder: 右へ移動",
   "infinite.general_feature.rendering.font_setting.description": "フォントをカスタマイズできます。",
+  "infinite.general_feature.rendering.loading_animation_setting.description": "ロードアニメーションの表示を設定します。",
   "infinite.general_feature.server.protocol_spoofing_setting.description": "バニラクライアントを模倣する",
   "doc.infinite.description_title": "機能の説明",
   "doc.infinite.settings_section_title": "設定",
