@@ -61,14 +61,12 @@
     "infinite.gui.ScrollableWidgetMixin",
     "infinite.gui.SliderWidgetMixin",
     "infinite.gui.TextFieldWidgetMixin",
-    "infinite.gui.SplashOverlayMixin",
-    "infinite.gui.ScreenMixin",
-    "infinite.gui.TitleScreenMixin",
     "infinite.interfaces.WorldRendererMixin",
     "infinite.settings.OptionsScreenMixin",
     "infinite.world.ClientPlayNetworkHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "mixins": []
 }

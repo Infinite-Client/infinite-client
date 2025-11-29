@@ -92,6 +92,6 @@ accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarT
 accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarThumbY ()I
 accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarThumbY ()I
 accessible field net/minecraft/client/gui/widget/ScrollableWidget scrollbarDragged Z
-accessible method net/minecraft/client/gui/screen/Screen renderPanoramaBackground (Lnet/minecraft/client/gui/DrawContext;F)V
+
 # --- AntiCheat
 accessible field net/minecraft/client/network/ClientCommonNetworkHandler seenPlayers Ljava/util/Map;
