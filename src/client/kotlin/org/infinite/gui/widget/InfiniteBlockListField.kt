@@ -34,9 +34,7 @@ class InfiniteBlockListField(
     private val scrollableListHeight: Int
 
     private val textField: InfiniteTextField
-    private lateinit var scrollableContainer: InfiniteScrollableContainer
-
-    private val blockItemWidgets = mutableListOf<BlockListItemWidget>()
+    private var scrollableContainer: InfiniteScrollableContainer
 
     init {
         // Calculate header and scrollable list heights based on totalHeight

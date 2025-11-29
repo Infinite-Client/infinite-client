@@ -41,9 +41,7 @@ class InfinitePlayerListField(
     private val scrollableListHeight: Int
 
     private val textField: InfiniteTextField
-    private lateinit var scrollableContainer: InfiniteScrollableContainer
-
-    private val playerItemWidgets = mutableListOf<PlayerListItemWidget>()
+    private var scrollableContainer: InfiniteScrollableContainer
 
     init {
         // Calculate header and scrollable list heights based on totalHeight
