@@ -1,11 +1,12 @@
 {
-	"required": true,
-	"package": "org.infinite.mixin.client",
-	"compatibilityLevel": "JAVA_21",
-	"client": [
-		"ExampleClientMixin"
-	],
-	"injectors": {
-		"defaultRequire": 1
+  "required": true,
+  "package": "org.infinite.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "core.MinecraftClientMixin",
+    "core.multiplayer.ClientLevelMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
 	}
 }

@@ -1,3 +1,3 @@
 package org.infinite.libs.log
 
-class LogSystem
+object LogSystem
