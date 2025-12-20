@@ -1,3 +1,11 @@
 package org.infinite.libs.core.features.feature
 
-class LocalFeature : org.infinite.libs.core.features.Feature()
+import org.infinite.libs.core.features.Feature
+
+open class LocalFeature : Feature() {
+    open fun onConnected() {
+    }
+
+    open fun onDisconnected() {
+    }
+}
