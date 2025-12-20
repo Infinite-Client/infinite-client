@@ -1,7 +1,10 @@
 package org.infinite.libs.core.features
 
-open class Feature {
-    open val properties: HashMap<String, Property> = HashMap.newHashMap(0)
+import org.infinite.libs.interfaces.MinecraftInterface
+import java.util.concurrent.ConcurrentHashMap
+
+open class Feature : MinecraftInterface() {
+    open val properties: ConcurrentHashMap<String, Property> = ConcurrentHashMap()
 
     init {
         val kClass = this::class

@@ -1,3 +1,7 @@
 package org.infinite.libs.graphics
 
-class Graphics2D
+import net.minecraft.client.gui.GuiGraphics
+
+class Graphics2D(
+    val gui: GuiGraphics,
+)
