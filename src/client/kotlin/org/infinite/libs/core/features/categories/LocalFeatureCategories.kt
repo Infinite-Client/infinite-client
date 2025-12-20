@@ -7,6 +7,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.infinite.features.local.rendering.LocalRenderingCategory
 import org.infinite.libs.core.features.FeatureCategories
 import org.infinite.libs.core.features.categories.category.LocalCategory
 import org.infinite.libs.core.features.feature.LocalFeature
@@ -18,6 +19,10 @@ class LocalFeatureCategories : FeatureCategories<KClass<out LocalFeature>, Local
 
     // 接続ごとに作り直すためのスコープ。初期値は null または空のスコープ
     private var connectionScope: CoroutineScope? = null
+
+    init {
+        insert(LocalRenderingCategory())
+    }
 
     /**
      * サーバー接続時の処理（非同期・並列）

@@ -13,6 +13,15 @@ abstract class FeatureCategories<
 > {
     abstract val categories: ConcurrentHashMap<K, V>
 
+    /**
+     * カテゴリを登録する
+     * 具体的な型（T）を LocalCategory として適切にキャストして Map に格納します
+     */
+    @Suppress("UNCHECKED_CAST")
+    inline fun <reified T : V> insert(category: T) {
+        categories[T::class as K] = category
+    }
+
     @Suppress("UNCHECKED_CAST")
     fun <T : V> getCategory(clazz: KClass<out T>): T? = categories[clazz as K] as? T
 }

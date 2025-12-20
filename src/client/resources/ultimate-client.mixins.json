@@ -3,7 +3,7 @@
   "package": "org.infinite.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "core.MinecraftClientMixin",
+    "core.MinecraftMixin",
     "core.multiplayer.ClientLevelMixin"
   ],
   "injectors": {
