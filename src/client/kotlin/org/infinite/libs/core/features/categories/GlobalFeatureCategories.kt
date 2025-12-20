@@ -52,4 +52,30 @@ class GlobalFeatureCategories :
                 }.joinAll()
         }
     }
+
+    fun onStartTick() {
+        lifecycleScope.launch {
+            try {
+                categories.values
+                    .map { category ->
+                        launch { category.onStartTick() }
+                    }.joinAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun onEndTick() {
+        lifecycleScope.launch {
+            try {
+                categories.values
+                    .map { category ->
+                        launch { category.onEndTick() }
+                    }.joinAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 }

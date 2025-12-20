@@ -7,4 +7,8 @@ class HelloFeature : LocalFeature() {
     override fun onConnected() {
         LogSystem.log("Hello, World!")
     }
+
+    override fun onStartTick() {
+        LogSystem.log("Tick")
+    }
 }

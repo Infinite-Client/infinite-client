@@ -31,4 +31,24 @@ open class GlobalCategory : Category<KClass<out GlobalFeature>, GlobalFeature>()
                     }
                 }.joinAll()
         }
+
+    suspend fun onStartTick() =
+        coroutineScope {
+            features.values
+                .map { feature ->
+                    launch(Dispatchers.Default) {
+                        feature.onStartTick()
+                    }
+                }.joinAll()
+        }
+
+    suspend fun onEndTick() =
+        coroutineScope {
+            features.values
+                .map { feature ->
+                    launch(Dispatchers.Default) {
+                        feature.onEndTick()
+                    }
+                }.joinAll()
+        }
 }

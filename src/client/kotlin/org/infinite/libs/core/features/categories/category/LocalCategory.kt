@@ -37,4 +37,24 @@ open class LocalCategory : Category<KClass<out LocalFeature>, LocalFeature>() {
                     }
                 }.joinAll()
         }
+
+    suspend fun onStartTick() =
+        coroutineScope {
+            features.values
+                .map { feature ->
+                    launch(Dispatchers.Default) {
+                        feature.onStartTick()
+                    }
+                }.joinAll()
+        }
+
+    suspend fun onEndTick() =
+        coroutineScope {
+            features.values
+                .map { feature ->
+                    launch(Dispatchers.Default) {
+                        feature.onEndTick()
+                    }
+                }.joinAll()
+        }
 }

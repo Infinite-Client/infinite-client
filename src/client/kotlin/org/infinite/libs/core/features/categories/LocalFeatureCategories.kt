@@ -77,4 +77,30 @@ class LocalFeatureCategories : FeatureCategories<KClass<out LocalFeature>, Local
     fun onShutdown() {
         onDisconnected()
     }
+
+    fun onStartTick() {
+        connectionScope?.launch {
+            try {
+                categories.values
+                    .map { category ->
+                        launch { category.onStartTick() }
+                    }.joinAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun onEndTick() {
+        connectionScope?.launch {
+            try {
+                categories.values
+                    .map { category ->
+                        launch { category.onEndTick() }
+                    }.joinAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 }
