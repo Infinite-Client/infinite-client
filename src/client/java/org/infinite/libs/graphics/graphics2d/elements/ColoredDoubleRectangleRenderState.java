@@ -18,7 +18,7 @@ public record ColoredDoubleRectangleRenderState(
     double x0,
     double y0,
     double x1,
-    double y1, // doubleに変更
+    double y1,
     int col1,
     int col2,
     @Nullable ScreenRectangle scissorArea,
@@ -51,7 +51,7 @@ public record ColoredDoubleRectangleRenderState(
   }
 
   public void buildVertices(VertexConsumer vertexConsumer) {
-    // VertexConsumerはfloatを要求するため、ここでfloatにキャスト
+    // JOML Matrix3x2fc および VertexConsumer は float を受け取るためキャストが必要
     vertexConsumer
         .addVertexWith2DPose(this.pose(), (float) this.x0(), (float) this.y0())
         .setColor(this.col1());
@@ -73,10 +73,15 @@ public record ColoredDoubleRectangleRenderState(
       double y1,
       Matrix3x2fc matrix3x2fc,
       @Nullable ScreenRectangle screenRectangle) {
+    // ScreenRectangle は整数のピクセル座標を扱う。
+    // 描画エリアを確実にカバーするため、x0/y0 は床関数(floor)、x1/y1 は天井関数(ceil)的な変換が安全
     int ix0 = (int) Math.floor(x0);
     int iy0 = (int) Math.floor(y0);
-    int iw = (int) Math.ceil(x1 - x0);
-    int ih = (int) Math.ceil(y1 - y0);
+    int ix1 = (int) Math.ceil(x1);
+    int iy1 = (int) Math.ceil(y1);
+
+    int iw = ix1 - ix0;
+    int ih = iy1 - iy0;
 
     ScreenRectangle screenRectangle2 =
         (new ScreenRectangle(ix0, iy0, iw, ih)).transformMaxBounds(matrix3x2fc);

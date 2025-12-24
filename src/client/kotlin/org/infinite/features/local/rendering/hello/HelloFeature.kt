@@ -16,7 +16,7 @@ class HelloFeature : LocalFeature() {
 
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
         graphics2D.strokeStyle = StrokeStyle(0xFFFFFFFF.toInt(), 1.0)
-        graphics2D.strokeRect(0, 0, 100, 100)
+        graphics2D.strokeRect(50, 50, 100, 100)
         return graphics2D
     }
 }
