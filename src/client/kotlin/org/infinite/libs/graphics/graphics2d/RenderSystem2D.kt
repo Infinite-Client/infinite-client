@@ -20,11 +20,13 @@ class RenderSystem2D(
             is RenderCommand.DrawRectInt -> {
                 rect.strokeRect(command.x, command.y, command.width, command.height, command.color, command.strokeWidth)
             }
-            is RenderCommand.DrawRectFloat ->{
-                rect.strokeRect(command.x,command.y,command.width,command.height,command.color,command.strokeWidth)
+
+            is RenderCommand.DrawRectFloat -> {
+                rect.strokeRect(command.x, command.y, command.width, command.height, command.color, command.strokeWidth)
             }
-            is RenderCommand.DrawRectDouble ->{
-                rect.strokeRect(command.x,command.y,command.width,command.height,command.color,command.strokeWidth)
+
+            is RenderCommand.DrawRectDouble -> {
+                rect.strokeRect(command.x, command.y, command.width, command.height, command.color, command.strokeWidth)
             }
         }
     }

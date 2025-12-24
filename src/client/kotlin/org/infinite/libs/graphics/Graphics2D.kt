@@ -36,7 +36,7 @@ class Graphics2D(
         x: Float,
         y: Float,
         width: Float,
-        height: Float
+        height: Float,
     ) {
         val style = strokeStyle ?: return
         val (strokeColor, strokeWidthDouble) = style
@@ -48,7 +48,7 @@ class Graphics2D(
         x: Double,
         y: Double,
         width: Double,
-        height: Double
+        height: Double,
     ) {
         val style = strokeStyle ?: return
         val (strokeColor, strokeWidth) = style

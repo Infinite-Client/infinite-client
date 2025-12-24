@@ -6,7 +6,13 @@ import net.minecraft.client.renderer.RenderPipelines
 import org.infinite.libs.graphics.graphics2d.elements.ColoredDoubleRectangleRenderState
 import org.joml.Matrix3x2f
 
-fun GuiGraphics.fill(x: Double, y: Double, width: Double, height: Double, color: Int) {
+fun GuiGraphics.fill(
+    x: Double,
+    y: Double,
+    width: Double,
+    height: Double,
+    color: Int,
+) {
     val renderPipeline = RenderPipelines.GUI
     val textureSetup = TextureSetup.noTexture()
     this.guiRenderState.submitGuiElement(
@@ -20,9 +26,7 @@ fun GuiGraphics.fill(x: Double, y: Double, width: Double, height: Double, color:
             height,
             color,
             color,
-            this.scissorStack.peek()
-        )
+            this.scissorStack.peek(),
+        ),
     )
-
 }
-
