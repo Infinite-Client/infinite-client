@@ -193,13 +193,13 @@ class QuadRenderer(private val guiGraphics: GuiGraphics) {
 
         val hw = strokeWidth / 2f
 
-        // 2. 正規化された座標(q.xN, q.yN)で計算
+        // 2. 正規化された座標で計算
         val p0 = calculateForMiter(q.x0, q.y0, q.x3, q.y3, q.x1, q.y1, hw)
         val p1 = calculateForMiter(q.x1, q.y1, q.x0, q.y0, q.x2, q.y2, hw)
         val p2 = calculateForMiter(q.x2, q.y2, q.x1, q.y1, q.x3, q.y3, hw)
         val p3 = calculateForMiter(q.x3, q.y3, q.x2, q.y2, q.x0, q.y0, hw)
 
-        // 3. 内側の色をサンプリング (正規化された色 q.cN を使用)
+        // 3. 内側の色をサンプリング
         val innerCols = if (strokeWidth > 2.0f) {
             QuadColorSampler.sample(
                 p0.ix, p0.iy, p1.ix, p1.iy, p2.ix, p2.iy, p3.ix, p3.iy,
@@ -210,7 +210,8 @@ class QuadRenderer(private val guiGraphics: GuiGraphics) {
             listOf(q.c0, q.c1, q.c2, q.c3)
         }
 
-        // 4. エッジ描画
+        // 4. エッジ描画 (色の引数順序を修正)
+        // 引数: start, end, outSCol, outECol, inSCol, inECol
         drawColoredEdge(p0, p1, q.c0, q.c1, innerCols[0], innerCols[1])
         drawColoredEdge(p1, p2, q.c1, q.c2, innerCols[1], innerCols[2])
         drawColoredEdge(p2, p3, q.c2, q.c3, innerCols[2], innerCols[3])
@@ -225,13 +226,17 @@ class QuadRenderer(private val guiGraphics: GuiGraphics) {
         inSCol: Int,
         inECol: Int,
     ) {
-        // 頂点指定順序: 開始外 -> 終了外 -> 終了内 -> 開始内
+        // 頂点指定順序:
+        // 1: 開始外(ox,oy) -> 2: 終了外(ox,oy) -> 3: 終了内(ix,iy) -> 4: 開始内(ix,iy)
         guiGraphics.fillQuad(
             start.ox, start.oy,
             end.ox, end.oy,
             end.ix, end.iy,
             start.ix, start.iy,
-            outSCol, outECol, inECol, inSCol,
+            outSCol, // 1に対応
+            outECol, // 2に対応
+            inECol, // 3に対応 (終了地点の内側の色)
+            inSCol, // 4に対応 (開始地点の内側の色)
         )
     }
 
