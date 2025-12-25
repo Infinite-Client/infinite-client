@@ -132,14 +132,7 @@ class Graphics2D(
     fun realDelta(): Float = capturedRealDelta
 
     /**
-     * キープリセット：次のフレームの描画前に呼び出す想定
-     */
-    fun clearCommands() {
-        commandQueue.clear()
-    }
-
-    /**
      * 登録された順にコマンドを取り出します
      */
-    fun poll(): RenderCommand? = commandQueue.poll()
+    fun commands(): List<RenderCommand> = commandQueue.toList()
 }

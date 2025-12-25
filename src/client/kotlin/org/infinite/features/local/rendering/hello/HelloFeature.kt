@@ -11,6 +11,7 @@ import kotlin.math.sin
 class HelloFeature : LocalFeature() {
     init {
         property("Hello", IntProperty(1, 1, 100))
+        enable()
     }
 
     override fun onConnected() {

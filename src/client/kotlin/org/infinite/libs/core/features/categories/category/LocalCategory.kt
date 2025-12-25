@@ -67,10 +67,7 @@ open class LocalCategory : Category<KClass<out LocalFeature>, LocalFeature>() {
                     val priority = block(feature, graphics2D)
 
                     val commands = mutableListOf<RenderCommand>()
-                    while (true) {
-                        commands.add(graphics2D.poll() ?: break)
-                    }
-
+                    commands.addAll(graphics2D.commands())
                     if (commands.isNotEmpty()) {
                         tempQueue.add(InternalCommandWrapper(priority, commands))
                     }
