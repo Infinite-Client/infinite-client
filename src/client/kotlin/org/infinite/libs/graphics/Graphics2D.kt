@@ -38,6 +38,9 @@ class Graphics2D(
                 height,
                 strokeWidth,
                 strokeColor,
+                strokeColor,
+                strokeColor,
+                strokeColor,
             ),
         )
     }
@@ -45,7 +48,7 @@ class Graphics2D(
     // --- fillRect ---
 
     fun fillRect(x: Float, y: Float, width: Float, height: Float) {
-        commandQueue.add(RenderCommand.FillRect(x, y, width, height, fillStyle))
+        commandQueue.add(RenderCommand.FillRect(x, y, width, height, fillStyle, fillStyle, fillStyle, fillStyle))
     }
 
     // --- fillQuad ---
@@ -146,7 +149,7 @@ class Graphics2D(
         commandQueue.add(
             RenderCommand.StrokeQuad(
                 x0, y0, x1, y1, x2, y2, x3, y3,
-                style.width, style.color,
+                style.width, style.color, style.color, style.color, style.color,
             ),
         )
     }
@@ -184,6 +187,8 @@ class Graphics2D(
                 x2,
                 y2,
                 width,
+                color,
+                color,
                 color,
             ),
         )

@@ -25,8 +25,6 @@ class HelloFeature : LocalFeature() {
         graphics2D.strokeStyle = StrokeStyle(0xFFFFFFFF.toInt(), 2.0f)
         graphics2D.strokeRect(10f, 10f, 100f, 50f)
         // 三角形の枠線を追加
-        graphics2D.strokeStyle = StrokeStyle(0xFF000000.toInt(), 10.0f)
-        graphics2D.strokeTriangle(150f, 20f, 120f, 80f, 180f, 80f)
         // --- 2. グラデーション三角形 (TriangleRenderer) ---
         graphics2D.fillTriangle(
             150f, 20f, // 頂点0 (上)
@@ -36,6 +34,8 @@ class HelloFeature : LocalFeature() {
             0xFF00FF00.toInt(),
             0xFF0000FF.toInt(),
         )
+        graphics2D.strokeStyle = StrokeStyle(0xFF000000.toInt(), 10.0f)
+        graphics2D.strokeTriangle(150f, 20f, 120f, 80f, 180f, 80f)
 
         graphics2D.fillQuad(
             200f, 20f, // 左上
