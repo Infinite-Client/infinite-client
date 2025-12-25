@@ -10,7 +10,7 @@ abstract class FeatureCategories<
     CV : Feature,
     K : KClass<out Category<CK, CV>>,
     V : Category<CK, CV>,
-> {
+    > {
     abstract val categories: ConcurrentHashMap<K, V>
 
     /**

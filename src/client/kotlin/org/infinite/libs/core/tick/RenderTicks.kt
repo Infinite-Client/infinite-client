@@ -4,9 +4,7 @@ import kotlinx.coroutines.runBlocking
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.GuiGraphics
 import org.infinite.UltimateClient
-import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.graphics2d.RenderSystem2D
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 object RenderTicks {
     fun onStartUiRendering(

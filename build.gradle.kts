@@ -125,7 +125,13 @@ spotless {
     }
     kotlin {
         target("src/**/*.kt")
-        ktlint("1.8.0")
+        // ここに設定を追加
+        ktlint("0.50.0").editorConfigOverride(
+            mapOf(
+                "ktlint_standard_no-wildcard-imports" to "disabled",
+                "ij_kotlin_allow_trailing_comma" to "true",
+            ),
+        )
     }
     groovyGradle {
         target("**/build.gradle")
@@ -133,7 +139,11 @@ spotless {
     }
     kotlinGradle {
         target("**/*.kts")
-        ktlint()
+        ktlint().editorConfigOverride(
+            mapOf(
+                "ktlint_standard_no-wildcard-imports" to "disabled",
+            ),
+        )
     }
 }
 

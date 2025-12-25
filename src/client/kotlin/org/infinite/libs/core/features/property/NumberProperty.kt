@@ -27,9 +27,5 @@ open class NumberProperty<T>(
                 }
         }
 
-    fun reset() {
-        value = default
-    }
-
     fun display(): String = "$value$suffix"
 }
