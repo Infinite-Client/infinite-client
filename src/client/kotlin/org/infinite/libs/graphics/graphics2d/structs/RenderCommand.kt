@@ -63,4 +63,39 @@ sealed interface RenderCommand {
         val color: Int,
         override val zIndex: Int,
     ) : RenderCommand
+
+    data class FillQuadFloat(
+        val x0: Float, val y0: Float,
+        val x1: Float, val y1: Float,
+        val x2: Float, val y2: Float,
+        val x3: Float, val y3: Float,
+        val col0: Int, val col1: Int, val col2: Int, val col3: Int,
+        override val zIndex: Int,
+    ) : RenderCommand
+
+    data class FillQuadDouble(
+        val x0: Double, val y0: Double,
+        val x1: Double, val y1: Double,
+        val x2: Double, val y2: Double,
+        val x3: Double, val y3: Double,
+        val col0: Int, val col1: Int, val col2: Int, val col3: Int,
+        override val zIndex: Int,
+    ) : RenderCommand
+
+    // --- FillTriangle (三角形の塗りつぶし/グラデーション) ---
+    data class FillTriangleFloat(
+        val x0: Float, val y0: Float,
+        val x1: Float, val y1: Float,
+        val x2: Float, val y2: Float,
+        val col0: Int, val col1: Int, val col2: Int,
+        override val zIndex: Int,
+    ) : RenderCommand
+
+    data class FillTriangleDouble(
+        val x0: Double, val y0: Double,
+        val x1: Double, val y1: Double,
+        val x2: Double, val y2: Double,
+        val col0: Int, val col1: Int, val col2: Int,
+        override val zIndex: Int,
+    ) : RenderCommand
 }

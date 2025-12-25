@@ -7,68 +7,57 @@ class RectRenderer(
     private val guiGraphics: GuiGraphics,
 ) {
     /**
-     * 矩形の枠線を描画する
+     * 矩形の枠線を描画する (Canvas API 準拠の拡大幅)
      */
     fun strokeRect(
-        x1: Float,
-        y1: Float,
-        x2: Float,
-        y2: Float,
+        x: Float,
+        y: Float,
+        w: Float,
+        h: Float,
         color: Int,
         strokeWidth: Float,
     ) {
+        val halfWidth = strokeWidth / 2f
+
+        // Canvasの挙動に合わせて、境界線を中心に外側と内側に半分ずつ広げる
+        val xMin = x - halfWidth
+        val yMin = y - halfWidth
+        val xMax = x + w + halfWidth
+        val yMax = y + h + halfWidth
+
         // 上辺
-        guiGraphics.fill(x1, y1, x2, y1 + strokeWidth, color)
+        guiGraphics.fill(xMin, yMin, xMax, yMin + strokeWidth, color)
         // 下辺
-        guiGraphics.fill(x1, y2 - strokeWidth, x2, y2, color)
-        // 左辺
-        guiGraphics.fill(x1, y1 + strokeWidth, x1 + strokeWidth, y2 - strokeWidth, color)
+        guiGraphics.fill(xMin, yMax - strokeWidth, xMax, yMax, color)
+        // 左辺 (上下の角を重複させない場合は yMin + strokeWidth ～ yMax - strokeWidth に調整)
+        guiGraphics.fill(xMin, yMin + strokeWidth, xMin + strokeWidth, yMax - strokeWidth, color)
         // 右辺
-        guiGraphics.fill(x2 - strokeWidth, y1 + strokeWidth, x2, y2 - strokeWidth, color)
+        guiGraphics.fill(xMax - strokeWidth, yMin + strokeWidth, xMax, yMax - strokeWidth, color)
     }
 
-    fun strokeRect(
-        x1: Int,
-        y1: Int,
-        x2: Int,
-        y2: Int,
-        color: Int,
-        strokeWidth: Int,
-    ) = strokeRect(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), color, strokeWidth.toFloat())
+    // --- オーバーロード (x2, y2 形式ではなく x, y, w, h 形式を想定) ---
 
     fun strokeRect(
-        x1: Double,
-        y1: Double,
-        x2: Double,
-        y2: Double,
-        color: Int,
-        strokeWidth: Double,
-    ) = strokeRect(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), color, strokeWidth.toFloat())
+        x: Int, y: Int, w: Int, h: Int,
+        color: Int, strokeWidth: Int
+    ) = strokeRect(x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat(), color, strokeWidth.toFloat())
+
+    fun strokeRect(
+        x: Double, y: Double, w: Double, h: Double,
+        color: Int, strokeWidth: Double
+    ) = strokeRect(x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat(), color, strokeWidth.toFloat())
 
     /**
-     * 矩形を塗りつぶす
+     * 矩形を塗りつぶす (fillRect は境界線に影響されず、指定範囲をそのまま塗る)
      */
     fun fillRect(
-        x1: Float,
-        y1: Float,
-        x2: Float,
-        y2: Float,
-        color: Int,
-    ) = guiGraphics.fill(x1, y1, x2, y2, color)
+        x: Float, y: Float, w: Float, h: Float,
+        color: Int
+    ) = guiGraphics.fill(x, y, x + w, y + h, color)
 
-    fun fillRect(
-        x1: Int,
-        y1: Int,
-        x2: Int,
-        y2: Int,
-        color: Int,
-    ) = guiGraphics.fill(x1, y1, x2, y2, color)
+    fun fillRect(x: Int, y: Int, w: Int, h: Int, color: Int) =
+        fillRect(x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat(), color)
 
-    fun fillRect(
-        x1: Double,
-        y1: Double,
-        x2: Double,
-        y2: Double,
-        color: Int,
-    ) = guiGraphics.fill(x1, y1, x2, y2, color)
+    fun fillRect(x: Double, y: Double, w: Double, h: Double, color: Int) =
+        fillRect(x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat(), color)
 }
