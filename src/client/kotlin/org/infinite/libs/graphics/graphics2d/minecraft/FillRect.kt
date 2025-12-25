@@ -6,17 +6,17 @@ import net.minecraft.client.renderer.RenderPipelines
 import org.infinite.libs.graphics.graphics2d.elements.ColoredRectangleRenderState
 import org.joml.Matrix3x2f
 
-fun GuiGraphics.fill(
+fun GuiGraphics.fillRect(
     x: Float,
     y: Float,
     width: Float,
     height: Float,
     color: Int,
 ) {
-    this.fill(x, y, width, height, color, color, color, color)
+    fillRect(x, y, width, height, color, color, color, color)
 }
 
-fun GuiGraphics.fill(
+fun GuiGraphics.fillRect(
     x: Float,
     y: Float,
     width: Float,

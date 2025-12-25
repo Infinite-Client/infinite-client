@@ -21,137 +21,36 @@ class RenderSystem2D(
         when (command) {
             // --- Rectangle (矩形) ---
             is RenderCommand.FillRect -> {
-                // すべての色が同じなら単色版、そうでなければ個別色版を呼ぶ（引数で判別）
-                if (allEqual(command.col0, command.col1, command.col2, command.col3)) {
-                    rectRenderer.fillRect(command.x, command.y, command.width, command.height, command.col0)
-                } else {
-                    rectRenderer.fillRect(
-                        command.x,
-                        command.y,
-                        command.width,
-                        command.height,
-                        command.col0,
-                        command.col1,
-                        command.col2,
-                        command.col3,
-                    )
-                }
-            }
-
-            is RenderCommand.StrokeRect -> {
-                val isSingleIn = allEqual(command.col0, command.col1, command.col2, command.col3)
-                val isSingleOut =
-                    allEqual(command.col0, command.col1, command.col2, command.col3)
-
-                if (isSingleIn && isSingleOut) {
-                    rectRenderer.strokeRect(
-                        command.x,
-                        command.y,
-                        command.width,
-                        command.height,
-                        command.col0,
-                        command.strokeWidth,
-                    )
-                } else {
-                    rectRenderer.strokeRect(
-                        command.x, command.y, command.width, command.height,
-                        command.col0, command.col1, command.col2, command.col3,
-                        command.strokeWidth,
-                    )
-                }
+                // `allEqual` 判定を削除し、常に多色版を呼び出す
+                rectRenderer.fillRect(
+                    command.x,
+                    command.y,
+                    command.width,
+                    command.height,
+                    command.col0,
+                    command.col1,
+                    command.col2,
+                    command.col3,
+                )
             }
 
             // --- Quad (四角形) ---
             is RenderCommand.FillQuad -> {
-                if (allEqual(command.col0, command.col1, command.col2, command.col3)) {
-                    quadRenderer.fillQuad(
-                        command.x0,
-                        command.y0,
-                        command.x1,
-                        command.y1,
-                        command.x2,
-                        command.y2,
-                        command.x3,
-                        command.y3,
-                        command.col0,
-                    )
-                } else {
-                    quadRenderer.fillQuad(
-                        command.x0, command.y0, command.x1, command.y1, command.x2, command.y2, command.x3, command.y3,
-                        command.col0, command.col1, command.col2, command.col3,
-                    )
-                }
-            }
-
-            is RenderCommand.StrokeQuad -> {
-                val isAllEqual =
-                    allEqual(command.col0, command.col1, command.col2, command.col3)
-                if (isAllEqual) {
-                    quadRenderer.strokeQuad(
-                        command.x0, command.y0, command.x1, command.y1, command.x2, command.y2, command.x3, command.y3,
-                        command.col0, command.strokeWidth,
-                    )
-                } else {
-                    quadRenderer.strokeQuad(
-                        command.x0, command.y0, command.x1, command.y1, command.x2, command.y2, command.x3, command.y3,
-                        command.col0, command.col1, command.col2, command.col3,
-                        command.strokeWidth,
-                    )
-                }
+                // `allEqual` 判定を削除し、常に多色版を呼び出す
+                quadRenderer.fillQuad(
+                    command.x0, command.y0, command.x1, command.y1, command.x2, command.y2, command.x3, command.y3,
+                    command.col0, command.col1, command.col2, command.col3,
+                )
             }
 
             // --- Triangle (三角形) ---
             is RenderCommand.FillTriangle -> {
-                if (allEqual(command.col0, command.col1, command.col2)) {
-                    triangleRenderer.fillTriangle(
-                        command.x0,
-                        command.y0,
-                        command.x1,
-                        command.y1,
-                        command.x2,
-                        command.y2,
-                        command.col0,
-                    )
-                } else {
-                    triangleRenderer.fillTriangle(
-                        command.x0, command.y0, command.x1, command.y1, command.x2, command.y2,
-                        command.col0, command.col1, command.col2,
-                    )
-                }
-            }
-
-            is RenderCommand.StrokeTriangle -> {
-                val isSingleIn = allEqual(command.col0, command.col1, command.col2)
-                val isSingleOut = allEqual(command.col0, command.col1, command.col2)
-
-                if (isSingleIn && isSingleOut) {
-                    triangleRenderer.strokeTriangle(
-                        command.x0,
-                        command.y0,
-                        command.x1,
-                        command.y1,
-                        command.x2,
-                        command.y2,
-                        command.col0,
-                        command.strokeWidth,
-                    )
-                } else {
-                    triangleRenderer.strokeTriangle(
-                        command.x0, command.y0, command.x1, command.y1, command.x2, command.y2,
-                        command.col0, command.col1, command.col2,
-                        command.strokeWidth,
-                    )
-                }
+                // `allEqual` 判定を削除し、常に多色版を呼び出す
+                triangleRenderer.fillTriangle(
+                    command.x0, command.y0, command.x1, command.y1, command.x2, command.y2,
+                    command.col0, command.col1, command.col2,
+                )
             }
         }
-    }
-
-    private fun allEqual(vararg colors: Int): Boolean {
-        if (colors.size <= 1) return true
-        val first = colors[0]
-        for (i in 1 until colors.size) {
-            if (colors[i] != first) return false
-        }
-        return true
     }
 }
