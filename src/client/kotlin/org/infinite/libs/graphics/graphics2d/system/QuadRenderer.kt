@@ -4,9 +4,8 @@ import net.minecraft.client.gui.GuiGraphics
 import org.infinite.libs.graphics.graphics2d.minecraft.fillQuad
 import org.infinite.libs.graphics.graphics2d.system.PointPair.Companion.calculateOffsets
 
-class QuadRenderer(
-    private val guiGraphics: GuiGraphics,
-) {
+class QuadRenderer(private val guiGraphics: GuiGraphics) {
+
     fun fillQuad(
         x0: Float,
         y0: Float,
@@ -38,30 +37,33 @@ class QuadRenderer(
     ) {
         val halfWidth = strokeWidth / 2f
 
-        val calcCorner = { tx: Float, ty: Float, px: Float, py: Float, nx: Float, ny: Float ->
-            // cx, cy を隣接点の中点として算出
-            val cx = (tx + px + nx) / 3f
-            val cy = (ty + py + ny) / 3f
-            calculateOffsets(tx, ty, cx, cy, halfWidth)
-        }
+        // 1. 元のロジック同様、重心を計算（非常に軽量）
+        val cx = (x0 + x1 + x2 + x3) / 4f
+        val cy = (y0 + y1 + y2 + y3) / 4f
 
-        // 2. 各頂点の PointPair (内側・外側の座標セット) を取得
-        val p0 = calcCorner(x0, y0, x3, y3, x1, y1) // 頂点0 (隣接: 3, 1)
-        val p1 = calcCorner(x1, y1, x0, y0, x2, y2) // 頂点1 (隣接: 0, 2)
-        val p2 = calcCorner(x2, y2, x1, y1, x3, y3) // 頂点2 (隣接: 1, 3)
-        val p3 = calcCorner(x3, y3, x2, y2, x0, y0) // 頂点3 (隣接: 2, 0)
+        // 2. PointPair (内外のオフセット) を計算（元の calculateOffsets を使用）
+        val p0 = calculateOffsets(x0, y0, cx, cy, halfWidth)
+        val p1 = calculateOffsets(x1, y1, cx, cy, halfWidth)
+        val p2 = calculateOffsets(x2, y2, cx, cy, halfWidth)
+        val p3 = calculateOffsets(x3, y3, cx, cy, halfWidth)
 
-        // 3. 4つの「辺」をそれぞれ描画
-        // 各辺は、隣り合う頂点の「外側(ox, oy)」と「内側(ix, iy)」の計4点で構成される矩形
+        // 3. 4つの辺を描画（頂点の並び順を修正し、ねじれとカリングを防止）
+        // 頂点順序: [開始外, 終了外, 終了内, 開始内] の順で渡すと綺麗に繋がります
+        drawEdge(p0, p1, color)
+        drawEdge(p1, p2, color)
+        drawEdge(p2, p3, color)
+        drawEdge(p3, p0, color)
+    }
 
-        // 辺 0-1
-        fillQuad(p0.ox, p0.oy, p0.ix, p0.iy, p1.ix, p1.iy, p1.ox, p1.oy, color)
-        // 辺 1-2
-        fillQuad(p1.ox, p1.oy, p1.ix, p1.iy, p2.ix, p2.iy, p2.ox, p2.oy, color)
-        // 辺 2-3
-        fillQuad(p2.ox, p2.oy, p2.ix, p2.iy, p3.ix, p3.iy, p3.ox, p3.oy, color)
-        // 辺 3-0
-        fillQuad(p3.ox, p3.oy, p3.ix, p3.iy, p0.ix, p0.iy, p0.ox, p0.oy, color)
+    private fun drawEdge(start: PointPair, end: PointPair, color: Int) {
+        // fillQuad に渡す順序を「外側2点 -> 内側2点」に固定
+        guiGraphics.fillQuad(
+            start.ox, start.oy,
+            end.ox, end.oy,
+            end.ix, end.iy,
+            start.ix, start.iy,
+            color, color, color, color,
+        )
     }
 
     private fun fillQuad(

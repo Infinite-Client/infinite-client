@@ -5,6 +5,7 @@ import org.infinite.libs.graphics.graphics2d.structs.RenderCommand
 import org.infinite.libs.graphics.graphics2d.system.QuadRenderer
 import org.infinite.libs.graphics.graphics2d.system.RectRenderer
 import org.infinite.libs.graphics.graphics2d.system.TriangleRenderer
+import org.infinite.libs.log.LogSystem
 
 class RenderSystem2D(
     gui: GuiGraphics,
@@ -23,6 +24,7 @@ class RenderSystem2D(
     }
 
     private fun executeCommand(command: RenderCommand) {
+        LogSystem.log("${command::class.java.simpleName}")
         when (command) {
             // --- Rectangle (矩形) ---
             is RenderCommand.StrokeRect -> {
