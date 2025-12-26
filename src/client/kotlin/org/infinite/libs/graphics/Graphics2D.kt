@@ -33,6 +33,10 @@ class Graphics2D(
     // 100は初期容量ではなく、最大容量の指定になるため、必要に応じて調整してください
     private val commandQueue = LinkedList<RenderCommand>()
 
+    // パス描画のためのプロパティ
+    private var currentPath: MutableList<Pair<Float, Float>> = mutableListOf()
+    private var startPath: Pair<Float, Float>? = null
+
     // --- fillRect ---
 
     fun fillRect(x: Float, y: Float, width: Float, height: Float) {
@@ -287,50 +291,87 @@ class Graphics2D(
         drawColoredEdge(p2, p0, inCol2, inCol0, col2, col0)
     }
 
-    // 2点間に線を描画するヘルパー関数 (線幅を持つ四角形として描画)
-    private fun drawLine(
-        x1: Float,
-        y1: Float,
-        x2: Float,
-        y2: Float,
-        strokeWidth: Float,
-        col1: Int,
-        col2: Int,
-    ) {
-        if (strokeWidth <= 0) return
+    // --- Path API ---
 
-        val dx = x2 - x1
-        val dy = y2 - y1
-        val length = sqrt(dx * dx + dy * dy)
+    fun beginPath() {
+        currentPath.clear()
+        startPath = null
+    }
 
-        if (length == 0f) return // 同じ点なので線は描画しない
+    fun moveTo(x: Float, y: Float) {
+        currentPath.add(x to y)
+        if (startPath == null) {
+            startPath = x to y
+        }
+    }
 
-        val angle = atan2(dy.toDouble(), dx.toDouble()).toFloat()
-        val halfWidth = strokeWidth / 2.0f
+    fun lineTo(x: Float, y: Float) {
+        currentPath.add(x to y)
+    }
 
-        val nx = -sin(angle) // 法線ベクトルのx成分
-        val ny = cos(angle) // 法線ベクトルのy成分
+    fun closePath() {
+        startPath?.let {
+            if (currentPath.lastOrNull() != it) {
+                currentPath.add(it)
+            }
+        }
+    }
 
-        // 線の四隅の座標を計算
-        val p1x = x1 + nx * halfWidth
-        val p1y = y1 + ny * halfWidth
-        val p2x = x2 + nx * halfWidth
-        val p2y = y2 + ny * halfWidth
-        val p3x = x2 - nx * halfWidth
-        val p3y = y2 - ny * halfWidth
-        val p4x = x1 - nx * halfWidth
-        val p4y = y1 - ny * halfWidth
+    fun strokePath() {
+        val style = strokeStyle ?: return
+        val strokeWidth = style.width
+        val color = style.color
 
-        // FillQuadとしてコマンドキューに追加
-        commandQueue.add(
-            RenderCommand.FillQuad(
-                p1x, p1y,
-                p2x, p2y,
-                p3x, p3y,
-                p4x, p4y,
-                col1, col2, col2, col1, // 線は均一な色になるように
-            ),
-        )
+        if (currentPath.size < 2) return
+
+        // パスを線分に分解して描画
+        for (i in 0 until currentPath.size - 1) {
+            val p1 = currentPath[i]
+            val p2 = currentPath[i + 1]
+
+            // drawLine 関数を呼び出す代わりに、直接四角形を構築
+            val x1 = p1.first
+            val y1 = p1.second
+            val x2 = p2.first
+            val y2 = p2.second
+
+            if (strokeWidth <= 0) continue
+
+            val dx = x2 - x1
+            val dy = y2 - y1
+            val length = sqrt(dx * dx + dy * dy)
+
+            if (length == 0f) continue
+
+            val angle = atan2(dy.toDouble(), dx.toDouble()).toFloat()
+            val halfWidth = strokeWidth / 2.0f
+
+            val nx = -sin(angle) // 法線ベクトルのx成分
+            val ny = cos(angle) // 法線ベクトルのy成分
+
+            // 線の四隅の座標を計算
+            val p1x_quad = x1 + nx * halfWidth
+            val p1y_quad = y1 + ny * halfWidth
+            val p2x_quad = x2 + nx * halfWidth
+            val p2y_quad = y2 + ny * halfWidth
+            val p3x_quad = x2 - nx * halfWidth
+            val p3y_quad = y2 - ny * halfWidth
+            val p4x_quad = x1 - nx * halfWidth
+            val p4y_quad = y1 - ny * halfWidth
+
+            commandQueue.add(
+                RenderCommand.FillQuad(
+                    p1x_quad, p1y_quad,
+                    p2x_quad, p2y_quad,
+                    p3x_quad, p3y_quad,
+                    p4x_quad, p4y_quad,
+                    color, color, color, color,
+                ),
+            )
+        }
+        // パス描画後にパスをクリア
+        currentPath.clear()
+        startPath = null
     }
 
     /**
