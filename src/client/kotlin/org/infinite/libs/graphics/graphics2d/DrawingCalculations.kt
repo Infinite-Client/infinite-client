@@ -1,11 +1,16 @@
-package org.infinite.libs.graphics.graphics2d.impls
+package org.infinite.libs.graphics.graphics2d
 
 import kotlin.math.abs
 
 /**
  * 頂点と色のペアを保持するデータ構造
  */
-internal data class NormalizedQuad(
+data class Vertex(val x: Float, val y: Float, val color: Int)
+
+/**
+ * 頂点と色のペアを保持するデータ構造
+ */
+data class NormalizedQuad(
     val x0: Float,
     val y0: Float,
     val x1: Float,
@@ -23,7 +28,7 @@ internal data class NormalizedQuad(
 /**
  * 頂点の順序を反時計回り(CCW)に正規化し、対応する色も入れ替える
  */
-internal fun normalizeToCCW(
+fun normalizeToCCW(
     x0: Float,
     y0: Float,
     x1: Float,
@@ -53,7 +58,7 @@ internal fun normalizeToCCW(
     }
 }
 
-internal object QuadColorSampler {
+object QuadColorSampler {
     fun sample(
         ix0: Float,
         iy0: Float,
@@ -151,7 +156,7 @@ internal object QuadColorSampler {
     }
 }
 
-internal fun lerpColorInTriangle(
+fun lerpColorInTriangle(
     px: Float,
     py: Float,
     x0: Float,

@@ -1,19 +1,15 @@
 package org.infinite.libs.graphics
 
 import net.minecraft.client.DeltaTracker
-import org.infinite.libs.graphics.graphics2d.impls.QuadColorSampler
-import org.infinite.libs.graphics.graphics2d.impls.lerpColorInTriangle
-import org.infinite.libs.graphics.graphics2d.impls.normalizeToCCW
+import org.infinite.libs.graphics.graphics2d.Graphics2DPrimitivesFill
+import org.infinite.libs.graphics.graphics2d.Graphics2DPrimitivesStroke
+import org.infinite.libs.graphics.graphics2d.Graphics2DTransformations
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
 import org.infinite.libs.graphics.graphics2d.system.Path2D
-import org.infinite.libs.graphics.graphics2d.system.PointPair
-import org.infinite.libs.graphics.graphics2d.system.PointPair.Companion.calculateForMiter
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix3x2f
 import java.util.*
-import java.util.Stack // 追加
-import kotlin.math.atan2
 
 /**
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
@@ -40,18 +36,23 @@ class Graphics2D(
     private val transformMatrix = Matrix3x2f()
 
     // 変換行列を保存するためのスタック
-    private val transformStack = Stack<Matrix3x2f>() // 追加
+    private val transformStack = Stack<Matrix3x2f>()
+
+    // 新しい描画および変換機能のインスタンス
+    private val fillOperations: Graphics2DPrimitivesFill = Graphics2DPrimitivesFill(commandQueue) { fillStyle }
+    private val strokeOperations: Graphics2DPrimitivesStroke = Graphics2DPrimitivesStroke(commandQueue) { strokeStyle }
+    private val transformations: Graphics2DTransformations = Graphics2DTransformations(transformMatrix, transformStack)
 
     // --- fillRect ---
 
     fun fillRect(x: Float, y: Float, width: Float, height: Float) {
-        commandQueue.add(RenderCommand.FillRect(x, y, width, height, fillStyle, fillStyle, fillStyle, fillStyle))
+        fillOperations.fillRect(x, y, width, height)
     }
 
     // --- fillQuad ---
 
     fun fillQuad(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
-        fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, fillStyle, fillStyle, fillStyle, fillStyle)
+        fillOperations.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3)
     }
 
     fun fillQuad(
@@ -68,39 +69,13 @@ class Graphics2D(
         col2: Int,
         col3: Int,
     ) {
-        // 頂点データと色のペアをリスト化
-        val vertices = mutableListOf(
-            Vertex(x0, y0, col0),
-            Vertex(x1, y1, col1),
-            Vertex(x2, y2, col2),
-            Vertex(x3, y3, col3),
-        )
-
-        // 重心を計算
-        val centerX = vertices.map { it.x }.average().toFloat()
-        val centerY = vertices.map { it.y }.average().toFloat()
-
-        // 重心からの角度でソート (時計回り)
-        // Math.atan2(y, x) は反時計回りなので、マイナスを付けてソート
-        vertices.sortBy { atan2((it.y - centerY).toDouble(), (it.x - centerX).toDouble()) }
-
-        commandQueue.add(
-            RenderCommand.FillQuad(
-                vertices[0].x, vertices[0].y,
-                vertices[1].x, vertices[1].y,
-                vertices[2].x, vertices[2].y,
-                vertices[3].x, vertices[3].y,
-                vertices[0].color, vertices[1].color, vertices[2].color, vertices[3].color,
-            ),
-        )
+        fillOperations.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, col0, col1, col2, col3)
     }
 
-    // 内部用ヘルパー
-    private data class Vertex(val x: Float, val y: Float, val color: Int)
     // --- fillTriangle ---
 
     fun fillTriangle(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float) {
-        fillTriangle(x0, y0, x1, y1, x2, y2, fillStyle, fillStyle, fillStyle)
+        fillOperations.fillTriangle(x0, y0, x1, y1, x2, y2)
     }
 
     fun fillTriangle(
@@ -114,36 +89,12 @@ class Graphics2D(
         col1: Int,
         col2: Int,
     ) {
-        // 外積 (Vector Cross Product) を利用して回転方向を判定
-        // (x1-x0)*(y2-y0) - (y1-y0)*(x2-x0)
-        val crossProduct = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0)
-
-        // crossProduct > 0 なら反時計回りなので、頂点1と2を入れ替えて時計回りにする
-        if (crossProduct > 0) {
-            addFillTriangle(x0, y0, x2, y2, x1, y1, col0, col2, col1)
-        } else {
-            addFillTriangle(x0, y0, x1, y1, x2, y2, col0, col1, col2)
-        }
-    }
-
-    private fun addFillTriangle(
-        x0: Float,
-        y0: Float,
-        x1: Float,
-        y1: Float,
-        x2: Float,
-        y2: Float,
-        c0: Int,
-        c1: Int,
-        c2: Int,
-    ) {
-        commandQueue.add(RenderCommand.FillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2))
+        fillOperations.fillTriangle(x0, y0, x1, y1, x2, y2, col0, col1, col2)
     }
 
     // --- strokeRect ---
     fun strokeRect(x: Float, y: Float, width: Float, height: Float) {
-        val style = strokeStyle ?: return
-        strokeRect(x, y, width, height, style.color, style.color, style.color, style.color)
+        strokeOperations.strokeRect(x, y, width, height)
     }
 
     fun strokeRect(
@@ -156,87 +107,12 @@ class Graphics2D(
         col2: Int, // 右下
         col3: Int, // 左下
     ) {
-        val style = strokeStyle ?: return
-        val strokeWidth = style.width
-        val v = strokeWidth / 2f
-        val p1 = PointPair(x + v, y + v, x - v, y - v)
-        val p2 = PointPair(x + v, y + h - v, x - v, y + h + v)
-        val p3 = PointPair(x + w - v, y + h - v, x + w + v, y + h + v)
-        val p4 = PointPair(x + w - v, y + v, x + w + v, y - v)
-
-        // ここで guiGraphics.fillQuad の代わりに commandQueue.add(RenderCommand.FillQuad(...)) を使用
-        commandQueue.add(
-            RenderCommand.FillQuad(
-                p1.ix,
-                p1.iy,
-                p1.ox,
-                p1.oy,
-                p2.ox,
-                p2.oy,
-                p2.ix,
-                p2.iy,
-                col0,
-                col0,
-                col1,
-                col1,
-            ),
-        )
-        commandQueue.add(
-            RenderCommand.FillQuad(
-                p2.ix,
-                p2.iy,
-                p2.ox,
-                p2.oy,
-                p3.ox,
-                p3.oy,
-                p3.ix,
-                p3.iy,
-                col1,
-                col1,
-                col2,
-                col2,
-            ),
-        )
-        commandQueue.add(
-            RenderCommand.FillQuad(
-                p3.ix,
-                p3.iy,
-                p3.ox,
-                p3.oy,
-                p4.ox,
-                p4.oy,
-                p4.ix,
-                p4.iy,
-                col2,
-                col2,
-                col3,
-                col3,
-            ),
-        )
-        commandQueue.add(
-            RenderCommand.FillQuad(
-                p4.ix,
-                p4.iy,
-                p4.ox,
-                p4.oy,
-                p1.ox,
-                p1.oy,
-                p1.ix,
-                p1.iy,
-                col3,
-                col3,
-                col0,
-                col0,
-            ),
-        )
+        strokeOperations.strokeRect(x, y, w, h, col0, col1, col2, col3)
     }
 
     // --- strokeQuad ---
     fun strokeQuad(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
-        val style = strokeStyle ?: return
-        val color = style.color
-
-        strokeQuad(x0, y0, x1, y1, x2, y2, x3, y3, color, color, color, color)
+        strokeOperations.strokeQuad(x0, y0, x1, y1, x2, y2, x3, y3)
     }
 
     fun strokeQuad(
@@ -253,69 +129,12 @@ class Graphics2D(
         icol2: Int,
         icol3: Int,
     ) {
-        val style = strokeStyle ?: return
-        val strokeWidth = style.width
-
-        // 1. 反時計回りに正規化
-        val q = normalizeToCCW(ix0, iy0, ix1, iy1, ix2, iy2, ix3, iy3, icol0, icol1, icol2, icol3)
-
-        val hw = strokeWidth / 2f
-
-        // 2. 正規化された座標で計算
-        val p0 = calculateForMiter(q.x0, q.y0, q.x3, q.y3, q.x1, q.y1, hw)
-        val p1 = calculateForMiter(q.x1, q.y1, q.x0, q.y0, q.x2, q.y2, hw)
-        val p2 = calculateForMiter(q.x2, q.y2, q.x1, q.y1, q.x3, q.y3, hw)
-        val p3 = calculateForMiter(q.x3, q.y3, q.x2, q.y2, q.x0, q.y0, hw)
-
-        // 3. 内側の色をサンプリング
-        val innerCols = if (strokeWidth > 2.0f) {
-            QuadColorSampler.sample(
-                p0.ix, p0.iy, p1.ix, p1.iy, p2.ix, p2.iy, p3.ix, p3.iy,
-                q.x0, q.y0, q.x1, q.y1, q.x2, q.y2, q.x3, q.y3,
-                q.c0, q.c1, q.c2, q.c3,
-            )
-        } else {
-            listOf(q.c0, q.c1, q.c2, q.c3)
-        }
-
-        // 4. エッジ描画 (色の引数順序を修正)
-        // 引数: start, end, outSCol, outECol, inSCol, inECol
-        drawColoredEdge(p0, p1, q.c0, q.c1, innerCols[0], innerCols[1])
-        drawColoredEdge(p1, p2, q.c1, q.c2, innerCols[1], innerCols[2])
-        drawColoredEdge(p2, p3, q.c2, q.c3, innerCols[2], innerCols[3])
-        drawColoredEdge(p3, p0, q.c3, q.c0, innerCols[3], innerCols[0])
-    }
-
-    private fun drawColoredEdge(
-        start: PointPair,
-        end: PointPair,
-        outSCol: Int,
-        outECol: Int,
-        inSCol: Int,
-        inECol: Int,
-    ) {
-        // 頂点指定順序:
-        // 1: 開始外(ox,oy) -> 2: 終了外(ox,oy) -> 3: 終了内(ix,iy) -> 4: 開始内(ix,iy)
-        commandQueue.add(
-            RenderCommand.FillQuad(
-                start.ox, start.oy,
-                end.ox, end.oy,
-                end.ix, end.iy,
-                start.ix, start.iy,
-                outSCol, // 1に対応
-                outECol, // 2に対応
-                inECol, // 3に対応 (終了地点の内側の色)
-                inSCol, // 4に対応 (開始地点の内側の色)
-            ),
-        )
+        strokeOperations.strokeQuad(ix0, iy0, ix1, iy1, ix2, iy2, ix3, iy3, icol0, icol1, icol2, icol3)
     }
 
     // --- strokeTriangle ---
     fun strokeTriangle(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float) {
-        val style = strokeStyle ?: return
-        val color = style.color
-
-        strokeTriangle(x0, y0, x1, y1, x2, y2, color, color, color)
+        strokeOperations.strokeTriangle(x0, y0, x1, y1, x2, y2)
     }
 
     fun strokeTriangle(
@@ -329,31 +148,7 @@ class Graphics2D(
         col1: Int,
         col2: Int,
     ) {
-        val style = strokeStyle ?: return
-        val strokeWidth = style.width
-        val hw = strokeWidth / 2f
-
-        // 1. 各角のオフセット座標を計算
-        val p0 = calculateForMiter(x0, y0, x2, y2, x1, y1, hw)
-        val p1 = calculateForMiter(x1, y1, x0, y0, x2, y2, hw)
-        val p2 = calculateForMiter(x2, y2, x1, y1, x0, y0, hw)
-
-        // 2. 内側の色を決定
-        val (inCol0, inCol1, inCol2) = if (strokeWidth > 2.0f) {
-            Triple(
-                lerpColorInTriangle(p0.ix, p0.iy, x0, y0, x1, y1, x2, y2, col0, col1, col2),
-                lerpColorInTriangle(p1.ix, p1.iy, x0, y0, x1, y1, x2, y2, col0, col1, col2),
-                lerpColorInTriangle(p2.ix, p2.iy, x0, y0, x1, y1, x2, y2, col0, col1, col2),
-            )
-        } else {
-            // 幅が狭い場合は、元の頂点色をそのまま使う（高速）
-            Triple(col0, col1, col2)
-        }
-
-        // 3. 描画
-        drawColoredEdge(p0, p1, inCol0, inCol1, col0, col1)
-        drawColoredEdge(p1, p2, inCol1, inCol2, col1, col2)
-        drawColoredEdge(p2, p0, inCol2, inCol0, col2, col0)
+        strokeOperations.strokeTriangle(x0, y0, x1, y1, x2, y2, col0, col1, col2)
     }
 
     // --- Path API ---
@@ -397,21 +192,21 @@ class Graphics2D(
      * 現在の変換行列に変換を適用します。
      */
     fun transform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
-        transformMatrix.mul(Matrix3x2f(m00, m10, m01, m11, m02, m12))
+        transformations.transform(m00, m10, m01, m11, m02, m12)
     }
 
     /**
      * 現在の変換行列に移動変換を適用します。
      */
     fun translate(x: Float, y: Float) {
-        transformMatrix.translate(x, y)
+        transformations.translate(x, y)
     }
 
     /**
      * 現在の変換状態をスタックに保存します。
      */
     fun save() {
-        transformStack.push(Matrix3x2f(transformMatrix)) // 現在の行列のコピーをプッシュ
+        transformations.save()
     }
 
     /**
@@ -419,9 +214,7 @@ class Graphics2D(
      * スタックが空の場合は何もしません。
      */
     fun restore() {
-        if (transformStack.isNotEmpty()) {
-            transformMatrix.set(transformStack.pop()) // スタックからポップして復元
-        }
+        transformations.restore()
     }
 
     /**
