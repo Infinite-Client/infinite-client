@@ -6,14 +6,14 @@ import org.infinite.libs.graphics.graphics2d.impls.lerpColorInTriangle
 import org.infinite.libs.graphics.graphics2d.impls.normalizeToCCW
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
+import org.infinite.libs.graphics.graphics2d.system.Path2D
 import org.infinite.libs.graphics.graphics2d.system.PointPair
 import org.infinite.libs.graphics.graphics2d.system.PointPair.Companion.calculateForMiter
 import org.infinite.libs.interfaces.MinecraftInterface
+import org.joml.Matrix3x2f
 import java.util.*
+import java.util.Stack // 追加
 import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 /**
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
@@ -33,9 +33,14 @@ class Graphics2D(
     // 100は初期容量ではなく、最大容量の指定になるため、必要に応じて調整してください
     private val commandQueue = LinkedList<RenderCommand>()
 
-    // パス描画のためのプロパティ
-    private var currentPath: MutableList<Pair<Float, Float>> = mutableListOf()
-    private var startPath: Pair<Float, Float>? = null
+    // Path2Dのインスタンスを追加
+    private val path2D = Path2D(commandQueue)
+
+    // 変換行列
+    private val transformMatrix = Matrix3x2f()
+
+    // 変換行列を保存するためのスタック
+    private val transformStack = Stack<Matrix3x2f>() // 追加
 
     // --- fillRect ---
 
@@ -160,10 +165,70 @@ class Graphics2D(
         val p4 = PointPair(x + w - v, y + v, x + w + v, y - v)
 
         // ここで guiGraphics.fillQuad の代わりに commandQueue.add(RenderCommand.FillQuad(...)) を使用
-        commandQueue.add(RenderCommand.FillQuad(p1.ix, p1.iy, p1.ox, p1.oy, p2.ox, p2.oy, p2.ix, p2.iy, col0, col0, col1, col1))
-        commandQueue.add(RenderCommand.FillQuad(p2.ix, p2.iy, p2.ox, p2.oy, p3.ox, p3.oy, p3.ix, p3.iy, col1, col1, col2, col2))
-        commandQueue.add(RenderCommand.FillQuad(p3.ix, p3.iy, p3.ox, p3.oy, p4.ox, p4.oy, p4.ix, p4.iy, col2, col2, col3, col3))
-        commandQueue.add(RenderCommand.FillQuad(p4.ix, p4.iy, p4.ox, p4.oy, p1.ox, p1.oy, p1.ix, p1.iy, col3, col3, col0, col0))
+        commandQueue.add(
+            RenderCommand.FillQuad(
+                p1.ix,
+                p1.iy,
+                p1.ox,
+                p1.oy,
+                p2.ox,
+                p2.oy,
+                p2.ix,
+                p2.iy,
+                col0,
+                col0,
+                col1,
+                col1,
+            ),
+        )
+        commandQueue.add(
+            RenderCommand.FillQuad(
+                p2.ix,
+                p2.iy,
+                p2.ox,
+                p2.oy,
+                p3.ox,
+                p3.oy,
+                p3.ix,
+                p3.iy,
+                col1,
+                col1,
+                col2,
+                col2,
+            ),
+        )
+        commandQueue.add(
+            RenderCommand.FillQuad(
+                p3.ix,
+                p3.iy,
+                p3.ox,
+                p3.oy,
+                p4.ox,
+                p4.oy,
+                p4.ix,
+                p4.iy,
+                col2,
+                col2,
+                col3,
+                col3,
+            ),
+        )
+        commandQueue.add(
+            RenderCommand.FillQuad(
+                p4.ix,
+                p4.iy,
+                p4.ox,
+                p4.oy,
+                p1.ox,
+                p1.oy,
+                p1.ix,
+                p1.iy,
+                col3,
+                col3,
+                col0,
+                col0,
+            ),
+        )
     }
 
     // --- strokeQuad ---
@@ -294,84 +359,69 @@ class Graphics2D(
     // --- Path API ---
 
     fun beginPath() {
-        currentPath.clear()
-        startPath = null
+        path2D.beginPath()
     }
 
     fun moveTo(x: Float, y: Float) {
-        currentPath.add(x to y)
-        if (startPath == null) {
-            startPath = x to y
-        }
+        path2D.moveTo(x, y)
     }
 
     fun lineTo(x: Float, y: Float) {
-        currentPath.add(x to y)
+        path2D.lineTo(x, y)
     }
 
     fun closePath() {
-        startPath?.let {
-            if (currentPath.lastOrNull() != it) {
-                currentPath.add(it)
-            }
-        }
+        path2D.closePath()
     }
 
     fun strokePath() {
         val style = strokeStyle ?: return
-        val strokeWidth = style.width
-        val color = style.color
+        path2D.strokePath(style.width, style.color)
+    }
 
-        if (currentPath.size < 2) return
+    fun arc(x: Float, y: Float, radius: Float, startAngle: Float, endAngle: Float, counterclockwise: Boolean = false) {
+        path2D.arc(x, y, radius, startAngle, endAngle, counterclockwise)
+    }
 
-        // パスを線分に分解して描画
-        for (i in 0 until currentPath.size - 1) {
-            val p1 = currentPath[i]
-            val p2 = currentPath[i + 1]
+    fun arcTo(x1: Float, y1: Float, x2: Float, y2: Float, radius: Float) {
+        path2D.arcTo(x1, y1, x2, y2, radius)
+    }
 
-            // drawLine 関数を呼び出す代わりに、直接四角形を構築
-            val x1 = p1.first
-            val y1 = p1.second
-            val x2 = p2.first
-            val y2 = p2.second
+    fun bezierCurveTo(cp1x: Float, cp1y: Float, cp2x: Float, cp2y: Float, x: Float, y: Float) {
+        path2D.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+    }
 
-            if (strokeWidth <= 0) continue
+    // --- 変換API ---
 
-            val dx = x2 - x1
-            val dy = y2 - y1
-            val length = sqrt(dx * dx + dy * dy)
+    /**
+     * 現在の変換行列に変換を適用します。
+     */
+    fun transform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
+        transformMatrix.mul(Matrix3x2f(m00, m10, m01, m11, m02, m12))
+    }
 
-            if (length == 0f) continue
+    /**
+     * 現在の変換行列に移動変換を適用します。
+     */
+    fun translate(x: Float, y: Float) {
+        transformMatrix.translate(x, y)
+    }
 
-            val angle = atan2(dy.toDouble(), dx.toDouble()).toFloat()
-            val halfWidth = strokeWidth / 2.0f
+    /**
+     * 現在の変換状態をスタックに保存します。
+     */
+    fun save() {
+        transformStack.push(Matrix3x2f(transformMatrix)) // 現在の行列のコピーをプッシュ
+    }
 
-            val nx = -sin(angle) // 法線ベクトルのx成分
-            val ny = cos(angle) // 法線ベクトルのy成分
-
-            // 線の四隅の座標を計算
-            val p1x_quad = x1 + nx * halfWidth
-            val p1y_quad = y1 + ny * halfWidth
-            val p2x_quad = x2 + nx * halfWidth
-            val p2y_quad = y2 + ny * halfWidth
-            val p3x_quad = x2 - nx * halfWidth
-            val p3y_quad = y2 - ny * halfWidth
-            val p4x_quad = x1 - nx * halfWidth
-            val p4y_quad = y1 - ny * halfWidth
-
-            commandQueue.add(
-                RenderCommand.FillQuad(
-                    p1x_quad, p1y_quad,
-                    p2x_quad, p2y_quad,
-                    p3x_quad, p3y_quad,
-                    p4x_quad, p4y_quad,
-                    color, color, color, color,
-                ),
-            )
+    /**
+     * スタックから変換状態を復元します。
+     * スタックが空の場合は何もしません。
+     */
+    fun restore() {
+        if (transformStack.isNotEmpty()) {
+            transformMatrix.set(transformStack.pop()) // スタックからポップして復元
         }
-        // パス描画後にパスをクリア
-        currentPath.clear()
-        startPath = null
     }
 
     /**

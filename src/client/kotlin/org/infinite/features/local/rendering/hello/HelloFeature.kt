@@ -111,6 +111,75 @@ class HelloFeature : LocalFeature() {
             0xFF00FFFF.toInt(),
             0xFFFFFFFF.toInt(),
         )
+
+        // --- 5. 新しい機能のテスト ---
+
+        // translateとarcを使った描画
+        graphics2D.save() // 現在の変換状態を保存
+        graphics2D.translate(50f, 300f) // 原点を移動
+        graphics2D.strokeStyle = StrokeStyle(0xFF00FF00.toInt(), 3.0f) // 緑色の線
+        graphics2D.beginPath()
+        graphics2D.arc(0f, 0f, 30f, 0f, (Math.PI * 1.5).toFloat(), false) // 半径30の円弧
+        graphics2D.strokePath()
+        graphics2D.restore() // 変換状態を元に戻す
+
+        // arcToを使った描画
+        graphics2D.save()
+        graphics2D.translate(150f, 300f)
+        graphics2D.strokeStyle = StrokeStyle(0xFF0000FF.toInt(), 3.0f) // 青色の線
+        graphics2D.beginPath()
+        graphics2D.moveTo(0f, 0f)
+        graphics2D.arcTo(50f, 0f, 50f, 50f, 20f) // 制御点(50,0),(50,50), 半径20の円弧
+        graphics2D.lineTo(50f, 50f)
+        graphics2D.strokePath()
+        graphics2D.restore()
+
+        // bezierCurveToを使った描画
+        graphics2D.save()
+        graphics2D.translate(250f, 300f)
+        graphics2D.strokeStyle = StrokeStyle(0xFFFF00FF.toInt(), 3.0f) // マゼンタの線
+        graphics2D.beginPath()
+        graphics2D.moveTo(0f, 0f)
+        graphics2D.bezierCurveTo(20f, -50f, 80f, 50f, 100f, 0f) // 制御点2つ、終点1つ
+        graphics2D.strokePath()
+        graphics2D.restore()
+
+        // transformを使った図形の変形
+        graphics2D.save()
+        graphics2D.translate(400f, 300f) // 平行移動
+        graphics2D.transform(1.5f, 0.2f, 0.0f, 1.0f, 0.0f, 0.0f) // スケールとスキュー
+        graphics2D.fillStyle = 0x80FFFF00.toInt() // 半透明の黄色
+        graphics2D.fillRect(0f, 0f, 50f, 50f)
+        graphics2D.restore()
+
+        // --- 6. Graphics2Dプロパティと単色fillQuad, closePathのテスト ---
+
+        // gamedelta, realdelta, width, heightの表示
+        // これらはテキスト描画機能がないため、ここでは擬似的に座標で表現する
+        // 例: gamedeltaの値をx座標に反映
+        val deltaDisplayX = 10f + graphics2D.gameDelta * 10 // gamedeltaに応じてx座標を変化
+        graphics2D.fillStyle = 0xFF00FFFF.toInt() // シアン
+        graphics2D.fillRect(deltaDisplayX, 400f, 10f, 10f) // gamedelta表示用
+
+        // realdeltaをy座標に反映
+        val realDeltaDisplayY = 400f + graphics2D.realDelta * 10 // realdeltaに応じてy座標を変化
+        graphics2D.fillStyle = 0xFFFF00FF.toInt() // マゼンタ
+        graphics2D.fillRect(20f, realDeltaDisplayY, 10f, 10f) // realdelta表示用
+
+        // widthとheightの表示 (画面の端に線を描くなど)
+        graphics2D.strokeStyle = StrokeStyle(0xFFCCCCCC.toInt(), 1.0f) // 明るいグレー
+        graphics2D.beginPath()
+        graphics2D.moveTo(0f, 0f)
+        graphics2D.lineTo(graphics2D.width.toFloat(), 0f)
+        graphics2D.lineTo(graphics2D.width.toFloat(), graphics2D.height.toFloat())
+        graphics2D.lineTo(0f, graphics2D.height.toFloat())
+        graphics2D.closePath() // 画面の端を閉じる
+        graphics2D.strokePath()
+
+        // fillQuad(単色版)の描画
+        graphics2D.fillStyle = 0x80808080.toInt() // 半透明のグレー
+        graphics2D.fillQuad(50f, 450f, 100f, 450f, 100f, 500f, 50f, 500f) // 正方形
+
         return graphics2D
     }
 }

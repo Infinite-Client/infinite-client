@@ -50,8 +50,18 @@ dependencies {
 //    implementation("org.lwjgl:lwjgl-stb:${property("lwjgl_version")}")
     implementation("com.squareup.okhttp3:okhttp:${property("ok_http_version")}")
     implementation("org.apache.maven:maven-artifact:${property("maven_artifact_version")}")
+
+    // テスト依存関係
+    testImplementation(kotlin("test"))
+    testImplementation("io.mockk:mockk:1.12.0") // Mockkの最新安定版
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1") // JUnit Jupiter API
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1") // JUnit Jupiter Engine
 }
 tasks {
+    test {
+        useJUnitPlatform()
+    }
+
     processResources {
         inputs.property("version", project.version)
         filesMatching("fabric.mod.json") {
