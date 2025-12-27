@@ -1,8 +1,10 @@
 package org.infinite.gui.widget
 
 import net.minecraft.client.MinecraftClient
+import net.minecraft.client.gui.Click
 import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.widget.ButtonWidget
+import net.minecraft.client.gui.widget.ClickableWidget
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
 import net.minecraft.text.Text
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
@@ -13,8 +15,8 @@ class InfiniteButton(
     width: Int,
     height: Int,
     message: Text,
-    onPress: PressAction,
-) : ButtonWidget(x, y, width, height, message, onPress, DEFAULT_NARRATION_SUPPLIER) {
+    private val onPress: () -> Unit,
+) : ClickableWidget(x, y, width, height, message) {
     override fun renderWidget(
         context: DrawContext,
         mouseX: Int,
@@ -24,58 +26,48 @@ class InfiniteButton(
         val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
 
         val borderWidth = 1 // 1px border
+        val colors = InfiniteClient.currentColors()
 
-        // Animation colors (same as InfiniteScreen)
-        val interpolatedColor =
-            InfiniteClient
-                .currentColors()
-                .primaryColor
-
-        // Button rendering logic (similar to InfiniteScreen)
-        // 1. Outer background
-        context.fill(
-            x,
-            y,
-            x + width,
-            y + height,
-            InfiniteClient
-                .currentColors()
-                .backgroundColor,
-        )
-
-        // 2. Animated border
+        // Outer background
+        context.fill(x, y, x + width, y + height, colors.backgroundColor)
+        // Animated border
         context.fill(
             x + borderWidth,
             y + borderWidth,
             x + width - borderWidth,
             y + height - borderWidth,
-            interpolatedColor,
+            colors.primaryColor,
         )
-
-        // 3. Inner background
+        // Inner background
         context.fill(
             x + borderWidth * 2,
             y + borderWidth * 2,
             x + width - borderWidth * 2,
             y + height - borderWidth * 2,
-            InfiniteClient
-                .currentColors()
-                .backgroundColor,
+            colors.backgroundColor,
         )
 
-        // Draw button text
-        val textColor =
-            if (isHovered) {
-                InfiniteClient.currentColors().primaryColor
-            } else {
-                InfiniteClient.currentColors().foregroundColor // Darker foreground when hovered, foreground otherwise
-            }
+        val textColor = if (isHovered) colors.primaryColor else colors.foregroundColor
         graphics2D.centeredText(
             message,
             x + width / 2,
             y + height / 2,
             textColor,
-            true, // shadow = true
+            true,
         )
+    }
+
+    override fun mouseClicked(
+        click: Click,
+        doubled: Boolean,
+    ): Boolean {
+        if (!isMouseOver(click.x, click.y) || !active) return false
+        playDownSound(MinecraftClient.getInstance().soundManager)
+        onPress()
+        return true
+    }
+
+    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
+        appendDefaultNarrations(builder)
     }
 }

@@ -5,7 +5,6 @@ import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.widget.CheckboxWidget
 import net.minecraft.client.gui.widget.LockButtonWidget
 import net.minecraft.client.gui.widget.PageTurnWidget
-import net.minecraft.client.gui.widget.PressableTextWidget
 import net.minecraft.client.gui.widget.PressableWidget
 import net.minecraft.client.gui.widget.TextIconButtonWidget
 import net.minecraft.client.gui.widget.TexturedButtonWidget
@@ -56,28 +55,22 @@ class PressableWidgetRenderer(
         graphics2D.drawBorder(x, y, width, height, borderColor, borderWidth)
         // -------------------------------------------------
 
-        // ⭐ テキスト描画の制御部分
         val shouldRenderText =
             when (widget) {
-                // テキストを表示するウィジェット
-                is PressableTextWidget, // 標準的なテキストボタン
-                is TextIconButtonWidget.WithText,
-                -> true
-
-                // テキスト表示が主目的ではないウィジェット
                 is CheckboxWidget,
                 is LockButtonWidget,
                 is PageTurnWidget,
                 is TextIconButtonWidget.IconOnly,
                 is TexturedButtonWidget,
                 -> false
-
-                // その他の PressableWidget の派生クラスは、デフォルトでテキストを表示する（安全策）
                 else -> true
             }
 
         if (shouldRenderText) {
-            widget.drawMessage(context, MinecraftClient.getInstance().textRenderer, textColor)
+            val textRenderer = MinecraftClient.getInstance().textRenderer
+            val textX = x + width / 2
+            val textY = y + (height - textRenderer.fontHeight) / 2
+            context.drawCenteredTextWithShadow(textRenderer, widget.message, textX, textY, textColor)
         }
     }
 }

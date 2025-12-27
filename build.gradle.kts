@@ -45,7 +45,8 @@ dependencies {
     modImplementation("maven.modrinth:modmenu:${property("mod_menu_version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("dev.babbaj:nether-pathfinder:${property("nether_pathfinder_version")}")
-    modImplementation("meteordevelopment:baritone:${property("baritone_version")}")
+    // Keep compile-only so sources still build, but do not ship or run Baritone until 1.21.11 is available.
+    modCompileOnly("meteordevelopment:baritone:${property("baritone_version")}")
     implementation("org.lwjgl:lwjgl-stb:${property("lwjgl_version")}")
     implementation("com.squareup.okhttp3:okhttp:${property("ok_http_version")}")
     implementation("org.apache.maven:maven-artifact:${property("maven_artifact_version")}")

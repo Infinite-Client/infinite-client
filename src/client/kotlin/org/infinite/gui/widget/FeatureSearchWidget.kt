@@ -168,7 +168,7 @@ class FeatureSearchWidget(
                 GLFW.GLFW_KEY_ENTER -> {
                     if (selectedIndex != -1) {
                         val selectedToggle = scrollableContainer.widgets[selectedIndex] as? InfiniteFeatureToggle
-                        selectedToggle?.toggleButton?.onPress(input) // Simulate button press
+                        selectedToggle?.toggleButton?.press()
                         return true
                     }
                 }

@@ -167,7 +167,7 @@ class TextFieldWidgetRenderer(
                 Objects.requireNonNull<TextRenderer?>(textRenderer)
                 val selectionYEnd: Int = selectionYStart + 1 + 9 // テキストの高さに依存
 
-                context.drawSelection(selectionStartXClamped, selectionYStart, selectionEndXClamped, selectionYEnd)
+                context.drawSelection(selectionStartXClamped, selectionYStart, selectionEndXClamped, selectionYEnd, false)
             }
 
             // 10. ブリンキングカーソル（キャレット）の描画

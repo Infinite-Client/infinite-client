@@ -150,9 +150,10 @@ class Graphics3D(
         val scaledHeight = window.scaledHeight.toDouble()
 
         // 1. ワールド座標から相対座標 (View Space) へ
-        val relX = (targetPos.x - camera.pos.x).toFloat()
-        val relY = (targetPos.y - camera.pos.y).toFloat()
-        val relZ = (targetPos.z - camera.pos.z).toFloat()
+        val camPos = RenderUtils.cameraPos()
+        val relX = (targetPos.x - camPos.x).toFloat()
+        val relY = (targetPos.y - camPos.y).toFloat()
+        val relZ = (targetPos.z - camPos.z).toFloat()
 
         // 4Dベクトル (x, y, z, w=1.0)
         val targetVector = Vector4f(relX, relY, relZ, 1.0f)

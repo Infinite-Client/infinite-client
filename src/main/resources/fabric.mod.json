@@ -36,7 +36,7 @@
   "accessWidener": "infinite.accesswidener",
   "depends": {
     "fabricloader": ">=0.16",
-    "minecraft": "~1.21.8",
+    "minecraft": "~1.21.11",
     "java": ">=21",
     "fabric-api": "*",
     "fabric-language-kotlin": "*"
@@ -53,7 +53,6 @@
     }
   },
   "suggests": {
-    "baritone": "~1.21.10",
     "modmenu": "~16"
   }
 }

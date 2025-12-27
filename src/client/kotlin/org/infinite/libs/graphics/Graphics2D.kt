@@ -1,6 +1,7 @@
 package org.infinite.libs.graphics
 
 import net.minecraft.client.MinecraftClient
+import net.minecraft.client.gl.GpuSampler
 import net.minecraft.client.gl.RenderPipelines
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.render.RenderTickCounter
@@ -25,7 +26,9 @@ import org.joml.Matrix3x2f
 import org.joml.Matrix3x2fStack
 import org.joml.Vector2d
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /**
  * MinecraftのGUI描画コンテキストを保持し、カスタム2Dレンダリングを実行するためのクラス。
@@ -239,22 +242,13 @@ class Graphics2D(
         color: Int,
         shadow: Boolean = true,
     ) {
-        val orderedText = Language.getInstance().reorder(StringVisitable.plain(text))
-        val backgroundColor = 0
-        val clipBounds = context.scissorStack.peekLast()
-        val state =
-            TextRenderState(
-                client.textRenderer,
-                orderedText,
-                matrixStack,
-                x,
-                y,
-                color,
-                backgroundColor,
-                shadow,
-                clipBounds,
-            )
-        context.state.addText(state)
+        val tx = x.toInt()
+        val ty = y.toInt()
+        if (shadow) {
+            context.drawTextWithShadow(client.textRenderer, text, tx, ty, color)
+        } else {
+            context.drawText(client.textRenderer, text, tx, ty, color, false)
+        }
     }
 
     fun drawText(
@@ -460,19 +454,19 @@ class Graphics2D(
 
         // 2セグメントごとに1つの四角形を順次描画
         for (i in 0 until segments step 2) {
-            val angle1 = (i.toFloat() / segments.toFloat() * twoPi).toFloat()
-            val angle2 = ((i.toFloat() + 1f) / segments.toFloat() * twoPi).toFloat()
-            val angle3 = ((i.toFloat() + 2f) / segments.toFloat() * twoPi).toFloat()
+            val angle1 = i.toDouble() / segments.toDouble() * twoPi
+            val angle2 = (i.toDouble() + 1.0) / segments.toDouble() * twoPi
+            val angle3 = (i.toDouble() + 2.0) / segments.toDouble() * twoPi
 
             // 頂点1 (円周上)
-            val p1X = MathHelper.cos(angle1) * radius
-            val p1Y = MathHelper.sin(angle1) * radius
+            val p1X = (cos(angle1) * radius).toFloat()
+            val p1Y = (sin(angle1) * radius).toFloat()
             // 頂点2 (円周上)
-            val p2X = MathHelper.cos(angle2) * radius
-            val p2Y = MathHelper.sin(angle2) * radius
+            val p2X = (cos(angle2) * radius).toFloat()
+            val p2Y = (sin(angle2) * radius).toFloat()
             // 頂点3 (円周上)
-            val p3X = MathHelper.cos(angle3) * radius
-            val p3Y = MathHelper.sin(angle3) * radius
+            val p3X = (cos(angle3) * radius).toFloat()
+            val p3Y = (sin(angle3) * radius).toFloat()
 
             quad(
                 p1X,
@@ -518,11 +512,13 @@ class Graphics2D(
         var prevInnerX = cx + innerRadius
         var prevInnerY = cy
         for (i in 1..segments) {
-            val angle = (i.toFloat() / segments.toFloat() * twoPi).toFloat()
-            val outerX = cx + MathHelper.cos(angle) * outerRadius
-            val outerY = cy + MathHelper.sin(angle) * outerRadius
-            val innerX = cx + MathHelper.cos(angle) * innerRadius
-            val innerY = cy + MathHelper.sin(angle) * innerRadius
+            val angle = i.toDouble() / segments.toDouble() * twoPi
+            val cosV = cos(angle).toFloat()
+            val sinV = sin(angle).toFloat()
+            val outerX = cx + cosV * outerRadius
+            val outerY = cy + sinV * outerRadius
+            val innerX = cx + cosV * innerRadius
+            val innerY = cy + sinV * innerRadius
             quad(
                 prevOuterX,
                 prevOuterY,
@@ -688,31 +684,17 @@ class Graphics2D(
             translate(-centerX, -centerY)
         }
 
-        // 現在の変換行列を取得し、描画状態として登録
-        val pose = Matrix3x2f(context.matrices)
-        val scissor = context.scissorStack.peekLast()
-        val gpuTextureView =
-            this.client.textureManager
-                .getTexture(identifier)
-                .getGlTextureView()
-
-        // TexturedQuadRenderState を使用して描画要素を追加
-        context.state.addSimpleElement(
-            TexturedQuadRenderState(
-                RenderPipelines.GUI_TEXTURED,
-                TextureSetup.of(gpuTextureView),
-                pose,
-                x,
-                y,
-                x + width,
-                y + height,
-                uNormalized1,
-                uNormalized2,
-                vNormalized1,
-                vNormalized2,
-                color,
-                scissor,
-            ),
+        context.drawTexture(
+            RenderPipelines.GUI_TEXTURED,
+            identifier,
+            x.toInt(),
+            y.toInt(),
+            u,
+            v,
+            width.toInt(),
+            height.toInt(),
+            textureWidth.toInt(),
+            textureHeight.toInt(),
         )
 
         popState()
@@ -928,8 +910,8 @@ class Graphics2D(
         var currentAngle = startAngle
 
         // 最初の点を追加
-        val startX = cx + MathHelper.cos(currentAngle) * radius
-        val startY = cy + MathHelper.sin(currentAngle) * radius
+        val startX = (cx + cos(currentAngle.toDouble()) * radius).toFloat()
+        val startY = (cy + sin(currentAngle.toDouble()) * radius).toFloat()
         arcPoints.add(startX to startY)
 
         // 中間点を計算し、リストに追加
@@ -937,8 +919,8 @@ class Graphics2D(
             currentAngle = startAngle + i * angleStep
 
             // 描画する円弧上の頂点の座標を計算
-            val x = cx + MathHelper.cos(currentAngle) * radius
-            val y = cy + MathHelper.sin(currentAngle) * radius
+            val x = (cx + cos(currentAngle.toDouble()) * radius).toFloat()
+            val y = (cy + sin(currentAngle.toDouble()) * radius).toFloat()
 
             arcPoints.add(x to y)
         }
