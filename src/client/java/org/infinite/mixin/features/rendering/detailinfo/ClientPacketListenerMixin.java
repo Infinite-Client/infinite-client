@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.game.ClientboundContainerSetDataPacket;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
 import net.minecraft.world.level.block.Blocks;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.detailinfo.DetailInfo;
+import org.infinite.infinite.features.rendering.detailinfo.DetailInfo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

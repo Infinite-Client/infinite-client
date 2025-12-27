@@ -2,7 +2,7 @@ package org.infinite.mixin.features.rendering.xray;
 
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.xray.XRay;
+import org.infinite.infinite.features.rendering.xray.XRay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

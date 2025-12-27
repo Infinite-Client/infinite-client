@@ -5,7 +5,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import org.infinite.InfiniteClient;
-import org.infinite.features.fighting.reach.Reach;
+import org.infinite.infinite.features.fighting.reach.Reach;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(LocalPlayer.class)

@@ -16,13 +16,6 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.util.ARGB
 import org.infinite.feature.ConfigurableFeature
-import org.infinite.features.FeatureCategory
-import org.infinite.features.automatic.AutomaticFeatureCategory
-import org.infinite.features.fighting.FightingFeatureCategory
-import org.infinite.features.movement.MovementFeatureCategory
-import org.infinite.features.rendering.RenderingFeatureCategory
-import org.infinite.features.server.ServerFeatureCategory
-import org.infinite.features.utils.UtilsFeatureCategory
 import org.infinite.global.ConfigurableGlobalFeature
 import org.infinite.global.GlobalFeatureCategory
 import org.infinite.global.rendering.GlobalRenderingFeatureCategory
@@ -32,6 +25,13 @@ import org.infinite.gui.theme.CustomThemeLoader
 import org.infinite.gui.theme.Theme
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.gui.theme.official.officialThemes
+import org.infinite.infinite.features.FeatureCategory
+import org.infinite.infinite.features.automatic.AutomaticFeatureCategory
+import org.infinite.infinite.features.fighting.FightingFeatureCategory
+import org.infinite.infinite.features.movement.MovementFeatureCategory
+import org.infinite.infinite.features.rendering.RenderingFeatureCategory
+import org.infinite.infinite.features.server.ServerFeatureCategory
+import org.infinite.infinite.features.utils.UtilsFeatureCategory
 import org.infinite.libs.ai.AiInterface
 import org.infinite.libs.client.async.AsyncInterface
 import org.infinite.libs.client.control.ControllerInterface

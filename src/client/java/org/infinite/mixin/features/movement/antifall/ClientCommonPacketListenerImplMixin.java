@@ -9,7 +9,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientCommonPacketListener;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import org.infinite.InfiniteClient;
-import org.infinite.features.movement.fall.AntiFall;
+import org.infinite.infinite.features.movement.fall.AntiFall;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;

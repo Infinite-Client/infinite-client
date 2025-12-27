@@ -3,7 +3,7 @@ package org.infinite.mixin.features.fighting.counterattack;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
 import org.infinite.InfiniteClient;
-import org.infinite.features.fighting.counter.CounterAttack;
+import org.infinite.infinite.features.fighting.counter.CounterAttack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

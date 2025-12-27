@@ -2,7 +2,7 @@ package org.infinite.mixin.features.rendering.freecamera;
 
 import net.minecraft.client.player.LocalPlayer;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.camera.FreeCamera;
+import org.infinite.infinite.features.rendering.camera.FreeCamera;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

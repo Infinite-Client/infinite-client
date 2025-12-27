@@ -5,7 +5,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.overlay.AntiOverlay;
+import org.infinite.infinite.features.rendering.overlay.AntiOverlay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

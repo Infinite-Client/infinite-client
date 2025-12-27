@@ -1,0 +1,1060 @@
+package org.infinite.infinite.features.automatic.pilot
+
+import com.mojang.brigadier.arguments.IntegerArgumentType
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
+import net.minecraft.client.Minecraft
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.core.BlockPos
+import net.minecraft.network.chat.Component
+import net.minecraft.util.Mth
+import net.minecraft.world.entity.EntitySelector
+import net.minecraft.world.entity.vehicle.boat.Boat
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.entity.EntityTypeTest
+import net.minecraft.world.level.levelgen.Heightmap
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
+import org.infinite.InfiniteClient
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.infinite.features.movement.vehicle.HoverVehicle
+import org.infinite.infinite.features.utils.backpack.BackPackManager
+import org.infinite.libs.client.aim.AimInterface
+import org.infinite.libs.client.aim.camera.CameraRoll
+import org.infinite.libs.client.aim.task.condition.AimTaskConditionReturn
+import org.infinite.libs.client.inventory.InventoryManager
+import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
+import org.infinite.libs.graphics.Graphics2D
+import org.infinite.libs.graphics.Graphics3D
+import org.infinite.libs.graphics.render.RenderUtils
+import org.infinite.settings.FeatureSetting
+import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
+import kotlin.math.sqrt
+
+// ターゲットの X, Z 座標を保持するデータクラス
+class Location(
+    val x: Int,
+    val z: Int,
+) {
+    private val client = Minecraft.getInstance()
+    private val player: LocalPlayer?
+        get() = client.player
+
+    /** プレイヤーからターゲットまでの水平距離を計算します。 */
+    fun distance(): Double {
+        if (player == null) return 0.0
+        val cx = player!!.x
+        val cz = player!!.z
+        val diffX = x - cx
+        val diffZ = z - cz
+        return sqrt(diffX * diffX + diffZ * diffZ)
+    }
+}
+
+// 自動操縦の状態を定義する列挙型
+enum class PilotState {
+    Idle, // 待機中
+    JetFlying, // SuperFlyモードで飛行中
+    HoverFlying, // ボートで飛行中
+    FallFlying, // 速度を落とすために下降中
+    RiseFlying, // 速度を上げるために上昇中
+    Gliding, // 一定以上の高さになったので滑空中
+    Circling, // 目標点の周りを旋回し、着陸地点を探索中
+    Landing, // 着陸中
+    EmergencyLanding, // 緊急着陸中
+    TakingOff, // 離陸中
+}
+
+// AutoPilot メイン機能クラス
+class AutoPilot : ConfigurableFeature(initialEnabled = false) {
+    override fun onDisabled() {
+        Minecraft
+            .getInstance()
+            .options.keyJump.isDown = false
+    }
+
+    private var reconnectInterval = 20
+    val defaultFallDir = 40.0
+    val defaultRiseDir = -45.0
+    val bestGlidingDir = 5.7
+    val fallDir =
+        FeatureSetting.DoubleSetting(
+            "FallDirection",
+            defaultFallDir,
+            defaultFallDir - 10,
+            defaultFallDir + 10,
+        )
+    val riseDir =
+        FeatureSetting.DoubleSetting(
+            "RiseDirection",
+            defaultRiseDir,
+            defaultRiseDir - 10,
+            defaultRiseDir + 10,
+        )
+    val glidingDir =
+        FeatureSetting.DoubleSetting(
+            "GlidingDirection",
+            20.0,
+            bestGlidingDir,
+            defaultFallDir,
+        )
+    val elytraThreshold =
+        FeatureSetting.IntSetting(
+            "ElytraThreshold",
+            5,
+            1,
+            50,
+        )
+    private val swapElytra =
+        FeatureSetting.BooleanSetting(
+            "SwapElytra",
+            true,
+        )
+    val standardHeight =
+        FeatureSetting.IntSetting(
+            "StandardHeight",
+            512,
+            256,
+            1024,
+        )
+    val landingDir =
+        FeatureSetting.DoubleSetting(
+            "LandingDirectory",
+            -14.0,
+            -45.0,
+            0.0,
+        )
+    val emergencyLandingThreshold =
+        FeatureSetting.IntSetting(
+            "EmergencyLandingThreshold",
+            60,
+            10,
+            300,
+        )
+    val collisionDetectionDistance =
+        FeatureSetting.IntSetting(
+            "CollisionDetectionDistance",
+            10,
+            3,
+            30,
+        )
+    val jetFlightMode =
+        FeatureSetting.BooleanSetting(
+            "JetFlight",
+            false,
+        )
+    val jetSpeedLimit =
+        FeatureSetting.DoubleSetting(
+            "JetSpeedLimit",
+            30.0,
+            10.0,
+            50.0,
+        )
+    val jetAcceleration =
+        FeatureSetting.DoubleSetting(
+            "JetAcceleration",
+            0.5,
+            0.0,
+            1.0,
+        )
+    private val targetX =
+        FeatureSetting.IntSetting("TargetX", 0, -30000000, 30000000)
+    private val targetZ =
+        FeatureSetting.IntSetting("TargetZ", 0, -30000000, 30000000)
+    override val settings: List<FeatureSetting<*>> =
+        listOf(
+            targetX,
+            targetZ,
+            elytraThreshold,
+            swapElytra,
+            standardHeight,
+            riseDir,
+            glidingDir,
+            fallDir,
+            landingDir,
+            emergencyLandingThreshold,
+            collisionDetectionDistance,
+            jetFlightMode,
+            jetSpeedLimit,
+            jetAcceleration,
+        )
+    private var fallHeight: Double = 0.0
+    private var riseHeight: Double = 0.0
+
+    private fun redeployElytra() {
+        if (player == null) return
+        client.options.keyJump.isDown = true
+    }
+
+    val flySpeed: Double
+        get() {
+            if (player == null) return 0.0
+            val entity = player!!.vehicle ?: player!!
+            val moveVelocity = entity.deltaMovement
+            val lookVelocity = entity.lookAngle
+            return moveVelocity.dot(lookVelocity)
+        }
+    val flySpeedDisplay: Double
+        get() = flySpeed * 20
+    var risingTime = System.currentTimeMillis()
+    var fallingTime = System.currentTimeMillis()
+
+    val riseSpeed: Double
+        get() = (player?.vehicle?.deltaMovement?.y ?: player?.deltaMovement?.y ?: 0.0)
+    val riseSpeedDisplay: Double
+        get() = riseSpeed * 20.0
+
+    private val alpha = 0.0015
+    var moveSpeedAverage: Double = 0.0
+    private var riseSpeedAverage: Double = 0.0
+
+    val height: Double
+        get() = player?.y ?: 0.0
+    private val moveSpeed: Double
+        get() {
+            if (player == null) {
+                return 0.0
+            }
+            val entity = player!!.vehicle ?: player!!
+            val x = entity.deltaMovement.x
+            val z = entity.deltaMovement.z
+            return sqrt(x * x + z * z) * 20.0
+        }
+
+    val target: Location
+        get() = Location(targetX.value, targetZ.value)
+    var state: PilotState = PilotState.Idle
+    var bestLandingSpot: LandingSpot? = null
+    var aimTaskCallBack: AimTaskConditionReturn? = null
+
+    private fun isCollidingWithTerrain(): Boolean {
+        if (player == null) return false
+
+        val entity = if (player!!.vehicle is Boat) player!!.vehicle!! else player!!
+        val currentPos = entity.blockPosition()
+        val lookVec = player!!.lookAngle
+        val checkDistance = collisionDetectionDistance.value
+
+        for (i in 1..checkDistance) {
+            val checkPos =
+                currentPos.offset(
+                    (lookVec.x * i).roundToInt(),
+                    (lookVec.y * i).roundToInt(),
+                    (lookVec.z * i).roundToInt(),
+                )
+            val blockState = world!!.getBlockState(checkPos)
+            if (!blockState.isAir) {
+                return true
+            }
+        }
+
+        val blockBelow = currentPos.below()
+        val blockStateBelow = world!!.getBlockState(blockBelow)
+        return !blockStateBelow.isAir
+    }
+
+    private fun isBoatOnWater(): Boolean {
+        if (player?.vehicle !is Boat) return false
+        val boat = player!!.vehicle as Boat
+        val blockPos = boat.blockPosition()
+        val blockState = world!!.getBlockState(blockPos)
+        return blockState.`is`(Blocks.WATER)
+    }
+
+    override fun onStart() {
+        reconnectInterval = 20
+        aimTaskCallBack = null // AimTaskの状態をリセット
+        state = PilotState.Idle // 状態を適切に初期化
+        moveSpeedAverage = moveSpeed // 移動速度の平均をリセット
+        riseSpeedAverage = riseSpeed // 上昇速度の平均をリセット
+        bestLandingSpot = null // 着陸地点をリセット
+    }
+
+    override fun onTick() {
+        val player = player ?: return
+        if (reconnectInterval > 0) {
+            reconnectInterval--
+            return
+        }
+        if (jetFlightMode.value) {
+            if (!InfiniteClient.isFeatureEnabled(HoverVehicle::class.java)) {
+                InfiniteClient.error(Component.translatable("autopilot.error.hoverboat").string)
+                disable()
+                return
+            }
+        }
+        val currentMoveSpeed = moveSpeed
+        val currentRiseSpeed = riseSpeed
+        moveSpeedAverage = alpha * currentMoveSpeed + (1.0 - alpha) * moveSpeedAverage
+        riseSpeedAverage = alpha * currentRiseSpeed + (1.0 - alpha) * riseSpeedAverage
+        if (listOf(PilotState.Landing, PilotState.EmergencyLanding).contains(state)) {
+            Minecraft
+                .getInstance()
+                .options.keyJump.isDown = false
+        }
+        val remainingFlightTime = flightTime()
+        val isEmergencyCondition =
+            if (player.vehicle is Boat || state == PilotState.Landing) {
+                false
+            } else {
+                remainingFlightTime < emergencyLandingThreshold.value || isCollidingWithTerrain()
+            }
+
+        if (isEmergencyCondition) {
+            if (state != PilotState.EmergencyLanding) {
+                InfiniteClient.warn(
+                    Component
+                        .translatable(
+                            "autopilot.emergency_landing.start",
+                            remainingFlightTime.roundToInt(),
+                            isCollidingWithTerrain(),
+                        ).string,
+                )
+                state = PilotState.EmergencyLanding
+                aimTaskCallBack = null
+            }
+        }
+
+        val currentTarget = target
+        val hoverMode = player.vehicle is Boat
+        if (swapElytra.value && player.vehicle !is Boat) {
+            checkAndSwapElytra()
+        }
+
+        if (!player.isFallFlying && !hoverMode) {
+            if (isElytra(InventoryManager.get(InventoryIndex.Armor.Chest()))) {
+                InfiniteClient.warn(Component.translatable("autopilot.elytra.flight_interrupted").string)
+                redeployElytra()
+            } else {
+                InfiniteClient.error(Component.translatable("autopilot.elytra.not_equipped").string)
+                disable()
+                return
+            }
+        }
+
+        val distance = currentTarget.distance()
+        if (distance < 32 && state == PilotState.Landing) {
+            if (player.vehicle is Boat && isBoatOnWater()) {
+                InfiniteClient.info(Component.translatable("autopilot.landing.boat_completed").string)
+                player.removeVehicle()
+                disable()
+                return
+            } else if (player.vehicle !is Boat) {
+                InfiniteClient.info(Component.translatable("autopilot.landing.completed").string)
+                disable()
+                return
+            }
+        } else if (distance < landingStartDistance && state != PilotState.Circling && state != PilotState.Landing) {
+            InfiniteClient.info(Component.translatable("autopilot.circling.start").string)
+            aimTaskCallBack = null
+            state = PilotState.Circling
+        }
+
+        if (jetFlightMode.value &&
+            listOf(PilotState.FallFlying, PilotState.Gliding, PilotState.RiseFlying, PilotState.TakingOff).contains(
+                state,
+            )
+        ) {
+            state = if (player.vehicle is Boat) PilotState.HoverFlying else PilotState.JetFlying
+        }
+        if (jetFlightMode.value) {
+            if (player.vehicle is Boat) {
+                if (state !in listOf(PilotState.Circling, PilotState.Landing, PilotState.EmergencyLanding)) {
+                    state = PilotState.HoverFlying
+                }
+            } else if (state == PilotState.HoverFlying) {
+                val searchBox = player.boundingBox.inflate(10.0)
+                val boats =
+                    world!!.getEntities(EntityTypeTest.forClass(Boat::class.java), searchBox) {
+                        EntitySelector.ENTITY_STILL_ALIVE.test(it)
+                    }
+                if (boats.isNotEmpty()) {
+                    val closestBoat = boats.minBy { it.distanceTo(player) }
+                    if (player.startRiding(closestBoat)) {
+                        InfiniteClient.info(Component.translatable("autopilot.hover.remounted").string)
+                    } else {
+                        InfiniteClient.warn(Component.translatable("autopilot.hover.remount_failed").string)
+                        state = PilotState.JetFlying
+                    }
+                } else {
+                    InfiniteClient.warn(Component.translatable("autopilot.hover.no_boat_found").string)
+                    state = PilotState.JetFlying
+                }
+            } else {
+                if (state !in listOf(PilotState.Circling, PilotState.Landing, PilotState.EmergencyLanding)) {
+                    state = PilotState.JetFlying
+                }
+            }
+        } else if (state == PilotState.Idle && player.vehicle is Boat && isBoatOnWater()) {
+            state = PilotState.TakingOff
+            aimTaskCallBack = null
+        }
+
+        process(currentTarget)
+    }
+
+    val landingStartDistance = 256.0
+
+    private fun elytraDurability(): Double {
+        val chestStack = InventoryManager.get(InventoryIndex.Armor.Chest())
+        return InventoryManager.durabilityPercentage(chestStack) * 100
+    }
+
+    private fun isElytra(stack: ItemStack): Boolean = stack.item == Items.ELYTRA
+
+    private fun checkAndSwapElytra() {
+        if (player == null) return
+
+        val invManager = InventoryManager
+        val equippedElytraStack = invManager.get(InventoryIndex.Armor.Chest())
+        val isElytraEquipped = isElytra(equippedElytraStack)
+        val currentDurability = if (isElytraEquipped) elytraDurability() else 0.0
+        val backPackManager = InfiniteClient.getFeature(BackPackManager::class.java)
+
+        val needsSwap = !isElytraEquipped || (currentDurability <= elytraThreshold.value)
+        if (needsSwap) {
+            val bestElytra = findBestElytraInInventory()
+            if (bestElytra != null) {
+                // ★ BackPackManagerの一時停止/再開をregisterで置き換え
+                backPackManager?.register {
+                    if (invManager.swap(InventoryIndex.Armor.Chest(), bestElytra.index)) {
+                        val swapMessage =
+                            if (isElytraEquipped) {
+                                Component
+                                    .translatable(
+                                        "autopilot.elytra.swapped.low_durability",
+                                        currentDurability.roundToInt(),
+                                        bestElytra.durability.roundToInt(),
+                                    ).string
+                            } else {
+                                Component
+                                    .translatable(
+                                        "autopilot.elytra.swapped.not_equipped",
+                                        bestElytra.durability.roundToInt(),
+                                    ).string
+                            }
+                        InfiniteClient.info(swapMessage)
+                    } else {
+                        InfiniteClient.error(Component.translatable("autopilot.elytra.swap_failed").string)
+                    }
+                }
+            } else if (player?.vehicle !is Boat) {
+                if (isElytraEquipped) {
+                    if (state != PilotState.EmergencyLanding) {
+                        InfiniteClient.warn(
+                            Component
+                                .translatable(
+                                    "autopilot.elytra.no_spare.low_durability",
+                                    currentDurability.roundToInt(),
+                                ).string,
+                        )
+                        state = PilotState.EmergencyLanding
+                        aimTaskCallBack = null
+                    }
+                } else {
+                    if (state != PilotState.EmergencyLanding) {
+                        InfiniteClient.warn(Component.translatable("autopilot.elytra.no_spare.not_equipped").string)
+                        state = PilotState.EmergencyLanding
+                        aimTaskCallBack = null
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onEnabled() {
+        moveSpeedAverage = moveSpeed
+        riseSpeedAverage = riseSpeed
+        state = if (player?.vehicle is Boat && isBoatOnWater()) PilotState.TakingOff else PilotState.Idle
+        aimTaskCallBack = null
+        riseHeight = height
+        fallHeight = height
+        bestLandingSpot = null
+    }
+
+    private fun process(target: Location) {
+        when (state) {
+            PilotState.Idle -> {
+                val targetSpeed = jetSpeedLimit.value
+                state =
+                    if (moveSpeedAverage > targetSpeed) {
+                        PilotState.FallFlying
+                    } else {
+                        PilotState.RiseFlying
+                    }
+                aimTaskCallBack = null
+            }
+
+            PilotState.TakingOff -> {
+                when (aimTaskCallBack) {
+                    null -> {
+                        aimTaskCallBack = AimTaskConditionReturn.Suspend
+                        AimInterface.addTask(AutoPilotAimTask(state))
+                        InfiniteClient.info(Component.translatable("autopilot.takeoff.start").string)
+                    }
+
+                    AimTaskConditionReturn.Exec -> {
+                        if (player == null || player!!.vehicle !is Boat) return
+                        val boat = player!!.vehicle as Boat
+                        var velocity = boat.deltaMovement
+                        val yaw = player!!.yRot.toDouble()
+                        val pitch = player!!.xRot.toDouble()
+                        val moveVec = CameraRoll(yaw, pitch).vec()
+                        val power = jetAcceleration.value
+                        val vecY =
+                            velocity.y + min(power, standardHeight.value - height)
+                        val vecX = velocity.x + moveVec.x * power
+                        val vecZ = velocity.z + moveVec.z * power
+                        velocity = Vec3(vecX, vecY, vecZ)
+                        if (velocity.length() * 20 > jetSpeedLimit.value) {
+                            velocity = velocity.normalize().scale(jetSpeedLimit.value / 20)
+                        }
+                        boat.deltaMovement = velocity
+                        if (height >= standardHeight.value) {
+                            aimTaskCallBack = AimTaskConditionReturn.Success
+                        }
+                    }
+
+                    AimTaskConditionReturn.Success -> {
+                        aimTaskCallBack = null
+                        state = PilotState.HoverFlying
+                        InfiniteClient.info(Component.translatable("autopilot.takeoff.completed").string)
+                    }
+
+                    AimTaskConditionReturn.Failure, AimTaskConditionReturn.Force -> {
+                        InfiniteClient.error(Component.translatable("autopilot.error.takeoff").string)
+                        disable()
+                    }
+
+                    else -> {}
+                }
+            }
+
+            PilotState.JetFlying -> {
+                when (aimTaskCallBack) {
+                    null -> {
+                        aimTaskCallBack = AimTaskConditionReturn.Suspend
+                        AimInterface.addTask(AutoPilotAimTask(state))
+                    }
+
+                    AimTaskConditionReturn.Exec -> {
+                        if (player == null) return
+                        var velocity = player!!.deltaMovement
+                        val yaw = player!!.yRot.toDouble()
+                        val pitch = player!!.xRot.toDouble()
+                        val moveVec = CameraRoll(yaw, pitch).vec()
+                        val power = jetAcceleration.value
+                        val vecY =
+                            velocity.y +
+                                if (height < standardHeight.value) {
+                                    min(power, standardHeight.value - velocity.y)
+                                } else {
+                                    -power
+                                }
+                        val vecX = velocity.x + moveVec.x * (if (moveSpeed < jetSpeedLimit.value) power else 0.0)
+                        val vecZ = velocity.z + moveVec.z * (if (moveSpeed < jetSpeedLimit.value) power else 0.0)
+                        velocity = Vec3(vecX, vecY, vecZ)
+                        if (velocity.length() * 20 > jetSpeedLimit.value) {
+                            velocity = velocity.normalize().scale(jetSpeedLimit.value / 20)
+                        }
+                        player!!.deltaMovement = velocity
+                    }
+
+                    AimTaskConditionReturn.Success -> {
+                        aimTaskCallBack = null
+                        state = PilotState.Circling
+                    }
+
+                    AimTaskConditionReturn.Failure, AimTaskConditionReturn.Force -> {
+                        InfiniteClient.error(Component.translatable("autopilot.error.circling").string)
+                        disable()
+                    }
+
+                    else -> {}
+                }
+            }
+
+            PilotState.HoverFlying -> {
+                when (aimTaskCallBack) {
+                    null -> {
+                        aimTaskCallBack = AimTaskConditionReturn.Suspend
+                        AimInterface.addTask(AutoPilotAimTask(state))
+                    }
+
+                    AimTaskConditionReturn.Exec -> {
+                        if (player == null || player!!.vehicle !is Boat) return
+                        val boat = player!!.vehicle as Boat
+                        var velocity = boat.deltaMovement
+                        val yaw = player!!.yRot.toDouble()
+                        val pitch = player!!.xRot.toDouble()
+                        val moveVec = CameraRoll(yaw, pitch).vec()
+                        val power = jetAcceleration.value
+                        val vecY =
+                            velocity.y +
+                                if (height < standardHeight.value) {
+                                    min(power, standardHeight.value - velocity.y)
+                                } else {
+                                    -power
+                                }
+                        val vecX = velocity.x + moveVec.x * (if (moveSpeed < jetSpeedLimit.value) power else 0.0)
+                        val vecZ = velocity.z + moveVec.z * (if (moveSpeed < jetSpeedLimit.value) power else 0.0)
+                        velocity = Vec3(vecX, vecY, vecZ)
+                        if (velocity.length() * 20 > jetSpeedLimit.value) {
+                            velocity = velocity.normalize().scale(jetSpeedLimit.value / 20)
+                        }
+                        boat.deltaMovement = velocity
+                    }
+
+                    AimTaskConditionReturn.Success -> {
+                        aimTaskCallBack = null
+                        state = PilotState.Circling
+                    }
+
+                    AimTaskConditionReturn.Failure, AimTaskConditionReturn.Force -> {
+                        InfiniteClient.error(Component.translatable("autopilot.error.hover_flying").string)
+                        disable()
+                    }
+
+                    else -> {}
+                }
+            }
+
+            PilotState.Circling -> {
+                when (aimTaskCallBack) {
+                    null -> {
+                        aimTaskCallBack = AimTaskConditionReturn.Suspend
+                        AimInterface.addTask(AutoPilotAimTask(state, bestLandingSpot))
+                    }
+
+                    AimTaskConditionReturn.Success -> {
+                        aimTaskCallBack = null
+                        state = PilotState.Landing
+                        InfiniteClient.info(Component.translatable("autopilot.landing.spot_found").string)
+                    }
+
+                    AimTaskConditionReturn.Failure, AimTaskConditionReturn.Force -> {
+                        InfiniteClient.error(Component.translatable("autopilot.error.circling").string)
+                        disable()
+                    }
+
+                    else -> {
+                        if (player?.vehicle is Boat) {
+                            player!!.vehicle!!.deltaMovement = player!!.vehicle!!.deltaMovement.add(0.0, -1.0, 0.0)
+                        }
+                        searchLandingSpot(target)
+                    }
+                }
+            }
+
+            PilotState.Landing -> {
+                when (aimTaskCallBack) {
+                    null -> {
+                        aimTaskCallBack = AimTaskConditionReturn.Suspend
+                        AimInterface.addTask(AutoPilotAimTask(state, bestLandingSpot))
+                        InfiniteClient.info(Component.translatable("autopilot.landing.aimtask_start").string)
+                    }
+
+                    AimTaskConditionReturn.Exec -> {
+                        if (player == null) return
+                        val isBoat = player!!.vehicle is Boat
+                        if (!isBoat) return // Elytra landing handled by glide pitch
+                        val boat = player!!.vehicle as Boat
+                        var velocity = boat.deltaMovement
+                        val yaw = player!!.yRot.toDouble()
+                        val pitch = player!!.xRot.toDouble()
+                        val moveVec = CameraRoll(yaw, pitch).vec()
+                        val power = jetAcceleration.value
+                        val landingSpot = bestLandingSpot ?: return
+                        val dX = landingSpot.x - player!!.x
+                        val dZ = landingSpot.z - player!!.z
+                        val horizontalDist = sqrt(dX * dX + dZ * dZ)
+                        val heightAboveSpot = player!!.y - landingSpot.y
+                        val vecY: Double
+                        val vecX: Double
+                        val vecZ: Double
+                        if (horizontalDist < 5.0 && heightAboveSpot > 0) {
+                            // Vertical descend
+                            vecY = velocity.y - power * 0.5 // Slow descend
+                            vecX = velocity.x * 0.9 // Dampen horizontal
+                            vecZ = velocity.z * 0.9
+                        } else {
+                            // Approach
+                            val verticalThreshold = 10.0
+                            vecY =
+                                velocity.y +
+                                if (heightAboveSpot >
+                                    verticalThreshold
+                                ) {
+                                    -power
+                                } else if (heightAboveSpot < verticalThreshold - 5) {
+                                    power
+                                } else {
+                                    0.0
+                                }
+                            vecX = velocity.x + moveVec.x * power
+                            vecZ = velocity.z + moveVec.z * power
+                        }
+                        velocity = Vec3(vecX, vecY, vecZ)
+                        boat.deltaMovement = velocity
+                    }
+
+                    AimTaskConditionReturn.Success -> {
+                        aimTaskCallBack = null
+                        if (player?.vehicle is Boat) {
+                            if (isBoatOnWater()) {
+                                InfiniteClient.info(Component.translatable("autopilot.landing.boat_completed").string)
+                                player!!.removeVehicle()
+                            } else {
+                                InfiniteClient.info(Component.translatable("autopilot.landing.boat_not_on_water").string)
+                            }
+                        } else {
+                            InfiniteClient.info(Component.translatable("autopilot.landing.conditions_met").string)
+                        }
+                        disable()
+                    }
+
+                    AimTaskConditionReturn.Failure, AimTaskConditionReturn.Force -> {
+                        InfiniteClient.error(Component.translatable("autopilot.error.landing").string)
+                        disable()
+                    }
+
+                    else -> {}
+                }
+            }
+
+            PilotState.EmergencyLanding -> {
+                when (aimTaskCallBack) {
+                    null -> {
+                        aimTaskCallBack = AimTaskConditionReturn.Suspend
+                        AimInterface.addTask(AutoPilotAimTask(state, bestLandingSpot))
+                        InfiniteClient.info(Component.translatable("autopilot.emergency_landing.aimtask_start").string)
+                    }
+
+                    AimTaskConditionReturn.Success -> {
+                        aimTaskCallBack = null
+                        if (player?.vehicle is Boat && isBoatOnWater()) {
+                            player!!.removeVehicle()
+                        }
+                        InfiniteClient.info(Component.translatable("autopilot.emergency_landing.completed").string)
+                        disable()
+                    }
+
+                    AimTaskConditionReturn.Failure, AimTaskConditionReturn.Force -> {
+                        InfiniteClient.error(Component.translatable("autopilot.error.emergency_landing").string)
+                        disable()
+                    }
+
+                    else -> {}
+                }
+            }
+
+            PilotState.FallFlying -> {
+                when (aimTaskCallBack) {
+                    null -> {
+                        aimTaskCallBack = AimTaskConditionReturn.Suspend
+                        riseHeight = height
+                        risingTime = System.currentTimeMillis()
+                        AimInterface.addTask(AutoPilotAimTask(state))
+                    }
+
+                    AimTaskConditionReturn.Success -> {
+                        aimTaskCallBack = null
+                        state = PilotState.RiseFlying
+                    }
+
+                    AimTaskConditionReturn.Failure, AimTaskConditionReturn.Force -> {
+                        InfiniteClient.error(Component.translatable("autopilot.error.fallflying").string)
+                        disable()
+                    }
+
+                    else -> {}
+                }
+            }
+
+            PilotState.RiseFlying -> {
+                when (aimTaskCallBack) {
+                    null -> {
+                        aimTaskCallBack = AimTaskConditionReturn.Suspend
+                        fallHeight = height
+                        fallingTime = System.currentTimeMillis()
+                        AimInterface.addTask(AutoPilotAimTask(state))
+                    }
+
+                    AimTaskConditionReturn.Success -> {
+                        aimTaskCallBack = null
+                        InfiniteClient.error(Component.translatable("autopilot.error.riseflying").string)
+                        disable()
+                    }
+
+                    AimTaskConditionReturn.Failure, AimTaskConditionReturn.Force -> {
+                        InfiniteClient.error(Component.translatable("autopilot.error.riseflying").string)
+                        disable()
+                    }
+
+                    else -> {}
+                }
+            }
+
+            PilotState.Gliding -> {
+                when (aimTaskCallBack) {
+                    null -> {
+                        aimTaskCallBack = AimTaskConditionReturn.Suspend
+                        AimInterface.addTask(AutoPilotAimTask(state))
+                    }
+
+                    AimTaskConditionReturn.Success -> {
+                        aimTaskCallBack = null
+                        state = PilotState.FallFlying
+                    }
+
+                    AimTaskConditionReturn.Failure, AimTaskConditionReturn.Force -> {
+                        InfiniteClient.error(Component.translatable("autopilot.error.gliding").string)
+                        disable()
+                    }
+
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private fun searchLandingSpot(target: Location) {
+        if (player == null) return
+
+        val centerX = target.x
+        val centerZ = target.z
+        val searchRadius = 128
+
+        var currentBestSpot: LandingSpot? = bestLandingSpot
+        val currentBestScore = currentBestSpot?.score ?: -1.0
+
+        repeat(5) {
+            val x = centerX + Mth.randomBetweenInclusive(player!!.random, -searchRadius, searchRadius)
+            val z = centerZ + Mth.randomBetweenInclusive(player!!.random, -searchRadius, searchRadius)
+            val y = world!!.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z)
+
+            if (!isDangerousBlock(x, y, z)) {
+                val flatnessScore = calculateFlatnessScore(x, z)
+                val score = y.toDouble() + (flatnessScore * 10.0)
+                var adjustedScore = score
+                if (player?.vehicle is Boat && isWaterBlock(x, y, z)) {
+                    adjustedScore += 2000000000000000000.0 // さらに高いボーナスで水を優先
+                }
+                if (adjustedScore > currentBestScore) {
+                    currentBestSpot = LandingSpot(x, y, z, adjustedScore)
+                    bestLandingSpot = currentBestSpot
+                }
+            }
+        }
+    }
+
+    private fun calculateFlatnessScore(
+        x: Int,
+        z: Int,
+    ): Double {
+        var totalDiff = 0.0
+        val centerH = world!!.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z)
+        var count = 0
+        for (dx in -1..1) {
+            for (dz in -1..1) {
+                if (dx == 0 && dz == 0) continue
+                val neighborH = world!!.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + dx, z + dz)
+                totalDiff += abs(centerH - neighborH)
+                count++
+            }
+        }
+
+        if (count == 0) return 1.0
+        val avgDiff = totalDiff / count.toDouble()
+        return Mth.clamp(1.0 - (avgDiff / 5.0), 0.0, 1.0)
+    }
+
+    private fun isDangerousBlock(
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Boolean {
+        val blockPos = BlockPos(x, y, z)
+        val blockState = world!!.getBlockState(blockPos)
+        val block = blockState.block
+        if (block == Blocks.LAVA || block == Blocks.FIRE || block == Blocks.CACTUS || block == Blocks.MAGMA_BLOCK) {
+            return true
+        }
+        val blockStateAbove = world!!.getBlockState(blockPos.above())
+        val blockAbove = blockStateAbove.block
+        return blockAbove == Blocks.LAVA || blockAbove == Blocks.FIRE || blockAbove == Blocks.CACTUS
+    }
+
+    private fun isWaterBlock(
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Boolean {
+        val blockPos = BlockPos(x, y, z)
+        val blockState = world!!.getBlockState(blockPos)
+        return blockState.`is`(Blocks.WATER) || blockState.`is`(Blocks.WATER_CAULDRON)
+    }
+
+    override fun registerCommands(builder: LiteralArgumentBuilder<FabricClientCommandSource>) {
+        builder.then(
+            ClientCommandManager.literal("target").then(
+                ClientCommandManager.argument("x", IntegerArgumentType.integer()).then(
+                    ClientCommandManager.argument("z", IntegerArgumentType.integer()).executes { context ->
+                        targetX.value = IntegerArgumentType.getInteger(context, "x")
+                        targetZ.value = IntegerArgumentType.getInteger(context, "z")
+                        InfiniteClient.info(
+                            Component
+                                .translatable(
+                                    "autopilot.command.target_set",
+                                    targetX.value,
+                                    targetZ.value,
+                                ).string,
+                        )
+                        1
+                    },
+                ),
+            ),
+        )
+    }
+
+    override fun render2d(graphics2D: Graphics2D) {
+        val currentTarget = target
+
+        val distance = currentTarget.distance()
+        val speed = moveSpeedAverage
+        val etaSeconds: Long =
+            if (speed > 1.0) {
+                (distance / speed).roundToLong()
+            } else {
+                -1L
+            }
+        val flightSeconds: Long = flightTime().roundToLong()
+        val stateText =
+            when (state) {
+                PilotState.Idle -> Component.translatable("autopilot.state.idle").string
+                PilotState.JetFlying -> Component.translatable("autopilot.state.jet_flying").string
+                PilotState.HoverFlying -> Component.translatable("autopilot.state.hover_flying").string
+                PilotState.FallFlying -> Component.translatable("autopilot.state.fall_flying").string
+                PilotState.RiseFlying -> Component.translatable("autopilot.state.rise_flying").string
+                PilotState.Gliding -> Component.translatable("autopilot.state.gliding").string
+                PilotState.Circling -> Component.translatable("autopilot.state.circling").string
+                PilotState.Landing -> Component.translatable("autopilot.state.landing").string
+                PilotState.EmergencyLanding -> Component.translatable("autopilot.state.emergency_landing").string
+                PilotState.TakingOff -> Component.translatable("autopilot.state.taking_off").string
+            }
+
+        val durability =
+            if (swapElytra.value && player?.vehicle !is Boat) {
+                "${elytraDurability().roundToInt()}%"
+            } else {
+                "Disabled"
+            }
+
+        val startX = 5
+        var currentY = 5
+        val lineHeight = graphics2D.fontHeight() + 2
+        val bgColor = InfiniteClient.theme().colors.backgroundColor
+        val white = InfiniteClient.theme().colors.foregroundColor
+        val primaryColor = InfiniteClient.theme().colors.primaryColor
+        val durabilityValue = elytraDurability()
+        val isElytraEquipped = isElytra(InventoryManager.get(InventoryIndex.Armor.Chest()))
+
+        val durabilityColor =
+            if (swapElytra.value && isElytraEquipped && durabilityValue <= elytraThreshold.value && player?.vehicle !is Boat) {
+                InfiniteClient.theme().colors.warnColor
+            } else {
+                white
+            }
+
+        val infoLines = mutableListOf<String>()
+        infoLines.add(Component.translatable("autopilot.display.title", stateText).string)
+        infoLines.add(Component.translatable("autopilot.display.target", currentTarget.x, currentTarget.z).string)
+        infoLines.add(
+            Component
+                .translatable(
+                    "autopilot.display.distance",
+                    "%.1f".format(distance / 1000.0),
+                    "%.0f".format(distance),
+                ).string,
+        )
+        infoLines.add(Component.translatable("autopilot.display.average_speed", "%.1f".format(moveSpeedAverage)).string)
+        infoLines.add(Component.translatable("autopilot.display.current_speed", "%.1f".format(flySpeedDisplay)).string)
+        infoLines.add(
+            Component
+                .translatable(
+                    "autopilot.display.average_rising",
+                    "%.1f".format(riseSpeedAverage),
+                ).string,
+        )
+        infoLines.add(
+            Component
+                .translatable(
+                    "autopilot.display.current_rising",
+                    "%.1f".format(riseSpeedDisplay),
+                ).string,
+        )
+        infoLines.add(Component.translatable("autopilot.display.elytra", durability).string)
+        infoLines.add(Component.translatable("autopilot.display.eta", formatSecondsToDHMS(etaSeconds)).string)
+        infoLines.add(Component.translatable("autopilot.display.remain", formatSecondsToDHMS(flightSeconds)).string)
+        bestLandingSpot?.let {
+            infoLines.add(Component.translatable("autopilot.display.land_spot", it.y, "%.1f".format(it.score)).string)
+        }
+
+        val maxWidth = (infoLines.maxOfOrNull { graphics2D.textWidth(it) } ?: 128).coerceAtLeast(128)
+        val boxWidth = maxWidth + 10
+        val boxHeight = infoLines.size * lineHeight + 6
+
+        graphics2D.fill(startX, currentY, boxWidth, boxHeight, bgColor)
+        graphics2D.drawBorder(startX, currentY, boxWidth, boxHeight, primaryColor, 1)
+
+        currentY += 4
+        infoLines.forEachIndexed { index, line ->
+            val color =
+                when (index) {
+                    0 -> primaryColor
+                    6 -> durabilityColor
+                    else -> white
+                }
+            graphics2D.drawText(line, startX + 5, currentY, color)
+            currentY += lineHeight
+        }
+    }
+
+    override fun render3d(graphics3D: Graphics3D) {
+        val x = target.x.toDouble()
+        val y = world!!.minY.toDouble()
+        val z = target.z.toDouble()
+        val height = world!!.height * 10
+        val size = 2
+        val box =
+            RenderUtils.ColorBox(
+                InfiniteClient.theme().colors.primaryColor,
+                AABB(x - size, y, z - size, x + size, y + height, z + size),
+            )
+        graphics3D.renderSolidColorBoxes(listOf(box))
+
+        bestLandingSpot?.let {
+            val size = 5.0
+            val color = if (state == PilotState.Circling) 0xAA00FFFF.toInt() else 0xAA00FF00.toInt()
+            val box =
+                RenderUtils.ColorBox(
+                    color,
+                    AABB(
+                        it.x - size,
+                        it.y.toDouble(),
+                        it.z - size,
+                        it.x + size,
+                        it.y.toDouble() + 5.0,
+                        it.z + size,
+                    ),
+                )
+            graphics3D.renderSolidColorBoxes(listOf(box))
+        }
+    }
+}

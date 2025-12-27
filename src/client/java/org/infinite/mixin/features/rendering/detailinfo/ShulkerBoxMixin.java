@@ -3,7 +3,7 @@ package org.infinite.mixin.features.rendering.detailinfo;
 import net.minecraft.world.entity.ContainerUser; // onOpen/onCloseの引数として追加
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.detailinfo.DetailInfo;
+import org.infinite.infinite.features.rendering.detailinfo.DetailInfo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;

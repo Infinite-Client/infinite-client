@@ -2,7 +2,7 @@ package org.infinite.mixin.features.movement.fastbreak;
 
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import org.infinite.InfiniteClient;
-import org.infinite.features.movement.braek.FastBreak;
+import org.infinite.infinite.features.movement.braek.FastBreak;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

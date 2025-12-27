@@ -8,7 +8,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.sight.SuperSight;
+import org.infinite.infinite.features.rendering.sight.SuperSight;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(LocalPlayer.class)

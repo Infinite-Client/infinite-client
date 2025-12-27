@@ -4,7 +4,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.entity.Entity;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.sensory.ExtraSensory;
+import org.infinite.infinite.features.rendering.sensory.ExtraSensory;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

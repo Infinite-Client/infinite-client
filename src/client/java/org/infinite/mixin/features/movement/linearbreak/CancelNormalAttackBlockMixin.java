@@ -4,7 +4,7 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import org.infinite.InfiniteClient;
-import org.infinite.features.movement.braek.LinearBreak;
+import org.infinite.infinite.features.movement.braek.LinearBreak;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

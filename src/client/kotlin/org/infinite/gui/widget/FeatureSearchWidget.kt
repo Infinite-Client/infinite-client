@@ -12,8 +12,8 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
-import org.infinite.features.Feature
 import org.infinite.gui.screen.FeatureSettingsScreen
+import org.infinite.infinite.features.Feature
 import org.lwjgl.glfw.GLFW
 
 class FeatureSearchWidget(

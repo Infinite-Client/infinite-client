@@ -1,8 +1,8 @@
 package org.infinite.global.rendering.font
 
 import net.minecraft.resources.Identifier
-import org.infinite.features.rendering.font.HyperTextRenderer
 import org.infinite.global.ConfigurableGlobalFeature
+import org.infinite.infinite.features.rendering.font.HyperTextRenderer
 import org.infinite.settings.FeatureSetting
 
 class FontSetting : ConfigurableGlobalFeature() {

@@ -5,7 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import java.nio.ByteBuffer;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.overlay.AntiOverlay;
+import org.infinite.infinite.features.rendering.overlay.AntiOverlay;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

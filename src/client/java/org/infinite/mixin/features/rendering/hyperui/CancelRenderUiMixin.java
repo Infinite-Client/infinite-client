@@ -2,7 +2,7 @@ package org.infinite.mixin.features.rendering.hyperui;
 
 import net.minecraft.client.gui.Gui;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.ui.HyperUi;
+import org.infinite.infinite.features.rendering.ui.HyperUi;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;

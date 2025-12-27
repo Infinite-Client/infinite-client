@@ -1,0 +1,26 @@
+package org.infinite.infinite.features.fighting.superattack
+
+import org.infinite.feature.ConfigurableFeature
+import org.infinite.settings.FeatureSetting
+
+class SuperAttack : ConfigurableFeature(initialEnabled = false) {
+    override val level: FeatureLevel = FeatureLevel.Cheat
+
+    enum class AttackMethod {
+        PACKET,
+        MINI_JUMP,
+        FULL_JUMP,
+    }
+
+    val method =
+        FeatureSetting.EnumSetting(
+            "Method",
+            AttackMethod.MINI_JUMP,
+            AttackMethod.entries.toList(),
+        )
+
+    override val settings: List<FeatureSetting<*>> =
+        listOf(
+            method,
+        )
+}

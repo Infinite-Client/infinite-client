@@ -1,8 +1,8 @@
 package org.infinite.libs.infinite
 
-import org.infinite.features.FeatureCategory
 import org.infinite.global.GlobalFeatureCategory
 import org.infinite.gui.theme.Theme
+import org.infinite.infinite.features.FeatureCategory
 
 interface InfiniteAddon {
     val id: String

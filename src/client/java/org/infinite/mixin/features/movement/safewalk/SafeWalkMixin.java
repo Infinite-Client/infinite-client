@@ -7,7 +7,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.phys.Vec3;
 import org.infinite.InfiniteClient;
-import org.infinite.features.movement.walk.SafeWalk;
+import org.infinite.infinite.features.movement.walk.SafeWalk;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(LocalPlayer.class)

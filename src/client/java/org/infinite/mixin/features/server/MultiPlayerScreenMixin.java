@@ -6,7 +6,7 @@ import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.chat.Component;
 import org.infinite.InfiniteClient;
-import org.infinite.features.server.connection.AutoConnect;
+import org.infinite.infinite.features.server.connection.AutoConnect;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;

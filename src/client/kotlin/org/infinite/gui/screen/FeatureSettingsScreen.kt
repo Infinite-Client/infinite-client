@@ -9,7 +9,6 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
-import org.infinite.features.Feature
 import org.infinite.gui.widget.InfiniteBlockColorListField
 import org.infinite.gui.widget.InfiniteBlockListField
 import org.infinite.gui.widget.InfiniteButton
@@ -20,6 +19,7 @@ import org.infinite.gui.widget.InfiniteSelectionListField
 import org.infinite.gui.widget.InfiniteSettingTextField
 import org.infinite.gui.widget.InfiniteSettingToggle
 import org.infinite.gui.widget.InfiniteSlider
+import org.infinite.infinite.features.Feature
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.rendering.transparent
 

@@ -4,7 +4,7 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import org.infinite.InfiniteClient;
-import org.infinite.features.fighting.mace.HyperMace;
+import org.infinite.infinite.features.fighting.mace.HyperMace;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

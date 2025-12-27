@@ -12,11 +12,11 @@ import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
-import org.infinite.features.Feature
 import org.infinite.gui.widget.FeatureSearchWidget
 import org.infinite.gui.widget.InfiniteButton
 import org.infinite.gui.widget.InfiniteFeatureToggle
 import org.infinite.gui.widget.InfiniteScrollableContainer
+import org.infinite.infinite.features.Feature
 import org.infinite.utils.rendering.drawBorder
 import org.infinite.utils.rendering.transparent
 

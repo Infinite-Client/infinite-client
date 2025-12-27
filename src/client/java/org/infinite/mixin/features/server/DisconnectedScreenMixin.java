@@ -8,7 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.chat.Component;
 import org.infinite.InfiniteClient;
-import org.infinite.features.server.connection.AutoConnect;
+import org.infinite.infinite.features.server.connection.AutoConnect;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

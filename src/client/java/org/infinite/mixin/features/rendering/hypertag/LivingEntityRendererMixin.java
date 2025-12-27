@@ -3,7 +3,7 @@ package org.infinite.mixin.features.rendering.hypertag;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.world.entity.LivingEntity;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.tag.HyperTag;
+import org.infinite.infinite.features.rendering.tag.HyperTag;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

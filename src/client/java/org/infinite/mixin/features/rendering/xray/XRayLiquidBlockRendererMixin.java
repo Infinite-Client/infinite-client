@@ -10,7 +10,7 @@ import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import org.infinite.InfiniteClient;
-import org.infinite.features.rendering.xray.XRay;
+import org.infinite.infinite.features.rendering.xray.XRay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
