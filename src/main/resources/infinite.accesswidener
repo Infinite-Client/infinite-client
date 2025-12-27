@@ -72,7 +72,6 @@ accessible method net/minecraft/client/gui/widget/ScrollableWidget isInScrollbar
 accessible field net/minecraft/client/gui/widget/ScrollableWidget scrollbarDragged Z
 accessible class net/minecraft/client/gui/widget/ScrollableLayoutWidget$Container
 accessible field net/minecraft/client/gui/widget/SliderWidget value D
-accessible method net/minecraft/client/gui/widget/ClickableWidget drawScrollableText (Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/client/font/TextRenderer;II)V
 accessible field net/minecraft/client/gui/widget/ClickableWidget alpha F
 accessible method net/minecraft/client/gui/widget/TextFieldWidget isEditable ()Z
 accessible field net/minecraft/client/gui/widget/TextFieldWidget firstCharacterIndex I

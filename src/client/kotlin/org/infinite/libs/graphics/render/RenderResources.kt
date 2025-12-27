@@ -14,5 +14,7 @@ object RenderResources {
 
     fun renderLinedLayer(isOverDraw: Boolean): RenderLayer = if (isOverDraw) espLines else normalLines
 
-    fun renderSolidLayer(@Suppress("UNUSED_PARAMETER") isOverDraw: Boolean): RenderLayer = solidLayer
+    fun renderSolidLayer(
+        @Suppress("UNUSED_PARAMETER") isOverDraw: Boolean,
+    ): RenderLayer = solidLayer
 }
