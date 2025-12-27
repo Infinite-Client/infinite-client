@@ -38,7 +38,7 @@ public abstract class SuperSprintMixin extends AbstractClientPlayerEntity {
   }
 
   /** This mixin allows AutoSprint to enable sprinting even when the player is too hungry. */
-  @Inject(at = @At("HEAD"), method = "canSprint()Z", cancellable = true)
+  @Inject(at = @At("HEAD"), method = "canSprint", cancellable = true)
   private void onCanSprint(CallbackInfoReturnable<Boolean> cir) {
     // Feature: SuperSprint (Setting: EvenIfHungry)
     if (InfiniteClient.INSTANCE.isSettingEnabled(SuperSprint.class, "EvenIfHungry"))
