@@ -1,23 +1,23 @@
 package org.infinite.libs.world
 
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket
-import net.minecraft.network.packet.s2c.play.ChunkData
-import net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket
+import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData
+import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket
 
 class WorldManager {
     sealed class Chunk {
         class Data(
             val x: Int,
             val z: Int,
-            val data: ChunkData,
+            val data: ClientboundLevelChunkPacketData,
         ) : Chunk()
 
         class BlockUpdate(
-            val packet: BlockUpdateS2CPacket,
+            val packet: ClientboundBlockUpdatePacket,
         ) : Chunk()
 
         class DeltaUpdate(
-            val packet: ChunkDeltaUpdateS2CPacket,
+            val packet: ClientboundSectionBlocksUpdatePacket,
         ) : Chunk()
     }
 
@@ -32,7 +32,7 @@ class WorldManager {
     fun handleChunkLoad(
         x: Int,
         z: Int,
-        chunkData: ChunkData,
+        chunkData: ClientboundLevelChunkPacketData,
     ) {
         queue.addLast(Chunk.Data(x, z, chunkData))
     }
@@ -41,7 +41,7 @@ class WorldManager {
      * ChunkDeltaUpdateS2CPacketをキューの最後に追加します。
      * @param packet チャンクデルタ更新パケット
      */
-    fun handleDeltaUpdate(packet: ChunkDeltaUpdateS2CPacket) {
+    fun handleDeltaUpdate(packet: ClientboundSectionBlocksUpdatePacket) {
         queue.addLast(Chunk.DeltaUpdate(packet))
     }
 
@@ -49,7 +49,7 @@ class WorldManager {
      * BlockUpdateS2CPacketをキューの最後に追加します。
      * @param packet ブロック更新パケット
      */
-    fun handleBlockUpdate(packet: BlockUpdateS2CPacket) {
+    fun handleBlockUpdate(packet: ClientboundBlockUpdatePacket) {
         queue.addLast(Chunk.BlockUpdate(packet))
     }
 }

@@ -1,15 +1,15 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.font.TextRenderer
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.widget.TextFieldWidget
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.registry.Registries
-import net.minecraft.text.Text
-import net.minecraft.util.math.MathHelper
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Font
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.EditBox
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.network.chat.Component
+import net.minecraft.util.Mth
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.drawBorder
@@ -18,21 +18,21 @@ import kotlin.math.max
 import kotlin.math.min
 
 class InfiniteTextField(
-    textRenderer: TextRenderer,
+    textRenderer: Font,
     x: Int,
     y: Int,
     width: Int,
     height: Int,
-    text: Text,
+    text: Component,
     private val inputType: InputType = InputType.ANY_TEXT,
-) : TextFieldWidget(textRenderer, x, y, width, height, text) {
+) : EditBox(textRenderer, x, y, width, height, text) {
     private var suggestions: List<String> = emptyList()
     private var suggestionIndex: Int = -1
 
     // --- サジェストスクロール関連の変数 ---
     private var suggestionScrollY: Double = 0.0
     private val maxVisibleSuggestions = 5
-    private val suggestionItemHeight = textRenderer.fontHeight + 2
+    private val suggestionItemHeight = textRenderer.lineHeight + 2
 
     enum class InputType {
         ANY_TEXT,
@@ -48,9 +48,9 @@ class InfiniteTextField(
         updateSuggestions()
     }
 
-    override fun charTyped(input: CharInput): Boolean {
+    override fun charTyped(input: CharacterEvent): Boolean {
         if (!isFocused) return false
-        val inputString = input.asString()
+        val inputString = input.codepointAsString()
         if (inputString.isEmpty()) return false
         val chr = inputString.toCharArray().first()
         val canType =
@@ -76,7 +76,7 @@ class InfiniteTextField(
                 }
             }
         if (canType) {
-            super.write(input.asString())
+            super.insertText(input.codepointAsString())
             updateSuggestions()
             return true
         } else {
@@ -85,7 +85,7 @@ class InfiniteTextField(
     }
 
     private fun updateSuggestions() {
-        if (text.isEmpty()) {
+        if (value.isEmpty()) {
             suggestions = emptyList()
             suggestionIndex = -1
             suggestionScrollY = 0.0
@@ -95,32 +95,32 @@ class InfiniteTextField(
         suggestions =
             when (inputType) {
                 InputType.BLOCK_ID -> {
-                    Registries.BLOCK.ids.map { it.toString() }
+                    BuiltInRegistries.BLOCK.keySet().map { it.toString() }
                 }
 
                 InputType.ENTITY_ID -> {
-                    Registries.ENTITY_TYPE.ids.map { it.toString() }
+                    BuiltInRegistries.ENTITY_TYPE.keySet().map { it.toString() }
                 }
 
                 InputType.PLAYER_NAME -> {
-                    MinecraftClient
+                    Minecraft
                         .getInstance()
-                        .networkHandler
-                        ?.playerList
+                        .connection
+                        ?.onlinePlayers
                         ?.map { it.profile.name } ?: emptyList()
                 }
 
                 else -> {
                     emptyList()
                 }
-            }.filter { it.startsWith(text, ignoreCase = true) }
+            }.filter { it.startsWith(value, ignoreCase = true) }
                 .sorted()
 
         suggestionIndex = -1
         suggestionScrollY = 0.0
     }
 
-    override fun keyPressed(input: KeyInput): Boolean {
+    override fun keyPressed(input: KeyEvent): Boolean {
         val keyCode = input.key
         if (!isFocused) {
             return super.keyPressed(input)
@@ -130,7 +130,7 @@ class InfiniteTextField(
         if (keyCode == GLFW.GLFW_KEY_TAB && (inputType == InputType.BLOCK_ID || inputType == InputType.ENTITY_ID)) {
             if (suggestions.isNotEmpty()) {
                 suggestionIndex =
-                    if (input.hasShift()) {
+                    if (input.hasShiftDown()) {
                         // Shift + Tab で前の候補
                         (suggestionIndex - 1 + suggestions.size) % suggestions.size
                     } else {
@@ -145,19 +145,19 @@ class InfiniteTextField(
                 } else if (suggestionIndex >= suggestionScrollY.toInt() + maxVisibleSuggestions) {
                     suggestionScrollY = (suggestionIndex - maxVisibleSuggestions + 1).toDouble()
                 }
-                suggestionScrollY = MathHelper.clamp(suggestionScrollY, 0.0, maxScrollIndex)
+                suggestionScrollY = Mth.clamp(suggestionScrollY, 0.0, maxScrollIndex)
 
-                text = suggestions[suggestionIndex]
-                setCursorToEnd(false)
+                setValue(suggestions[suggestionIndex])
+                moveCursorToEnd(false)
                 return true // 処理完了。親クラスの処理をスキップ
             }
         }
 
         // --- Enterキーによるサジェスト採用処理 ---
         if (keyCode == GLFW.GLFW_KEY_ENTER && suggestionIndex != -1 && suggestions.isNotEmpty()) {
-            text = suggestions[suggestionIndex]
+            setValue(suggestions[suggestionIndex])
             suggestions = emptyList()
-            setCursorToEnd(false)
+            moveCursorToEnd(false)
             return true // 処理完了。親クラスの処理をスキップ
         }
 
@@ -167,7 +167,7 @@ class InfiniteTextField(
         // キー入力の結果、テキストが変更された可能性がある場合、サジェストを更新
         if (result && (inputType == InputType.BLOCK_ID || inputType == InputType.ENTITY_ID)) {
             // BACKSPACE, DELETE, Ctrl + V/X/Aなどの操作後にサジェストを更新
-            if (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE || input.hasCtrl()) {
+            if (keyCode == GLFW.GLFW_KEY_BACKSPACE || keyCode == GLFW.GLFW_KEY_DELETE || input.hasControlDown()) {
                 updateSuggestions()
             }
             // その他のキー処理では charTyped で更新されるためここでは不要だが、
@@ -200,23 +200,23 @@ class InfiniteTextField(
             val maxScrollIndex = max(0.0, contentSize - maxVisibleSuggestions)
 
             // スクロール量を調整
-            suggestionScrollY = MathHelper.clamp(suggestionScrollY - verticalAmount, 0.0, maxScrollIndex)
+            suggestionScrollY = Mth.clamp(suggestionScrollY - verticalAmount, 0.0, maxScrollIndex)
             return true
         }
 
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
     }
 
-    override fun drawsBackground(): Boolean = false
+    override fun isBordered(): Boolean = false
 
     // --- 描画ロジック：スクロールとクリッピング ---
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         deltaTicks: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         // 1. テキストフィールドの背景と枠線の描画
         context.fill(x, y, x + width, y + height, InfiniteClient.currentColors().backgroundColor)
@@ -321,7 +321,7 @@ class InfiniteTextField(
 
     // --- mouseClicked: サジェスト選択とフォーカス管理 ---
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         val mouseX = click.x
@@ -339,8 +339,8 @@ class InfiniteTextField(
                 val clickedSuggestionIndex = suggestionScrollY.toInt() + clickedVisibleIndex
 
                 if (clickedSuggestionIndex >= 0 && clickedSuggestionIndex < suggestions.size) {
-                    text = suggestions[clickedSuggestionIndex]
-                    setCursorToEnd(false)
+                    setValue(suggestions[clickedSuggestionIndex])
+                    moveCursorToEnd(false)
                     suggestions = emptyList() // 選択後はサジェストを非表示
                     return true // クリックイベントを消費
                 }

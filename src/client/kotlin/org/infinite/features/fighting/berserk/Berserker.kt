@@ -1,6 +1,6 @@
 package org.infinite.features.fighting.berserk
 
-import net.minecraft.entity.LivingEntity
+import net.minecraft.world.entity.LivingEntity
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.fighting.lockon.LockOn
@@ -62,7 +62,7 @@ class Berserker : ConfigurableFeature() {
         aiMovementAction =
             EntityPosMovementAction(
                 target = target,
-                radius = (player?.entityInteractionRange ?: 3.5) / 2.0,
+                radius = (player?.entityInteractionRange() ?: 3.5) / 2.0,
                 height = 2, // ターゲットと同じ高さか、少し上
                 // AIが目的地に到達した時の処理
                 onSuccessAction = {
@@ -105,7 +105,7 @@ class Berserker : ConfigurableFeature() {
             else -> {
                 // ターゲットとの距離が近すぎる場合は、移動を中断して攻撃フェーズへ移行
                 val player = client.player ?: return
-                if (player.distanceTo(targetEntity) <= attackRangeSetting.value) {
+                if (player.distanceTo(targetEntity as LivingEntity) <= attackRangeSetting.value) {
                     aiMovementAction?.onSuccess() // 成功として終了させ、ATTACKINGへ移行
                 }
             }
@@ -119,15 +119,15 @@ class Berserker : ConfigurableFeature() {
         // 攻撃可能範囲内のチェック
         val player = player ?: return
         val distance = player.distanceTo(target)
-        if (distance > player.entityInteractionRange) {
-            ControllerInterface.press(options.forwardKey)
+        if (distance > player.entityInteractionRange()) {
+            ControllerInterface.press(options.keyUp)
         }
         if (distance > attackRangeSetting.value) {
             currentState = BerserkerState.MOVING_TO_TARGET
             return
         }
-        if (player.getAttackCooldownProgress(0.0f) >= 1.0f) {
-            interactionManager?.attackEntity(player, target)
+        if (player.getAttackStrengthScale(0.0f) >= 1.0f) {
+            interactionManager?.attack(player, target)
         }
     }
 }

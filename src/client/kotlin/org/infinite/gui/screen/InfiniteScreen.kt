@@ -1,11 +1,11 @@
 package org.infinite.gui.screen
 
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.Screen
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.text.Text
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.lwjgl.glfw.GLFW
 import kotlin.math.PI
@@ -14,7 +14,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 class InfiniteScreen(
-    title: Text,
+    title: Component,
 ) : Screen(title) {
     companion object {
         var selectedPageIndex: Int = 0
@@ -70,7 +70,7 @@ class InfiniteScreen(
     }
 
     override fun render(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
@@ -131,8 +131,8 @@ class InfiniteScreen(
         renderedSections.sortByDescending { it.z3d }
 
         if (animationProgress >= 1.0f) {
-            context.drawCenteredTextWithShadow(
-                textRenderer,
+            context.drawCenteredString(
+                font,
                 title,
                 width / 2,
                 startY + 15,
@@ -161,7 +161,7 @@ class InfiniteScreen(
                 mouseY,
                 delta,
                 info.isSelected,
-                textRenderer,
+                font,
                 newBorderColor,
                 alpha,
                 renderContent,
@@ -169,7 +169,7 @@ class InfiniteScreen(
         }
     }
 
-    override fun keyPressed(input: KeyInput): Boolean {
+    override fun keyPressed(input: KeyEvent): Boolean {
         if (System.currentTimeMillis() - animationStartTime < animationDurationMs) {
             return true
         }
@@ -215,7 +215,7 @@ class InfiniteScreen(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         if (System.currentTimeMillis() - animationStartTime < animationDurationMs) {
@@ -240,7 +240,7 @@ class InfiniteScreen(
     }
 
     override fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
     ): Boolean {
@@ -251,7 +251,7 @@ class InfiniteScreen(
         return super.mouseDragged(click, offsetX, offsetY)
     }
 
-    override fun mouseReleased(click: Click): Boolean {
+    override fun mouseReleased(click: MouseButtonEvent): Boolean {
         if (System.currentTimeMillis() - animationStartTime < animationDurationMs) {
             return true
         }
@@ -259,7 +259,7 @@ class InfiniteScreen(
         return super.mouseReleased(click)
     }
 
-    override fun charTyped(input: CharInput): Boolean {
+    override fun charTyped(input: CharacterEvent): Boolean {
         if (System.currentTimeMillis() - animationStartTime < animationDurationMs) {
             return true
         }
@@ -267,5 +267,5 @@ class InfiniteScreen(
         return super.charTyped(input)
     }
 
-    override fun shouldPause(): Boolean = false
+    override fun isPauseScreen(): Boolean = false
 }

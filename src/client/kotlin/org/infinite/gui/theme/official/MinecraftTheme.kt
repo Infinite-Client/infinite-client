@@ -1,6 +1,6 @@
 package org.infinite.gui.theme.official
 
-import net.minecraft.util.Identifier
+import net.minecraft.resources.Identifier
 import org.infinite.gui.theme.Theme
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.gui.theme.ThemeIcon
@@ -9,7 +9,7 @@ class MinecraftTheme :
     Theme(
         "minecraft",
         MinecraftColor(),
-        ThemeIcon(Identifier.of("minecraft", "textures/gui/title/minecraft.png")),
+        ThemeIcon(Identifier.fromNamespaceAndPath("minecraft", "textures/gui/title/minecraft.png")),
     )
 
 class MinecraftColor : ThemeColors() {

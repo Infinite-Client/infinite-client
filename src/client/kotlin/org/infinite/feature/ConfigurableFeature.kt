@@ -1,10 +1,10 @@
 package org.infinite.feature
 
+import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
-import net.minecraft.client.option.KeyBinding
-import net.minecraft.client.util.InputUtil
+import net.minecraft.client.KeyMapping
 import org.infinite.InfiniteClient
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.libs.graphics.Graphics2D
@@ -184,20 +184,20 @@ abstract class ConfigurableFeature(
         private val key: Int,
         val action: () -> Unit,
     ) {
-        lateinit var keyBinding: KeyBinding
+        lateinit var keyBinding: KeyMapping
         lateinit var translationKey: String
 
         fun register(
             categoryName: String,
             featureName: String,
-            keyBindingCategory: KeyBinding.Category,
+            keyBindingCategory: KeyMapping.Category,
         ): ActionKeybind {
             translationKey =
                 "key.infinite-client.action.${toSnakeCase(categoryName)}.${toSnakeCase(featureName)}.${toSnakeCase(name)}"
             keyBinding =
-                KeyBinding(
+                KeyMapping(
                     translationKey,
-                    InputUtil.Type.KEYSYM,
+                    InputConstants.Type.KEYSYM,
                     key,
                     keyBindingCategory,
                 )
@@ -219,7 +219,7 @@ abstract class ConfigurableFeature(
     fun registerKeybinds(
         categoryName: String,
         featureName: String,
-        keyBindingCategory: KeyBinding.Category,
+        keyBindingCategory: KeyMapping.Category,
     ): List<ActionKeybind> = actionKeybinds.map { it.register(categoryName, featureName, keyBindingCategory) }
 
     fun registeredTranslations(): List<String> = actionKeybinds.map { it.translationKey }

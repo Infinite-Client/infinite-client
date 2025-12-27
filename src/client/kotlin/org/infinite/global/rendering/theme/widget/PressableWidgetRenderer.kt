@@ -1,28 +1,28 @@
 package org.infinite.global.rendering.theme.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.widget.CheckboxWidget
-import net.minecraft.client.gui.widget.LockButtonWidget
-import net.minecraft.client.gui.widget.PageTurnWidget
-import net.minecraft.client.gui.widget.PressableWidget
-import net.minecraft.client.gui.widget.TextIconButtonWidget
-import net.minecraft.client.gui.widget.TexturedButtonWidget
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractButton
+import net.minecraft.client.gui.components.Checkbox
+import net.minecraft.client.gui.components.ImageButton
+import net.minecraft.client.gui.components.LockIconButton
+import net.minecraft.client.gui.components.SpriteIconButton
+import net.minecraft.client.gui.screens.inventory.PageButton
 import org.infinite.InfiniteClient
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.transparent
 
 class PressableWidgetRenderer(
-    val widget: PressableWidget,
+    val widget: AbstractButton,
 ) {
     fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
         val x = widget.x
         val y = widget.y
         val width = widget.width
@@ -57,21 +57,21 @@ class PressableWidgetRenderer(
 
         val shouldRenderText =
             when (widget) {
-                is CheckboxWidget,
-                is LockButtonWidget,
-                is PageTurnWidget,
-                is TextIconButtonWidget.IconOnly,
-                is TexturedButtonWidget,
+                is Checkbox,
+                is LockIconButton,
+                is PageButton,
+                is SpriteIconButton.CenteredIcon,
+                is ImageButton,
                 -> false
 
                 else -> true
             }
 
         if (shouldRenderText) {
-            val textRenderer = MinecraftClient.getInstance().textRenderer
+            val textRenderer = Minecraft.getInstance().font
             val textX = x + width / 2
-            val textY = y + (height - textRenderer.fontHeight) / 2
-            context.drawCenteredTextWithShadow(textRenderer, widget.message, textX, textY, textColor)
+            val textY = y + (height - textRenderer.lineHeight) / 2
+            context.drawCenteredString(textRenderer, widget.message, textX, textY, textColor)
         }
     }
 }

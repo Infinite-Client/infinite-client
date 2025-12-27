@@ -1,12 +1,12 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.text.Text
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 
 class ThemeTileContainer(
     x: Int,
@@ -17,9 +17,9 @@ class ThemeTileContainer(
     private val tileWidth: Int = 130, // Adjust as needed
     private val tileHeight: Int = 36, // Adjust as needed
     private val padding: Int = 5,
-) : ClickableWidget(x, y, width, height, Text.empty()) {
+) : AbstractWidget(x, y, width, height, Component.empty()) {
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
@@ -63,7 +63,7 @@ class ThemeTileContainer(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         if (!this.active || !this.visible) return false
@@ -75,7 +75,7 @@ class ThemeTileContainer(
         return super.mouseClicked(click, doubled)
     }
 
-    override fun mouseReleased(click: Click): Boolean {
+    override fun mouseReleased(click: MouseButtonEvent): Boolean {
         if (!this.active || !this.visible) return false
         themeTileButtons.forEach { button ->
             if (button.mouseReleased(click)) {
@@ -85,7 +85,7 @@ class ThemeTileContainer(
         return super.mouseReleased(click)
     }
 
-    override fun keyPressed(input: KeyInput): Boolean {
+    override fun keyPressed(input: KeyEvent): Boolean {
         themeTileButtons.forEach { button ->
             if (button.keyPressed(input)) {
                 return true
@@ -94,7 +94,7 @@ class ThemeTileContainer(
         return super.keyPressed(input)
     }
 
-    override fun charTyped(input: CharInput): Boolean {
+    override fun charTyped(input: CharacterEvent): Boolean {
         themeTileButtons.forEach { button ->
             if (button.charTyped(input)) {
                 return true
@@ -104,8 +104,8 @@ class ThemeTileContainer(
     }
 
     // Narration Builder for accessibility (optional, but good practice)
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        themeTileButtons.forEach { it.appendNarrations(builder) }
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        themeTileButtons.forEach { it.updateNarration(builder) }
     }
 
     fun calculateHeight(containerWidth: Int): Int {

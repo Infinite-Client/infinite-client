@@ -1,8 +1,8 @@
 package org.infinite.mixin.features.rendering.extrasensory;
 
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.world.entity.Entity;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.sensory.ExtraSensory;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,11 +13,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(EntityRenderer.class)
 public abstract class EntityRendererMixin<T extends Entity, S extends EntityRenderState> {
   @Inject(
-      method = "updateRenderState",
+      method = "extractRenderState",
       at =
           @At(
               value = "FIELD",
-              target = "Lnet/minecraft/client/render/entity/state/EntityRenderState;outlineColor:I",
+              target =
+                  "Lnet/minecraft/client/renderer/entity/state/EntityRenderState;outlineColor:I",
               shift = At.Shift.AFTER))
   private void onUpdateRenderState(T entity, S state, float tickProgress, CallbackInfo ci) {
     ExtraSensory extraSensory = InfiniteClient.INSTANCE.getFeature(ExtraSensory.class);

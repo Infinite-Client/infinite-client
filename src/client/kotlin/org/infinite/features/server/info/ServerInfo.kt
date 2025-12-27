@@ -3,8 +3,8 @@ package org.infinite.features.server.info
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.network.ServerInfo
+import net.minecraft.client.Minecraft
+import net.minecraft.client.multiplayer.ServerData
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
@@ -20,15 +20,15 @@ class ServerInfo : ConfigurableFeature() {
         if (info != null) {
             var serverInfoText = ""
             serverInfoText += "Name: ${info.name}\n"
-            serverInfoText += "Address: ${info.address}\n"
+            serverInfoText += "Address: ${info.ip}\n"
             serverInfoText += "Version: ${info.version.string}\n"
-            serverInfoText += "Protocol Version: ${info.protocolVersion}\n"
+            serverInfoText += "Protocol Version: ${info.protocol}\n"
             serverInfoText += "Ping: ${info.ping}ms\n"
             info.players?.let { players ->
                 serverInfoText += "Players: ${players.online}/${players.max}\n"
             }
-            serverInfoText += "Resource Pack Policy: ${info.resourcePackPolicy.name}\n"
-            serverInfoText += "Server Type: ${info.serverType.name}\n"
+            serverInfoText += "Resource Pack Policy: ${info.resourcePackStatus.name}\n"
+            serverInfoText += "Server Type: ${info.type().name}\n"
             InfiniteClient.log("\n$serverInfoText")
         } else {
             InfiniteClient.error("Failed to get Server Info")
@@ -46,8 +46,8 @@ class ServerInfo : ConfigurableFeature() {
         )
     }
 
-    fun getCurrentServerInfo(): ServerInfo? {
-        val client = MinecraftClient.getInstance()
-        return client.currentServerEntry
+    fun getCurrentServerInfo(): ServerData? {
+        val client = Minecraft.getInstance()
+        return client.currentServer
     }
 }

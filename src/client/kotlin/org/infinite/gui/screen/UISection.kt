@@ -1,15 +1,15 @@
 package org.infinite.gui.screen
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.font.TextRenderer
-import net.minecraft.client.gl.RenderPipelines
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.Screen
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Font
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.client.renderer.RenderPipelines
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.Feature
@@ -26,7 +26,7 @@ class UISection(
     featureList: List<Feature<out ConfigurableFeature>>? = null,
 ) {
     private var closeButton: InfiniteButton? = null
-    val widgets = mutableListOf<ClickableWidget>()
+    val widgets = mutableListOf<AbstractWidget>()
     private var featureSearchWidget: FeatureSearchWidget? = null
     private var isMainSectionInitialized = false
 
@@ -49,7 +49,7 @@ class UISection(
             features.map { feature ->
                 feature.name
                 InfiniteFeatureToggle(0, 0, 280, 20, feature, false) {
-                    MinecraftClient.getInstance().setScreen(FeatureSettingsScreen(screen, feature))
+                    Minecraft.getInstance().setScreen(FeatureSettingsScreen(screen, feature))
                 }
             }
 
@@ -60,7 +60,7 @@ class UISection(
     }
 
     fun render(
-        context: DrawContext,
+        context: GuiGraphics,
         x: Int,
         y: Int,
         width: Int,
@@ -69,7 +69,7 @@ class UISection(
         mouseY: Int,
         delta: Float,
         isSelected: Boolean,
-        textRenderer: TextRenderer,
+        textRenderer: Font,
         borderColor: Int,
         alpha: Int,
         renderContent: Boolean,
@@ -83,7 +83,7 @@ class UISection(
             val iconY = y + (height - iconHeight) / 2
             val iconColor =
                 borderColor.transparent(128)
-            context.drawTexture(
+            context.blit(
                 RenderPipelines.GUI_TEXTURED,
                 icon.identifier,
                 iconX,
@@ -152,9 +152,9 @@ class UISection(
                         y = y + 10,
                         width = 20,
                         height = 20,
-                        message = Text.literal("X"),
+                        message = Component.literal("X"),
                     ) {
-                        screen.close()
+                        screen.onClose()
                     }
             }
             closeButton?.render(context, mouseX, mouseY, delta)
@@ -164,12 +164,12 @@ class UISection(
     }
 
     private fun renderMain(
-        context: DrawContext,
+        context: GuiGraphics,
         x: Int,
         y: Int,
         width: Int,
         height: Int,
-        textRenderer: TextRenderer,
+        textRenderer: Font,
         isSelected: Boolean,
         mouseX: Int,
         mouseY: Int,
@@ -197,12 +197,12 @@ class UISection(
     }
 
     private fun renderSettings(
-        context: DrawContext,
+        context: GuiGraphics,
         x: Int,
         y: Int,
         width: Int,
         height: Int,
-        textRenderer: TextRenderer,
+        textRenderer: Font,
         titleText: String,
         isSelected: Boolean,
         mouseX: Int,
@@ -229,16 +229,16 @@ class UISection(
     }
 
     private fun renderTitle(
-        context: DrawContext,
+        context: GuiGraphics,
         x: Int,
         y: Int,
         width: Int,
-        textRenderer: TextRenderer,
+        textRenderer: Font,
         titleText: String,
         isSelected: Boolean,
     ) {
-        val title = Text.of(titleText)
-        val textWidth = textRenderer.getWidth(title)
+        val title = Component.nullToEmpty(titleText)
+        val textWidth = textRenderer.width(title)
         val textX = x + (width - textWidth) / 2
         val textY = y + 20
 
@@ -252,13 +252,13 @@ class UISection(
                     .theme()
                     .colors.secondaryColor
             }
-        context.drawTextWithShadow(textRenderer, title, textX, textY, color)
+        context.drawString(textRenderer, title, textX, textY, color)
     }
 
     // ★ 修正点: mouseClicked を Boolean 戻り値に変更し、
     // イベントを処理したウィジェットでループを停止する
     fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
         isSelected: Boolean,
     ): Boolean { // ★ 戻り値を Boolean に変更
@@ -286,7 +286,7 @@ class UISection(
     }
 
     fun keyPressed(
-        input: KeyInput,
+        input: KeyEvent,
         isSelected: Boolean,
     ) {
         if (!isSelected) return
@@ -328,7 +328,7 @@ class UISection(
 
     // ★ 修正点: mouseDragged を全てのウィジェットに転送
     fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
         isSelected: Boolean,
@@ -357,7 +357,7 @@ class UISection(
 
     // ★ 修正点: mouseReleased を全てのウィジェットに転送
     fun mouseReleased(
-        click: Click,
+        click: MouseButtonEvent,
         isSelected: Boolean,
     ): Boolean { // ★ 戻り値は Boolean
         if (!isSelected) return false
@@ -383,7 +383,7 @@ class UISection(
     }
 
     fun charTyped(
-        input: CharInput,
+        input: CharacterEvent,
         isSelected: Boolean,
     ): Boolean {
         if (!isSelected) return false

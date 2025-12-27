@@ -1,19 +1,19 @@
 package org.infinite.utils.block
 
-import net.minecraft.block.entity.AbstractFurnaceBlockEntity
-import net.minecraft.client.MinecraftClient
-import net.minecraft.item.Item
-import net.minecraft.item.ItemStack
-import net.minecraft.item.Items
-import net.minecraft.registry.Registries
+import net.minecraft.client.Minecraft
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity
 
 fun AbstractFurnaceBlockEntity.createFuelTimeMap(): Map<Item, Int> {
-    val fuelRegistry = MinecraftClient.getInstance().world?.fuelRegistry ?: return mapOf()
+    val fuelRegistry = Minecraft.getInstance().level?.fuelValues() ?: return mapOf()
     val fuelMap = mutableMapOf<Item, Int>()
 
     // Iterate over all registered items
-    for (item in Registries.ITEM) {
-        val fuelTicks = fuelRegistry.getFuelTicks(ItemStack(item))
+    for (item in BuiltInRegistries.ITEM) {
+        val fuelTicks = fuelRegistry.burnDuration(ItemStack(item))
         if (fuelTicks > 0) {
             fuelMap[item] = fuelTicks
         }
@@ -21,7 +21,7 @@ fun AbstractFurnaceBlockEntity.createFuelTimeMap(): Map<Item, Int> {
 
     // Add special case for bucket (if not already included)
     if (!fuelMap.containsKey(Items.BUCKET)) {
-        val bucketTicks = fuelRegistry.getFuelTicks(ItemStack(Items.BUCKET))
+        val bucketTicks = fuelRegistry.burnDuration(ItemStack(Items.BUCKET))
         if (bucketTicks > 0) {
             fuelMap[Items.BUCKET] = bucketTicks
         }

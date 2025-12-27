@@ -1,7 +1,7 @@
 package org.infinite.features.movement.brawler
 
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Direction
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 

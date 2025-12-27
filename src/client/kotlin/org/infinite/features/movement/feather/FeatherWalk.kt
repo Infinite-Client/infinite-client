@@ -1,9 +1,9 @@
 package org.infinite.features.movement.feather
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.registry.Registries
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Vec3i
+import net.minecraft.client.Minecraft
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Vec3i
+import net.minecraft.core.registries.BuiltInRegistries
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
@@ -39,11 +39,11 @@ class FeatherWalk : ConfigurableFeature(initialEnabled = false) {
     // --- 仮定されるゲームクライアントへのアクセスポイント ---
     // 実際の環境に合わせて適宜変更してください。
     // 例: Minecraft client object
-    private var mc = MinecraftClient.getInstance()
+    private var mc = Minecraft.getInstance()
 
     override fun onTick() {
         var isWalkingOnFeatherBlock = false
-
+        val level = mc.level ?: return
         // 1. プレイヤーの現在のブロック座標を取得
         // プレイヤーの足元（Y-1）ではなく、プレイヤーの中心ブロックを取得する
         val playerX =
@@ -68,12 +68,10 @@ class FeatherWalk : ConfigurableFeature(initialEnabled = false) {
                     val checkX = playerX + xOffset
                     val checkY = playerY + yOffset
                     val checkZ = playerZ + zOffset
-
-                    // 現在のブロックのID/名前を取得 (環境依存のメソッド)
-                    // 例: mc.world.getBlockState(x, y, z).id.toString()
+                    val block = level.getBlockState(BlockPos(Vec3i(checkX, checkY, checkZ)))?.block ?: continue
                     val blockName =
-                        Registries.BLOCK
-                            .getId(mc.world?.getBlockState(BlockPos(Vec3i(checkX, checkY, checkZ)))?.block)
+                        BuiltInRegistries.BLOCK
+                            .getKey(block)
                             .toString()
 
                     // 設定されたブロックリストに含まれているかチェック
@@ -92,7 +90,7 @@ class FeatherWalk : ConfigurableFeature(initialEnabled = false) {
         if (isWalkingOnFeatherBlock) {
             if (disableJump.value) {
                 // ジャンプ入力を抑制するロジック (例: mc.player.input.jumping = false)
-                mc.options.jumpKey.isPressed = false
+                mc.options.keyJump.isDown = false
             }
             if (disableSprint.value) {
                 mc.player?.isSprinting = false // Stop sprinting if hunger is too low

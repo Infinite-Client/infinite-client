@@ -1,8 +1,8 @@
 package org.infinite.mixin.features.movement.adventure;
 
-import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import org.infinite.InfiniteClient;
 import org.infinite.features.movement.adventure.Adventure;
 import org.spongepowered.asm.mixin.Mixin;
@@ -10,11 +10,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(ClientPlayerInteractionManager.class)
+@Mixin(MultiPlayerGameMode.class)
 public class AdventureMixin {
 
   // ブロック攻撃パケットをキャンセル (左クリック長押しなど)
-  @Inject(method = "attackBlock", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "startDestroyBlock", at = @At("HEAD"), cancellable = true)
   private void infinite$cancelAttackBlock(
       BlockPos pos, Direction direction, CallbackInfoReturnable<Boolean> cir) {
     if (InfiniteClient.INSTANCE.isFeatureEnabled(Adventure.class)) {
@@ -24,7 +24,7 @@ public class AdventureMixin {
   }
 
   // ブロック破壊進行パケットをキャンセル (ブロックを叩くアニメーションなど)
-  @Inject(method = "updateBlockBreakingProgress", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "continueDestroyBlock", at = @At("HEAD"), cancellable = true)
   private void infinite$cancelUpdateBlockBreakingProgress(
       BlockPos pos, Direction direction, CallbackInfoReturnable<Boolean> cir) {
     if (InfiniteClient.INSTANCE.isFeatureEnabled(Adventure.class)) {

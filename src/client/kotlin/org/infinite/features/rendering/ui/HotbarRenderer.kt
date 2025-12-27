@@ -1,7 +1,7 @@
 package org.infinite.features.rendering.ui
 
-import net.minecraft.text.Text
-import net.minecraft.util.Arm
+import net.minecraft.network.chat.Component
+import net.minecraft.world.entity.HumanoidArm
 import org.infinite.features.rendering.sensory.esp.ItemEsp
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.client.inventory.InventoryManager
@@ -55,8 +55,8 @@ class HotbarRenderer(
             val offHandItemX =
                 centerX +
                     when (player.mainArm) {
-                        Arm.LEFT -> hotbarWidth / 2 + padding
-                        Arm.RIGHT -> -hotbarWidth / 2 - padding * 2 - stackBoxSize
+                        HumanoidArm.LEFT -> hotbarWidth / 2 + padding
+                        HumanoidArm.RIGHT -> -hotbarWidth / 2 - padding * 2 - stackBoxSize
                     }
             val startX = offHandItemX + innerPadding
             val startY =
@@ -109,17 +109,17 @@ class HotbarRenderer(
         colors: ThemeColors,
     ) {
         val player = client.player ?: return
-        val selectedStack = player.mainHandStack
+        val selectedStack = player.mainHandItem
 
         if (selectedStack.isEmpty) {
             return // アイテムがない場合は何もしない
         }
 
-        val textRenderer = client.textRenderer
+        val textRenderer = client.font
         val width = graphics2D.width
         val centerX = width / 2
         val padding = config.padding.toDouble()
-        val fontHeight = textRenderer.fontHeight.toDouble()
+        val fontHeight = textRenderer.lineHeight.toDouble()
         val expBarHeight = fontHeight * 1.5
         val hotbarBoxSize = 22
         val hotbarHeight = hotbarBoxSize + padding
@@ -127,15 +127,15 @@ class HotbarRenderer(
         val bottomY = graphics2D.height - hotbarHeight - expBarHeight - padding
         val iconSize = 16.0
         val leftSideTexts = mutableListOf<Triple<String, Int, Boolean>>() // Text, Color, Shadow
-        leftSideTexts.add(Triple(selectedStack.name.string, ItemEsp.rarityColor(selectedStack), false))
+        leftSideTexts.add(Triple(selectedStack.hoverName.string, ItemEsp.rarityColor(selectedStack), false))
         leftSideTexts.add(Triple("x${selectedStack.count}", colors.secondaryColor, true))
 
         // 右側情報 (耐久値、エンチャント)
         val rightSideTexts = mutableListOf<Triple<String, Int, Boolean>>() // Text, Color, Shadow
 
         // 1. 耐久値
-        if (selectedStack.isDamageable) {
-            val durability = selectedStack.maxDamage - selectedStack.damage
+        if (selectedStack.isDamageableItem) {
+            val durability = selectedStack.maxDamage - selectedStack.damageValue
             val maxDurability = selectedStack.maxDamage
             val durabilityText = "$durability/$maxDurability"
             rightSideTexts.add(Triple(durabilityText, colors.foregroundColor, true))
@@ -143,14 +143,15 @@ class HotbarRenderer(
 
         // 2. エンチャント
         val originalEnchantments =
-            selectedStack.enchantments.enchantmentEntries
+            selectedStack.enchantments
+                .entrySet()
                 .map { it.key }
-                .filter { it != null && it.key != null }
-                .map { it.key.get() }
+                .filter { it != null && it.unwrapKey() != null }
+                .map { it.unwrapKey().get() }
         for (enchantment in originalEnchantments) {
             val level = enchantLevel(selectedStack, enchantment)
             val enchantmentText =
-                Text.translatable("enchantment.${enchantment.value.toTranslationKey()}").string + level.toRomanNumerics()
+                Component.translatable("enchantment.${enchantment.identifier().toLanguageKey()}").string + level.toRomanNumerics()
             rightSideTexts.add(Triple(enchantmentText, colors.yellowAccentColor, true))
         }
         // アイコンの中央 Y 座標 (bottomY を情報の描画エリアの下端とする)

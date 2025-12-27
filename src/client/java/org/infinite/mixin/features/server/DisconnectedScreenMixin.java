@@ -1,12 +1,12 @@
 package org.infinite.mixin.features.server;
 
 import java.util.stream.Stream;
-import net.minecraft.client.gui.screen.DisconnectedScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.DirectionalLayoutWidget;
-import net.minecraft.network.DisconnectionInfo;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.layouts.LinearLayout;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.DisconnectionDetails;
+import net.minecraft.network.chat.Component;
 import org.infinite.InfiniteClient;
 import org.infinite.features.server.connection.AutoConnect;
 import org.spongepowered.asm.mixin.Final;
@@ -20,12 +20,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(DisconnectedScreen.class)
 public abstract class DisconnectedScreenMixin extends Screen {
   @Unique private int autoReconnectTimer = -1;
-  @Unique private ButtonWidget autoReconnectButton;
-  @Shadow @Final private DisconnectionInfo info;
+  @Unique private Button autoReconnectButton;
+  @Shadow @Final private DisconnectionDetails details;
   @Shadow @Final private Screen parent;
-  @Shadow @Final private DirectionalLayoutWidget grid;
+  @Shadow @Final private LinearLayout layout;
 
-  protected DisconnectedScreenMixin(Text title) { // コンストラクタをprotectedに変更
+  protected DisconnectedScreenMixin(Component title) { // コンストラクタをprotectedに変更
     super(title);
   }
 
@@ -37,7 +37,7 @@ public abstract class DisconnectedScreenMixin extends Screen {
 
   @Inject(at = @At("TAIL"), method = "init()V")
   private void onInit(CallbackInfo ci) {
-    Text reason = info.reason();
+    Component reason = details.reason();
     autoReconnectTimer = -1;
     System.out.println("Disconnected: " + reason.getString()); // TextをStringに変換
     addReconnectButtons();
@@ -52,21 +52,21 @@ public abstract class DisconnectedScreenMixin extends Screen {
     }
 
     // 1. Reconnectボタン
-    ButtonWidget reconnectButton =
-        grid.add(
-            ButtonWidget.builder(Text.literal("Reconnect"), b -> autoConnect.reconnect(parent))
+    Button reconnectButton =
+        layout.addChild(
+            Button.builder(Component.literal("Reconnect"), b -> autoConnect.reconnect(parent))
                 .width(200)
                 .build());
 
     // 2. AutoReconnectボタン
     autoReconnectButton =
-        grid.add(
-            ButtonWidget.builder(Text.literal("AutoReconnect"), b -> pressAutoReconnect())
+        layout.addChild(
+            Button.builder(Component.literal("AutoReconnect"), b -> pressAutoReconnect())
                 .width(200)
                 .build());
 
-    grid.refreshPositions();
-    Stream.of(reconnectButton, autoReconnectButton).forEach(this::addDrawableChild);
+    layout.arrangeElements();
+    Stream.of(reconnectButton, autoReconnectButton).forEach(this::addRenderableWidget);
 
     // Featureが有効な場合、タイマーを設定
     if (autoConnect.isEnabled()) {
@@ -89,14 +89,14 @@ public abstract class DisconnectedScreenMixin extends Screen {
 
     // AutoReconnectが無効な場合、ボタンのテキストをリセットして終了
     if (autoConnect.isDisabled()) {
-      autoReconnectButton.setMessage(Text.literal("AutoReconnect"));
+      autoReconnectButton.setMessage(Component.literal("AutoReconnect"));
       return;
     }
 
     // ボタンのテキストを更新 (残り秒数を表示)
     // タイマー値(tick)を20.0で割って秒数に変換し、切り上げ
     double secondsLeft = autoReconnectTimer / 20.0;
-    autoReconnectButton.setMessage(Text.literal("AutoReconnect (" + (int) secondsLeft + ")"));
+    autoReconnectButton.setMessage(Component.literal("AutoReconnect (" + (int) secondsLeft + ")"));
     if (autoReconnectTimer > 0) {
       autoReconnectTimer--;
     }

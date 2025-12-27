@@ -1,12 +1,12 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.screen.narration.NarrationPart
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarratedElementType
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.gui.theme.Theme
 import org.infinite.utils.rendering.drawBorder
 
@@ -18,15 +18,15 @@ class ThemeTileButton(
     private val theme: Theme,
     private val isSelected: () -> Boolean,
     private val onSelect: () -> Unit,
-) : ClickableWidget(x, y, width, height, Text.literal(theme.name)) {
+) : AbstractWidget(x, y, width, height, Component.literal(theme.name)) {
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val textRenderer = MinecraftClient.getInstance().textRenderer
-        val selected = isSelected()
+        val textRenderer = Minecraft.getInstance().font
+        val selected = isHoveredOrFocused
         val borderColor = if (selected) theme.colors.primaryColor else theme.colors.secondaryColor
         val background = theme.colors.backgroundColor
 
@@ -36,7 +36,7 @@ class ThemeTileButton(
         // Title
         val textX = x + 8
         val textY = y + 6
-        context.drawTextWithShadow(textRenderer, Text.literal(theme.name), textX, textY, theme.colors.foregroundColor)
+        context.drawString(textRenderer, Component.literal(theme.name), textX, textY, theme.colors.foregroundColor)
 
         // Color dots (squares) under the title
         val swatches =
@@ -57,16 +57,16 @@ class ThemeTileButton(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         if (!isMouseOver(click.x, click.y)) return false
-        playDownSound(MinecraftClient.getInstance().soundManager)
+        playDownSound(Minecraft.getInstance().soundManager)
         onSelect()
         return true
     }
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        builder.put(NarrationPart.TITLE, this.message)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        builder.add(NarratedElementType.TITLE, this.message)
     }
 }

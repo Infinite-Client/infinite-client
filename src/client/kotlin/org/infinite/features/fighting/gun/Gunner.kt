@@ -1,12 +1,12 @@
 package org.infinite.features.fighting.gun
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.component.DataComponentTypes
-import net.minecraft.item.CrossbowItem
-import net.minecraft.item.Item
-import net.minecraft.item.ItemStack
-import net.minecraft.registry.Registries
-import net.minecraft.util.Identifier
+import net.minecraft.client.Minecraft
+import net.minecraft.core.component.DataComponents
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.resources.Identifier
+import net.minecraft.world.item.CrossbowItem
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.utils.backpack.BackPackManager
@@ -71,10 +71,10 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
 
     fun gunnerCount(): Int {
         // クロスボウで使用可能なアイテムのIdentifierを取得
-        val arrowItem = Registries.ITEM.get(Identifier.of("minecraft:arrow"))
-        val tippedArrowItem = Registries.ITEM.get(Identifier.of("minecraft:tipped_arrow"))
-        val spectralArrowItem = Registries.ITEM.get(Identifier.of("minecraft:spectral_arrow"))
-        val fireworkItem = Registries.ITEM.get(Identifier.of("minecraft:firework_rocket"))
+        val arrowItem = BuiltInRegistries.ITEM.getValue(Identifier.parse("minecraft:arrow"))
+        val tippedArrowItem = BuiltInRegistries.ITEM.getValue(Identifier.parse("minecraft:tipped_arrow"))
+        val spectralArrowItem = BuiltInRegistries.ITEM.getValue(Identifier.parse("minecraft:spectral_arrow"))
+        val fireworkItem = BuiltInRegistries.ITEM.getValue(Identifier.parse("minecraft:firework_rocket"))
 
         // 各アイテムの個数を合計
         val arrowCount = InventoryManager.count(arrowItem)
@@ -98,7 +98,7 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
     private var intervalCount = 0
 
     override fun onTick() {
-        if (client.currentScreen != null) return
+        if (client.screen != null) return
         switchMode()
         val manager = InventoryManager
         val backPackManager = InfiniteClient.getFeature(BackPackManager::class.java)
@@ -106,7 +106,7 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
         backPackManager?.register {
             // --- 👇 追加された花火オフハンドのロジック ---
             val offHand = manager.get(InventoryIndex.OffHand())
-            val fireworkRocketItem = Registries.ITEM.get(Identifier.of("minecraft:firework_rocket"))
+            val fireworkRocketItem = BuiltInRegistries.ITEM.getValue(Identifier.parse("minecraft:firework_rocket"))
 
             // オフハンドが花火アイテムでない、かつ、花火アイテムがある場合
             if (offHand.item != fireworkRocketItem) {
@@ -132,7 +132,7 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
                         val loadedCrossbow = findFirstLoadedCrossbow()
                         val readyToSet =
                             (fireMode.value == FireMode.FULL_AUTO && intervalCount == 0) ||
-                                (fireMode.value == FireMode.SEMI_AUTO && !options.useKey.isPressed)
+                                (fireMode.value == FireMode.SEMI_AUTO && !options.keyUse.isDown)
                         if (loadedCrossbow != null && readyToSet) {
                             intervalCount = additionalInterval.value
                             manager.swap(InventoryIndex.MainHand(), loadedCrossbow)
@@ -169,9 +169,9 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
 
     private fun switchMode() {
         val isKeyPressed =
-            MinecraftClient
+            Minecraft
                 .getInstance()
-                .options.sneakKey.isPressed
+                .options.keyShift.isDown
         when (changeMode.value) {
             ChangeMode.Fixed -> {
                 mode =
@@ -193,7 +193,7 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
         }
     }
 
-    private fun getCrossbowItem(): Item = Registries.ITEM.get(Identifier.of("minecraft:crossbow"))
+    private fun getCrossbowItem(): Item = BuiltInRegistries.ITEM.getValue(Identifier.parse("minecraft:crossbow"))
 
     fun totalCrossbows(): Int = InventoryManager.count(getCrossbowItem())
 
@@ -219,14 +219,14 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
 
     private fun isLoadedCrossbow(stack: ItemStack): Boolean {
         if (stack.item != getCrossbowItem()) return false
-        val chargedProjectiles = stack.get(DataComponentTypes.CHARGED_PROJECTILES)
-        return chargedProjectiles != null && !chargedProjectiles.projectiles.isEmpty()
+        val chargedProjectiles = stack.get(DataComponents.CHARGED_PROJECTILES)
+        return chargedProjectiles != null && !chargedProjectiles.items.isEmpty()
     }
 
     private fun isUnloadedCrossbow(stack: ItemStack): Boolean {
         if (stack.item != getCrossbowItem()) return false
-        val chargedProjectiles = stack.get(DataComponentTypes.CHARGED_PROJECTILES)
-        return chargedProjectiles != null && chargedProjectiles.projectiles.isEmpty()
+        val chargedProjectiles = stack.get(DataComponents.CHARGED_PROJECTILES)
+        return chargedProjectiles != null && chargedProjectiles.items.isEmpty()
     }
 
     private fun findFirstLoadedCrossbow(): InventoryIndex? {
@@ -282,11 +282,11 @@ class Gunner : ConfigurableFeature(initialEnabled = false) {
      */
     private fun isStarFirework(stack: ItemStack): Boolean {
         // 1. アイテムが花火ロケットか確認
-        val fireworkRocketItem = Registries.ITEM.get(Identifier.of("minecraft:firework_rocket"))
+        val fireworkRocketItem = BuiltInRegistries.ITEM.getValue(Identifier.parse("minecraft:firework_rocket"))
         if (stack.item != fireworkRocketItem) return false
 
         // 2. ペイロード（花火の星）のコンポーネントを取得
-        val firework = stack.get(DataComponentTypes.FIREWORKS)
+        val firework = stack.get(DataComponents.FIREWORKS)
         // ペイロードが null でない、かつ、花火の星リストが空でないことを確認
         return firework != null && !firework.explosions.isEmpty()
     }

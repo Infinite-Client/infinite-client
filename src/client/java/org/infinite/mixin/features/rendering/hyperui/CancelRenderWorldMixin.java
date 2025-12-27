@@ -2,12 +2,12 @@ package org.infinite.mixin.features.rendering.hyperui;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.WorldRenderer;
-import net.minecraft.client.render.state.OutlineRenderState;
-import net.minecraft.client.render.state.WorldRenderState;
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Camera;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.state.BlockOutlineRenderState;
+import net.minecraft.client.renderer.state.LevelRenderState;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.ui.HyperUi;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(WorldRenderer.class)
+@Mixin(LevelRenderer.class)
 public class CancelRenderWorldMixin {
   @Unique
   private boolean shouldCancel() {
@@ -29,17 +29,17 @@ public class CancelRenderWorldMixin {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/render/WorldRenderer;drawBlockOutline(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumer;DDDLnet/minecraft/client/render/state/OutlineRenderState;IF)V"),
+                  "Lnet/minecraft/client/renderer/LevelRenderer;renderHitOutline(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;DDDLnet/minecraft/client/renderer/state/BlockOutlineRenderState;IF)V"),
       method =
-          "renderTargetBlockOutline(Lnet/minecraft/client/render/VertexConsumerProvider$Immediate;Lnet/minecraft/client/util/math/MatrixStack;ZLnet/minecraft/client/render/state/WorldRenderState;)V")
+          "renderBlockOutline(Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lcom/mojang/blaze3d/vertex/PoseStack;ZLnet/minecraft/client/renderer/state/LevelRenderState;)V")
   private void cancelBlockOutline(
-      WorldRenderer instance,
-      MatrixStack matrices,
+      LevelRenderer instance,
+      PoseStack matrices,
       VertexConsumer vertexConsumer,
       double x,
       double y,
       double z,
-      OutlineRenderState state,
+      BlockOutlineRenderState state,
       int i,
       float lineWidth,
       Operation<Void> original) {
@@ -52,9 +52,9 @@ public class CancelRenderWorldMixin {
     }
   }
 
-  @Inject(method = "fillBlockBreakingProgressRenderState", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "extractBlockDestroyAnimation", at = @At("HEAD"), cancellable = true)
   private void cancelBlockBreakingProgress(
-      Camera camera, WorldRenderState worldRenderState, CallbackInfo ci) {
+      Camera camera, LevelRenderState worldRenderState, CallbackInfo ci) {
     if (shouldCancel()) {
       ci.cancel(); // 描画メソッドの実行をキャンセル
     }

@@ -1,14 +1,14 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.screen.narration.NarrationPart
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.text.Text
-import net.minecraft.util.math.MathHelper
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarratedElementType
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
+import net.minecraft.util.Mth
 import org.infinite.InfiniteClient
 import org.lwjgl.glfw.GLFW
 import kotlin.math.max
@@ -18,12 +18,12 @@ class InfiniteScrollableContainer(
     y: Int,
     width: Int,
     height: Int,
-    var widgets: MutableList<ClickableWidget>, // Made mutable and public
-) : ClickableWidget(x, y, width, height, Text.literal("")) {
+    var widgets: MutableList<AbstractWidget>, // Made mutable and public
+) : AbstractWidget(x, y, width, height, Component.literal("")) {
     var scrollY: Double = 0.0
         set(value) {
             val contentHeight = widgets.sumOf { it.height + internalPadding }
-            field = MathHelper.clamp(value, 0.0, max(0.0, contentHeight - height.toDouble()))
+            field = Mth.clamp(value, 0.0, max(0.0, contentHeight - height.toDouble()))
         }
     private val scrollbarWidth = 6
     internal val internalPadding = 5 // Made internal
@@ -71,7 +71,7 @@ class InfiniteScrollableContainer(
     }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
@@ -94,11 +94,11 @@ class InfiniteScrollableContainer(
     // renderScrollbar, mouseScrolled, mouseClicked, mouseDragged, mouseReleased, keyPressed, charTyped, appendClickableNarrations は
     // 前回の最終版のロジック（親へのスクロール伝播、子のイベント処理優先、ドラッグ処理）を維持します。
 
-    private fun renderScrollbar(context: DrawContext) {
+    private fun renderScrollbar(context: GuiGraphics) {
         val contentHeight = widgets.sumOf { it.height + internalPadding }
         if (contentHeight > height) {
             val maxScrollY = max(0.0, contentHeight - height.toDouble())
-            val scrollbarHeight = MathHelper.clamp((height.toDouble() / contentHeight * height).toInt(), 32, height - 8)
+            val scrollbarHeight = Mth.clamp((height.toDouble() / contentHeight * height).toInt(), 32, height - 8)
 
             val scrollbarY = y + (scrollY / maxScrollY * (height - scrollbarHeight)).toInt()
             val scrollbarX = x + width - scrollbarWidth
@@ -156,7 +156,7 @@ class InfiniteScrollableContainer(
         if (isMouseOver(mouseX, mouseY) && contentHeight > height) {
             val oldScrollY = scrollY
             scrollY -= verticalAmount * 20
-            scrollY = MathHelper.clamp(scrollY, 0.0, max(0.0, contentHeight - height.toDouble()))
+            scrollY = Mth.clamp(scrollY, 0.0, max(0.0, contentHeight - height.toDouble()))
 
             if (scrollY != oldScrollY) {
                 updateWidgetPositions()
@@ -169,7 +169,7 @@ class InfiniteScrollableContainer(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         val mouseX = click.x
@@ -196,7 +196,7 @@ class InfiniteScrollableContainer(
 
                 val maxScrollY = max(0.0, contentHeight - height.toDouble())
                 val scrollbarHeight =
-                    MathHelper.clamp((height.toDouble() / contentHeight * height).toInt(), 32, height - 8)
+                    Mth.clamp((height.toDouble() / contentHeight * height).toInt(), 32, height - 8)
                 val maxScrollbarY = height - scrollbarHeight
                 val currentScrollbarY = y + (scrollY / maxScrollY * maxScrollbarY).toInt()
 
@@ -210,7 +210,7 @@ class InfiniteScrollableContainer(
     }
 
     override fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
     ): Boolean {
@@ -220,16 +220,16 @@ class InfiniteScrollableContainer(
             if (contentHeight > height) {
                 val maxScrollY = max(0.0, contentHeight - height.toDouble())
                 val scrollbarHeight =
-                    MathHelper.clamp((height.toDouble() / contentHeight * height).toInt(), 32, height - 8)
+                    Mth.clamp((height.toDouble() / contentHeight * height).toInt(), 32, height - 8)
                 val maxScrollbarY = height - scrollbarHeight
 
                 val newScrollbarY = click.y - dragYOffset
 
-                val clampedScrollbarY = MathHelper.clamp(newScrollbarY - y, 0.0, maxScrollbarY.toDouble())
+                val clampedScrollbarY = Mth.clamp(newScrollbarY - y, 0.0, maxScrollbarY.toDouble())
 
                 scrollY = clampedScrollbarY / maxScrollbarY * maxScrollY
 
-                scrollY = MathHelper.clamp(scrollY, 0.0, maxScrollY)
+                scrollY = Mth.clamp(scrollY, 0.0, maxScrollY)
                 updateWidgetPositions()
                 return true // イベントを消費
             }
@@ -254,7 +254,7 @@ class InfiniteScrollableContainer(
         return false
     }
 
-    override fun mouseReleased(click: Click): Boolean {
+    override fun mouseReleased(click: MouseButtonEvent): Boolean {
         val wasDragging = isDragging
         isDragging = false
         if (wasDragging) {
@@ -270,18 +270,18 @@ class InfiniteScrollableContainer(
         return false
     }
 
-    override fun keyPressed(input: KeyInput): Boolean {
+    override fun keyPressed(input: KeyEvent): Boolean {
         val keyCode = input.key
         val contentHeight = widgets.sumOf { it.height + internalPadding }
         if (contentHeight > height) {
             if (keyCode == GLFW.GLFW_KEY_DOWN) {
                 scrollY += 10
-                scrollY = MathHelper.clamp(scrollY, 0.0, max(0.0, contentHeight - height.toDouble()))
+                scrollY = Mth.clamp(scrollY, 0.0, max(0.0, contentHeight - height.toDouble()))
                 updateWidgetPositions()
                 return true
             } else if (keyCode == GLFW.GLFW_KEY_UP) {
                 scrollY -= 10
-                scrollY = MathHelper.clamp(scrollY, 0.0, max(0.0, contentHeight - height.toDouble()))
+                scrollY = Mth.clamp(scrollY, 0.0, max(0.0, contentHeight - height.toDouble()))
                 updateWidgetPositions()
                 return true
             }
@@ -294,7 +294,7 @@ class InfiniteScrollableContainer(
         return super.keyPressed(input)
     }
 
-    override fun charTyped(input: CharInput): Boolean {
+    override fun charTyped(input: CharacterEvent): Boolean {
         for (widget in widgets) {
             if (widget.charTyped(input)) {
                 return true
@@ -303,7 +303,7 @@ class InfiniteScrollableContainer(
         return super.charTyped(input)
     }
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        builder.put(NarrationPart.TITLE, "Scrollable Container")
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        builder.add(NarratedElementType.TITLE, "Scrollable Container")
     }
 }

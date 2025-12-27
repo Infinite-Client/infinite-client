@@ -1,96 +1,93 @@
 accessWidener v1 named
 # --- 既存の定義 ---
-accessible field net/minecraft/client/network/ClientPlayerInteractionManager currentBreakingProgress F
-accessible field net/minecraft/client/network/ClientPlayerInteractionManager breakingBlock Z
-accessible field net/minecraft/client/network/ClientPlayerInteractionManager currentBreakingPos Lnet/minecraft/util/math/BlockPos;
-accessible field net/minecraft/client/input/Input movementVector Lnet/minecraft/util/math/Vec2f;
-accessible field net/minecraft/entity/ai/pathing/EntityNavigation entity Lnet/minecraft/entity/mob/MobEntity;
+accessible field net/minecraft/client/multiplayer/MultiPlayerGameMode destroyProgress F
+accessible field net/minecraft/client/multiplayer/MultiPlayerGameMode isDestroying Z
+accessible field net/minecraft/client/multiplayer/MultiPlayerGameMode destroyBlockPos Lnet/minecraft/core/BlockPos;
+accessible field net/minecraft/client/player/ClientInput moveVector Lnet/minecraft/world/phys/Vec2;
+accessible field net/minecraft/world/entity/ai/navigation/PathNavigation mob Lnet/minecraft/world/entity/Mob;
 
 # --- 新規追加: AbstractFurnaceBlockEntity のフィールド ---
 # litTimeRemaining
-accessible field net/minecraft/block/entity/AbstractFurnaceBlockEntity litTimeRemaining I
+accessible field net/minecraft/world/level/block/entity/AbstractFurnaceBlockEntity litTimeRemaining I
 # litTotalTime
-accessible field net/minecraft/block/entity/AbstractFurnaceBlockEntity litTotalTime I
+accessible field net/minecraft/world/level/block/entity/AbstractFurnaceBlockEntity litTotalTime I
 # cookingTimeSpent
-accessible field net/minecraft/block/entity/AbstractFurnaceBlockEntity cookingTimeSpent I
+accessible field net/minecraft/world/level/block/entity/AbstractFurnaceBlockEntity cookingTimer I
 # cookingTotalTime
-accessible field net/minecraft/block/entity/AbstractFurnaceBlockEntity cookingTotalTime I
+accessible field net/minecraft/world/level/block/entity/AbstractFurnaceBlockEntity cookingTotalTime I
 
 # --- 新規追加: HopperBlockEntity のフィールド ---
 # transferCooldown
-accessible field net/minecraft/block/entity/HopperBlockEntity transferCooldown I
-accessible field net/minecraft/block/entity/BrewingStandBlockEntity propertyDelegate Lnet/minecraft/screen/PropertyDelegate;
-accessible field net/minecraft/block/entity/AbstractFurnaceBlockEntity propertyDelegate Lnet/minecraft/screen/PropertyDelegate;
+accessible field net/minecraft/world/level/block/entity/HopperBlockEntity cooldownTime I
+accessible field net/minecraft/world/level/block/entity/BrewingStandBlockEntity dataAccess Lnet/minecraft/world/inventory/ContainerData;
+accessible field net/minecraft/world/level/block/entity/AbstractFurnaceBlockEntity dataAccess Lnet/minecraft/world/inventory/ContainerData;
 
 # --- 新規追加: ExtraSensoryの機能 ---
-accessible field net/minecraft/client/render/block/entity/BlockEntityRenderManager cameraPos Lnet/minecraft/util/math/Vec3d;
+accessible field net/minecraft/client/renderer/blockentity/BlockEntityRenderDispatcher cameraPos Lnet/minecraft/world/phys/Vec3;
 
 # --- Anti Hunger ---
-accessible field net/minecraft/network/packet/c2s/play/PlayerMoveC2SPacket onGround Z
+accessible field net/minecraft/network/protocol/game/ServerboundMovePlayerPacket onGround Z
 
 # --- 3D Radar ---
-accessible field net/minecraft/block/AbstractBlock$AbstractBlockState mapColor Lnet/minecraft/block/MapColor;
+accessible field net/minecraft/world/level/block/state/BlockBehaviour$BlockStateBase mapColor Lnet/minecraft/world/level/material/MapColor;
 
 # --- Navigator ---
-accessible method net/minecraft/entity/mob/MobEntity <init> (Lnet/minecraft/entity/EntityType;Lnet/minecraft/world/World;)V
+accessible method net/minecraft/world/entity/Mob <init> (Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/level/Level;)V
 
 # --- Hyper Ui ---
-accessible field net/minecraft/entity/player/HungerManager exhaustion F
-accessible method net/minecraft/client/gui/render/state/GuiRenderState findAndGoToLayerToAdd (Lnet/minecraft/client/gui/render/state/GuiElementRenderState;)Z
-accessible field net/minecraft/client/gui/render/state/GuiRenderState currentLayer Lnet/minecraft/client/gui/render/state/GuiRenderState$Layer;
-accessible method net/minecraft/client/gui/render/state/GuiRenderState onElementAdded (Lnet/minecraft/client/gui/ScreenRect;)V
-extendable class net/minecraft/client/gui/render/state/TextGuiElementRenderState
+accessible field net/minecraft/world/food/FoodData exhaustionLevel F
+extendable class net/minecraft/client/gui/render/state/GuiTextRenderState
 # --- Font Renderer ---
-accessible class net/minecraft/client/font/FontManager$Fonts
-accessible field net/minecraft/client/font/TextRenderer fonts Lnet/minecraft/client/font/TextRenderer$GlyphsProvider;
-accessible field net/minecraft/client/font/FontManager anyFonts Lnet/minecraft/client/font/FontManager$Fonts;
-extendable method net/minecraft/client/font/TextRenderer getGlyphs (Lnet/minecraft/text/StyleSpriteSource;)Lnet/minecraft/client/font/GlyphProvider;
-extendable method net/minecraft/client/font/TextRenderer getGlyph (ILnet/minecraft/text/Style;)Lnet/minecraft/client/font/BakedGlyph;
-accessible method net/minecraft/client/font/FontManager getStorageInternal (Lnet/minecraft/util/Identifier;)Lnet/minecraft/client/font/FontStorage;
-accessible field net/minecraft/client/font/FontManager fontStorages Ljava/util/Map;
-accessible field net/minecraft/client/font/TextRenderer handler Lnet/minecraft/client/font/TextHandler;
-mutable field net/minecraft/client/font/TextRenderer handler Lnet/minecraft/client/font/TextHandler;
-extendable class net/minecraft/client/gui/render/state/ItemGuiElementRenderState
-accessible method net/minecraft/client/gui/render/state/ItemGuiElementRenderState createOversizedBounds ()Lnet/minecraft/client/gui/ScreenRect;
-accessible method net/minecraft/client/gui/render/state/ItemGuiElementRenderState createBounds (Lnet/minecraft/client/gui/ScreenRect;)Lnet/minecraft/client/gui/ScreenRect;
-extendable method net/minecraft/client/gui/render/state/ItemGuiElementRenderState createBounds (Lnet/minecraft/client/gui/ScreenRect;)Lnet/minecraft/client/gui/ScreenRect;
-accessible field net/minecraft/client/gui/hud/ChatHud messages Ljava/util/List;
-mutable field net/minecraft/client/gui/hud/ChatHud messages Ljava/util/List;
-accessible method net/minecraft/client/gui/hud/ChatHud refresh ()V
+accessible class net/minecraft/client/gui/font/FontManager$CachedFontProvider
+accessible field net/minecraft/client/gui/Font provider Lnet/minecraft/client/gui/Font$Provider;
+accessible field net/minecraft/client/gui/font/FontManager anyGlyphs Lnet/minecraft/client/gui/font/FontManager$CachedFontProvider;
+extendable method net/minecraft/client/gui/Font getGlyphSource (Lnet/minecraft/network/chat/FontDescription;)Lnet/minecraft/client/gui/GlyphSource;
+extendable method net/minecraft/client/gui/Font getGlyph (ILnet/minecraft/network/chat/Style;)Lnet/minecraft/client/gui/font/glyphs/BakedGlyph;
+accessible method net/minecraft/client/gui/font/FontManager getFontSetRaw (Lnet/minecraft/resources/Identifier;)Lnet/minecraft/client/gui/font/FontSet;
+accessible field net/minecraft/client/gui/font/FontManager fontSets Ljava/util/Map;
+accessible field net/minecraft/client/gui/Font splitter Lnet/minecraft/client/StringSplitter;
+mutable field net/minecraft/client/gui/Font splitter Lnet/minecraft/client/StringSplitter;
+extendable class net/minecraft/client/gui/render/state/GuiItemRenderState
+accessible method net/minecraft/client/gui/render/state/GuiItemRenderState calculateOversizedItemBounds ()Lnet/minecraft/client/gui/navigation/ScreenRectangle;
+accessible method net/minecraft/client/gui/render/state/GuiItemRenderState calculateBounds (Lnet/minecraft/client/gui/navigation/ScreenRectangle;)Lnet/minecraft/client/gui/navigation/ScreenRectangle;
+extendable method net/minecraft/client/gui/render/state/GuiItemRenderState calculateBounds (Lnet/minecraft/client/gui/navigation/ScreenRectangle;)Lnet/minecraft/client/gui/navigation/ScreenRectangle;
+accessible field net/minecraft/client/gui/components/ChatComponent allMessages Ljava/util/List;
+mutable field net/minecraft/client/gui/components/ChatComponent allMessages Ljava/util/List;
+accessible method net/minecraft/client/gui/components/ChatComponent refreshTrimmedMessages ()V
 
 # --- Builder Feature ---
-accessible method net/minecraft/client/network/ClientPlayerInteractionManager interactBlockInternal (Lnet/minecraft/client/network/ClientPlayerEntity;Lnet/minecraft/util/Hand;Lnet/minecraft/util/hit/BlockHitResult;)Lnet/minecraft/util/ActionResult;
+accessible method net/minecraft/client/multiplayer/MultiPlayerGameMode performUseItemOn (Lnet/minecraft/client/player/LocalPlayer;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;
 
 # --- Theme Settings ---
-accessible class net/minecraft/client/gui/widget/ScrollableLayoutWidget
-accessible method net/minecraft/client/gui/widget/ScrollableWidget drawScrollbar (Lnet/minecraft/client/gui/DrawContext;II)V
-accessible method net/minecraft/client/gui/widget/ScrollableWidget overflows ()Z
-accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarX ()I
-accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarThumbHeight ()I
-accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarThumbY ()I
-accessible method net/minecraft/client/gui/widget/ScrollableWidget isInScrollbar (DD)Z
-accessible field net/minecraft/client/gui/widget/ScrollableWidget scrollbarDragged Z
-accessible class net/minecraft/client/gui/widget/ScrollableLayoutWidget$Container
-accessible field net/minecraft/client/gui/widget/SliderWidget value D
-accessible field net/minecraft/client/gui/widget/ClickableWidget alpha F
-accessible method net/minecraft/client/gui/widget/TextFieldWidget isEditable ()Z
-accessible field net/minecraft/client/gui/widget/TextFieldWidget firstCharacterIndex I
-accessible field net/minecraft/client/gui/widget/TextFieldWidget selectionStart I
-accessible field net/minecraft/client/gui/widget/TextFieldWidget selectionEnd I
-accessible field net/minecraft/client/gui/widget/TextFieldWidget textX I
-accessible field net/minecraft/client/gui/widget/TextFieldWidget textY I
-accessible field net/minecraft/client/gui/widget/TextFieldWidget placeholder Lnet/minecraft/text/Text;
-accessible field net/minecraft/client/gui/widget/TextFieldWidget lastSwitchFocusTime J
-accessible field net/minecraft/client/gui/widget/TextFieldWidget textShadow Z
-accessible field net/minecraft/client/gui/widget/TextFieldWidget maxLength I
-accessible method net/minecraft/client/gui/widget/TextFieldWidget format (Ljava/lang/String;I)Lnet/minecraft/text/OrderedText;
-accessible field net/minecraft/client/gui/widget/TextFieldWidget suggestion Ljava/lang/String;
-accessible method net/minecraft/client/gui/widget/ScrollableWidget overflows ()Z
-accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarX ()I
-accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarThumbHeight ()I
-accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarThumbY ()I
-accessible method net/minecraft/client/gui/widget/ScrollableWidget getScrollbarThumbY ()I
-accessible field net/minecraft/client/gui/widget/ScrollableWidget scrollbarDragged Z
+accessible class net/minecraft/client/gui/components/ScrollableLayout
+accessible method net/minecraft/client/gui/components/AbstractScrollArea renderScrollbar (Lnet/minecraft/client/gui/GuiGraphics;II)V
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollbarVisible ()Z
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarX ()I
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollerHeight ()I
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarY ()I
+accessible method net/minecraft/client/gui/components/AbstractScrollArea isOverScrollbar (DD)Z
+accessible field net/minecraft/client/gui/components/AbstractScrollArea scrolling Z
+accessible class net/minecraft/client/gui/components/ScrollableLayout$Container
+accessible field net/minecraft/client/gui/components/AbstractSliderButton value D
+accessible field net/minecraft/client/gui/components/AbstractWidget alpha F
+accessible method net/minecraft/client/gui/components/EditBox isEditable ()Z
+accessible field net/minecraft/client/gui/components/EditBox displayPos I
+accessible field net/minecraft/client/gui/components/EditBox cursorPos I
+accessible field net/minecraft/client/gui/components/EditBox highlightPos I
+accessible field net/minecraft/client/gui/components/EditBox textX I
+accessible field net/minecraft/client/gui/components/EditBox textY I
+accessible field net/minecraft/client/gui/components/EditBox hint Lnet/minecraft/network/chat/Component;
+accessible field net/minecraft/client/gui/components/EditBox focusedTime J
+accessible field net/minecraft/client/gui/components/EditBox textShadow Z
+accessible field net/minecraft/client/gui/components/EditBox maxLength I
+accessible method net/minecraft/client/gui/components/EditBox applyFormat (Ljava/lang/String;I)Lnet/minecraft/util/FormattedCharSequence;
+accessible field net/minecraft/client/gui/components/EditBox suggestion Ljava/lang/String;
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollbarVisible ()Z
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarX ()I
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollerHeight ()I
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarY ()I
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarY ()I
+accessible field net/minecraft/client/gui/components/AbstractScrollArea scrolling Z
 
 # --- AntiCheat
-accessible field net/minecraft/client/network/ClientCommonNetworkHandler seenPlayers Ljava/util/Map;
+accessible field net/minecraft/client/multiplayer/ClientCommonPacketListenerImpl seenPlayers Ljava/util/Map;

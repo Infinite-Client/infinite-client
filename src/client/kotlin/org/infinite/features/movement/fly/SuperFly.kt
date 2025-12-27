@@ -1,8 +1,8 @@
 package org.infinite.features.movement.fly
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket
-import net.minecraft.util.math.Vec3d
+import net.minecraft.client.Minecraft
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket
+import net.minecraft.world.phys.Vec3
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.camera.CameraRoll
 import org.infinite.settings.FeatureSetting
@@ -39,18 +39,18 @@ class SuperFly : ConfigurableFeature(initialEnabled = false) {
         )
 
     override fun onTick() {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
 
-        if (!player.isGliding && method.value != FlyMethod.CreativeFlight) return
+        if (!player.isFallFlying && method.value != FlyMethod.CreativeFlight) return
         manageGliding(client)
         when (method.value) {
             FlyMethod.Acceleration -> {
                 // Check HyperBoost conditions: HyperBoost enabled, forward key, jump key, and sneak key pressed
                 val isHyperBoostActive =
-                    client.options.forwardKey.isPressed &&
-                        client.options.jumpKey.isPressed &&
-                        client.options.sneakKey.isPressed
+                    client.options.keyUp.isDown &&
+                        client.options.keyJump.isDown &&
+                        client.options.keyShift.isDown
 
                 if (isHyperBoostActive) {
                     // Apply HyperBoost effects
@@ -73,76 +73,76 @@ class SuperFly : ConfigurableFeature(initialEnabled = false) {
         }
     }
 
-    private fun manageGliding(client: MinecraftClient) {
+    private fun manageGliding(client: Minecraft) {
         val player = client.player ?: return
         val options = client.options ?: return
         // Only apply this specific gliding management if we are in a method that relies on elytra gliding
         if (method.value == FlyMethod.Acceleration || method.value == FlyMethod.Rocket) {
-            if (player.isTouchingWater) {
+            if (player.isInWater) {
                 val packet =
-                    ClientCommandC2SPacket(
+                    ServerboundPlayerCommandPacket(
                         player,
-                        ClientCommandC2SPacket.Mode.START_FALL_FLYING,
+                        ServerboundPlayerCommandPacket.Action.START_FALL_FLYING,
                     )
-                player.networkHandler?.sendPacket(packet)
+                player.connection?.send(packet)
             }
         }
-        val cancelKey = options.sprintKey.isPressed && options.sneakKey.isPressed
-        if (keepFly.value && !player.isGliding && !cancelKey) {
+        val cancelKey = options.keySprint.isDown && options.keyShift.isDown
+        if (keepFly.value && !player.isFallFlying && !cancelKey) {
             val packet =
-                ClientCommandC2SPacket(
+                ServerboundPlayerCommandPacket(
                     player,
-                    ClientCommandC2SPacket.Mode.START_FALL_FLYING,
+                    ServerboundPlayerCommandPacket.Action.START_FALL_FLYING,
                 )
-            player.networkHandler?.sendPacket(packet)
+            player.connection?.send(packet)
         }
     }
 
-    private fun controlAccelerationSpeed(client: MinecraftClient) {
+    private fun controlAccelerationSpeed(client: Minecraft) {
         val player = client.player ?: return
-        val yaw = toRadians(player.yaw)
-        val velocity = player.velocity
+        val yaw = toRadians(player.yRot)
+        val velocity = player.deltaMovement
         val movementPower = 0.05 + power.value / 100.0
         val forwardVelocity =
-            Vec3d(
+            Vec3(
                 -sin(yaw) * movementPower,
                 0.0,
                 cos(yaw) * movementPower,
             )
-        if (client.options.forwardKey.isPressed) {
-            player.velocity = velocity.add(forwardVelocity)
+        if (client.options.keyUp.isDown) {
+            player.setDeltaMovement(velocity.add(forwardVelocity))
         }
-        if (client.options.backKey.isPressed) {
-            player.velocity = velocity.subtract(forwardVelocity)
+        if (client.options.keyDown.isDown) {
+            player.setDeltaMovement(velocity.subtract(forwardVelocity))
         }
     }
 
-    private fun controlAccelerationHeight(client: MinecraftClient) {
+    private fun controlAccelerationHeight(client: Minecraft) {
         val player = client.player ?: return
-        val velocity = player.velocity
+        val velocity = player.deltaMovement
         val movementPower = 0.06 + power.value / 100
         val gravity = 0.02
-        if (client.options.jumpKey.isPressed) {
-            player.setVelocity(velocity.x, velocity.y + movementPower + gravity, velocity.z)
+        if (client.options.keyJump.isDown) {
+            player.setDeltaMovement(velocity.x, velocity.y + movementPower + gravity, velocity.z)
         }
-        if (client.options.sneakKey.isPressed) {
-            player.setVelocity(velocity.x, velocity.y - movementPower + gravity, velocity.z)
+        if (client.options.keyShift.isDown) {
+            player.setDeltaMovement(velocity.x, velocity.y - movementPower + gravity, velocity.z)
         }
     }
 
-    private fun applyAccelerationHyperBoost(client: MinecraftClient) {
+    private fun applyAccelerationHyperBoost(client: Minecraft) {
         val player = client.player ?: return
-        val yaw = toRadians(player.yaw)
-        val velocity = player.velocity
+        val yaw = toRadians(player.yRot)
+        val velocity = player.deltaMovement
         val movementPower = 0.3 + power.value / 100.0
         // HyperBoost: Significantly increase forward speed and add slight upward boost
         val hyperBoostVelocity =
-            Vec3d(
+            Vec3(
                 -sin(yaw) * movementPower, // Increased speed (0.05 -> 0.3)
                 0.1, // Slight upward boost
                 cos(yaw) * movementPower, // Increased speed (0.05 -> 0.3)
             )
-        player.velocity = velocity.add(hyperBoostVelocity)
+        player.setDeltaMovement(velocity.add(hyperBoostVelocity))
     }
 
     /**
@@ -152,56 +152,56 @@ class SuperFly : ConfigurableFeature(initialEnabled = false) {
      * - ジャンプキー: 真上へ移動 (ワールドY+)
      * - スニークキー (Shift): 即座に停止 (急停止)
      */
-    private fun controlRocket(client: MinecraftClient) {
+    private fun controlRocket(client: Minecraft) {
         val player = client.player ?: return
         val options = client.options ?: return
         // power.valueに応じて速度を設定します。2.0を乗算してデフォルトの速度を調整します。
         val movementMultiplier = power.value * 2.0
 
         // SHIFTキー (Sneak Key) が押されている場合、速度をゼロにして即座に停止します。
-        if (options.sneakKey.isPressed) {
-            player.velocity = Vec3d.ZERO
+        if (options.keyShift.isDown) {
+            player.setDeltaMovement(Vec3.ZERO)
             return
         }
 
-        val yaw = toRadians(player.yaw)
+        val yaw = toRadians(player.yRot)
 
-        var moveVector = Vec3d.ZERO
+        var moveVector = Vec3.ZERO
         var moving = false
 
         // 前後移動 (W/S) - 視線方向
-        if (options.forwardKey.isPressed || options.backKey.isPressed) {
+        if (options.keyUp.isDown || options.keyDown.isDown) {
             // CameraRollを使用して、ピッチ（上下方向）も考慮した視線方向のベクトルを取得
-            val forwardDirection = CameraRoll(player.yaw.toDouble(), player.pitch.toDouble()).vec()
-            if (options.forwardKey.isPressed) {
+            val forwardDirection = CameraRoll(player.yRot.toDouble(), player.xRot.toDouble()).vec()
+            if (options.keyUp.isDown) {
                 moveVector = moveVector.add(forwardDirection)
             }
-            if (options.backKey.isPressed) {
+            if (options.keyDown.isDown) {
                 moveVector = moveVector.subtract(forwardDirection)
             }
             moving = true
         }
 
         // 左右移動 (A/D) - 水平方向のストレイフ
-        if (options.leftKey.isPressed || options.rightKey.isPressed) {
+        if (options.keyLeft.isDown || options.keyRight.isDown) {
             // 水平方向の左右移動ベクトルを計算 (視線方向のYawに90度回転)
             // rightX = cos(yaw), rightZ = sin(yaw)
             val strafeX = cos(yaw).toDouble()
             val strafeZ = sin(yaw).toDouble()
-            val strafeVec = Vec3d(strafeX, 0.0, strafeZ)
+            val strafeVec = Vec3(strafeX, 0.0, strafeZ)
 
-            if (options.rightKey.isPressed) {
+            if (options.keyRight.isDown) {
                 moveVector = moveVector.subtract(strafeVec)
             }
-            if (options.leftKey.isPressed) {
+            if (options.keyLeft.isDown) {
                 moveVector = moveVector.add(strafeVec)
             }
             moving = true
         }
 
         // 上移動 (Jump Key) - 真上 (ワールドY軸)
-        if (options.jumpKey.isPressed) {
-            moveVector = moveVector.add(Vec3d(0.0, 1.0, 0.0))
+        if (options.keyJump.isDown) {
+            moveVector = moveVector.add(Vec3(0.0, 1.0, 0.0))
             moving = true
         }
 
@@ -209,17 +209,17 @@ class SuperFly : ConfigurableFeature(initialEnabled = false) {
         if (moving) {
             // 速度ベクトルを正規化し、設定されたパワーを適用
             // 正規化することで、斜めや複数キー同時押しの場合でも一定の速度を保ちます
-            val finalVelocity = moveVector.normalize().multiply(movementMultiplier)
-            player.velocity = finalVelocity
+            val finalVelocity = moveVector.normalize().scale(movementMultiplier)
+            player.setDeltaMovement(finalVelocity)
         } else {
             // 移動キーが何も押されていない場合 (スニークキーは上記で処理済み)、
             // 新しい速度を設定しないことで、ゲームの物理演算（重力、空気抵抗）に速度の減衰を任せます。
         }
     }
 
-    private fun controlCreativeFlight(client: MinecraftClient) {
+    private fun controlCreativeFlight(client: Minecraft) {
         val player = client.player ?: return
-        if (!player.isGliding) return
+        if (!player.isFallFlying) return
         val options = client.options ?: return
         val baseSpeed = power.value
         val boostMultiplier = if (player.isSprinting) 2.0 else 1.0 // スプリント（Ctrl）で速度ブースト
@@ -229,14 +229,14 @@ class SuperFly : ConfigurableFeature(initialEnabled = false) {
         var deltaZ = 0.0
 
         // 2. 移動キーのチェック
-        if (options.forwardKey.isPressed) deltaZ += 1.0
-        if (options.backKey.isPressed) deltaZ -= 1.0
-        if (options.leftKey.isPressed) deltaX += 1.0
-        if (options.rightKey.isPressed) deltaX -= 1.0
+        if (options.keyUp.isDown) deltaZ += 1.0
+        if (options.keyDown.isDown) deltaZ -= 1.0
+        if (options.keyLeft.isDown) deltaX += 1.0
+        if (options.keyRight.isDown) deltaX -= 1.0
 
         // 上下移動 (Jump Key for Up, Sneak Key for Down)
-        if (options.jumpKey.isPressed) deltaY += 1.0
-        if (options.sneakKey.isPressed) deltaY -= 1.0
+        if (options.keyJump.isDown) deltaY += 1.0
+        if (options.keyShift.isDown) deltaY -= 1.0
 
         // 移動ベクトルを正規化 (斜め移動時に速くなりすぎないように)
         val magnitude = kotlin.math.sqrt(deltaX * deltaX + deltaZ * deltaZ + deltaY * deltaY)
@@ -248,7 +248,7 @@ class SuperFly : ConfigurableFeature(initialEnabled = false) {
 
         // 3. プレイヤーの視線方向に合わせて水平移動ベクトルを回転
         // Yaw (Y軸回転) をラジアンに変換
-        val yawRadians = toRadians(player.yaw)
+        val yawRadians = toRadians(player.yRot)
 
         // Yawに基づいて水平方向の速度をワールド座標に変換 (FreeCameraのロジックと同様)
         val velocityX = deltaX * cos(yawRadians) - deltaZ * sin(yawRadians)
@@ -259,11 +259,12 @@ class SuperFly : ConfigurableFeature(initialEnabled = false) {
         // クリエイティブ飛行は、速度を設定するだけでなく、プレイヤーの慣性（既存の速度）を徐々に減衰させる特性があります。
         // 完全なバニラ動作をエミュレートするには、既存の速度を考慮しつつ新しい速度を加える必要があります。
         // ここでは単純に速度を設定することで、常に一定の速度で移動できるようにします。
-        player.velocity =
-            Vec3d(
+        player.setDeltaMovement(
+            Vec3(
                 velocityX * currentSpeed,
                 deltaY * currentSpeed + gravity,
                 velocityZ * currentSpeed,
-            )
+            ),
+        )
     }
 }

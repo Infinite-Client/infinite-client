@@ -1,6 +1,6 @@
 package org.infinite.global.rendering.theme
 
-import net.minecraft.client.gui.widget.ClickableWidget
+import net.minecraft.client.gui.components.AbstractWidget
 import org.infinite.InfiniteClient
 import org.infinite.global.ConfigurableGlobalFeature
 import org.infinite.gui.widget.ThemeTileButton
@@ -38,7 +38,7 @@ class ThemeSetting : ConfigurableGlobalFeature() {
         InfiniteClient.currentTheme = themeSetting.value
     }
 
-    override fun getCustomWidgets(): List<ClickableWidget> {
+    override fun getCustomWidgets(): List<AbstractWidget> {
         val buttons =
             InfiniteClient.themes.map { theme ->
                 ThemeTileButton(

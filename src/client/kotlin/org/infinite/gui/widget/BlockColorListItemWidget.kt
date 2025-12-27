@@ -1,17 +1,17 @@
 package org.infinite.gui.widget
 
-import net.minecraft.block.Blocks
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.screen.narration.NarrationPart
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.item.ItemStack
-import net.minecraft.item.Items
-import net.minecraft.registry.Registries
-import net.minecraft.text.Text
-import net.minecraft.util.Identifier
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarratedElementType
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.world.level.block.Blocks
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.drawBorder
@@ -24,8 +24,8 @@ class BlockColorListItemWidget(
     private val blockId: String,
     private val color: Int, // ARGB color
     private val onRemove: (String) -> Unit,
-) : ClickableWidget(x, y, width, height, Text.literal(blockId)) {
-    private val textRenderer = MinecraftClient.getInstance().textRenderer
+) : AbstractWidget(x, y, width, height, Component.literal(blockId)) {
+    private val textRenderer = Minecraft.getInstance().font
     private val padding = 8
     private val iconSize = 16
     private val iconPadding = 2
@@ -46,24 +46,24 @@ class BlockColorListItemWidget(
      */
     private fun getItemStackFromId(id: String): ItemStack =
         try {
-            val identifier = Identifier.of(id)
-            val block = Registries.BLOCK.get(identifier)
+            val identifier = Identifier.parse(id)
+            val block = BuiltInRegistries.BLOCK.getValue(identifier)
             if (block != Blocks.AIR) {
-                block.asItem().defaultStack
+                block.asItem().defaultInstance
             } else {
-                Items.BARRIER.defaultStack
+                Items.BARRIER.defaultInstance
             }
         } catch (_: Exception) {
-            Items.BARRIER.defaultStack
+            Items.BARRIER.defaultInstance
         }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         // 1. アイテム全体の背景 (ホバー時のみ)
         if (this.isHovered) {
@@ -84,12 +84,12 @@ class BlockColorListItemWidget(
 
         // 2. アイコンの描画
         val itemStack = getItemStackFromId(blockId)
-        context.drawItem(itemStack, iconX, iconY)
+        context.renderItem(itemStack, iconX, iconY)
         // 3. テキストの描画
         val textX = iconX + iconTotalWidth
         val textY = y + this.height / 2 - 4
         graphics2D.drawText(
-            Text.literal(blockId),
+            Component.literal(blockId),
             textX,
             textY,
             InfiniteClient
@@ -99,7 +99,7 @@ class BlockColorListItemWidget(
         )
 
         // 4. カラーボックスの描画
-        val colorBoxX = textX + textRenderer.getWidth(blockId) + padding
+        val colorBoxX = textX + textRenderer.width(blockId) + padding
         val colorBoxY = y + (this.height - colorBoxSize) / 2
         context.fill(
             colorBoxX,
@@ -177,7 +177,7 @@ class BlockColorListItemWidget(
      * ★ 修正済み: Click オブジェクトを受け取る形式に再修正
      */
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         // ClickableWidget の mouseClicked は、既に this.isMouseOver(click.x(), click.y()) をチェックしている。
@@ -195,16 +195,16 @@ class BlockColorListItemWidget(
         return super.mouseClicked(click, doubled)
     }
 
-    override fun mouseReleased(click: Click): Boolean = super.mouseReleased(click)
+    override fun mouseReleased(click: MouseButtonEvent): Boolean = super.mouseReleased(click)
 
     override fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
     ): Boolean = super.mouseDragged(click, offsetX, offsetY)
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        builder.put(NarrationPart.TITLE, Text.literal("Block Color List Item: $blockId"))
-        builder.put(NarrationPart.HINT, Text.literal("Press Enter to remove this block."))
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        builder.add(NarratedElementType.TITLE, Component.literal("Block Color List Item: $blockId"))
+        builder.add(NarratedElementType.HINT, Component.literal("Press Enter to remove this block."))
     }
 }

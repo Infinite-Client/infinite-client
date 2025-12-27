@@ -1,22 +1,22 @@
 package org.infinite.mixin.features.movement.builder;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameMode;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import org.infinite.InfiniteClient;
 import org.infinite.features.movement.builder.Builder;
 import org.jetbrains.annotations.NotNull;
@@ -28,31 +28,31 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(ClientPlayerInteractionManager.class)
+@Mixin(MultiPlayerGameMode.class)
 public class BuilderMixin {
-  @Shadow private GameMode gameMode;
+  @Shadow private GameType localPlayerMode;
 
   // エンティティ攻撃パケットをキャンセル
-  @Inject(method = "attackEntity", at = @At("HEAD"), cancellable = true)
-  private void infinite$cancelAttackEntity(PlayerEntity player, Entity target, CallbackInfo ci) {
+  @Inject(method = "attack", at = @At("HEAD"), cancellable = true)
+  private void infinite$cancelAttackEntity(Player player, Entity target, CallbackInfo ci) {
     if (InfiniteClient.INSTANCE.isFeatureEnabled(Builder.class)) {
       ci.cancel(); // Builderが有効な場合、エンティティ攻撃をキャンセル
     }
   }
 
   // ブロックインタラクト時に、Builder機能が有効であればBlockHitResultを変更
-  @Inject(method = "interactBlock", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "useItemOn", at = @At("HEAD"), cancellable = true)
   private void infinite$redirectInteractBlock(
-      ClientPlayerEntity player,
-      Hand hand,
+      LocalPlayer player,
+      InteractionHand hand,
       BlockHitResult hitResult,
-      CallbackInfoReturnable<ActionResult> cir) {
+      CallbackInfoReturnable<InteractionResult> cir) {
     Builder builderFeature = InfiniteClient.INSTANCE.getFeature(Builder.class);
     if (builderFeature != null && builderFeature.isEnabled()) {
       BlockHitResult modifiedHitResult = getBlockHitResult(hitResult, builderFeature);
 
       // 修正されたBlockHitResultを使用して内部のインタラクトブロックメソッドを呼び出す
-      ActionResult result = interactBlockInternal(player, hand, modifiedHitResult);
+      InteractionResult result = interactBlockInternal(player, hand, modifiedHitResult);
       cir.setReturnValue(result);
       cir.cancel(); // Cancel the original method as we've handled it
     }
@@ -65,69 +65,70 @@ public class BuilderMixin {
     Direction currentOffset = builderFeature.getCurrentPlacementOffset();
 
     // 新しいBlockPosを計算
-    BlockPos newPos = originalPos.offset(currentOffset);
+    BlockPos newPos = originalPos.relative(currentOffset);
 
     // 新しいBlockHitResultを作成 (面は元のヒット結果の面を使用)
     return new BlockHitResult(
-        new Vec3d(newPos.getX() + 0.5, newPos.getY() + 0.5, newPos.getZ() + 0.5),
-        hitResult.getSide(), // 元のヒット面のまま
+        new Vec3(newPos.getX() + 0.5, newPos.getY() + 0.5, newPos.getZ() + 0.5),
+        hitResult.getDirection(), // 元のヒット面のまま
         newPos,
-        hitResult.isInsideBlock());
+        hitResult.isInside());
   }
 
   @Unique
-  private MinecraftClient client() {
-    return MinecraftClient.getInstance();
+  private Minecraft client() {
+    return Minecraft.getInstance();
   }
 
   @Unique
-  private ActionResult interactBlockInternal(
-      ClientPlayerEntity player, Hand hand, BlockHitResult hitResult) {
+  private InteractionResult interactBlockInternal(
+      LocalPlayer player, InteractionHand hand, BlockHitResult hitResult) {
     BlockPos blockPos = hitResult.getBlockPos();
-    ItemStack itemStack = player.getStackInHand(hand);
-    if (this.gameMode == GameMode.SPECTATOR) {
-      return ActionResult.CONSUME;
+    ItemStack itemStack = player.getItemInHand(hand);
+    if (this.localPlayerMode == GameType.SPECTATOR) {
+      return InteractionResult.CONSUME;
     } else {
-      boolean bl = !player.getMainHandStack().isEmpty() || !player.getOffHandStack().isEmpty();
-      boolean bl2 = player.shouldCancelInteraction() && bl;
-      ClientWorld world = client().world;
-      ClientPlayNetworkHandler networkHandler = client().getNetworkHandler();
+      boolean bl = !player.getMainHandItem().isEmpty() || !player.getOffhandItem().isEmpty();
+      boolean bl2 = player.isSecondaryUseActive() && bl;
+      ClientLevel world = client().level;
+      ClientPacketListener networkHandler = client().getConnection();
       if (!bl2 && world != null && networkHandler != null) {
         BlockState blockState = world.getBlockState(blockPos);
-        if (!networkHandler.hasFeature(blockState.getBlock().getRequiredFeatures())) {
-          return ActionResult.FAIL;
+        if (!networkHandler.isFeatureEnabled(blockState.getBlock().requiredFeatures())) {
+          return InteractionResult.FAIL;
         }
 
-        ActionResult actionResult =
-            blockState.onUseWithItem(
-                player.getStackInHand(hand), client().world, player, hand, hitResult);
-        if (actionResult.isAccepted()) {
+        InteractionResult actionResult =
+            blockState.useItemOn(
+                player.getItemInHand(hand), client().level, player, hand, hitResult);
+        if (actionResult.consumesAction()) {
           return actionResult;
         }
 
-        if (actionResult instanceof ActionResult.PassToDefaultBlockAction
-            && hand == Hand.MAIN_HAND) {
-          ActionResult actionResult2 = blockState.onUse(client().world, player, hitResult);
-          if (actionResult2.isAccepted()) {
+        if (actionResult instanceof InteractionResult.TryEmptyHandInteraction
+            && hand == InteractionHand.MAIN_HAND) {
+          InteractionResult actionResult2 =
+              blockState.useWithoutItem(client().level, player, hitResult);
+          if (actionResult2.consumesAction()) {
             return actionResult2;
           }
         }
       }
 
-      if (!itemStack.isEmpty() && !player.getItemCooldownManager().isCoolingDown(itemStack)) {
-        ItemUsageContext itemUsageContext = new ItemUsageContext(player, hand, hitResult);
-        ActionResult actionResult3;
-        if (player.isInCreativeMode()) {
+      if (!itemStack.isEmpty() && !player.getCooldowns().isOnCooldown(itemStack)) {
+        UseOnContext itemUsageContext = new UseOnContext(player, hand, hitResult);
+        InteractionResult actionResult3;
+        if (player.hasInfiniteMaterials()) {
           int i = itemStack.getCount();
-          actionResult3 = itemStack.useOnBlock(itemUsageContext);
+          actionResult3 = itemStack.useOn(itemUsageContext);
           itemStack.setCount(i);
         } else {
-          actionResult3 = itemStack.useOnBlock(itemUsageContext);
+          actionResult3 = itemStack.useOn(itemUsageContext);
         }
 
         return actionResult3;
       } else {
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
       }
     }
   }

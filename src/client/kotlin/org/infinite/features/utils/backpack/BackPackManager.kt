@@ -1,7 +1,7 @@
 package org.infinite.features.utils.backpack
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.item.ItemStack
+import net.minecraft.client.Minecraft
+import net.minecraft.world.item.ItemStack
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
@@ -49,10 +49,10 @@ class BackPackManager : ConfigurableFeature() {
 
     fun updateSlotsInfo(): List<ItemStack> {
         val player = player ?: return emptyList()
-        previousInventory = (0 until player.inventory.size()).map { player.inventory.getStack(it).copy() }
+        previousInventory = (0 until player.inventory.containerSize).map { player.inventory.getItem(it).copy() }
         emptyHotbarSlots =
             (0 until 9)
-                .filter { player.inventory.getStack(it).isEmpty }
+                .filter { player.inventory.getItem(it).isEmpty }
                 .toSet()
         return previousInventory
     }
@@ -74,9 +74,9 @@ class BackPackManager : ConfigurableFeature() {
         val player = player ?: return
         val world = world ?: return
         // --- 1. 定期ソート機能 ---
-        if (sortEnabled.value && world.time.minus(lastSortTick) >= sortInterval.value) {
+        if (sortEnabled.value && world.gameTime.minus(lastSortTick) >= sortInterval.value) {
             InventoryManager.sort()
-            lastSortTick = world.time
+            lastSortTick = world.gameTime
             updateSlotsInfo()
         }
 
@@ -84,7 +84,7 @@ class BackPackManager : ConfigurableFeature() {
         if (autoMoveToBackpackEnabled.value && emptyHotbarSlots.isNotEmpty()) {
             // ホットバーのスロット (0-8) をチェック
             for (i in 0 until 9) {
-                val currentStack = player.inventory.getStack(i)
+                val currentStack = player.inventory.getItem(i)
 
                 // 本来空であるべきスロットに、アイテムが入っている場合
                 if (i in emptyHotbarSlots && !currentStack.isEmpty) {
@@ -129,7 +129,7 @@ class BackPackManager : ConfigurableFeature() {
     }
 
     override fun onTick() {
-        val currentScreen = client.currentScreen
+        val currentScreen = client.screen
         if (isInventoryOpen && currentScreen == null) {
             updateSlotsInfo()
             return
@@ -144,12 +144,12 @@ class BackPackManager : ConfigurableFeature() {
 
     override fun onEnabled() {
         // Featureが有効になったときにインベントリの状態を初期化
-        val player = MinecraftClient.getInstance().player
+        val player = Minecraft.getInstance().player
         previousInventory =
-            (0 until (player?.inventory?.size() ?: 0)).map {
-                player?.inventory?.getStack(it)?.copy() ?: ItemStack.EMPTY
+            (0 until (player?.inventory?.containerSize ?: 0)).map {
+                player?.inventory?.getItem(it)?.copy() ?: ItemStack.EMPTY
             }
-        isInventoryOpen = (MinecraftClient.getInstance().currentScreen != null)
+        isInventoryOpen = (Minecraft.getInstance().screen != null)
         updateSlotsInfo() // 有効化時にも初期化
     }
 }

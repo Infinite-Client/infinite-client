@@ -1,5 +1,5 @@
 package org.infinite.global
-import net.minecraft.client.gui.widget.ClickableWidget
+import net.minecraft.client.gui.components.AbstractWidget
 import org.infinite.feature.ConfigurableFeature
 
 abstract class ConfigurableGlobalFeature : ConfigurableFeature(true) {
@@ -7,5 +7,5 @@ abstract class ConfigurableGlobalFeature : ConfigurableFeature(true) {
 
     open fun onShutdown() {}
 
-    open fun getCustomWidgets(): List<ClickableWidget> = emptyList()
+    open fun getCustomWidgets(): List<AbstractWidget> = emptyList()
 }

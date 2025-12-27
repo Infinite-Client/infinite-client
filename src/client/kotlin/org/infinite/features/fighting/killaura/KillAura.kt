@@ -1,7 +1,7 @@
 package org.infinite.features.fighting.killaura
 
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.fighting.lockon.LockOn
@@ -128,11 +128,12 @@ class KillAura : ConfigurableFeature(initialEnabled = false) {
         val priority = prioritySetting.value
 
         val attackableEntities =
-            world.entities
+            world
+                .entitiesForRendering()
                 .filter {
                     it != player &&
                         player.distanceTo(it) <= range && it is LivingEntity &&
-                        ((it is PlayerEntity && attackPlayers) || (it !is PlayerEntity && attackMobs))
+                        ((it is Player && attackPlayers) || (it !is Player && attackMobs))
                 }.map { it as LivingEntity }
                 .sortedBy {
                     when (priority) {
@@ -146,7 +147,7 @@ class KillAura : ConfigurableFeature(initialEnabled = false) {
             return
         }
         // 3. 攻撃実行
-        if (player.getAttackCooldownProgress(0.0f) >= 1.0f || attackFrequency != 0) {
+        if (player.getAttackStrengthScale(0.0f) >= 1.0f || attackFrequency != 0) {
             execAttack(attackableEntities)
             val randomDelay = if (randomizer > 0) Random.nextInt(0, randomizer + 1) else 0
             nextAttackTick = tickCount + attackFrequency + randomDelay
@@ -157,8 +158,8 @@ class KillAura : ConfigurableFeature(initialEnabled = false) {
         val player = player ?: return
         val attackableEntities = entities.filter { !it.isInvulnerable && it.isAlive }
         if (attackableEntities.isNotEmpty()) {
-            player.swingHand(player.activeHand)
-            attackableEntities.forEach { interactionManager?.attackEntity(player, it) }
+            player.swing(player.usedItemHand)
+            attackableEntities.forEach { interactionManager?.attack(player, it) }
         }
     }
 }

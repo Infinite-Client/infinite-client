@@ -1,9 +1,9 @@
 package org.infinite.libs.client.aim.task
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.util.math.MathHelper
-import net.minecraft.util.math.Vec3d
+import net.minecraft.client.Minecraft
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.util.Mth
+import net.minecraft.world.phys.Vec3
 import org.infinite.libs.client.aim.camera.CameraRoll
 import org.infinite.libs.client.aim.task.condition.AimTaskConditionInterface
 import org.infinite.libs.client.aim.task.condition.AimTaskConditionReturn
@@ -23,22 +23,24 @@ open class AimTask(
     val onFailure: () -> Unit = {},
 ) {
     private fun mouseSensitivity(): Double =
-        MinecraftClient
+        Minecraft
             .getInstance()
-            .options.mouseSensitivity.value
+            .options
+            .sensitivity()
+            .get()
 
     companion object {
-        fun calcLookAt(target: Vec3d): CameraRoll {
-            val vec3d: Vec3d = MinecraftClient.getInstance().player!!.eyePos
+        fun calcLookAt(target: Vec3): CameraRoll {
+            val vec3d: Vec3 = Minecraft.getInstance().player!!.eyePosition
             val d = target.x - vec3d.x
             val e = target.y - vec3d.y
             val f = target.z - vec3d.z
             val g = sqrt(d * d + f * f)
             val pitch =
-                MathHelper.wrapDegrees(
+                Mth.wrapDegrees(
                     (
                         -(
-                            MathHelper.atan2(
+                            Mth.atan2(
                                 e,
                                 g,
                             ) * (180.0 / Math.PI)
@@ -46,9 +48,9 @@ open class AimTask(
                     ),
                 )
             val yaw =
-                MathHelper.wrapDegrees(
+                Mth.wrapDegrees(
                     (
-                        MathHelper.atan2(
+                        Mth.atan2(
                             f,
                             d,
                         ) * (180.0 / Math.PI)
@@ -75,7 +77,7 @@ open class AimTask(
      * @param client MinecraftClientインスタンス
      * @return エイム処理の結果
      */
-    fun process(client: MinecraftClient): AimProcessResult {
+    fun process(client: Minecraft): AimProcessResult {
         val currentTime = System.currentTimeMillis()
         duration = currentTime - time
         time = currentTime
@@ -184,33 +186,33 @@ open class AimTask(
      * @return (Target Yaw, Target Pitch)
      */
     private fun calculateRotation(
-        player: ClientPlayerEntity,
-        targetPos: Vec3d,
+        player: LocalPlayer,
+        targetPos: Vec3,
     ): CameraRoll {
         val t = calcLookAt(targetPos)
         val c = playerRoll(player)
         return (t - c).diffNormalize()
     }
 
-    private fun playerRoll(player: ClientPlayerEntity): CameraRoll = CameraRoll(player.yaw.toDouble(), player.pitch.toDouble())
+    private fun playerRoll(player: LocalPlayer): CameraRoll = CameraRoll(player.yRot.toDouble(), player.xRot.toDouble())
 
     /**
      * 進行度に基づき、開始角度から目標角度へプレイヤーの視線を補間・設定します。
      */
     private fun setAim(
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         roll: CameraRoll,
     ) {
-        player.yaw = roll.yaw.toFloat()
-        player.pitch = roll.pitch.toFloat()
+        player.setYRot(roll.yaw.toFloat())
+        player.setXRot(roll.pitch.toFloat())
     }
 
     private fun rollAim(
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         roll: CameraRoll,
     ) {
-        val currentYaw = player.yaw
-        val currentPitch = player.pitch
+        val currentYaw = player.yRot
+        val currentPitch = player.xRot
         setAim(player, CameraRoll(currentYaw + roll.yaw, currentPitch + roll.pitch))
     }
 }

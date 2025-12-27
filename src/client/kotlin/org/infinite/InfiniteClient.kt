@@ -1,5 +1,6 @@
 package org.infinite
 
+import com.mojang.blaze3d.resource.GraphicsResourceAllocator
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
@@ -7,12 +8,13 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.render.RenderTickCounter
-import net.minecraft.text.MutableText
-import net.minecraft.text.Text
-import net.minecraft.util.Formatting
-import net.minecraft.util.math.ColorHelper
+import net.minecraft.ChatFormatting
+import net.minecraft.client.Camera
+import net.minecraft.client.DeltaTracker
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.MutableComponent
+import net.minecraft.util.ARGB
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.FeatureCategory
 import org.infinite.features.automatic.AutomaticFeatureCategory
@@ -102,12 +104,12 @@ object InfiniteClient : ClientModInitializer {
         for (category in featureCategories) {
             for (feature in category.features) {
                 val key = feature.generateKey(category.name)
-                if (Text.translatable(key).string == key) {
+                if (Component.translatable(key).string == key) {
                     result.add(key)
                 }
                 for (setting in feature.instance.settings) {
                     val key = setting.generateKey(category.name, feature.name, setting.name)
-                    if (Text.translatable(key).string == key) {
+                    if (Component.translatable(key).string == key) {
                         result.add(key)
                     }
                 }
@@ -116,12 +118,12 @@ object InfiniteClient : ClientModInitializer {
         for (category in globalFeatureCategories) {
             for (feature in category.features) {
                 val key = feature.generateKey(category.name)
-                if (Text.translatable(key).string == key) {
+                if (Component.translatable(key).string == key) {
                     result.add(key)
                 }
                 for (setting in feature.instance.settings) {
                     val key = setting.generateKey(category.name, feature.name, setting.name)
-                    if (Text.translatable(key).string == key) {
+                    if (Component.translatable(key).string == key) {
                         result.add(key)
                     }
                 }
@@ -362,7 +364,7 @@ object InfiniteClient : ClientModInitializer {
         }
     }
 
-    fun rainbowText(text: String): MutableText {
+    fun rainbowText(text: String): MutableComponent {
         val colors =
             intArrayOf(
                 0xFFFF0000.toInt(),
@@ -374,7 +376,7 @@ object InfiniteClient : ClientModInitializer {
             )
 
         val totalLength = text.length
-        val rainbowText = Text.empty()
+        val rainbowText = Component.empty()
 
         for (i in text.indices) {
             val progress = i.toFloat() / (totalLength - 1).toFloat()
@@ -395,10 +397,10 @@ object InfiniteClient : ClientModInitializer {
             val g = (startG * (1 - segmentProgress) + endG * segmentProgress).toInt()
             val b = (startB * (1 - segmentProgress) + endB * segmentProgress).toInt()
 
-            val interpolatedColor = ColorHelper.getArgb(0xFF, r, g, b)
+            val interpolatedColor = ARGB.color(0xFF, r, g, b)
 
             rainbowText.append(
-                Text.literal(text[i].toString()).styled { style ->
+                Component.literal(text[i].toString()).withStyle { style ->
                     style.withColor(interpolatedColor)
                 },
             )
@@ -410,24 +412,24 @@ object InfiniteClient : ClientModInitializer {
     private fun createPrefixedMessage(
         prefixType: String,
         textColor: Int,
-    ): MutableText =
-        Text
+    ): MutableComponent =
+        Component
             .literal("[")
-            .formatted(Formatting.BOLD)
-            .append(rainbowText("Infinite Client").formatted(Formatting.BOLD))
-            .append(Text.literal(prefixType).styled { style -> style.withColor(textColor) })
-            .append(Text.literal("]: ").formatted(Formatting.RESET))
+            .withStyle(ChatFormatting.BOLD)
+            .append(rainbowText("Infinite Client").withStyle(ChatFormatting.BOLD))
+            .append(Component.literal(prefixType).withStyle { style -> style.withColor(textColor) })
+            .append(Component.literal("]: ").withStyle(ChatFormatting.RESET))
 
     fun log(text: String) {
         val message =
             createPrefixedMessage(
                 "",
                 theme().colors.foregroundColor,
-            ).append(Text.literal(text).styled { style -> style.withColor(theme().colors.foregroundColor) })
+            ).append(Component.literal(text).withStyle { style -> style.withColor(theme().colors.foregroundColor) })
         LogQueue.enqueueMessage(message) // キューに追加
     }
 
-    fun log(text: Text) {
+    fun log(text: Component) {
         val message = createPrefixedMessage("", theme().colors.foregroundColor).append(text)
         LogQueue.enqueueMessage(message)
     }
@@ -437,7 +439,7 @@ object InfiniteClient : ClientModInitializer {
             createPrefixedMessage(
                 " - Info ",
                 theme().colors.infoColor,
-            ).append(Text.literal(text).styled { style -> style.withColor(theme().colors.infoColor) })
+            ).append(Component.literal(text).withStyle { style -> style.withColor(theme().colors.infoColor) })
         LogQueue.enqueueMessage(message) // キューに追加
     }
 
@@ -446,7 +448,7 @@ object InfiniteClient : ClientModInitializer {
             createPrefixedMessage(
                 " - Warn ",
                 theme().colors.warnColor,
-            ).append(Text.literal(text).styled { style -> style.withColor(theme().colors.warnColor) })
+            ).append(Component.literal(text).withStyle { style -> style.withColor(theme().colors.warnColor) })
         LogQueue.enqueueMessage(message) // キューに追加
     }
 
@@ -455,7 +457,7 @@ object InfiniteClient : ClientModInitializer {
             createPrefixedMessage(
                 " - Error",
                 theme().colors.errorColor,
-            ).append(Text.literal(text).styled { style -> style.withColor(theme().colors.errorColor) })
+            ).append(Component.literal(text).withStyle { style -> style.withColor(theme().colors.errorColor) })
         LogQueue.enqueueMessage(message) // キューに追加
     }
 
@@ -542,8 +544,8 @@ object InfiniteClient : ClientModInitializer {
     }
 
     fun handle2dGraphics(
-        context: DrawContext,
-        tickCounter: RenderTickCounter,
+        context: GuiGraphics,
+        tickCounter: DeltaTracker,
         timing: ConfigurableFeature.Timing,
     ) {
         val graphics2D = Graphics2D(context, tickCounter)
@@ -558,10 +560,10 @@ object InfiniteClient : ClientModInitializer {
     }
 
     fun handle3dGraphics(
-        allocator: net.minecraft.client.util.ObjectAllocator,
-        tickCounter: RenderTickCounter,
+        allocator: GraphicsResourceAllocator,
+        tickCounter: DeltaTracker,
         renderBlockOutline: Boolean,
-        camera: net.minecraft.client.render.Camera,
+        camera: Camera,
         positionMatrix: org.joml.Matrix4f,
         projectionMatrix: org.joml.Matrix4f,
         matrix4f2: org.joml.Matrix4f,

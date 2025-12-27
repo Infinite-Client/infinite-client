@@ -1,8 +1,8 @@
 package org.infinite.mixin.features.rendering.detailinfo;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BarrelBlockEntity;
-import net.minecraft.sound.SoundEvent;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.detailinfo.DetailInfo;
 import org.spongepowered.asm.mixin.Mixin;
@@ -46,7 +46,7 @@ public abstract class BarrelMixin {
 
   // アニメーションの停止 (setOpen)
   @Inject(
-      method = "setOpen",
+      method = "updateBlockState",
       at =
           @At(
               value = "HEAD",

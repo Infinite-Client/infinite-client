@@ -1,7 +1,7 @@
 package org.infinite
 
-import net.minecraft.text.Text
+import net.minecraft.network.chat.Component
 
 object Translation {
-    fun t(key: String): String = Text.translatable(key).string
+    fun t(key: String): String = Component.translatable(key).string
 }

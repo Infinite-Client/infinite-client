@@ -1,20 +1,20 @@
 package org.infinite.libs.graphics.render
 
-import net.minecraft.client.gl.RenderPipelines
-import net.minecraft.client.render.RenderLayer
-import net.minecraft.client.render.RenderSetup
+import net.minecraft.client.renderer.RenderPipelines
+import net.minecraft.client.renderer.rendertype.RenderSetup
+import net.minecraft.client.renderer.rendertype.RenderType
 
 object RenderResources {
-    private val normalLines: RenderLayer =
-        RenderLayer.of("infinite:lines", RenderSetup.builder(RenderPipelines.LINES).build())
-    private val espLines: RenderLayer =
-        RenderLayer.of("infinite:esp_lines", RenderSetup.builder(RenderPipelines.LINES_TRANSLUCENT).translucent().build())
-    private val solidLayer: RenderLayer =
-        RenderLayer.of("infinite:solid", RenderSetup.builder(RenderPipelines.GUI).translucent().build())
+    private val normalLines: RenderType =
+        RenderType.create("infinite:lines", RenderSetup.builder(RenderPipelines.LINES).createRenderSetup())
+    private val espLines: RenderType =
+        RenderType.create("infinite:esp_lines", RenderSetup.builder(RenderPipelines.LINES_TRANSLUCENT).sortOnUpload().createRenderSetup())
+    private val solidLayer: RenderType =
+        RenderType.create("infinite:solid", RenderSetup.builder(RenderPipelines.GUI).sortOnUpload().createRenderSetup())
 
-    fun renderLinedLayer(isOverDraw: Boolean): RenderLayer = if (isOverDraw) espLines else normalLines
+    fun renderLinedLayer(isOverDraw: Boolean): RenderType = if (isOverDraw) espLines else normalLines
 
     fun renderSolidLayer(
         @Suppress("UNUSED_PARAMETER") isOverDraw: Boolean,
-    ): RenderLayer = solidLayer
+    ): RenderType = solidLayer
 }

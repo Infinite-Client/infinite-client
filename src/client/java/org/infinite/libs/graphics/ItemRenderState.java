@@ -2,16 +2,16 @@ package org.infinite.libs.graphics;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.ScreenRect;
-import net.minecraft.client.gui.render.state.ItemGuiElementRenderState;
-import net.minecraft.client.render.item.KeyedItemRenderState;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.gui.render.state.GuiItemRenderState;
+import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3x2f;
 
 @Environment(EnvType.CLIENT)
-public final class ItemRenderState extends ItemGuiElementRenderState {
+public final class ItemRenderState extends GuiItemRenderState {
 
   // --- ItemRenderStateで追加・再定義するフィールド ---
   private final float floatX; // floatのX座標
@@ -22,8 +22,8 @@ public final class ItemRenderState extends ItemGuiElementRenderState {
 
   // ItemGuiElementRenderStateのフィールドを再定義 (accesswidenerを前提)
   // 親クラスのプライベートフィールドにアクセスできるため、ここで再計算した値を代入
-  @Nullable private final ScreenRect oversizedBounds;
-  @Nullable private final ScreenRect bounds;
+  @Nullable private final ScreenRectangle oversizedBounds;
+  @Nullable private final ScreenRectangle bounds;
 
   /**
    * ItemRenderStateのコンストラクタ。
@@ -40,44 +40,44 @@ public final class ItemRenderState extends ItemGuiElementRenderState {
   public ItemRenderState(
       String name,
       Matrix3x2f pose,
-      KeyedItemRenderState state,
+      TrackingItemStackRenderState state,
       float x,
       float y,
       float size,
       float alpha,
-      @Nullable ScreenRect scissor) {
+      @Nullable ScreenRectangle scissor) {
     // 親クラスのコンストラクタを呼び出す。
     // 親クラスのint x/yフィールドは、このクラスのfloatX/floatYに置き換えられることを前提とし、
     // 適切な整数値（ここでは切り捨て）を渡す。
-    super(name, pose, state, MathHelper.floor(x), MathHelper.floor(y), scissor);
+    super(name, pose, state, Mth.floor(x), Mth.floor(y), scissor);
     this.floatX = x;
     this.floatY = y;
     this.size = size;
-    this.alpha = MathHelper.clamp(alpha, 0.0F, 1.0F);
+    this.alpha = Mth.clamp(alpha, 0.0F, 1.0F);
     // floatX, floatY, size, alpha を使用して、boundsを再計算しフィールドを更新
     this.oversizedBounds =
-        this.state().isOversizedInGui()
+        this.itemStackRenderState().isOversizedInGui()
             ? this.createOversizedBounds(this.floatX, this.floatY, this.size)
             : null;
     this.bounds =
-        this.createBounds(
+        this.calculateBounds(
             this.oversizedBounds != null
                 ? this.oversizedBounds
-                : new ScreenRect(
-                    MathHelper.floor(this.floatX),
-                    MathHelper.floor(this.floatY),
-                    MathHelper.ceil(this.size),
-                    MathHelper.ceil(this.size)));
+                : new ScreenRectangle(
+                    Mth.floor(this.floatX),
+                    Mth.floor(this.floatY),
+                    Mth.ceil(this.size),
+                    Mth.ceil(this.size)));
   }
 
   /** サイズがデフォルト値(16.0F)で、アルファ値がデフォルト値(1.0F)のコンストラクタ。 */
   public ItemRenderState(
       String name,
       Matrix3x2f pose,
-      KeyedItemRenderState state,
+      TrackingItemStackRenderState state,
       float x,
       float y,
-      @Nullable ScreenRect scissor) {
+      @Nullable ScreenRectangle scissor) {
     this(name, pose, state, x, y, 16.0F, 1.0F, scissor);
   }
 
@@ -105,13 +105,13 @@ public final class ItemRenderState extends ItemGuiElementRenderState {
 
   @Override
   @Nullable
-  public ScreenRect oversizedBounds() {
+  public ScreenRectangle oversizedItemBounds() {
     return this.oversizedBounds;
   }
 
   @Override
   @Nullable
-  public ScreenRect bounds() {
+  public ScreenRectangle bounds() {
     return this.bounds;
   }
 
@@ -119,34 +119,34 @@ public final class ItemRenderState extends ItemGuiElementRenderState {
 
   /** 親クラスのプライベートメソッドをオーバーライド/再定義 float座標とfloatサイズに対応したboundsを計算 */
   @Nullable
-  private ScreenRect createOversizedBounds(float x, float y, float size) {
-    Box box = this.state().getModelBoundingBox();
+  private ScreenRectangle createOversizedBounds(float x, float y, float size) {
+    AABB box = this.itemStackRenderState().getModelBoundingBox();
 
     // sizeを基準にした大きさを計算
-    int i = MathHelper.ceil(box.getLengthX() * size);
-    int j = MathHelper.ceil(box.getLengthY() * size);
+    int i = Mth.ceil(box.getXsize() * size);
+    int j = Mth.ceil(box.getYsize() * size);
 
     if (i <= (int) size && j <= (int) size) {
       return null;
     } else {
       float f = (float) (box.minX * size);
       float g = (float) (box.maxY * size);
-      int k = MathHelper.floor(f);
-      int l = MathHelper.floor(g);
+      int k = Mth.floor(f);
+      int l = Mth.floor(g);
 
       // floatのx/yに整数オフセットを加える
-      int m = MathHelper.floor(x + (float) k + size / 2.0F);
-      int n = MathHelper.floor(y - (float) l + size / 2.0F);
+      int m = Mth.floor(x + (float) k + size / 2.0F);
+      int n = Mth.floor(y - (float) l + size / 2.0F);
 
-      return new ScreenRect(m, n, i, j);
+      return new ScreenRectangle(m, n, i, j);
     }
   }
 
   /** 親クラスのプライベートメソッドをオーバーライド/再定義 float座標とsizeを反映したScreenRectを作成 */
   @Nullable
-  public ScreenRect createBounds(ScreenRect rect) {
+  public ScreenRectangle calculateBounds(ScreenRectangle rect) {
     // pose() は親クラスのパブリックメソッドなのでアクセス可能
-    ScreenRect screenRect = rect.transformEachVertex(this.pose());
+    ScreenRectangle screenRect = rect.transformMaxBounds(this.pose());
 
     // scissorArea() も親クラスのパブリックメソッドなのでアクセス可能
     return this.scissorArea() != null ? this.scissorArea().intersection(screenRect) : screenRect;

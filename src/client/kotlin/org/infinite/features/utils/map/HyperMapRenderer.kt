@@ -1,12 +1,12 @@
 package org.infinite.features.utils.map
 
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.mob.HostileEntity
-import net.minecraft.entity.passive.PassiveEntity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.util.math.ColorHelper
-import net.minecraft.util.math.MathHelper
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.util.ARGB
+import net.minecraft.util.Mth
+import net.minecraft.world.entity.AgeableMob
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.monster.Monster
+import net.minecraft.world.entity.player.Player
 import org.infinite.InfiniteClient
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.libs.graphics.Graphics2D
@@ -24,13 +24,13 @@ object HyperMapRenderer : ClientInterface() {
      */
     fun getBaseDotColor(entity: LivingEntity): Int =
         when (entity) {
-            is PlayerEntity -> InfiniteClient.theme().colors.infoColor
+            is Player -> InfiniteClient.theme().colors.infoColor
 
             // プレイヤー: 水色 (ARGBのAなし)
-            is HostileEntity -> InfiniteClient.theme().colors.errorColor
+            is Monster -> InfiniteClient.theme().colors.errorColor
 
             // 敵対モブ: 赤色
-            is PassiveEntity -> InfiniteClient.theme().colors.greenAccentColor
+            is AgeableMob -> InfiniteClient.theme().colors.greenAccentColor
 
             // 友好モブ: 緑色
             else -> InfiniteClient.theme().colors.warnColor // それ以外（中立モブなど）: 黄色
@@ -73,7 +73,7 @@ object HyperMapRenderer : ClientInterface() {
         mode: HyperMap.Mode, // Mode を受け取るように変更
     ) {
         val player = player ?: return
-        val font = client.textRenderer
+        val font = client.font
 
         val screenWidth = graphics2d.width
         val screenHeight = graphics2d.height
@@ -93,7 +93,7 @@ object HyperMapRenderer : ClientInterface() {
                 .theme()
                 .colors.backgroundColor
                 .transparent(128)
-        val playerYaw = player.headYaw
+        val playerYaw = player.yHeadRot
         // 背景と外枠の描画
         graphics2d.fill(centerX - halfSizePx, centerY - halfSizePx, sizePx, sizePx, innerColor)
         graphics2d.enableScissor(
@@ -116,18 +116,18 @@ object HyperMapRenderer : ClientInterface() {
                 180f to "N",
                 270f to "E",
             )
-        val clipOffset = (halfSizePx - (font.fontHeight / 2))
+        val clipOffset = (halfSizePx - (font.lineHeight / 2))
         val textOffset = sqrt(2.0) * clipOffset
         for ((degree, char) in compassPoints) {
-            val relativeYaw = MathHelper.wrapDegrees(degree - playerYaw)
+            val relativeYaw = Mth.wrapDegrees(degree - playerYaw)
             val relativeRad = toRadians(relativeYaw)
             val textX = centerX + (sin(relativeRad) * textOffset).toInt().coerceIn(-halfSizePx, halfSizePx)
             val textY = centerY - (cos(relativeRad) * textOffset).toInt().coerceIn(-halfSizePx, halfSizePx)
-            val textWidth = font.getWidth(char)
+            val textWidth = font.width(char)
             graphics2d.drawText(
                 char, // text
                 textX - textWidth / 2, // x
-                textY - font.fontHeight / 2, // y
+                textY - font.lineHeight / 2, // y
                 if (char == "N") {
                     InfiniteClient.theme().colors.errorColor
                 } else {
@@ -149,7 +149,7 @@ object HyperMapRenderer : ClientInterface() {
         graphics2d.drawText("x: $xString", textX, textY, colors.blueAccentColor, true)
         graphics2d.drawText("y: $yString", textX, textY + fontSize, colors.greenAccentColor, true)
         graphics2d.drawText("z: $zString", textX, textY + 2 * fontSize, colors.redAccentColor, true)
-        graphics2d.drawText("fps: ${client.currentFps}", textX, textY + 3 * fontSize, colors.foregroundColor, true)
+        graphics2d.drawText("fps: ${client.fps}", textX, textY + 3 * fontSize, colors.foregroundColor, true)
     }
 
     fun renderMobs(
@@ -158,7 +158,7 @@ object HyperMapRenderer : ClientInterface() {
         centerX: Int,
         centerY: Int,
         halfSizePx: Int,
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         playerYaw: Float,
     ) {
         // モブの描画
@@ -169,11 +169,11 @@ object HyperMapRenderer : ClientInterface() {
 
         // プレイヤーのドットを中央に描画
         val playerDotColor =
-            ColorHelper.getArgb(
+            ARGB.color(
                 255,
-                ColorHelper.getRed(getBaseDotColor(player)),
-                ColorHelper.getGreen(getBaseDotColor(player)),
-                ColorHelper.getBlue(getBaseDotColor(player)),
+                ARGB.red(getBaseDotColor(player)),
+                ARGB.green(getBaseDotColor(player)),
+                ARGB.blue(getBaseDotColor(player)),
             )
 
         // Graphics2D.fill(x, y, width, height, color) を使用
@@ -200,7 +200,7 @@ object HyperMapRenderer : ClientInterface() {
             val blendedColor =
                 when {
                     relativeHeight > 0 -> {
-                        ColorHelper.lerp(
+                        ARGB.srgbLerp(
                             blendFactor,
                             baseColor,
                             0xFFFFFFFF.toInt(),
@@ -209,7 +209,7 @@ object HyperMapRenderer : ClientInterface() {
 
                     // Blend with white
                     relativeHeight < 0 -> {
-                        ColorHelper.lerp(
+                        ARGB.srgbLerp(
                             blendFactor,
                             baseColor,
                             0xFF000000.toInt(),
@@ -257,7 +257,7 @@ object HyperMapRenderer : ClientInterface() {
         val centerX = screenWidth - marginPx - halfSizePx
         val centerY = marginPx + halfSizePx
         val featureRadius = hyperMapFeature.radiusSetting.value.toDouble()
-        val yaw = camera.yaw
+        val yaw = camera.yRot
         val yawRad = toRadians(yaw)
 
         val playerBlockX = player.blockX

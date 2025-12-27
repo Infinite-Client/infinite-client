@@ -1,8 +1,8 @@
 package org.infinite.features.fighting.counter
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.entity.LivingEntity
-import net.minecraft.network.packet.s2c.play.EntityDamageS2CPacket
+import net.minecraft.client.Minecraft
+import net.minecraft.network.protocol.game.ClientboundDamageEventPacket
+import net.minecraft.world.entity.LivingEntity
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.AimInterface
 import org.infinite.libs.client.aim.task.AimTask
@@ -33,10 +33,10 @@ class CounterAttack : ConfigurableFeature(initialEnabled = false) {
      * 1. ダメージパケット受信時の処理 (Mixinで呼び出される想定)
      * サーバーからの正確な攻撃者情報に基づいて反撃対象をセットします。
      */
-    fun receive(packet: EntityDamageS2CPacket) {
-        val client = MinecraftClient.getInstance()
+    fun receive(packet: ClientboundDamageEventPacket) {
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
-        val world = client.world ?: return
+        val world = client.level ?: return
         // パケットの対象エンティティがプレイヤー自身か確認
         if (packet.entityId() != player.id) {
             return
@@ -45,7 +45,7 @@ class CounterAttack : ConfigurableFeature(initialEnabled = false) {
         // DamageSource#getAttacker() に相当する sourceCauseId を使用
         val attackerId = packet.sourceCauseId()
         // IDからエンティティを取得
-        val attackerEntity = world.getEntityById(attackerId)
+        val attackerEntity = world.getEntity(attackerId)
         if (attackerEntity is LivingEntity && attackerEntity != player) {
             executeCounterAttack(attackerEntity)
         }
@@ -68,7 +68,7 @@ class CounterAttack : ConfigurableFeature(initialEnabled = false) {
                 onSuccess = {
                     val player = player ?: return@AimTask
                     val interactionManager = interactionManager ?: return@AimTask
-                    interactionManager.attackEntity(player, target)
+                    interactionManager.attack(player, target)
                 },
             ),
         )

@@ -1,9 +1,9 @@
 package org.infinite.features.automatic.pilot
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.entity.vehicle.BoatEntity
-import net.minecraft.util.math.MathHelper
+import net.minecraft.client.Minecraft
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.util.Mth
+import net.minecraft.world.entity.vehicle.boat.Boat
 import org.infinite.InfiniteClient
 import org.infinite.libs.client.aim.camera.CameraRoll
 import org.infinite.libs.client.aim.task.AimTask
@@ -50,8 +50,8 @@ class AutoPilotCondition(
 ) : AimTaskConditionInterface {
     private val autoPilot: AutoPilot
         get() = InfiniteClient.getFeature(AutoPilot::class.java)!!
-    private val player: ClientPlayerEntity?
-        get() = MinecraftClient.getInstance().player
+    private val player: LocalPlayer?
+        get() = Minecraft.getInstance().player
     private var tickCounter = 0
 
     /**
@@ -159,21 +159,21 @@ class AutoPilotCondition(
                 val minimalSpeedThreshold = 0.3
 
                 val isHorizontalVelocityMinimal =
-                    if (player!!.vehicle is BoatEntity) {
-                        player!!.vehicle!!.velocity.horizontalLength() < minimalSpeedThreshold
+                    if (player!!.vehicle is Boat) {
+                        player!!.vehicle!!.deltaMovement.horizontalDistance() < minimalSpeedThreshold
                     } else {
-                        player!!.velocity.horizontalLength() < minimalSpeedThreshold
+                        player!!.deltaMovement.horizontalDistance() < minimalSpeedThreshold
                     }
 
                 // 垂直速度の最小判定 (ボート/非ボート共通)
-                val isVerticalVelocityMinimal = kotlin.math.abs(player!!.velocity.y) < 0.1
+                val isVerticalVelocityMinimal = kotlin.math.abs(player!!.deltaMovement.y) < 0.1
 
                 // 1. bestLandingSpot が設定されている場合の精密着陸判定
                 if (autoPilot.bestLandingSpot != null) {
                     // ボートの場合: 垂直距離が 1.5 ブロック以内、または陸地に乗っている
                     // 非ボートの場合: SafeFallDistance 以内、または陸地に乗っている
                     val isCloseToLandingSpot =
-                        (player!!.vehicle is BoatEntity && player!!.velocity.length() < 1.5) || player!!.isOnGround
+                        (player!!.vehicle is Boat && player!!.deltaMovement.length() < 1.5) || player!!.onGround()
 
                     if (isCloseToLandingSpot && isVerticalVelocityMinimal && isHorizontalVelocityMinimal) {
                         AimTaskConditionReturn.Success
@@ -186,7 +186,7 @@ class AutoPilotCondition(
                     //   b) ボートに乗っており、水に触れている (isTouchingWater)
                     if (isHorizontalVelocityMinimal &&
                         isVerticalVelocityMinimal &&
-                        (player!!.isOnGround || (player!!.vehicle is BoatEntity && player!!.isTouchingWater))
+                        (player!!.onGround() || (player!!.vehicle is Boat && player!!.isInWater))
                     ) {
                         AimTaskConditionReturn.Success
                     } else {
@@ -202,7 +202,7 @@ class AutoPilotCondition(
             if (autoPilot.isDisabled() || player == null) {
                 AimTaskConditionReturn.Failure
             } else {
-                val isCloseToGround = player!!.isOnGround || player!!.isTouchingWater
+                val isCloseToGround = player!!.onGround() || player!!.isInWater
                 if (isCloseToGround) {
                     AimTaskConditionReturn.Success
                 } else {
@@ -210,11 +210,9 @@ class AutoPilotCondition(
                 }
             }
         if (autoPilot.aimTaskCallBack != AimTaskConditionReturn.Exec) {
-            MinecraftClient
+            Minecraft
                 .getInstance()
-                .options
-                ?.sneakKey
-                ?.isPressed = false
+                .options.keyShift.isDown = false
         }
         return autoPilot.aimTaskCallBack!!
     }
@@ -222,7 +220,7 @@ class AutoPilotCondition(
     /** 【新規】離陸時の条件処理。標準高度に達したら成功。 */
     private fun handleTakingOff(): AimTaskConditionReturn {
         autoPilot.aimTaskCallBack =
-            if (autoPilot.isDisabled() || player == null || player!!.vehicle !is BoatEntity) {
+            if (autoPilot.isDisabled() || player == null || player!!.vehicle !is Boat) {
                 AimTaskConditionReturn.Failure
             } else if (autoPilot.height >= autoPilot.standardHeight.value) {
                 AimTaskConditionReturn.Success
@@ -239,8 +237,8 @@ class PilotAimTarget(
 ) : AimTarget.RollTarget(CameraRoll(0.0, 0.0)) {
     val target: Location
         get() = autoPilot.target
-    private val player: ClientPlayerEntity
-        get() = MinecraftClient.getInstance().player!!
+    private val player: LocalPlayer
+        get() = Minecraft.getInstance().player!!
     private val autoPilot: AutoPilot
         get() = InfiniteClient.getFeature(AutoPilot::class.java)!!
 
@@ -280,22 +278,22 @@ class PilotAimTarget(
             )
         }
 
-    private fun calculateEmergencyYaw(): Double = player.yaw + if (emergencyLandFlag) 60.0 else 0.0
+    private fun calculateEmergencyYaw(): Double = player.yRot + if (emergencyLandFlag) 60.0 else 0.0
 
     private fun calculateTargetYaw(): Double {
         val currentPlayer = player
         val d = target.x - currentPlayer.x
         val f = target.z - currentPlayer.z
-        return MathHelper.wrapDegrees((MathHelper.atan2(f, d) * (180.0 / Math.PI)) - 90.0)
+        return Mth.wrapDegrees((Mth.atan2(f, d) * (180.0 / Math.PI)) - 90.0)
     }
 
     private fun calculateCirclingYaw(): Double {
         val currentPlayer = player
         val d = target.x - currentPlayer.x
         val f = target.z - currentPlayer.z
-        val yawToCenter = MathHelper.wrapDegrees((MathHelper.atan2(f, d) * (180.0 / Math.PI)) - 90.0)
+        val yawToCenter = Mth.wrapDegrees((Mth.atan2(f, d) * (180.0 / Math.PI)) - 90.0)
         val circlingOffset = 90.0
-        return MathHelper.wrapDegrees(yawToCenter + circlingOffset)
+        return Mth.wrapDegrees(yawToCenter + circlingOffset)
     }
 
     private fun calculateLandingYaw(): Double {
@@ -303,7 +301,7 @@ class PilotAimTarget(
         val currentPlayer = player
         val d = landingSpot.x - currentPlayer.x
         val f = landingSpot.z - currentPlayer.z
-        return MathHelper.wrapDegrees((MathHelper.atan2(f, d) * (180.0 / Math.PI)) - 90.0)
+        return Mth.wrapDegrees((Mth.atan2(f, d) * (180.0 / Math.PI)) - 90.0)
     }
 
     private fun handleLandingPitch(): Double {
@@ -320,13 +318,13 @@ class PilotAimTarget(
 
         val horizontalDistance = sqrt(dX * dX + dZ * dZ)
         val predictionTimeTicks = 20.0
-        val gravityPerTick = if (currentPlayer.vehicle is BoatEntity) 0.0 else currentPlayer.finalGravity // ボートでは重力を無視
+        val gravityPerTick = if (currentPlayer.vehicle is Boat) 0.0 else currentPlayer.gravity // ボートでは重力を無視
 
-        val predictedPlayerX = currentPlayer.x + currentPlayer.velocity.x * predictionTimeTicks
+        val predictedPlayerX = currentPlayer.x + currentPlayer.deltaMovement.x * predictionTimeTicks
         val predictedPlayerY =
-            currentPlayer.y + currentPlayer.velocity.y * predictionTimeTicks +
+            currentPlayer.y + currentPlayer.deltaMovement.y * predictionTimeTicks +
                 0.5 * gravityPerTick * predictionTimeTicks * predictionTimeTicks
-        val predictedPlayerZ = currentPlayer.z + currentPlayer.velocity.z * predictionTimeTicks
+        val predictedPlayerZ = currentPlayer.z + currentPlayer.deltaMovement.z * predictionTimeTicks
 
         val dXPredicted = targetX - predictedPlayerX
         val dYPredicted = targetY - predictedPlayerY
@@ -335,35 +333,35 @@ class PilotAimTarget(
         val horizontalDistancePredicted = sqrt(dXPredicted * dXPredicted + dZPredicted * dZPredicted)
 
         if (horizontalDistancePredicted < 0.1) {
-            return MathHelper.clamp(
-                -Math.toDegrees(MathHelper.atan2(dYPredicted, 0.1)),
+            return Mth.clamp(
+                -Math.toDegrees(Mth.atan2(dYPredicted, 0.1)),
                 -60.0,
                 45.0,
             )
         }
 
-        val directPitchToLandingSpot = Math.toDegrees(MathHelper.atan2(dYPredicted, horizontalDistancePredicted))
+        val directPitchToLandingSpot = Math.toDegrees(Mth.atan2(dYPredicted, horizontalDistancePredicted))
         val maxSpeed = 20.0
-        val speedFactor = MathHelper.clamp(autoPilot.moveSpeedAverage / maxSpeed, 0.0, 1.0)
+        val speedFactor = Mth.clamp(autoPilot.moveSpeedAverage / maxSpeed, 0.0, 1.0)
         val speedAdjustedPitch = autoPilot.fallDir.value - (speedFactor * 20.0)
 
         val minHorizontalDistance = 20.0
         val maxHorizontalDistance = 100.0
         val distanceFactor =
-            MathHelper.clamp(
+            Mth.clamp(
                 (horizontalDistance - minHorizontalDistance) / (maxHorizontalDistance - minHorizontalDistance),
                 0.0,
                 1.0,
             )
 
         var pitch = (directPitchToLandingSpot * (1.0 - distanceFactor)) + (speedAdjustedPitch * distanceFactor)
-        val verticalAlignmentThreshold = if (currentPlayer.vehicle is BoatEntity) 2.0 else 5.0 // ボートではより近い高度で調整
-        val verticalFactor = MathHelper.clamp(dY / verticalAlignmentThreshold, -1.0, 1.0)
-        pitch -= verticalFactor * (if (currentPlayer.vehicle is BoatEntity) 2.0 else 5.0) // ボートではより繊細な調整
+        val verticalAlignmentThreshold = if (currentPlayer.vehicle is Boat) 2.0 else 5.0 // ボートではより近い高度で調整
+        val verticalFactor = Mth.clamp(dY / verticalAlignmentThreshold, -1.0, 1.0)
+        pitch -= verticalFactor * (if (currentPlayer.vehicle is Boat) 2.0 else 5.0) // ボートではより繊細な調整
 
         val maxNegativePitch = -14.0
         val minPositivePitch = 45.0
-        return MathHelper.clamp(pitch, maxNegativePitch, minPositivePitch)
+        return Mth.clamp(pitch, maxNegativePitch, minPositivePitch)
     }
 
     private var emergencyLandFlag = false
@@ -371,8 +369,8 @@ class PilotAimTarget(
     private fun handleEmergencyLandingPitch(): Double {
         val currentPlayer = player
         val currentY = currentPlayer.y
-        val verticalVelocity = currentPlayer.velocity.y
-        val gravity = if (currentPlayer.vehicle is BoatEntity) 0.0 else currentPlayer.finalGravity // ボートでは重力を無視
+        val verticalVelocity = currentPlayer.deltaMovement.y
+        val gravity = if (currentPlayer.vehicle is Boat) 0.0 else currentPlayer.gravity // ボートでは重力を無視
 
         val groundY = bestLandingSpot?.y?.toDouble() ?: findDynamicGroundY()
 
@@ -406,12 +404,10 @@ class PilotAimTarget(
         if (timeToImpactSeconds <= criticalTTI || emergencyLandFlag) {
             emergencyLandFlag = true
             pitch = minPitch
-            if (currentPlayer.vehicle !is BoatEntity) {
-                MinecraftClient
+            if (currentPlayer.vehicle !is Boat) {
+                Minecraft
                     .getInstance()
-                    .options
-                    ?.sneakKey
-                    ?.isPressed = true
+                    .options.keyShift.isDown = true
             }
         } else if (timeToImpactSeconds < safeTTI) {
             val factor = (timeToImpactSeconds - criticalTTI) / (safeTTI - criticalTTI)
@@ -420,12 +416,12 @@ class PilotAimTarget(
             pitch = maxPitch
         }
 
-        return MathHelper.clamp(pitch, minPitch, maxPitch)
+        return Mth.clamp(pitch, minPitch, maxPitch)
     }
 
     private fun findDynamicGroundY(): Double {
         val currentPlayer = player
-        val world = MinecraftClient.getInstance().world ?: return 320.0
+        val world = Minecraft.getInstance().level ?: return 320.0
         val currentX = currentPlayer.blockX
         val currentZ = currentPlayer.blockZ
         val horizontalSpeed = autoPilot.moveSpeedAverage
@@ -436,7 +432,12 @@ class PilotAimTarget(
             for (dz in -searchDistanceBlocks..searchDistanceBlocks) {
                 val checkX = currentX + dx
                 val checkZ = currentZ + dz
-                val y = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, checkX, checkZ)
+                val y =
+                    world.getHeight(
+                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                        checkX,
+                        checkZ,
+                    )
                 if (y > highestGroundY) {
                     highestGroundY = y.toDouble()
                 }

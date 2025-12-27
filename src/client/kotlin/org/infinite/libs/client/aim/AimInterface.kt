@@ -1,13 +1,13 @@
 package org.infinite.libs.client.aim
 
-import net.minecraft.client.MinecraftClient
+import net.minecraft.client.Minecraft
 import org.infinite.libs.client.aim.task.AimTask
 import org.infinite.libs.client.aim.task.config.AimPriority
 import org.infinite.libs.client.aim.task.config.AimProcessResult
 
 object AimInterface {
-    private val client: MinecraftClient
-        get() = MinecraftClient.getInstance()
+    private val client: Minecraft
+        get() = Minecraft.getInstance()
     private var tasks: ArrayDeque<AimTask> = ArrayDeque(listOf())
 
     fun addTask(task: AimTask) {

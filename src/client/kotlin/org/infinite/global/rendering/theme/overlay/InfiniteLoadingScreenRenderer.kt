@@ -1,10 +1,9 @@
 package org.infinite.global.rendering.theme.overlay
 
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.text.Text
-import net.minecraft.util.Identifier
-import net.minecraft.util.Util
-import net.minecraft.util.math.ColorHelper
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
+import net.minecraft.util.ARGB
 import org.infinite.libs.graphics.Graphics2D
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -21,13 +20,13 @@ object InfiniteLoadingScreenRenderer {
 
     private val animationTextures: List<Identifier> by lazy {
         (0 until ANIMATION_FRAMES_COUNT).map { i ->
-            Identifier.of("infinite", "textures/gui/loading_animations/animation-${String.format("%04d", i)}.png")
+            Identifier.fromNamespaceAndPath("infinite", "textures/gui/loading_animations/animation-${String.format("%04d", i)}.png")
         }
     }
 
     @JvmStatic
     fun render(
-        context: DrawContext,
+        context: GuiGraphics,
         progress: Float,
         reloadStartTime: Long,
         reloadCompleteTime: Long,
@@ -35,7 +34,7 @@ object InfiniteLoadingScreenRenderer {
     ) {
         val g2d = Graphics2D(context) // Graphics2Dインスタンスを作成
 
-        val now = Util.getMeasuringTimeMs()
+        val now = System.currentTimeMillis()
         val completeMark =
             if (reloadCompleteTime > -1) {
                 fallbackCompleteTime = -1
@@ -60,8 +59,8 @@ object InfiniteLoadingScreenRenderer {
         // 1. 背景のグラデーション塗りつぶし
         // Graphics2DにはfillGradientがないため、DrawContextのメソッドを直接使用するか、
         // Graphics2D内にfillGradientを実装する必要があります。ここではDrawContextをラップしているため、直接使用します。
-        val topColor = ColorHelper.getArgb((255 * alpha).roundToInt(), 8, 10, 14)
-        val bottomColor = ColorHelper.getArgb((255 * alpha).roundToInt(), 0, 0, 0)
+        val topColor = ARGB.color((255 * alpha).roundToInt(), 8, 10, 14)
+        val bottomColor = ARGB.color((255 * alpha).roundToInt(), 0, 0, 0)
         context.fillGradient(0, 0, width, height, topColor, bottomColor)
 
         // 2. アニメーション画像の描画
@@ -79,7 +78,7 @@ object InfiniteLoadingScreenRenderer {
             width = displaySize.toFloat(),
             height = displaySize.toFloat(),
             rotation = 0f, // 回転なし
-            color = ColorHelper.getArgb((255 * alpha).roundToInt(), 255, 255, 255), // アルファ値を適用
+            color = ARGB.color((255 * alpha).roundToInt(), 255, 255, 255), // アルファ値を適用
             u = 0f,
             v = 0f,
             uWidth = TEXTURE_SIZE.toFloat(),
@@ -89,8 +88,8 @@ object InfiniteLoadingScreenRenderer {
         )
         val fontHeight = g2d.fontHeight()
         // 3. タイトルテキストの描画
-        val titleAlpha = ColorHelper.getArgb((255 * alpha).roundToInt(), 255, 255, 255)
-        val title = Text.literal("Infinite Client")
+        val titleAlpha = ARGB.color((255 * alpha).roundToInt(), 255, 255, 255)
+        val title = Component.literal("Infinite Client")
         g2d.centeredText(
             text = title,
             x = width / 2,
@@ -102,11 +101,11 @@ object InfiniteLoadingScreenRenderer {
         // 4. サブタイトルテキストの描画 (Y座標を +26 から +38 に変更)
         val subtitleText =
             if (reloading) {
-                Text.literal("Loading resources...")
+                Component.literal("Loading resources...")
             } else {
-                Text.literal("Finishing setup...")
+                Component.literal("Finishing setup...")
             }
-        val subtitleAlpha = ColorHelper.getArgb((210 * alpha).roundToInt(), 180, 180, 180)
+        val subtitleAlpha = ARGB.color((210 * alpha).roundToInt(), 180, 180, 180)
         g2d.centeredText(
             text = subtitleText,
             x = width / 2,
@@ -121,7 +120,7 @@ object InfiniteLoadingScreenRenderer {
         val progressBarY = (height * 0.68f).roundToInt()
 
         // ベースバーの描画 (rect)
-        val baseBarColor = ColorHelper.getArgb((80 * alpha).roundToInt(), 255, 255, 255)
+        val baseBarColor = ARGB.color((80 * alpha).roundToInt(), 255, 255, 255)
         g2d.rect(
             x1 = progressBarX.toFloat(),
             y1 = progressBarY.toFloat(),
@@ -133,7 +132,7 @@ object InfiniteLoadingScreenRenderer {
         // フィル部分の描画 (rect)
         val clampedProgress = progress.coerceIn(0f, 1f)
         val filledWidth = (progressBarWidth * clampedProgress).roundToInt()
-        val fillColor = ColorHelper.getArgb((230 * alpha).roundToInt(), 255, 255, 255)
+        val fillColor = ARGB.color((230 * alpha).roundToInt(), 255, 255, 255)
 
         if (filledWidth > 0) {
             g2d.rect(
@@ -146,8 +145,8 @@ object InfiniteLoadingScreenRenderer {
         }
         // 6. パーセンテージテキストの描画 (Y座標は変更なし)
         val percentText = "${(clampedProgress * 100f).roundToInt()}%"
-        val percentTitle = Text.literal("$percentText • Infinite")
-        val percentAlpha = ColorHelper.getArgb((200 * alpha).roundToInt(), 210, 210, 210)
+        val percentTitle = Component.literal("$percentText • Infinite")
+        val percentAlpha = ARGB.color((200 * alpha).roundToInt(), 210, 210, 210)
 
         g2d.centeredText(
             text = percentTitle,

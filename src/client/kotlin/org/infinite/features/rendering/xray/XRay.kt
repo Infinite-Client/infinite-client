@@ -1,11 +1,11 @@
 package org.infinite.features.rendering.xray
 
-import net.minecraft.block.Block
-import net.minecraft.block.BlockState
-import net.minecraft.client.MinecraftClient
-import net.minecraft.registry.Registries
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Direction
+import net.minecraft.client.Minecraft
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.state.BlockState
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import org.infinite.settings.Property
@@ -129,12 +129,12 @@ class XRay : ConfigurableFeature(initialEnabled = false) {
     // ... (enabled/disabled関数は変更なし)
     override fun onEnabled() {
         // Trigger world re-render when XRay is enabled
-        MinecraftClient.getInstance().worldRenderer.reload()
+        Minecraft.getInstance().levelRenderer.allChanged()
     }
 
     override fun onDisabled() {
         // Trigger world re-render when XRay is disabled
-        MinecraftClient.getInstance().worldRenderer.reload()
+        Minecraft.getInstance().levelRenderer.allChanged()
     }
 
     // 設定リストを取得する補助関数
@@ -150,7 +150,7 @@ class XRay : ConfigurableFeature(initialEnabled = false) {
         block: Block,
         pos: BlockPos,
     ): Boolean {
-        val blockId = Registries.BLOCK.getId(block).toString()
+        val blockId = BuiltInRegistries.BLOCK.getKey(block).toString()
         val throughList = getThroughBlockList()
         val exposedList = getExposedBlockList()
 
@@ -199,13 +199,13 @@ class XRay : ConfigurableFeature(initialEnabled = false) {
         if (!isEnabled()) return null
 
         val block = blockState.block
-        val blockId = Registries.BLOCK.getId(block).toString()
+        val blockId = BuiltInRegistries.BLOCK.getKey(block).toString()
         val method = getSetting("Method")?.value as? XRayMode ?: return null
 
         val throughList = getThroughBlockList()
         val exposedList = getExposedBlockList()
 
-        val neighborBlockId = Registries.BLOCK.getId(neighborState.block).toString()
+        val neighborBlockId = BuiltInRegistries.BLOCK.getKey(neighborState.block).toString()
         val isNeighborAir = neighborBlockId == "minecraft:air"
 
         // 1. まず、現在のブロックがXRay対象リストに載っているかチェック (装飾ブロックの除外)

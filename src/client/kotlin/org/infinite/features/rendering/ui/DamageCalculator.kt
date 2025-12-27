@@ -1,9 +1,9 @@
 package org.infinite.features.rendering.ui
 
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.enchantment.Enchantments
-import net.minecraft.entity.attribute.EntityAttributes
-import net.minecraft.entity.effect.StatusEffects
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.world.effect.MobEffects
+import net.minecraft.world.entity.ai.attributes.Attributes
+import net.minecraft.world.item.enchantment.Enchantments
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.utils.item.enchantLevel
 import kotlin.math.floor
@@ -18,11 +18,11 @@ class DamageCalculator {
      * 装甲によるダメージ軽減を計算します。
      */
     fun armorProtection(
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         damage: Double,
     ): Double {
-        val armor = player.armor.toDouble()
-        val toughness = player.attributes.getValue(EntityAttributes.ARMOR_TOUGHNESS)
+        val armor = player.armorValue.toDouble()
+        val toughness = player.attributes.getValue(Attributes.ARMOR_TOUGHNESS)
         val constReduction = 0.2 // 固定最大軽減率
         // ダメージ軽減計算式の適用
         val armorReduction = armor / 5.0
@@ -76,11 +76,11 @@ class DamageCalculator {
      * ステータス効果（主に耐性/Resistance）によるダメージ軽減を計算します。
      */
     fun playerEffectProtection(
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         damage: Double,
     ): Double {
         // 1. 耐性（Resistance）効果のレベルを取得
-        val resistanceEffect = player.getStatusEffect(StatusEffects.RESISTANCE) ?: return damage
+        val resistanceEffect = player.getEffect(MobEffects.RESISTANCE) ?: return damage
         val resistanceLevel = resistanceEffect.amplifier + 1 // レベルは0から始まるため+1
         // 2. 軽減率を計算 (レベル * 20%)
         val reductionFactor = min(1.0, resistanceLevel * 0.2) // 最大100% (1.0) に制限
@@ -93,7 +93,7 @@ class DamageCalculator {
      * @param fireTicks ティック関数で管理されている火災ティック数
      */
     fun estimations(
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         fireTicks: Int,
     ): Double {
         val estimatedPoisonDamage = calculatePoisonDamage(player)
@@ -102,8 +102,8 @@ class DamageCalculator {
         return estimatedFireDamage + estimatedPoisonDamage + estimatedWitherDamage
     }
 
-    private fun calculatePoisonDamage(player: ClientPlayerEntity): Double {
-        val poisonEffect = player.getStatusEffect(StatusEffects.POISON) ?: return 0.0
+    private fun calculatePoisonDamage(player: LocalPlayer): Double {
+        val poisonEffect = player.getEffect(MobEffects.POISON) ?: return 0.0
         val poisonDurationTicks: Int = poisonEffect.duration
         val level = poisonEffect.amplifier + 1 // レベルは0から始まるため+1
 
@@ -150,7 +150,7 @@ class DamageCalculator {
     }
 
     private fun calculateFireDamage(
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         fireTicks: Int,
     ): Double {
         if (fireTicks <= 0) return 0.0
@@ -166,8 +166,8 @@ class DamageCalculator {
         return intervals * finalDamagePerInterval
     }
 
-    private fun calculateWitherDamage(player: ClientPlayerEntity): Double {
-        val witherEffect = player.getStatusEffect(StatusEffects.WITHER) ?: return 0.0
+    private fun calculateWitherDamage(player: LocalPlayer): Double {
+        val witherEffect = player.getEffect(MobEffects.WITHER) ?: return 0.0
         val witherDurationTicks: Int = witherEffect.duration
         val level = witherEffect.amplifier + 1 // レベルは0から始まるため+1
 

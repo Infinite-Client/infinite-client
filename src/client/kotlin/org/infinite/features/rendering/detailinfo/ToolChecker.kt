@@ -1,14 +1,14 @@
 package org.infinite.features.rendering.detailinfo
 
-import net.minecraft.block.Block
-import net.minecraft.block.Blocks
-import net.minecraft.client.MinecraftClient
-import net.minecraft.enchantment.Enchantments
-import net.minecraft.item.ItemStack
-import net.minecraft.item.Items
-import net.minecraft.registry.Registries
-import net.minecraft.registry.tag.BlockTags
-import net.minecraft.util.Identifier
+import net.minecraft.client.Minecraft
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.resources.Identifier
+import net.minecraft.tags.BlockTags
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.world.item.enchantment.Enchantments
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.Blocks
 
 object ToolChecker {
     enum class ToolKind {
@@ -25,13 +25,13 @@ object ToolChecker {
         val isSilkTouchRequired: Boolean = false,
     ) {
         fun checkPlayerToolStatus(): Int {
-            val client = MinecraftClient.getInstance()
+            val client = Minecraft.getInstance()
             val player = client.player ?: return 2
-            val heldItem: ItemStack = player.mainHandStack
+            val heldItem: ItemStack = player.mainHandItem
 
             if (toolKind == null) return 0
 
-            val toolId = Registries.ITEM.getId(heldItem.item).toString()
+            val toolId = BuiltInRegistries.ITEM.getKey(heldItem.item).toString()
             val materialStr = toolId.substringAfter("minecraft:").substringBeforeLast("_")
             val isCorrectToolKind =
                 when (toolKind) {
@@ -57,7 +57,7 @@ object ToolChecker {
             if (actualLevel < 0 || actualLevel < toolLevel) return 2
 
             if (isSilkTouchRequired) {
-                val hasSilkTouch = heldItem.enchantments.enchantments.any { it == Enchantments.SILK_TOUCH }
+                val hasSilkTouch = heldItem.enchantments.keySet().any { it == Enchantments.SILK_TOUCH }
                 if (!hasSilkTouch) return 1
             }
 
@@ -87,8 +87,8 @@ object ToolChecker {
     }
 
     fun isSilkTouchRequiredClient(block: Block): Boolean {
-        val state = block.defaultState
-        val id = Registries.BLOCK.getId(block).path
+        val state = block.defaultBlockState()
+        val id = BuiltInRegistries.BLOCK.getKey(block).path
 
         if (id.endsWith("_ore") || id == "ancient_debris") return true
         if (block == Blocks.STONE || block == Blocks.DEEPSLATE) return true
@@ -107,8 +107,8 @@ object ToolChecker {
         if (block == Blocks.GRASS_BLOCK || block == Blocks.MYCELIUM || block == Blocks.PODZOL || block == Blocks.DIRT_PATH) return true
         if (block == Blocks.ENDER_CHEST) return true
         if (block == Blocks.BEEHIVE || block == Blocks.BEE_NEST) return true
-        if (state.isIn(BlockTags.LEAVES)) return true
-        val amethystId = Registries.BLOCK.getId(block).path
+        if (state.`is`(BlockTags.LEAVES)) return true
+        val amethystId = BuiltInRegistries.BLOCK.getKey(block).path
         if (amethystId.startsWith("small_amethyst_bud") ||
             amethystId.startsWith("medium_amethyst_bud") ||
             amethystId.startsWith("large_amethyst_bud") ||
@@ -116,31 +116,31 @@ object ToolChecker {
         ) {
             return true
         }
-        if (state.isIn(BlockTags.CORAL_BLOCKS) || state.isIn(BlockTags.CORAL_PLANTS)) return true
+        if (state.`is`(BlockTags.CORAL_BLOCKS) || state.`is`(BlockTags.CORAL_PLANTS)) return true
         return false
     }
 
     fun getCorrectTool(block: Block): CorrectTool {
-        val state = block.defaultState
+        val state = block.defaultBlockState()
         val toolLevel =
             when {
-                state.isIn(BlockTags.NEEDS_STONE_TOOL) -> 1
-                state.isIn(BlockTags.NEEDS_IRON_TOOL) -> 2
-                state.isIn(BlockTags.NEEDS_DIAMOND_TOOL) -> 3
+                state.`is`(BlockTags.NEEDS_STONE_TOOL) -> 1
+                state.`is`(BlockTags.NEEDS_IRON_TOOL) -> 2
+                state.`is`(BlockTags.NEEDS_DIAMOND_TOOL) -> 3
                 else -> 0
             }
         val toolKind =
             when {
-                state.isIn(BlockTags.AXE_MINEABLE) -> ToolKind.Axe
+                state.`is`(BlockTags.MINEABLE_WITH_AXE) -> ToolKind.Axe
 
-                state.isIn(BlockTags.PICKAXE_MINEABLE) -> ToolKind.PickAxe
+                state.`is`(BlockTags.MINEABLE_WITH_PICKAXE) -> ToolKind.PickAxe
 
-                state.isIn(BlockTags.SHOVEL_MINEABLE) -> ToolKind.Shovel
+                state.`is`(BlockTags.MINEABLE_WITH_SHOVEL) -> ToolKind.Shovel
 
-                state.isIn(BlockTags.HOE_MINEABLE) -> ToolKind.Hoe
+                state.`is`(BlockTags.MINEABLE_WITH_HOE) -> ToolKind.Hoe
 
-                state.isIn(BlockTags.LEAVES) || Registries.BLOCK
-                    .getId(block)
+                state.`is`(BlockTags.LEAVES) || BuiltInRegistries.BLOCK
+                    .getKey(block)
                     .toString() == "minecraft:cobweb" -> ToolKind.Sword
 
                 else -> null
@@ -155,8 +155,8 @@ object ToolChecker {
 
     fun getItemStackFromId(id: String): ItemStack =
         try {
-            val identifier = Identifier.of(id)
-            val item = Registries.ITEM.get(identifier)
+            val identifier = Identifier.parse(id)
+            val item = BuiltInRegistries.ITEM.getValue(identifier)
             if (item != Items.AIR) ItemStack(item) else ItemStack(Items.BARRIER)
         } catch (_: Exception) {
             ItemStack(Items.BARRIER)

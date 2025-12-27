@@ -1,8 +1,8 @@
 package org.infinite.features.rendering.ui
 
-import net.minecraft.util.hit.BlockHitResult
-import net.minecraft.util.hit.EntityHitResult
-import net.minecraft.util.hit.HitResult
+import net.minecraft.world.phys.BlockHitResult
+import net.minecraft.world.phys.EntityHitResult
+import net.minecraft.world.phys.HitResult
 import org.infinite.InfiniteClient
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.libs.graphics.Graphics3D
@@ -21,10 +21,10 @@ class RayCastRenderer : ClientInterface() {
         val player = player ?: return
 
         // プレイヤーのブロックとのインタラクション範囲を取得
-        val blockReach = player.blockInteractionRange
+        val blockReach = player.blockInteractionRange()
 
         // レイトレースを実行
-        val rayCastResult = player.raycast(blockReach, graphics3D.tickProgress, false)
+        val rayCastResult = player.pick(blockReach, graphics3D.tickProgress, false)
 
         when (rayCastResult.type) {
             HitResult.Type.MISS -> return
@@ -47,9 +47,9 @@ class RayCastRenderer : ClientInterface() {
     ) {
         val entity = rayCast.entity
         // 補間された位置と境界ボックス
-        val pos = entity.getLerpedPos(graphics3D.tickProgress)
+        val pos = entity.getPosition(graphics3D.tickProgress)
         val boundingBox = entity.boundingBox
-        val box = boundingBox.offset(pos)
+        val box = boundingBox.move(pos)
 
         // 色の設定
         val primaryColor = InfiniteClient.theme().colors.primaryColor
@@ -57,7 +57,7 @@ class RayCastRenderer : ClientInterface() {
         val solidColor = primaryColor.transparent(70)
 
         // 1. 塗りつぶしボックスを描画
-        val solidBoxes = listOf(RenderUtils.ColorBox(solidColor, box.contract(0.002))) // わずかに縮小
+        val solidBoxes = listOf(RenderUtils.ColorBox(solidColor, box.deflate(0.002))) // わずかに縮小
         graphics3D.renderSolidColorBoxes(solidBoxes, true)
 
         // 2. 輪郭ボックスを描画
@@ -77,20 +77,20 @@ class RayCastRenderer : ClientInterface() {
         val interactionManager = interactionManager ?: return
         val blockState =
             world.getBlockState(blockPos)
-        val progress = interactionManager.currentBreakingProgress
+        val progress = interactionManager.destroyProgress
         val boundingBox =
             blockState
-                .getOutlineShape(world, blockPos)
-                .boundingBox
+                .getShape(world, blockPos)
+                .bounds()
         val dynamicBox =
             boundingBox
-                .contract((1 - progress) / 2.0)
-                .offset(blockPos)
+                .deflate((1 - progress) / 2.0)
+                .move(blockPos)
         val accentColor = InfiniteClient.theme().colors.primaryColor
         val solidColor = accentColor.transparent(90) // 塗りつぶし用に透明度を調整 (強めに)
 
         // 1. 強調された塗りつぶしボックスを描画
-        if (interactionManager.isBreakingBlock) {
+        if (interactionManager.isDestroying) {
             val solidBoxes = listOf(RenderUtils.ColorBox(solidColor, dynamicBox))
             graphics3D.renderSolidColorBoxes(solidBoxes, true)
         }

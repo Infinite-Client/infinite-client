@@ -1,6 +1,6 @@
 package org.infinite.features.rendering.ui
 
-import net.minecraft.util.hit.HitResult
+import net.minecraft.world.phys.HitResult
 import org.infinite.InfiniteClient
 import org.infinite.features.rendering.detailinfo.DetailInfo
 import org.infinite.libs.client.player.ClientInterface
@@ -76,7 +76,7 @@ class CrosshairRenderer : ClientInterface() {
             }
         }
         val player = player ?: return
-        val cooldownProgress = player.getAttackCooldownProgress(graphics2D.tickProgress)
+        val cooldownProgress = player.getAttackStrengthScale(graphics2D.tickProgress)
         if (cooldownProgress < 1.0f) {
             val centerX = scaledWidth / 2.0f
             val centerY = scaledHeight / 2.0f
@@ -101,8 +101,8 @@ class CrosshairRenderer : ClientInterface() {
     fun findCrossHairTarget(): HitResult? {
         val player = player ?: return null
         val camera = client.cameraEntity ?: return null
-        val blockInteractionRange = player.blockInteractionRange
-        val entityInteractionRange = player.entityInteractionRange
+        val blockInteractionRange = player.blockInteractionRange()
+        val entityInteractionRange = player.entityInteractionRange()
         return InfiniteClient
             .getFeature(DetailInfo::class.java)
             ?.findCrosshairTarget(camera, blockInteractionRange, entityInteractionRange)

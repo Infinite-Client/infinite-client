@@ -1,9 +1,9 @@
 package org.infinite.features.fighting.aimassist
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.entity.Entity
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.client.Minecraft
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.AimInterface
@@ -80,16 +80,17 @@ class AimAssist : ConfigurableFeature(initialEnabled = false) {
 // AimAssist クラス内の checkTarget() 関数を変更
 
     fun checkTarget(): Entity? {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return null
-        val world = client.world ?: return null
+        val world = client.level ?: return null
 
         val candidates =
-            world.entities
+            world
+                .entitiesForRendering()
                 .filter { it is LivingEntity }
                 .filter { it != player && it.isAlive }
                 .filter {
-                    (players.value && it is PlayerEntity) || (mobs.value && it !is PlayerEntity)
+                    (players.value && it is Player) || (mobs.value && it !is Player)
                 }.filter { player.distanceTo(it) <= range.value }
                 .filter { isWithinFOV(player, it as LivingEntity, fov.value) }
 
@@ -107,7 +108,7 @@ class AimAssist : ConfigurableFeature(initialEnabled = false) {
      * 注: この関数は LockOn クラスから流用し、AimAssistの private なヘルパー関数として配置します。
      */
     private fun calculateCombinedScore(
-        player: PlayerEntity,
+        player: Player,
         target: LivingEntity,
     ): Double {
         val distance = player.distanceTo(target).toDouble()
@@ -153,20 +154,20 @@ class AimAssist : ConfigurableFeature(initialEnabled = false) {
     }
 
     fun calcFov(
-        player: PlayerEntity,
+        player: Player,
         target: LivingEntity,
     ): Double {
-        val playerLookVec = player.rotationVector.normalize()
+        val playerLookVec = player.lookAngle.normalize()
         val targetCenterVec = target.boundingBox.center
-        val targetVec = targetCenterVec.subtract(player.eyePos)
+        val targetVec = targetCenterVec.subtract(player.eyePosition)
         val targetLookVec = targetVec.normalize()
-        val dotProduct = playerLookVec.dotProduct(targetLookVec)
+        val dotProduct = playerLookVec.dot(targetLookVec)
         val angleRadians = acos(dotProduct.coerceIn(-1.0, 1.0))
         return Math.toDegrees(angleRadians)
     }
 
     private fun isWithinFOV(
-        player: PlayerEntity,
+        player: Player,
         target: LivingEntity,
         fovDegrees: Float,
     ): Boolean {

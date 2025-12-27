@@ -1,8 +1,8 @@
 package org.infinite.mixin.features.movement.linearbreak;
 
-import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import org.infinite.InfiniteClient;
 import org.infinite.features.movement.braek.LinearBreak;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * LinearBreakが有効な場合に、ClientPlayerInteractionManager.attackBlock()の実行をキャンセルし、
  * 通常のブロック破壊操作を無効化するためのMixin。
  */
-@Mixin(ClientPlayerInteractionManager.class)
+@Mixin(MultiPlayerGameMode.class)
 public class CancelNormalAttackBlockMixin {
 
   /**
@@ -24,7 +24,7 @@ public class CancelNormalAttackBlockMixin {
    * @param direction 破壊する面
    * @param cir コールバック情報（戻り値の操作に使用）
    */
-  @Inject(method = "attackBlock", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "startDestroyBlock", at = @At("HEAD"), cancellable = true)
   private void infinite$cancelAttackBlockIfLinearBreakActive(
       BlockPos pos, Direction direction, CallbackInfoReturnable<Boolean> cir) {
     if (InfiniteClient.INSTANCE.isFeatureEnabled(LinearBreak.class)) {

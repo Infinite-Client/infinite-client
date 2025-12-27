@@ -1,13 +1,13 @@
 package org.infinite.features.utils.map
 
-import net.minecraft.block.Blocks
-import net.minecraft.block.LeavesBlock
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.color.world.BiomeColors
-import net.minecraft.entity.LivingEntity
-import net.minecraft.util.math.BlockPos
-import net.minecraft.world.Heightmap
-import net.minecraft.world.World
+import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.BiomeColors
+import net.minecraft.core.BlockPos
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.level.Level
+import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.block.LeavesBlock
+import net.minecraft.world.level.levelgen.Heightmap
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
@@ -52,8 +52,8 @@ class HyperMap : ConfigurableFeature() {
         )
 
     fun findTargetMobs(): List<LivingEntity> {
-        val client = MinecraftClient.getInstance()
-        val world = client.world ?: return emptyList()
+        val client = Minecraft.getInstance()
+        val world = client.level ?: return emptyList()
         val player = client.player ?: return emptyList()
         val radius = radiusSetting.value
         val height = heightSetting.value
@@ -63,7 +63,7 @@ class HyperMap : ConfigurableFeature() {
 
         val targets = mutableListOf<LivingEntity>()
 
-        for (entity in world.entities) {
+        for (entity in world.entitiesForRendering()) {
             if (entity == player) continue
 
             if (entity is LivingEntity) {
@@ -114,20 +114,20 @@ class HyperMap : ConfigurableFeature() {
         val z = pos.z.toDouble()
         return when (block) {
             Blocks.GRASS_BLOCK, Blocks.SHORT_GRASS, Blocks.TALL_GRASS -> {
-                BiomeColors.GRASS_COLOR.getColor(biome, x, z)
+                BiomeColors.GRASS_COLOR_RESOLVER.getColor(biome, x, z)
             }
 
             is LeavesBlock -> {
-                BiomeColors.FOLIAGE_COLOR.getColor(biome, x, z)
+                BiomeColors.FOLIAGE_COLOR_RESOLVER.getColor(biome, x, z)
             }
 
             Blocks.WATER -> {
-                BiomeColors.WATER_COLOR.getColor(biome, x, z)
+                BiomeColors.WATER_COLOR_RESOLVER.getColor(biome, x, z)
             }
 
             else -> {
                 // MapColor.colorはRGB整数値なので、アルファ値を255として追加
-                state.getMapColor(world, pos).color.transparent(255)
+                state.getMapColor(world, pos).col.transparent(255)
             }
         }
     }
@@ -199,10 +199,10 @@ class HyperMap : ConfigurableFeature() {
         chunkZ: Int,
         heightMap: Array<IntArray>,
         color: Int,
-        world: World,
+        world: Level,
     ): Int {
         val currentY = heightMap[x][z]
-        if (currentY <= world.bottomY) return color
+        if (currentY <= world.minY) return color
 
         val alpha = color ushr 24 and 0xFF
         val red = color ushr 16 and 0xFF
@@ -219,7 +219,8 @@ class HyperMap : ConfigurableFeature() {
             if (z > 0) {
                 heightMap[x][z - 1]
             } else {
-                world.getChunk(chunkX, chunkZ - 1)?.getHeightmap(Heightmap.Type.MOTION_BLOCKING)?.get(x, 15) ?: currentY
+                world.getChunk(chunkX, chunkZ - 1)?.getOrCreateHeightmapUnprimed(Heightmap.Types.MOTION_BLOCKING)?.getFirstAvailable(x, 15)
+                    ?: currentY
             }
         val diffNorth = northY - currentY
 
@@ -227,7 +228,8 @@ class HyperMap : ConfigurableFeature() {
             if (x < 15) {
                 heightMap[x + 1][z]
             } else {
-                world.getChunk(chunkX + 1, chunkZ)?.getHeightmap(Heightmap.Type.MOTION_BLOCKING)?.get(0, z) ?: currentY
+                world.getChunk(chunkX + 1, chunkZ)?.getOrCreateHeightmapUnprimed(Heightmap.Types.MOTION_BLOCKING)?.getFirstAvailable(0, z)
+                    ?: currentY
             }
         val diffEast = eastY - currentY
 
@@ -235,7 +237,8 @@ class HyperMap : ConfigurableFeature() {
             if (x > 0) {
                 heightMap[x - 1][z]
             } else {
-                world.getChunk(chunkX - 1, chunkZ)?.getHeightmap(Heightmap.Type.MOTION_BLOCKING)?.get(15, z) ?: currentY
+                world.getChunk(chunkX - 1, chunkZ)?.getOrCreateHeightmapUnprimed(Heightmap.Types.MOTION_BLOCKING)?.getFirstAvailable(15, z)
+                    ?: currentY
             }
         val diffWest = westY - currentY
 
@@ -243,7 +246,8 @@ class HyperMap : ConfigurableFeature() {
             if (z < 15) {
                 heightMap[x][z + 1]
             } else {
-                world.getChunk(chunkX, chunkZ + 1)?.getHeightmap(Heightmap.Type.MOTION_BLOCKING)?.get(x, 0) ?: currentY
+                world.getChunk(chunkX, chunkZ + 1)?.getOrCreateHeightmapUnprimed(Heightmap.Types.MOTION_BLOCKING)?.getFirstAvailable(x, 0)
+                    ?: currentY
             }
         val diffSouth = currentY - southY
 
@@ -316,12 +320,12 @@ class HyperMap : ConfigurableFeature() {
 
     // 地下判定ヘルパー
     fun isUnderground(playerY: Int): Boolean {
-        val client = MinecraftClient.getInstance()
-        val world = client.world ?: return false
+        val client = Minecraft.getInstance()
+        val world = client.level ?: return false
         val player = client.player ?: return false
         val isForceSolid = mode.value == Mode.Solid
         val isBelowThreshold = playerY < undergroundYThreshold
-        val isSkyObscured = !world.isSkyVisible(player.blockPos)
+        val isSkyObscured = !world.canSeeSky(player.blockPosition())
         return isForceSolid || isBelowThreshold || isSkyObscured
     }
 
@@ -343,10 +347,10 @@ class HyperMap : ConfigurableFeature() {
 
             val texturesInRenderRange = mutableSetOf<String>()
 
-            val globalScanMinY = world.bottomY
+            val globalScanMinY = world.minY
             // SolidモードではプレイヤーのY座標を上限に、Flatモードではワールドの最大Y座標を上限にする
             val globalScanMaxY =
-                if (currentMode == Mode.Solid) playerY.coerceAtMost(world.bottomY + world.height) else world.bottomY + world.height
+                if (currentMode == Mode.Solid) playerY.coerceAtMost(world.minY + world.height) else world.minY + world.height
             val searchRange = 2 * radius / 16
             // プレイヤーを中心とした半径内のチャンクをスキャン
             for (chunkXOffset in -searchRange..searchRange) {
@@ -414,11 +418,11 @@ class HyperMap : ConfigurableFeature() {
                     if (tickCounter % updateInterval == 0) {
                         val lastUpdateTime = updatedChunks[chunkKey] ?: 0L
                         if (System.currentTimeMillis() - lastUpdateTime > chunkUpdateIntervalMs) {
-                            val scanMinY = world.bottomY
+                            val scanMinY = world.minY
                             val heightMap = Array(16) { IntArray(16) { scanMinY - 1 } }
                             // Flatモード用の地表データを保持
                             val rawBlockDataMap = mutableMapOf<Pair<Int, Int>, Pair<BlockPos, Int>>()
-                            var maxBlockY = world.bottomY
+                            var maxBlockY = world.minY
 
                             // ------------------------------------------------
                             // 1. チャンクデータ収集 (パス1: Flatモード用のY座標とベースカラーの取得)
@@ -520,7 +524,7 @@ class HyperMap : ConfigurableFeature() {
                                                         finalColor,
                                                         world,
                                                     )
-                                                val lightLevel = world.getLightLevel(closestBlockPos) // 0 to 15
+                                                val lightLevel = world.getMaxLocalRawBrightness(closestBlockPos) // 0 to 15
                                                 val brightnessFactor = lightLevel / 15.0f
                                                 finalColor = applyLighting(finalColor, brightnessFactor)
                                                 finalColor = adjustSaturation(finalColor, brightnessFactor)
@@ -593,7 +597,7 @@ class HyperMap : ConfigurableFeature() {
                                                             finalColor,
                                                             world,
                                                         )
-                                                    val lightLevel = world.getLightLevel(targetBlockPos) // 0 to 15
+                                                    val lightLevel = world.getMaxLocalRawBrightness(targetBlockPos) // 0 to 15
                                                     val brightnessFactor = lightLevel / 15.0f
                                                     finalColor = applyLighting(finalColor, brightnessFactor)
                                                     finalColor = adjustSaturation(finalColor, brightnessFactor)
@@ -630,7 +634,7 @@ class HyperMap : ConfigurableFeature() {
             // ------------------------------------------------
             // 4. テクスチャのアンロード (範囲外に出たテクスチャのメモリ解放)
             // ------------------------------------------------
-            if (tickCounter % textureUnloadInterval == 0 && client.currentScreen !is FullScreenMapScreen) {
+            if (tickCounter % textureUnloadInterval == 0 && client.screen !is FullScreenMapScreen) {
                 val currentLoadedKeys = loadedChunkKeys.keys().toList()
                 currentLoadedKeys.forEach { cacheKey ->
                     val parts = cacheKey.split("_")
@@ -660,9 +664,9 @@ class HyperMap : ConfigurableFeature() {
     }
 
     override fun render2d(graphics2D: Graphics2D) {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player
-        client.world
+        client.level
 
         val isUnderground =
             player?.let {

@@ -1,7 +1,7 @@
 package org.infinite.features.movement.sprint
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket
+import net.minecraft.client.Minecraft
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import kotlin.math.atan2
@@ -25,52 +25,48 @@ class SuperSprint : ConfigurableFeature(initialEnabled = false) {
         )
 
     override fun onDisabled() {
-        MinecraftClient
-            .getInstance()
-            .options
-            ?.sprintKey
-            ?.isPressed = false
+        options.keySprint.isDown = false
     }
 
     override fun onTick() {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
         val options = client.options ?: return
         if (!evenIfHungry.value) { // If EvenIfHungry is false, check hunger
-            if (player.hungerManager.foodLevel <= 6) {
+            if (player.foodData.foodLevel <= 6) {
                 player.isSprinting = false // Stop sprinting if hunger is too low
                 return // Prevent further sprint logic
             }
         }
-        if (!options.sprintKey.isPressed) {
-            options.sprintKey.isPressed = !player.isGliding && options.forwardKey.isPressed
+        if (!options.keySprint.isDown) {
+            options.keySprint.isDown = !player.isFallFlying && options.keyUp.isDown
         }
         if (!onlyWhenForward.value) {
-            val pressedForward = options.forwardKey.isPressed
-            val pressedBack = options.backKey.isPressed
-            val pressedLeft = options.leftKey.isPressed
-            val pressedRight = options.rightKey.isPressed
+            val pressedForward = options.keyUp.isDown
+            val pressedBack = options.keyDown.isDown
+            val pressedLeft = options.keyLeft.isDown
+            val pressedRight = options.keyRight.isDown
             val movementKeyPressed = pressedForward || pressedBack || pressedLeft || pressedRight
             if (movementKeyPressed) {
                 player.isSprinting = true
-                val currentYaw = player.yaw // 現在のカメラの向き（視線）
+                val currentYaw = player.yRot // 現在のカメラの向き（視線）
                 var deltaYaw: Double // ラジアン
                 val moveZ = (if (pressedForward) 1 else 0) - (if (pressedBack) 1 else 0)
                 val moveX = (if (pressedRight) 1 else 0) - (if (pressedLeft) 1 else 0)
                 if (moveZ != 0 || moveX != 0) {
                     deltaYaw = atan2(moveX.toDouble(), moveZ.toDouble())
                     val calculatedYaw = (currentYaw + Math.toDegrees(deltaYaw)).toFloat()
-                    val networkHandler = client.networkHandler
+                    val networkHandler = client.connection
                     if (networkHandler != null) {
                         // PlayerMoveC2SPacket.LookAndOnGround で向きをサーバーに強制
                         val packet =
-                            PlayerMoveC2SPacket.LookAndOnGround(
+                            ServerboundMovePlayerPacket.Rot(
                                 calculatedYaw,
-                                player.pitch, // Pitchは変更しない
-                                player.isOnGround,
+                                player.xRot, // Pitchは変更しない
+                                player.onGround(),
                                 player.horizontalCollision,
                             )
-                        networkHandler.sendPacket(packet)
+                        networkHandler.send(packet)
                     }
                 }
             }

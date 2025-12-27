@@ -1,12 +1,12 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.screen.narration.NarrationPart
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarratedElementType
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 
@@ -17,7 +17,7 @@ class EntityListItemWidget(
     height: Int, // This height is for the individual item
     private val entityId: String,
     private val onRemove: (String) -> Unit,
-) : ClickableWidget(x, y, width, height, Text.literal(entityId)) {
+) : AbstractWidget(x, y, width, height, Component.literal(entityId)) {
     private val padding = 8
     private val iconSize = 16
     private val iconPadding = 2
@@ -25,17 +25,17 @@ class EntityListItemWidget(
     private val removeButtonWidth = 20
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         val textX = iconTotalWidth
         val textY = y + this.height / 2 - 4
         graphics2D.drawText(
-            Text.literal(entityId),
+            Component.literal(entityId),
             textX,
             textY,
             InfiniteClient
@@ -81,7 +81,7 @@ class EntityListItemWidget(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         val removeButtonX = x + width - padding - removeButtonWidth
@@ -99,7 +99,7 @@ class EntityListItemWidget(
         return super.mouseClicked(click, doubled)
     }
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        builder.put(NarrationPart.TITLE, Text.literal("Entity List Item: $entityId"))
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        builder.add(NarratedElementType.TITLE, Component.literal("Entity List Item: $entityId"))
     }
 }

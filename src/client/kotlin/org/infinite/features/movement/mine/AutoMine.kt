@@ -9,12 +9,12 @@ class AutoMine : ConfigurableFeature(initialEnabled = false) {
 
     override fun onTick() {
         // 左クリック（攻撃/採掘）を強制的に押す
-        client.options.attackKey.isPressed = true
+        client.options.keyAttack.setDown(true)
     }
 
     override fun onDisabled() {
         super.onDisabled()
         // 無効になったときに左クリックを離す
-        client.options.attackKey.isPressed = false
+        client.options.keyAttack.setDown(false)
     }
 }

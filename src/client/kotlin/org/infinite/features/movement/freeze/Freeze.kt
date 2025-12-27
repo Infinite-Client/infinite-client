@@ -1,6 +1,6 @@
 package org.infinite.features.movement.freeze
 
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.rendering.camera.FreeCamera
@@ -15,7 +15,7 @@ class Freeze : ConfigurableFeature(initialEnabled = false) {
     override val level: FeatureLevel = FeatureLevel.Utils
 
     // 蓄積された移動パケットを保持するキュー
-    val packets = ArrayDeque<PlayerMoveC2SPacket>() // Mixinからアクセスするためvalにしておく
+    val packets = ArrayDeque<ServerboundMovePlayerPacket>() // Mixinからアクセスするためvalにしておく
 
     // 瞬間移動中にクライアント側での表示を維持するための偽プレイヤー
     private var fakePlayer: FakePlayerEntity? = null
@@ -88,7 +88,7 @@ class Freeze : ConfigurableFeature(initialEnabled = false) {
     private fun sendQueuedPackets() {
         val networkHandler = networkHandler ?: return
         // キューから全てのパケットを取り出し、送信
-        packets.forEach { networkHandler.sendPacket(it) }
+        packets.forEach { networkHandler.send(it) }
     }
 
     /**
@@ -109,7 +109,7 @@ class Freeze : ConfigurableFeature(initialEnabled = false) {
     /**
      * Mixinから呼び出され、パケットを処理（キューに追加）する
      */
-    fun processMovePacket(packet: PlayerMoveC2SPacket) {
+    fun processMovePacket(packet: ServerboundMovePlayerPacket) {
         if (packets.isEmpty()) {
             packets.addLast(packet)
             return
@@ -119,10 +119,10 @@ class Freeze : ConfigurableFeature(initialEnabled = false) {
 
         // パケットの内容が前のパケットと全て同一であれば、冗長なパケットとして無視
         // BlinkHackの冗長パケットチェックロジックを再現
-        if (packet.isOnGround == prevPacket.isOnGround && packet.getYaw(-1f) ==
-            prevPacket.getYaw(
+        if (packet.isOnGround == prevPacket.isOnGround && packet.getYRot(-1f) ==
+            prevPacket.getYRot(
                 -1f,
-            ) && packet.getPitch(-1f) == prevPacket.getPitch(-1f) && packet.getX(-1.0) == prevPacket.getX(-1.0) && packet.getY(
+            ) && packet.getXRot(-1f) == prevPacket.getXRot(-1f) && packet.getX(-1.0) == prevPacket.getX(-1.0) && packet.getY(
                 -1.0,
             ) == prevPacket.getY(-1.0) && packet.getZ(-1.0) == prevPacket.getZ(-1.0)
         ) {

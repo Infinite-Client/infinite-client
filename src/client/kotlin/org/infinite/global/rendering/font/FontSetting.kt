@@ -1,6 +1,6 @@
 package org.infinite.global.rendering.font
 
-import net.minecraft.util.Identifier
+import net.minecraft.resources.Identifier
 import org.infinite.features.rendering.font.HyperTextRenderer
 import org.infinite.global.ConfigurableGlobalFeature
 import org.infinite.settings.FeatureSetting
@@ -8,7 +8,7 @@ import org.infinite.settings.FeatureSetting
 class FontSetting : ConfigurableGlobalFeature() {
     override val settings: List<FeatureSetting<*>> = listOf()
     private val hyperTextRenderer: HyperTextRenderer?
-        get() = client.textRenderer as? HyperTextRenderer
+        get() = client.font as? HyperTextRenderer
 
     override fun onEnabled() {
         hyperTextRenderer?.enable()
@@ -17,10 +17,10 @@ class FontSetting : ConfigurableGlobalFeature() {
     override fun onInit() {
         hyperTextRenderer?.defineFont(
             HyperTextRenderer.HyperFonts(
-                Identifier.of("minecraft", "infinite_regular"),
-                Identifier.of("minecraft", "infinite_italic"),
-                Identifier.of("minecraft", "infinite_bold"),
-                Identifier.of("minecraft", "infinite_bolditalic"),
+                Identifier.fromNamespaceAndPath("minecraft", "infinite_regular"),
+                Identifier.fromNamespaceAndPath("minecraft", "infinite_italic"),
+                Identifier.fromNamespaceAndPath("minecraft", "infinite_bold"),
+                Identifier.fromNamespaceAndPath("minecraft", "infinite_bolditalic"),
             ),
         )
         if (isEnabled()) {

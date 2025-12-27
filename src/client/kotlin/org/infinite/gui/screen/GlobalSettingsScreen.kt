@@ -1,13 +1,13 @@
 package org.infinite.gui.screen
 
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.Screen
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.text.Text
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.global.ConfigurableGlobalFeature
 import org.infinite.global.GlobalFeature
@@ -31,7 +31,7 @@ import org.lwjgl.glfw.GLFW
 
 class GlobalSettingsScreen(
     parentScreen: Screen?,
-) : Screen(Text.literal("Infinite Client Global Settings")) {
+) : Screen(Component.literal("Infinite Client Global Settings")) {
     private val parent: Screen? = parentScreen
     private var selectedCategory: GlobalFeatureCategory? = null
     private var initialCategoryName: String? = null
@@ -50,8 +50,8 @@ class GlobalSettingsScreen(
         val tabSpacing = 2
         // タブの幅を計算。最小幅を確保しつつ、テキストに合わせて調整
         val tabWidth =
-            categories.maxOf { textRenderer.getWidth(it.name) + tabSpacing * 2 }.coerceAtLeast(width / categories.size)
-        val tabHeight = (textRenderer.fontHeight + tabSpacing) * 2
+            categories.maxOf { font.width(it.name) + tabSpacing * 2 }.coerceAtLeast(width / categories.size)
+        val tabHeight = (font.lineHeight + tabSpacing) * 2
         val totalTabsWidth = (tabWidth + tabSpacing) * categories.size - tabSpacing
         var x = (this.width - totalTabsWidth) / 2
 
@@ -63,7 +63,7 @@ class GlobalSettingsScreen(
                     tabWidth,
                     tabHeight,
                     // カテゴリ名をローカライズして表示
-                    Text.literal(category.name),
+                    Component.literal(category.name),
                 ) {
                     selectedCategory = category
                     updateCategoryContent() // クリックされたらコンテンツを切り替え
@@ -76,7 +76,7 @@ class GlobalSettingsScreen(
             sections[category] = Section(tabButton, contents)
 
             // タブボタンのみをselectableChildとして追加
-            addSelectableChild(tabButton)
+            addWidget(tabButton)
         }
 
         selectedCategory =
@@ -94,11 +94,11 @@ class GlobalSettingsScreen(
             if (category == selectedCategory) {
                 // 選択されているカテゴリのコンテンツを有効化
                 container.visible = true
-                addSelectableChild(container) // childrenリストに追加することでフォーカス対象とする
+                addWidget(container) // childrenリストに追加することでフォーカス対象とする
             } else {
                 // 選択されていないカテゴリのコンテンツを無効化
                 container.visible = false
-                remove(container) // childrenリストから削除することでフォーカス対象外とする
+                removeWidget(container) // childrenリストから削除することでフォーカス対象外とする
             }
             container.isFocused = category == selectedCategory // フォーカス状態を設定
         }
@@ -115,12 +115,12 @@ class GlobalSettingsScreen(
             if (it.name == "Themes") {
                 "Themes"
             } else {
-                Text.translatable("infinite.global_category.${it.name.lowercase()}").string
+                Component.translatable("infinite.global_category.${it.name.lowercase()}").string
             }
         } ?: ""
 
     override fun render(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
@@ -148,10 +148,10 @@ class GlobalSettingsScreen(
         super.render(context, mouseX, mouseY, delta)
     }
 
-    override fun keyPressed(input: KeyInput): Boolean {
+    override fun keyPressed(input: KeyEvent): Boolean {
         when (input.key) {
             GLFW.GLFW_KEY_ESCAPE -> {
-                this.close()
+                this.onClose()
             }
 
             GLFW.GLFW_KEY_LEFT -> {
@@ -170,7 +170,7 @@ class GlobalSettingsScreen(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean = super.mouseClicked(click, doubled)
 
@@ -182,14 +182,14 @@ class GlobalSettingsScreen(
     ): Boolean = super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
 
     override fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
     ): Boolean = super.mouseDragged(click, offsetX, offsetY)
 
-    override fun mouseReleased(click: Click): Boolean = super.mouseReleased(click)
+    override fun mouseReleased(click: MouseButtonEvent): Boolean = super.mouseReleased(click)
 
-    override fun charTyped(input: CharInput): Boolean = super.charTyped(input)
+    override fun charTyped(input: CharacterEvent): Boolean = super.charTyped(input)
 
     private fun selectPreviousCategory() {
         if (categories.isEmpty()) return
@@ -209,14 +209,14 @@ class GlobalSettingsScreen(
         updateTabButtonStates()
     }
 
-    private fun generateWidgets(category: GlobalFeatureCategory): MutableList<ClickableWidget> {
-        val allCategoryWidgets = mutableListOf<ClickableWidget>()
+    private fun generateWidgets(category: GlobalFeatureCategory): MutableList<AbstractWidget> {
+        val allCategoryWidgets = mutableListOf<AbstractWidget>()
         val contentWidth = width - 40
         val padding = 5
         val defaultWidgetHeight = 20
 
         category.features.forEach { feature ->
-            val featureDescription = Text.translatable(feature.descriptionKey).string
+            val featureDescription = Component.translatable(feature.descriptionKey).string
 
             // isEnabledトグルボタンを追加
             allCategoryWidgets.add(
@@ -233,9 +233,9 @@ class GlobalSettingsScreen(
 
             // 概要ウィジェットと設定ウィジェットの間のスペーサー
             allCategoryWidgets.add(
-                object : ClickableWidget(0, 0, contentWidth, 10, Text.empty()) {
+                object : AbstractWidget(0, 0, contentWidth, 10, Component.empty()) {
                     override fun renderWidget(
-                        context: DrawContext,
+                        context: GuiGraphics,
                         mouseX: Int,
                         mouseY: Int,
                         delta: Float,
@@ -243,31 +243,31 @@ class GlobalSettingsScreen(
                         // スペーサー、自身の視覚的レンダリングは不要
                     }
 
-                    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {}
+                    override fun updateWidgetNarration(builder: NarrationElementOutput) {}
                 },
             )
             allCategoryWidgets.addAll(generateWidgets(feature))
 
             // 各フィーチャー間の視覚的な区切りとして大きなスペーサーを追加
             allCategoryWidgets.add(
-                object : ClickableWidget(0, 0, contentWidth, padding, Text.empty()) {
+                object : AbstractWidget(0, 0, contentWidth, padding, Component.empty()) {
                     override fun renderWidget(
-                        context: DrawContext,
+                        context: GuiGraphics,
                         mouseX: Int,
                         mouseY: Int,
                         delta: Float,
                     ) {
                     }
 
-                    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {}
+                    override fun updateWidgetNarration(builder: NarrationElementOutput) {}
                 },
             )
         }
         return allCategoryWidgets
     }
 
-    private fun generateWidgets(feature: GlobalFeature<out ConfigurableGlobalFeature>): MutableList<ClickableWidget> {
-        val settingWidgets = mutableListOf<ClickableWidget>()
+    private fun generateWidgets(feature: GlobalFeature<out ConfigurableGlobalFeature>): MutableList<AbstractWidget> {
+        val settingWidgets = mutableListOf<AbstractWidget>()
         val widgetWidth = width - 40 // ScrollableContainerの幅に合わせるため、仮の値
         val defaultWidgetHeight = 20
         val sliderWidgetHeight = 35
@@ -332,7 +332,7 @@ class GlobalSettingsScreen(
         return settingWidgets
     }
 
-    override fun close() {
-        this.client?.setScreen(this.parent)
+    override fun onClose() {
+        this.minecraft?.setScreen(this.parent)
     }
 }

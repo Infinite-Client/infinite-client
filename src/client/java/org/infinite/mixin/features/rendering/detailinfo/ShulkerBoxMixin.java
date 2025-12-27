@@ -1,7 +1,7 @@
 package org.infinite.mixin.features.rendering.detailinfo;
 
-import net.minecraft.block.entity.ShulkerBoxBlockEntity;
-import net.minecraft.entity.ContainerUser; // onOpen/onCloseの引数として追加
+import net.minecraft.world.entity.ContainerUser; // onOpen/onCloseの引数として追加
+import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.detailinfo.DetailInfo;
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,7 +30,7 @@ public class ShulkerBoxMixin {
   // アニメーションの停止 (getAnimationProgress)
   // ChestMixinと同様に、RETURNで戻り値を操作する
   @Inject(
-      method = "getAnimationProgress",
+      method = "getProgress",
       at = @At("RETURN"), // 戻り値取得後
       cancellable = true)
   private void infiniteClient$forceZeroShulkerAnimation(
@@ -49,7 +49,7 @@ public class ShulkerBoxMixin {
 
   // サウンドの停止 (onOpen)
   // shouldCancel() が true の時に直接キャンセル
-  @Inject(method = "onOpen", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "startOpen", at = @At("HEAD"), cancellable = true)
   public void infiniteClient$cancelShulkerOpenSound(ContainerUser viewer, CallbackInfo ci) {
     if (cancelFlag) {
       ci.cancel();
@@ -58,7 +58,7 @@ public class ShulkerBoxMixin {
 
   // サウンドの停止 (onClose)
   // shouldCancel() が true の時に直接キャンセル
-  @Inject(method = "onClose", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "stopOpen", at = @At("HEAD"), cancellable = true)
   // onOpen/onCloseはContainerUserを引数に取るため追加
   public void infiniteClient$cancelShulkerCloseSound(ContainerUser viewer, CallbackInfo ci) {
     if (cancelFlag) {

@@ -1,12 +1,12 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.screen.narration.NarrationPart
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarratedElementType
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 
@@ -17,22 +17,22 @@ class PlayerListItemWidget(
     height: Int, // This height is for the individual item
     private val playerName: String,
     private val onRemove: (String) -> Unit,
-) : ClickableWidget(x, y, width, height, Text.literal(playerName)) {
+) : AbstractWidget(x, y, width, height, Component.literal(playerName)) {
     private val padding = 8
     private val removeButtonWidth = 20
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         val textX = x + padding
         val textY = y + this.height / 2 - 4
         graphics2D.drawText(
-            Text.literal(playerName),
+            Component.literal(playerName),
             textX,
             textY,
             InfiniteClient
@@ -83,7 +83,7 @@ class PlayerListItemWidget(
      * 座標は Click オブジェクトから取得し、ボタンは buttonInfo().button() で確認します。
      */
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         // マウスの座標を取得
@@ -100,7 +100,7 @@ class PlayerListItemWidget(
                 mouseY < removeButtonY + this.height
             ) {
                 // ボタンクリック音を鳴らす
-                this.playDownSound(MinecraftClient.getInstance().soundManager)
+                this.playDownSound(Minecraft.getInstance().soundManager)
                 onRemove(playerName)
                 return true
             }
@@ -119,9 +119,9 @@ class PlayerListItemWidget(
     // override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean = super.keyPressed(keyCode, scanCode, modifiers)
     // override fun charTyped(chr: Char, modifiers: Int): Boolean = super.charTyped(chr, modifiers)
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
         // デフォルトのナレーションを追加してから、追加の情報を付与
-        this.appendDefaultNarrations(builder)
-        builder.put(NarrationPart.TITLE, Text.literal("Player List Item: $playerName"))
+        this.defaultButtonNarrationText(builder)
+        builder.add(NarratedElementType.TITLE, Component.literal("Player List Item: $playerName"))
     }
 }

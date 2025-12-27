@@ -1,7 +1,7 @@
 package org.infinite.features.movement.walk
 
-import net.minecraft.client.MinecraftClient // MinecraftClient のインポートを追加
-import net.minecraft.client.option.KeyBinding // KeyBinding のインポートを追加
+import net.minecraft.client.KeyMapping // KeyBinding のインポートを追加
+import net.minecraft.client.Minecraft // MinecraftClient のインポートを追加
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.control.ControllerInterface
 import org.infinite.settings.FeatureSetting
@@ -24,32 +24,32 @@ class AutoWalk : ConfigurableFeature(initialEnabled = false) {
 
     // 機能が無効化されたときに全ての移動キーを離すロジックを追加
     override fun onDisabled() {
-        val options = MinecraftClient.getInstance().options ?: return
-        ControllerInterface.release(options.forwardKey)
-        ControllerInterface.release(options.backKey)
-        ControllerInterface.release(options.leftKey)
-        ControllerInterface.release(options.rightKey)
+        val options = Minecraft.getInstance().options ?: return
+        ControllerInterface.release(options.keyUp)
+        ControllerInterface.release(options.keyDown)
+        ControllerInterface.release(options.keyLeft)
+        ControllerInterface.release(options.keyRight)
     }
 
     override fun onTick() {
-        val keysToPress: List<KeyBinding> =
+        val keysToPress: List<KeyMapping> =
             when (waySetting.value) {
-                Way.Forward -> listOf(options.forwardKey)
+                Way.Forward -> listOf(options.keyUp)
 
-                Way.Back -> listOf(options.backKey)
+                Way.Back -> listOf(options.keyDown)
 
-                Way.Left -> listOf(options.leftKey)
+                Way.Left -> listOf(options.keyLeft)
 
-                Way.Right -> listOf(options.rightKey)
+                Way.Right -> listOf(options.keyRight)
 
                 // 斜め方向は2つのキーを同時に押す
-                Way.ForwardLeft -> listOf(options.forwardKey, options.leftKey)
+                Way.ForwardLeft -> listOf(options.keyUp, options.keyLeft)
 
-                Way.ForwardRight -> listOf(options.forwardKey, options.rightKey)
+                Way.ForwardRight -> listOf(options.keyUp, options.keyRight)
 
-                Way.BackLeft -> listOf(options.backKey, options.leftKey)
+                Way.BackLeft -> listOf(options.keyDown, options.keyLeft)
 
-                Way.BackRight -> listOf(options.backKey, options.rightKey)
+                Way.BackRight -> listOf(options.keyDown, options.keyRight)
             }
 
         // 決定したキーをControllerInterface経由で押す

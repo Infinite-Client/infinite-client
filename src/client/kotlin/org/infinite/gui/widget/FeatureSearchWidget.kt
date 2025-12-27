@@ -1,15 +1,15 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.font.TextRenderer
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.Screen
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Font
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.Feature
@@ -22,8 +22,8 @@ class FeatureSearchWidget(
     width: Int,
     height: Int,
     private val parentScreen: Screen,
-) : ClickableWidget(x, y, width, height, Text.empty()) {
-    private val textRenderer: TextRenderer = MinecraftClient.getInstance().textRenderer
+) : AbstractWidget(x, y, width, height, Component.empty()) {
+    private val textRenderer: Font = Minecraft.getInstance().font
     private var searchField: InfiniteTextField
     private var scrollableContainer: InfiniteScrollableContainer
     private var allFeatures: List<Feature<out ConfigurableFeature>> =
@@ -40,11 +40,11 @@ class FeatureSearchWidget(
                 y,
                 width,
                 20, // Height of the search field
-                Text.literal("Search features..."),
+                Component.literal("Search features..."),
                 // 最新のコードに合わせて InputType.ANY_TEXT を使用
                 InfiniteTextField.InputType.ANY_TEXT,
             )
-        searchField.setChangedListener { newText ->
+        searchField.setResponder { newText ->
             filterFeatures(newText)
         }
         scrollableContainer =
@@ -85,7 +85,7 @@ class FeatureSearchWidget(
         scrollableContainer.updateWidgetPositions() // Update positions after changing widgets
     }
 
-    private fun createFeatureToggleWidgets(features: List<Feature<out ConfigurableFeature>>): List<ClickableWidget> =
+    private fun createFeatureToggleWidgets(features: List<Feature<out ConfigurableFeature>>): List<AbstractWidget> =
         features.mapIndexed { index, feature ->
             InfiniteFeatureToggle(
                 0,
@@ -96,12 +96,12 @@ class FeatureSearchWidget(
                 index == selectedIndex, // isSelected
             ) {
                 // onSettings lambda
-                MinecraftClient.getInstance().setScreen(FeatureSettingsScreen(parentScreen, feature))
+                Minecraft.getInstance().setScreen(FeatureSettingsScreen(parentScreen, feature))
             }
         }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
@@ -122,7 +122,7 @@ class FeatureSearchWidget(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         if (searchField.mouseClicked(click, doubled)) {
@@ -134,7 +134,7 @@ class FeatureSearchWidget(
         return super.mouseClicked(click, doubled)
     }
 
-    override fun keyPressed(input: KeyInput): Boolean {
+    override fun keyPressed(input: KeyEvent): Boolean {
         // フォーカス強制再設定ロジックを維持
         if (!searchField.isFocused) {
             searchField.isFocused = true
@@ -205,7 +205,7 @@ class FeatureSearchWidget(
     }
 
     override fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
     ): Boolean {
@@ -218,7 +218,7 @@ class FeatureSearchWidget(
         return super.mouseDragged(click, offsetX, offsetY)
     }
 
-    override fun mouseReleased(click: Click): Boolean {
+    override fun mouseReleased(click: MouseButtonEvent): Boolean {
         if (searchField.mouseReleased(click)) {
             return true
         }
@@ -228,7 +228,7 @@ class FeatureSearchWidget(
         return super.mouseReleased(click)
     }
 
-    override fun charTyped(input: CharInput): Boolean {
+    override fun charTyped(input: CharacterEvent): Boolean {
         // 🚀 修正点 4: charTypedにもフォーカス強制再設定ロジックを追加/維持する
         // (以前のデバッグでこのガードが必要と確認されている)
         if (!searchField.isFocused) {
@@ -245,8 +245,8 @@ class FeatureSearchWidget(
         return super.charTyped(input)
     }
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        searchField.appendNarrations(builder)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        searchField.updateNarration(builder)
         // scrollableContainer.appendNarrations(builder) は以前のコード通りコメントアウトせず残します
     }
 

@@ -1,6 +1,6 @@
 package org.infinite.features.server.anti
 
-import net.minecraft.util.math.Vec3d
+import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.movement.move.QuickMove
@@ -23,39 +23,40 @@ class AntiCheat : ConfigurableFeature(initialEnabled = true) {
     private fun handleQuickMove() {
         val quickMove = InfiniteClient.getFeature(QuickMove::class.java) ?: return
         val player = player ?: return
-        if (player.isSprinting && player.isOnGround) return
-        val networkHandler = player.networkHandler ?: return
-        val netWorkPlayer = networkHandler.getPlayerListEntry(player.uuid) ?: return
+        if (player.isSprinting && player.onGround()) return
+        val networkHandler = player.connection ?: return
+        val netWorkPlayer = networkHandler.getPlayerInfo(player.uuid) ?: return
         val latencyMS = netWorkPlayer.latency
         val baseTolerance = quickMoveTolerance.value // 基本的な許容値 (例: 0.05)
         val latencyMultiplier = quickMoveLatencyMultiplier.value // レイテンシに適用する倍率 (例: 0.5)
         val dynamicToleranceMultiplier: Double =
             baseTolerance + (latencyMS.toDouble() * 0.001 * latencyMultiplier)
         val modifiedVelocity = quickMove.calculateVelocity()
-        val originalVelocity = player.velocity
+        val originalVelocity = player.deltaMovement
         val diffVelocity = modifiedVelocity.subtract(originalVelocity) // チートによる理想値との差
-        val originalSpeed = originalVelocity.horizontalLength()
-        val diffSpeed = diffVelocity.horizontalLength()
+        val originalSpeed = originalVelocity.horizontalDistance()
+        val diffSpeed = diffVelocity.horizontalDistance()
         val diffProgress = diffSpeed / originalSpeed
-        player.velocity =
+        player.setDeltaMovement(
             if (diffProgress > dynamicToleranceMultiplier) {
                 val m = (diffProgress / dynamicToleranceMultiplier).coerceIn(0.0, 1.0)
                 val modifiedVelocity =
                     vecMin(
                         modifiedVelocity,
-                        originalVelocity.add(diffVelocity.multiply(m)),
+                        originalVelocity.add(diffVelocity.scale(m)),
                     )
                 modifiedVelocity
             } else {
                 modifiedVelocity
-            }
+            },
+        )
     }
 
     private fun vecMin(
-        a: Vec3d,
-        b: Vec3d,
-    ): Vec3d =
-        if (a.lengthSquared() > b.lengthSquared()) {
+        a: Vec3,
+        b: Vec3,
+    ): Vec3 =
+        if (a.lengthSqr() > b.lengthSqr()) {
             b
         } else {
             a

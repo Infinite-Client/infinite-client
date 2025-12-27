@@ -4,11 +4,11 @@ import com.llamalad7.mixinextras.sugar.Local;
 import java.util.function.Supplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.option.OptionsScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.GridWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.layouts.GridLayout;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.options.OptionsScreen;
+import net.minecraft.network.chat.Component;
 import org.infinite.gui.screen.GlobalSettingsScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -23,17 +23,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Environment(EnvType.CLIENT)
 @Mixin(OptionsScreen.class)
 public abstract class OptionsScreenMixin extends Screen {
-  private OptionsScreenMixin(Text title) {
+  private OptionsScreenMixin(Component title) {
     super(title);
   }
 
   @Unique
-  private ButtonWidget createButton(Text message, Supplier<Screen> screenSupplier) {
-    return ButtonWidget.builder(
+  private Button createButton(Component message, Supplier<Screen> screenSupplier) {
+    return Button.builder(
             message,
             (button) -> {
-              if (this.client != null) {
-                this.client.setScreen(screenSupplier.get());
+              if (this.minecraft != null) {
+                this.minecraft.setScreen(screenSupplier.get());
               }
             })
         .build();
@@ -52,11 +52,12 @@ public abstract class OptionsScreenMixin extends Screen {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/gui/widget/ThreePartsLayoutWidget;addBody(Lnet/minecraft/client/gui/widget/Widget;)Lnet/minecraft/client/gui/widget/Widget;"))
-  private void infinite$addModConfigButtonInGrid(CallbackInfo ci, @Local GridWidget.Adder adder) {
-    adder.add(
+                  "Lnet/minecraft/client/gui/layouts/HeaderAndFooterLayout;addToContents(Lnet/minecraft/client/gui/layouts/LayoutElement;)Lnet/minecraft/client/gui/layouts/LayoutElement;"))
+  private void infinite$addModConfigButtonInGrid(
+      CallbackInfo ci, @Local GridLayout.RowHelper adder) {
+    adder.addChild(
         this.createButton(
-            Text.literal("Infinite Client Settings"),
+            Component.literal("Infinite Client Settings"),
             () -> new GlobalSettingsScreen((OptionsScreen) (Object) this)));
   }
 }

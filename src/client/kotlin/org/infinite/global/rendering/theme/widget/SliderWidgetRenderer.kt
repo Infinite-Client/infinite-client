@@ -1,23 +1,23 @@
 package org.infinite.global.rendering.theme.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.widget.SliderWidget
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractSliderButton
 import org.infinite.InfiniteClient
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.graphics.Graphics2D
 
 class SliderWidgetRenderer(
-    val widget: SliderWidget,
+    val widget: AbstractSliderButton,
 ) {
     fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val minecraftClient = MinecraftClient.getInstance()
-        val graphics2D = Graphics2D(context, minecraftClient.renderTickCounter)
+        val minecraftClient = Minecraft.getInstance()
+        val graphics2D = Graphics2D(context, minecraftClient.deltaTracker)
         val x = widget.x
         val y = widget.y
         val width = widget.width
@@ -67,9 +67,9 @@ class SliderWidgetRenderer(
         // centeredText ではなく、通常は左端に少しオフセットをかけて描画します。
 
         val textColor = if (active) colors.foregroundColor else colors.secondaryColor
-        val textRenderer = minecraftClient.textRenderer
+        val textRenderer = minecraftClient.font
         val textX = x + 2
-        val textY = y + (height - textRenderer.fontHeight) / 2
-        context.drawTextWithShadow(textRenderer, widget.message, textX, textY, textColor)
+        val textY = y + (height - textRenderer.lineHeight) / 2
+        context.drawString(textRenderer, widget.message, textX, textY, textColor)
     }
 }

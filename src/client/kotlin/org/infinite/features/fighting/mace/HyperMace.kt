@@ -1,25 +1,25 @@
 package org.infinite.features.fighting.mace
 
-import net.minecraft.entity.Entity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.item.Items
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.PositionAndOnGround
-import net.minecraft.util.hit.HitResult
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.Items
+import net.minecraft.world.phys.HitResult
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class HyperMace : ConfigurableFeature(initialEnabled = false) {
     fun execute(
-        player: PlayerEntity,
+        player: Player,
         target: Entity,
     ) {
-        if (client.crosshairTarget == null || client.crosshairTarget!!.type !== HitResult.Type.ENTITY) {
+        if (client.hitResult == null || client.hitResult!!.type !== HitResult.Type.ENTITY) {
             return
         }
-        if (player.attackCooldownProgressPerTick < 0.9f) {
+        if (player.currentItemAttackStrengthDelay < 0.9f) {
             return
         }
-        if (!player.mainHandStack.isOf(Items.MACE)) {
+        if (!player.mainHandItem.`is`(Items.MACE)) {
             return
         }
         if (target.isInvulnerable) {
@@ -62,7 +62,7 @@ class HyperMace : ConfigurableFeature(initialEnabled = false) {
             fallDistance,
         )
 
-    private fun getFallDistanceToSend(player: PlayerEntity): Double {
+    private fun getFallDistanceToSend(player: Player): Double {
         val fallDistance = fallDistance.value
         val fallMultiply = fallMultiply.value
         val actualFall = player.fallDistance
@@ -81,11 +81,11 @@ class HyperMace : ConfigurableFeature(initialEnabled = false) {
     }
 
     private fun sendFakeY(
-        player: PlayerEntity,
+        player: Player,
         offset: Double,
     ) {
-        networkHandler?.sendPacket(
-            PositionAndOnGround(
+        networkHandler?.send(
+            Pos(
                 player.x,
                 player.y + offset,
                 player.z,

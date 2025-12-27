@@ -1,10 +1,10 @@
 package org.infinite.features.movement.move
 
-import net.minecraft.block.Blocks
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.attribute.EntityAttributes
-import net.minecraft.entity.vehicle.BoatEntity
-import net.minecraft.util.math.Vec3d
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.ai.attributes.Attributes
+import net.minecraft.world.entity.vehicle.boat.Boat
+import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.server.anti.AntiCheat
@@ -23,13 +23,13 @@ class QuickMove : ConfigurableFeature() {
         get() {
             val player = player ?: return MoveMode.None
             return when {
-                player.hasVehicle() && allowWithVehicle.value -> MoveMode.Vehicle
+                player.isPassenger && allowWithVehicle.value -> MoveMode.Vehicle
                 allowOnSwimming.value && player.isSwimming -> MoveMode.Swimming
-                allowOnGliding.value && player.isGliding -> MoveMode.Gliding
-                player.isOnGround && allowOnGround.value -> MoveMode.Ground
+                allowOnGliding.value && player.isFallFlying -> MoveMode.Gliding
+                player.onGround() && allowOnGround.value -> MoveMode.Ground
                 player.isInLava && allowInLava.value -> MoveMode.Lava
-                player.isTouchingWater && allowInWater.value -> MoveMode.Water
-                !player.isOnGround && allowInAir.value -> MoveMode.Air
+                player.isInWater && allowInWater.value -> MoveMode.Water
+                !player.onGround() && allowInAir.value -> MoveMode.Air
                 else -> MoveMode.None
             }
         }
@@ -44,10 +44,10 @@ class QuickMove : ConfigurableFeature() {
                     val vehicle = player.vehicle ?: return 0.0
                     when (vehicle) {
                         is LivingEntity -> {
-                            vehicle.attributes.getValue(EntityAttributes.MOVEMENT_SPEED)
+                            vehicle.attributes.getValue(Attributes.MOVEMENT_SPEED)
                         }
 
-                        is BoatEntity -> {
+                        is Boat -> {
                             1.0
                         }
 
@@ -60,7 +60,7 @@ class QuickMove : ConfigurableFeature() {
                 else -> {
                     (if (player.isSprinting) 1.3 else 1.0) *
                         attributes.getValue(
-                            EntityAttributes.MOVEMENT_SPEED,
+                            Attributes.MOVEMENT_SPEED,
                         )
                 }
             }
@@ -71,24 +71,24 @@ class QuickMove : ConfigurableFeature() {
             val world = world ?: return 0.0
             val entity = player.vehicle ?: player
             val attributes = player.attributes
-            val blockPos = entity.supportingBlockPos
+            val blockPos = entity.mainSupportingBlockPos
 
             val blockFriction =
                 if (blockPos != null && blockPos.isPresent) {
                     world
                         .getBlockState(
                             blockPos.get(),
-                        ).block.slipperiness
+                        ).block.friction
                 } else {
                     1f
                 }
-            val poseFriction = if (player.isSneaking) attributes.getValue(EntityAttributes.SNEAKING_SPEED) else 1.0
+            val poseFriction = if (player.isShiftKeyDown) attributes.getValue(Attributes.SNEAKING_SPEED) else 1.0
             val airFriction = 0.91
-            val waterFriction = Blocks.WATER.slipperiness
-            val lavaFriction = Blocks.LAVA.slipperiness
+            val waterFriction = Blocks.WATER.friction
+            val lavaFriction = Blocks.LAVA.friction
             return when (currentMode) {
                 MoveMode.Ground -> {
-                    return blockFriction * poseFriction * airFriction
+                    blockFriction * poseFriction * airFriction
                 }
 
                 MoveMode.Swimming, MoveMode.Water -> {
@@ -212,43 +212,43 @@ class QuickMove : ConfigurableFeature() {
         )
 
     override fun onEnabled() {
-        lastVelocity = player?.velocity ?: Vec3d.ZERO
+        lastVelocity = player?.deltaMovement ?: Vec3.ZERO
     }
 
-    var lastVelocity: Vec3d = Vec3d.ZERO
+    var lastVelocity: Vec3 = Vec3.ZERO
     var playerAccelerationSpeed: Double = 0.0
 
     fun updatePlayerAccelerationSpeed() {
         val player = player ?: return
-        val v = player.velocity
+        val v = player.deltaMovement
         val l = lastVelocity
         // 水平方向の加速度を計算
         playerAccelerationSpeed = sqrt((v.x - l.x).pow(2) + (v.z - l.z).pow(2))
-        lastVelocity = player.velocity
+        lastVelocity = player.deltaMovement
     }
 
     /**
      * 現在の状態と設定に基づき、プレイヤーまたは車両の新しいベロシティ（水平成分）を計算します。
      * @return 新しい水平ベロシティ成分 (Vec3d(newVelX, 0.0, newVelZ))。Y成分は無視されます。
      */
-    fun calculateVelocity(): Vec3d {
-        val player = player ?: return Vec3d.ZERO
+    fun calculateVelocity(): Vec3 {
+        val player = player ?: return Vec3.ZERO
         val options = options
-        val velocity = velocity ?: return Vec3d.ZERO // 現在のベロシティ
+        val velocity = velocity ?: return Vec3.ZERO // 現在のベロシティ
         if (currentMode == MoveMode.None) return velocity
         var forwardInput = 0.0
         var strafeInput = 0.0
 
-        if (options.forwardKey.isPressed) forwardInput++
-        if (options.backKey.isPressed) forwardInput--
-        if (options.leftKey.isPressed) strafeInput++
-        if (options.rightKey.isPressed) strafeInput--
+        if (options.keyUp.isDown) forwardInput++
+        if (options.keyDown.isDown) forwardInput--
+        if (options.keyLeft.isDown) strafeInput++
+        if (options.keyRight.isDown) strafeInput--
 
         val tickSpeedLimit = currentMaxSpeed * speed.value
         val baseAcceleration = accelerationConstant.value // 設定された基本の加速度
 
         // 1. グローバル速度をプレイヤーのローカル座標系に変換
-        val yaw = Math.toRadians(player.yaw.toDouble())
+        val yaw = Math.toRadians(player.yRot.toDouble())
         val sinYaw = sin(yaw)
         val cosYaw = cos(yaw)
 
@@ -293,7 +293,7 @@ class QuickMove : ConfigurableFeature() {
                 ) * antiFrictionBoost
         )
 
-        val isApplyingCorrection = player.isUsingItem && player.isOnGround
+        val isApplyingCorrection = player.isUsingItem && player.onGround()
         val itemUseFactor =
             if (isApplyingCorrection) {
                 val baseMovementReductionFactor = 0.15
@@ -368,7 +368,7 @@ class QuickMove : ConfigurableFeature() {
         val newVelZ = cosYaw * localVelForward + sinYaw * localVelStrafe
 
         // X, Z成分のみを更新して返す
-        return Vec3d(newVelX, this.velocity?.y ?: player.velocity.y, newVelZ)
+        return Vec3(newVelX, this.velocity?.y ?: player.deltaMovement.y, newVelZ)
     }
 
     override fun onTick() {
@@ -376,9 +376,9 @@ class QuickMove : ConfigurableFeature() {
         updatePlayerAccelerationSpeed()
         val player = player ?: return
         val vehicle = player.vehicle
-        vehicle?.yaw = player.yaw
+        vehicle?.yRot = player.yRot
         if (InfiniteClient.isSettingEnabled(AntiCheat::class.java, "EnableForQuickMove")) return
         val newVelocity = calculateVelocity()
-        this.velocity = Vec3d(newVelocity.x, newVelocity.y, newVelocity.z)
+        this.velocity = Vec3(newVelocity.x, newVelocity.y, newVelocity.z)
     }
 }

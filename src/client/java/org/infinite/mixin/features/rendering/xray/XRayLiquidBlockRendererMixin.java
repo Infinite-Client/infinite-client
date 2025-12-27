@@ -2,20 +2,20 @@ package org.infinite.mixin.features.rendering.xray;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.block.FluidRenderer;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.BlockRenderView;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.block.LiquidBlockRenderer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.xray.XRay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin(FluidRenderer.class)
-public class XRayFluidRendererMixin {
+@Mixin(LiquidBlockRenderer.class)
+public class XRayLiquidBlockRendererMixin {
 
   /** Hides and shows fluids when using X-Ray without Sodium installed. */
   @WrapOperation(
@@ -23,15 +23,15 @@ public class XRayFluidRendererMixin {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/render/block/FluidRenderer;shouldSkipRendering(Lnet/minecraft/util/math/Direction;FLnet/minecraft/block/BlockState;)Z"),
+                  "Lnet/minecraft/client/renderer/block/LiquidBlockRenderer;isFaceOccludedByNeighbor(Lnet/minecraft/core/Direction;FLnet/minecraft/world/level/block/state/BlockState;)Z"),
       method =
-          "render(Lnet/minecraft/world/BlockRenderView;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/client/render/VertexConsumer;Lnet/minecraft/block/BlockState;Lnet/minecraft/fluid/FluidState;)V")
+          "tesselate(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/material/FluidState;)V")
   private boolean modifyShouldSkipRendering(
       Direction side, // shouldSkipRenderingの引数1: チェックしている面
       float height, // shouldSkipRenderingの引数2
       BlockState neighborState, // shouldSkipRenderingの引数3: 隣接ブロックの状態
       Operation<Boolean> original,
-      BlockRenderView world,
+      BlockAndTintGetter world,
       BlockPos pos, // レンダリング対象の流体ブロックの座標
       VertexConsumer vertexConsumer,
       BlockState blockState, // レンダリング対象の流体ブロックの状態

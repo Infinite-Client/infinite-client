@@ -1,15 +1,15 @@
 package org.infinite.features.rendering.sensory.esp
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.render.entity.state.LivingEntityRenderState
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.mob.HostileEntity
-import net.minecraft.entity.mob.MobEntity
-import net.minecraft.entity.passive.PassiveEntity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.MathHelper
-import net.minecraft.util.math.Vec3d
+import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
+import net.minecraft.util.Mth
+import net.minecraft.world.entity.AgeableMob
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.Mob
+import net.minecraft.world.entity.monster.Monster
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import org.infinite.features.rendering.sensory.ExtraSensory
 import org.infinite.libs.graphics.Graphics3D // Graphics3D をインポート
 import org.infinite.libs.graphics.render.RenderUtils
@@ -18,14 +18,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 object MobEsp {
     private fun livingEntities(): List<LivingEntity> {
         // 現在のワールドに存在する、プレイヤー自身ではないLivingEntityのリストを取得
-        val client = MinecraftClient.getInstance()
-        val world = client.world
+        val client = Minecraft.getInstance()
+        val world = client.level
 
         return world
-            ?.entities
+            ?.entitiesForRendering()
             ?.filter {
                 // LivingEntity かつ プレイヤー自身ではない
-                it is LivingEntity && it !is PlayerEntity
+                it is LivingEntity && it !is Player
             }?.map {
                 it as LivingEntity
             }
@@ -52,7 +52,7 @@ object MobEsp {
                 RenderUtils.ColorBox(
                     mobColor(it),
                     mobBox(it, tickProgress)
-                        .expand(expand), // Boxを拡張
+                        .inflate(expand), // Boxを拡張
                 )
             }
 
@@ -65,14 +65,14 @@ object MobEsp {
      */
     private fun mobColor(entity: LivingEntity): Int =
         when (entity) {
-            is HostileEntity -> {
+            is Monster -> {
                 org.infinite.InfiniteClient
                     .theme()
                     .colors.redAccentColor
             }
 
             // 敵対モブ -> 赤
-            is PassiveEntity -> {
+            is AgeableMob -> {
                 org.infinite.InfiniteClient
                     .theme()
                     .colors.greenAccentColor
@@ -93,15 +93,15 @@ object MobEsp {
     private fun mobBox(
         entity: LivingEntity,
         tickProgress: Float,
-    ): Box {
+    ): AABB {
         if (entity.isRemoved) return entity.boundingBox
 
-        val offset: Vec3d =
+        val offset: Vec3 =
             mobPos(
                 entity,
                 tickProgress,
-            ).subtract(entity.entityPos)
-        return entity.boundingBox.offset(offset)
+            ).subtract(entity.position())
+        return entity.boundingBox.move(offset)
     }
 
     /**
@@ -110,18 +110,18 @@ object MobEsp {
     private fun mobPos(
         entity: LivingEntity,
         partialTicks: Float,
-    ): Vec3d {
-        if (entity.isRemoved) return entity.entityPos
+    ): Vec3 {
+        if (entity.isRemoved) return entity.position()
 
         // MathHelper.lerp を使用して位置を補間
-        val x: Double = MathHelper.lerp(partialTicks.toDouble(), entity.lastRenderX, entity.x)
-        val y: Double = MathHelper.lerp(partialTicks.toDouble(), entity.lastRenderY, entity.y)
-        val z: Double = MathHelper.lerp(partialTicks.toDouble(), entity.lastRenderZ, entity.z)
-        return Vec3d(x, y, z)
+        val x: Double = Mth.lerp(partialTicks.toDouble(), entity.xOld, entity.x)
+        val y: Double = Mth.lerp(partialTicks.toDouble(), entity.yOld, entity.y)
+        val z: Double = Mth.lerp(partialTicks.toDouble(), entity.zOld, entity.z)
+        return Vec3(x, y, z)
     }
 
     fun handleRenderState(
-        entity: MobEntity,
+        entity: Mob,
         state: LivingEntityRenderState,
         tickProgress: Float,
         ci: CallbackInfo,

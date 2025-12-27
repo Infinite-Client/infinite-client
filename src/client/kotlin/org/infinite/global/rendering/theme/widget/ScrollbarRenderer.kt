@@ -1,30 +1,30 @@
 package org.infinite.global.rendering.theme.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.cursor.StandardCursors
-import net.minecraft.client.gui.widget.ScrollableWidget
+import com.mojang.blaze3d.platform.cursor.CursorTypes
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractScrollArea
 import org.infinite.InfiniteClient
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.transparent
 
 class ScrollbarRenderer(
-    val widget: ScrollableWidget,
+    val widget: AbstractScrollArea,
 ) {
     fun renderScrollbar(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float, // delta is not used in the original drawScrollbar, but kept for consistency
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
         val colors: ThemeColors = InfiniteClient.currentColors()
 
-        if (widget.overflows()) {
-            val i = widget.scrollbarX
-            val j = widget.scrollbarThumbHeight
-            val k = widget.scrollbarThumbY
+        if (widget.scrollbarVisible()) {
+            val i = widget.scrollBarX()
+            val j = widget.scrollerHeight()
+            val k = widget.scrollBarY()
 
             // カスタムのスクロールバー背景の描画
             graphics2D.fill(
@@ -52,8 +52,8 @@ class ScrollbarRenderer(
                 1,
             )
 
-            if (widget.isInScrollbar(mouseX.toDouble(), mouseY.toDouble())) {
-                context.setCursor(if (widget.scrollbarDragged) StandardCursors.RESIZE_NS else StandardCursors.POINTING_HAND)
+            if (widget.isOverScrollbar(mouseX.toDouble(), mouseY.toDouble())) {
+                context.requestCursor(if (widget.scrolling) CursorTypes.RESIZE_NS else CursorTypes.POINTING_HAND)
             }
         }
     }

@@ -1,18 +1,18 @@
 package org.infinite.features.rendering.tag
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.entity.Entity
-import net.minecraft.entity.EquipmentSlot
-import net.minecraft.entity.ItemEntity
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.effect.StatusEffects
-import net.minecraft.entity.mob.HostileEntity
-import net.minecraft.entity.mob.MobEntity
-import net.minecraft.entity.passive.PassiveEntity
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.item.ItemStack
-import net.minecraft.item.Items
-import net.minecraft.util.math.ColorHelper
+import net.minecraft.client.Minecraft
+import net.minecraft.util.ARGB
+import net.minecraft.world.effect.MobEffects
+import net.minecraft.world.entity.AgeableMob
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.EquipmentSlot
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.Mob
+import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.entity.monster.Monster
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics2D
@@ -120,10 +120,10 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
     // ----------------------------------------------------------------------
     override fun render3d(graphics3D: Graphics3D) {
         targetEntities.clear()
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
-        val entities = client.world?.entities ?: return
-        val worldRandom = client.world?.random
+        val entities = client.level?.entitiesForRendering() ?: return
+        val worldRandom = client.level?.random
 
         val maxDistSq = distance.value * distance.value
 
@@ -145,12 +145,12 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
             entities
                 .filter { it is LivingEntity || (showItems.value && it is ItemEntity) }
                 .filter {
-                    val distCheck = player.squaredDistanceTo(it) < maxDistSq || maxDistSq == 0 || always.value
+                    val distCheck = player.distanceToSqr(it) < maxDistSq || maxDistSq == 0 || always.value
                     if (!distCheck) return@filter false
 
                     when (it) {
-                        is PlayerEntity -> players.value
-                        is MobEntity -> mobs.value && (it.health < it.maxHealth || always.value)
+                        is Player -> players.value
+                        is Mob -> mobs.value && (it.health < it.maxHealth || always.value)
                         is ItemEntity -> showItems.value
                         else -> false
                     }
@@ -161,13 +161,13 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
                 when (entity) {
                     is LivingEntity -> {
                         entity
-                            .getLerpedPos(graphics3D.tickCounter.getTickProgress(false))
-                            .add(0.0, entity.height.toDouble(), 0.0)
+                            .getPosition(graphics3D.tickCounter.getGameTimeDeltaPartialTick(false))
+                            .add(0.0, entity.bbHeight.toDouble(), 0.0)
                     }
 
                     is ItemEntity -> {
                         entity
-                            .getLerpedPos(graphics3D.tickCounter.getTickProgress(false))
+                            .getPosition(graphics3D.tickCounter.getGameTimeDeltaPartialTick(false))
                             .add(0.0, 0.5, 0.0)
                     }
 
@@ -178,10 +178,10 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
             val pos2d = graphics3D.toDisplayPos(aboveHeadPos)
 
             if (pos2d != null) {
-                targetEntities.add(TagRenderInfo(entity, pos2d, player.squaredDistanceTo(entity)))
+                targetEntities.add(TagRenderInfo(entity, pos2d, player.distanceToSqr(entity)))
 
                 // 💡 新規パーティクル生成フック (20ティックごとに1/20の確率でスポーン)
-                if (entity is LivingEntity && showStatusEffects.value && entity.age % 20 == 0 && worldRandom?.nextInt(20) == 0) {
+                if (entity is LivingEntity && showStatusEffects.value && entity.tickCount % 20 == 0 && worldRandom?.nextInt(20) == 0) {
                     generate2dTagParticles(entity, entity.id)
                 }
             }
@@ -243,11 +243,11 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
     ) {
         val clampedProgress = progress.coerceIn(0.0f, 1.0f)
         val barBackgroundColor =
-            ColorHelper.getArgb(
+            ARGB.color(
                 (128 * alpha).toInt(),
-                ColorHelper.getRed(InfiniteClient.theme().colors.backgroundColor),
-                ColorHelper.getGreen(InfiniteClient.theme().colors.backgroundColor),
-                ColorHelper.getBlue(InfiniteClient.theme().colors.backgroundColor),
+                ARGB.red(InfiniteClient.theme().colors.backgroundColor),
+                ARGB.green(InfiniteClient.theme().colors.backgroundColor),
+                ARGB.blue(InfiniteClient.theme().colors.backgroundColor),
             )
         graphics2d.fill(x, y, width, height, barBackgroundColor)
 
@@ -293,37 +293,37 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
         // 1. デバフ (優先度高)
         if (entity.isOnFire) {
             // 火: 赤/オレンジ
-            return Pair(ColorHelper.getArgb(0, 255, 127, 0), 1.0f)
+            return Pair(ARGB.color(0, 255, 127, 0), 1.0f)
         }
-        if (entity.hasStatusEffect(StatusEffects.POISON)) {
+        if (entity.hasEffect(MobEffects.POISON)) {
             // 毒: 緑
             return Pair(theme.greenAccentColor.transparent(0), 1.0f)
         }
-        if (entity.hasStatusEffect(StatusEffects.WITHER)) {
+        if (entity.hasEffect(MobEffects.WITHER)) {
             // 衰弱: 暗い灰色/黒
-            return Pair(ColorHelper.getArgb(0, 50, 50, 50), 1.0f)
+            return Pair(ARGB.color(0, 50, 50, 50), 1.0f)
         }
-        if (entity.hasStatusEffect(StatusEffects.WEAKNESS)) {
+        if (entity.hasEffect(MobEffects.WEAKNESS)) {
             // 弱体化: 淡い紫
-            return Pair(ColorHelper.getArgb(0, 150, 150, 200), 1.0f)
+            return Pair(ARGB.color(0, 150, 150, 200), 1.0f)
         }
-        if (entity.hasStatusEffect(StatusEffects.BLINDNESS)) {
+        if (entity.hasEffect(MobEffects.BLINDNESS)) {
             // 盲目: 黒
-            return Pair(ColorHelper.getArgb(0, 0, 0, 0), 1.0f)
+            return Pair(ARGB.color(0, 0, 0, 0), 1.0f)
         }
 
         // 2. バフ/特殊状態
-        if (showHealthRegen.value && entity.hasStatusEffect(StatusEffects.REGENERATION)) {
+        if (showHealthRegen.value && entity.hasEffect(MobEffects.REGENERATION)) {
             // 再生: 明るい緑
-            return Pair(ColorHelper.getArgb(0, 0, 255, 0), 1.0f)
+            return Pair(ARGB.color(0, 0, 255, 0), 1.0f)
         }
 
         // 3. プレイヤー固有の状態
-        if (showHunger.value && entity is PlayerEntity) {
-            val hungerLevel = entity.hungerManager.foodLevel
+        if (showHunger.value && entity is Player) {
+            val hungerLevel = entity.foodData.foodLevel
             if (hungerLevel <= 6) { // 空腹エフェクトが始まるレベル (1-6)
                 // 空腹: 黄色/茶色
-                return Pair(ColorHelper.getArgb(0, 200, 150, 50), 1.0f)
+                return Pair(ARGB.color(0, 200, 150, 50), 1.0f)
             }
         }
 
@@ -413,11 +413,11 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
 
             // 色に不透明度を適用
             val particleColor =
-                ColorHelper.getArgb(
+                ARGB.color(
                     currentAlpha.coerceIn(0, 255),
-                    ColorHelper.getRed(particle.color),
-                    ColorHelper.getGreen(particle.color),
-                    ColorHelper.getBlue(particle.color),
+                    ARGB.red(particle.color),
+                    ARGB.green(particle.color),
+                    ARGB.blue(particle.color),
                 )
 
             // サイズもライフタイムで少し縮小
@@ -439,7 +439,7 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
         itemEntity: ItemEntity,
         alpha: Float,
     ) {
-        val stack = itemEntity.stack
+        val stack = itemEntity.item
         val x = -(itemRenderSize / 2)
         val y = -(itemRenderSize / 2) - 32
 
@@ -455,7 +455,7 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
         entity: LivingEntity,
         alpha: Float,
     ) {
-        val isPlayer = entity is PlayerEntity
+        val isPlayer = entity is Player
         val name = entity.name
         val displayName: String? = if (isPlayer) name.string else null
         val hasName = !displayName.isNullOrEmpty()
@@ -479,21 +479,21 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
         val alphaInt = (alpha * 255).toInt()
         val tagColor =
             when (entity) {
-                is PlayerEntity -> {
+                is Player -> {
                     InfiniteClient
                         .theme()
                         .colors.infoColor
                         .transparent(alphaInt)
                 }
 
-                is HostileEntity -> {
+                is Monster -> {
                     InfiniteClient
                         .theme()
                         .colors.errorColor
                         .transparent(alphaInt)
                 }
 
-                is PassiveEntity -> {
+                is AgeableMob -> {
                     InfiniteClient
                         .theme()
                         .colors.greenAccentColor
@@ -565,7 +565,7 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
         var currentX = -(armorAreaWidth / 2)
 
         for (slot in armorSlots) {
-            val itemStack = entity.getEquippedStack(slot)
+            val itemStack = entity.getItemBySlot(slot)
             val renderStack = if (itemStack.isEmpty) ItemStack(Items.AIR) else itemStack
 
             graphics2D.drawItem(renderStack, currentX, armorY, alpha)
@@ -574,8 +574,8 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
         }
 
         // 2-2. 手持ちアイテムの描画
-        val mainHandStack = entity.getEquippedStack(EquipmentSlot.MAINHAND)
-        val offHandStack = entity.getEquippedStack(EquipmentSlot.OFFHAND)
+        val mainHandStack = entity.getItemBySlot(EquipmentSlot.MAINHAND)
+        val offHandStack = entity.getItemBySlot(EquipmentSlot.OFFHAND)
 
         val handY = tagStartY + tagHeight / 2 - itemRenderSize / 2
 

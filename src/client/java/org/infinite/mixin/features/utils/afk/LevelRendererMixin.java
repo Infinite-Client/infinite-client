@@ -1,10 +1,10 @@
 package org.infinite.mixin.features.utils.afk;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.render.WorldRenderer;
-import net.minecraft.client.util.ObjectAllocator;
+import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.renderer.LevelRenderer;
 import org.infinite.InfiniteClient;
 import org.infinite.features.utils.afk.AfkMode;
 import org.joml.Matrix4f;
@@ -14,16 +14,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(WorldRenderer.class)
-public abstract class WorldRendererMixin {
+@Mixin(LevelRenderer.class)
+public abstract class LevelRendererMixin {
   @Inject(
       at = @At("HEAD"),
       method =
-          "render(Lnet/minecraft/client/util/ObjectAllocator;Lnet/minecraft/client/render/RenderTickCounter;ZLnet/minecraft/client/render/Camera;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V",
+          "renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V",
       cancellable = true)
   private void onRenderHead(
-      ObjectAllocator allocator,
-      RenderTickCounter tickCounter,
+      GraphicsResourceAllocator allocator,
+      DeltaTracker tickCounter,
       boolean renderBlockOutline,
       Camera camera,
       Matrix4f positionMatrix,

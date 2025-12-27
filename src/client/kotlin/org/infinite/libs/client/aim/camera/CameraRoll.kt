@@ -1,7 +1,7 @@
 package org.infinite.libs.client.aim.camera
 
-import net.minecraft.util.math.MathHelper
-import net.minecraft.util.math.Vec3d
+import net.minecraft.util.Mth
+import net.minecraft.world.phys.Vec3
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -80,7 +80,7 @@ class CameraRoll(
         return this * scale // 'times' operator (this.times(scale)) を使用
     }
 
-    fun vec(): Vec3d {
+    fun vec(): Vec3 {
         // 1. 角度をラジアンに変換 (度数で格納されていると仮定)
         // 既にラジアンで格納されている場合は、この行をコメントアウトしてください。
         val yawRad = this.yaw * PI / 180.0
@@ -94,8 +94,8 @@ class CameraRoll(
         val z = cos(yawRad) * cosPitch
 
         // 結果は自動的に正規化されます (sin^2 + cos^2 = 1 のため)
-        return Vec3d(x, y, z)
+        return Vec3(x, y, z)
     }
 
-    fun diffNormalize(): CameraRoll = CameraRoll(MathHelper.wrapDegrees(yaw), MathHelper.wrapDegrees(pitch))
+    fun diffNormalize(): CameraRoll = CameraRoll(Mth.wrapDegrees(yaw), Mth.wrapDegrees(pitch))
 }

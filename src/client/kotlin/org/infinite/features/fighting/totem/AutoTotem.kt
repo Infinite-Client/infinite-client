@@ -1,7 +1,7 @@
 package org.infinite.features.fighting.totem
 
-import net.minecraft.item.Items
-import net.minecraft.screen.slot.SlotActionType
+import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.item.Items
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.utils.backpack.BackPackManager
@@ -72,7 +72,7 @@ class AutoTotem : ConfigurableFeature(initialEnabled = false) {
         // スロットの変換
         val netA = InventoryIndex.OffHand().slotId() ?: return
         val netB = targetSlot.slotId() ?: return
-        val currentScreenId = currentPlayer.currentScreenHandler.syncId
+        val currentScreenId = currentPlayer.containerMenu.containerId
 
         // ランダムなディレイを計算するヘルパー
         fun randomDelay(): Long {
@@ -88,7 +88,7 @@ class AutoTotem : ConfigurableFeature(initialEnabled = false) {
             // 最初のクリックは、操作の開始として即座に予約（遅延0）
             AsyncInterface.add(
                 AsyncInterface.AsyncAction(0L) {
-                    interactionManager?.clickSlot(currentScreenId, netA, 0, SlotActionType.PICKUP, currentPlayer)
+                    interactionManager?.handleInventoryMouseClick(currentScreenId, netA, 0, ClickType.PICKUP, currentPlayer)
                 },
             )
 
@@ -98,7 +98,7 @@ class AutoTotem : ConfigurableFeature(initialEnabled = false) {
             cumulativeDelay += delay1
             AsyncInterface.add(
                 AsyncInterface.AsyncAction(cumulativeDelay) {
-                    interactionManager?.clickSlot(currentScreenId, netB, 0, SlotActionType.PICKUP, currentPlayer)
+                    interactionManager?.handleInventoryMouseClick(currentScreenId, netB, 0, ClickType.PICKUP, currentPlayer)
                 },
             )
 
@@ -108,7 +108,7 @@ class AutoTotem : ConfigurableFeature(initialEnabled = false) {
             cumulativeDelay += delay2
             AsyncInterface.add(
                 AsyncInterface.AsyncAction(cumulativeDelay) {
-                    interactionManager?.clickSlot(currentScreenId, netA, 0, SlotActionType.PICKUP, currentPlayer)
+                    interactionManager?.handleInventoryMouseClick(currentScreenId, netA, 0, ClickType.PICKUP, currentPlayer)
                 },
             )
 
@@ -119,7 +119,7 @@ class AutoTotem : ConfigurableFeature(initialEnabled = false) {
             AsyncInterface.add(
                 AsyncInterface.AsyncAction(cumulativeDelay) {
                     // カーソルにアイテムが残っているかチェック
-                    if (!currentPlayer.currentScreenHandler.cursorStack.isEmpty) {
+                    if (!currentPlayer.containerMenu.carried.isEmpty) {
                         val emptyBackpackSlot = manager.findFirstEmptyBackpackSlot()
 
                         if (emptyBackpackSlot != null) {
@@ -133,11 +133,11 @@ class AutoTotem : ConfigurableFeature(initialEnabled = false) {
 
                             AsyncInterface.add(
                                 AsyncInterface.AsyncAction(cumulativeDelay) {
-                                    interactionManager?.clickSlot(
+                                    interactionManager?.handleInventoryMouseClick(
                                         currentScreenId,
                                         emptyNetSlot,
                                         0,
-                                        SlotActionType.PICKUP,
+                                        ClickType.PICKUP,
                                         currentPlayer,
                                     )
                                     isSwapping = false // すべての操作が完了
@@ -150,7 +150,7 @@ class AutoTotem : ConfigurableFeature(initialEnabled = false) {
 
                             AsyncInterface.add(
                                 AsyncInterface.AsyncAction(cumulativeDelay) {
-                                    interactionManager?.clickSlot(currentScreenId, -999, 0, SlotActionType.PICKUP, currentPlayer)
+                                    interactionManager?.handleInventoryMouseClick(currentScreenId, -999, 0, ClickType.PICKUP, currentPlayer)
                                     isSwapping = false // すべての操作が完了
                                 },
                             )

@@ -1,11 +1,11 @@
 package org.infinite.features.utils.map
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.Screen
-import net.minecraft.text.Text
-import net.minecraft.util.math.ColorHelper
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
+import net.minecraft.util.ARGB
 import org.infinite.InfiniteClient
 import org.infinite.gui.widget.InfiniteButton
 import org.infinite.libs.graphics.Graphics2D
@@ -16,7 +16,7 @@ import kotlin.math.min
 
 class FullScreenMapScreen(
     val mapFeature: MapFeature,
-) : Screen(Text.of("Full Screen Map")) {
+) : Screen(Component.nullToEmpty("Full Screen Map")) {
     private var zoom: Double = 1.0
 
     // マップの中心点となるワールド座標 (X, Z)
@@ -38,7 +38,7 @@ class FullScreenMapScreen(
     private val buttonHeight = 20
 
     init {
-        val player = client?.player
+        val player = minecraft?.player
         if (player != null) {
             centerX = player.x
             centerZ = player.z
@@ -58,11 +58,11 @@ class FullScreenMapScreen(
                 buttonSpacing,
                 buttonWidth,
                 buttonHeight,
-                Text.of("-"),
+                Component.nullToEmpty("-"),
             ) {
                 zoom = max(minZoom, zoom - zoomStep)
             }
-        addDrawableChild(zoomOutButton)
+        addRenderableWidget(zoomOutButton)
         currentX += buttonWidth + buttonSpacing
         // 2. ズームイン (+) ボタン
         val zoomInButton =
@@ -71,11 +71,11 @@ class FullScreenMapScreen(
                 buttonSpacing,
                 buttonWidth,
                 buttonHeight,
-                Text.of("+"),
+                Component.nullToEmpty("+"),
             ) {
                 zoom = min(maxZoom, zoom + zoomStep)
             }
-        addDrawableChild(zoomInButton)
+        addRenderableWidget(zoomInButton)
         currentX += buttonWidth + buttonSpacing
 
         // 3. 現在地へリセット (⌖) ボタン
@@ -85,9 +85,9 @@ class FullScreenMapScreen(
                 buttonSpacing,
                 buttonWidth,
                 buttonHeight,
-                Text.of("⌖"),
+                Component.nullToEmpty("⌖"),
             ) {
-                val p = client?.player
+                val p = minecraft?.player
                 if (p != null) {
                     // マップの中心をプレイヤーの現在地に戻す
                     centerX = p.x
@@ -95,12 +95,12 @@ class FullScreenMapScreen(
                     zoom = 1.0
                 }
             }
-        addDrawableChild(centerButton)
+        addRenderableWidget(centerButton)
     }
 
     // --- mouseClicked / mouseScrolled のロジックは変更なし ---
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         if (click.button() == 0) { // 左クリック
@@ -114,7 +114,7 @@ class FullScreenMapScreen(
 
     // --- mouseDragged の修正: アスペクト比を考慮したワールド移動量に修正 ---
     override fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
     ): Boolean {
@@ -160,13 +160,13 @@ class FullScreenMapScreen(
 
     // --- render 関数の修正: 画面全体を描画し、アスペクト比を考慮した座標計算に修正 ---
     override fun render(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, client!!.renderTickCounter)
-        val player = client!!.player ?: return
+        val graphics2D = Graphics2D(context, minecraft!!.deltaTracker)
+        val player = minecraft!!.player ?: return
 
         val screenWidth = width
         val screenHeight = height
@@ -209,7 +209,7 @@ class FullScreenMapScreen(
         // プレイヤーの向き (yaw) を取得し、ラジアンに変換
         // Minecraftの yaw は Y軸周りの回転で、-180から180度。北が-90、東が0、南が90、西が180/-180。
         // 右がX+、下がZ+と仮定して、時計回りの角度に変換
-        val playerYawRadians = -toRadians(player.yaw + 90) // 北が上 (-Z) になるように調整
+        val playerYawRadians = -toRadians(player.yRot + 90) // 北が上 (-Z) になるように調整
 
         val triangleSize = 8f // 三角形のサイズ (適宜調整)
         val halfSize = triangleSize / 2f
@@ -246,8 +246,8 @@ class FullScreenMapScreen(
         // 1. プレイヤー座標の表示 (左上)
         val currentY = margin
         if (mapFeature.showPlayerCoordinates.value) {
-            val p = client!!.player ?: return
-            val coordsText = Text.of("X: %.1f Y: %.1f Z: %.1f".format(p.x, p.y, p.z))
+            val p = minecraft!!.player ?: return
+            val coordsText = Component.nullToEmpty("X: %.1f Y: %.1f Z: %.1f".format(p.x, p.y, p.z))
             graphics2D.drawText(
                 coordsText.string,
                 margin,
@@ -267,7 +267,7 @@ class FullScreenMapScreen(
         mapWorldWidth: Double, // X方向のワールド表示半径 (アスペクト比考慮済)
         mapWorldHeight: Double, // Z方向のワールド表示半径
     ) {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
 
         val centerBlockX = centerX.toInt()
@@ -367,7 +367,7 @@ class FullScreenMapScreen(
         mapWorldWidth: Double, // X方向のワールド表示半径
         mapWorldHeight: Double, // Z方向のワールド表示半径
     ) {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
 
         val mobDotRadius = 2
@@ -394,7 +394,7 @@ class FullScreenMapScreen(
             val blendedColor =
                 when {
                     relativeHeight > 0 -> {
-                        ColorHelper.lerp(
+                        ARGB.srgbLerp(
                             blendFactor,
                             baseColor,
                             0xFFFFFFFF.toInt(),
@@ -402,7 +402,7 @@ class FullScreenMapScreen(
                     }
 
                     relativeHeight < 0 -> {
-                        ColorHelper.lerp(
+                        ARGB.srgbLerp(
                             blendFactor,
                             baseColor,
                             0xFF000000.toInt(),

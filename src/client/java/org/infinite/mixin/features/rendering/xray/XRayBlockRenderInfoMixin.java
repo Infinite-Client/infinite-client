@@ -1,11 +1,11 @@
 package org.infinite.mixin.features.rendering.xray;
 
 import net.fabricmc.fabric.impl.client.indigo.renderer.render.BlockRenderInfo;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.BlockRenderView;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.block.state.BlockState;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.xray.XRay;
 import org.spongepowered.asm.mixin.Mixin;
@@ -43,13 +43,13 @@ public abstract class XRayBlockRenderInfoMixin {
     }
 
     // World（BlockRenderView）と隣接ブロックの状態を取得する
-    BlockRenderView world = MinecraftClient.getInstance().world;
+    BlockAndTintGetter world = Minecraft.getInstance().level;
     if (world == null) {
       return;
     }
 
     // 隣接ブロックの座標を計算
-    BlockPos neighborPos = blockPos.offset(face);
+    BlockPos neighborPos = blockPos.relative(face);
 
     // 隣接ブロックの状態を取得
     BlockState neighborState = world.getBlockState(neighborPos);

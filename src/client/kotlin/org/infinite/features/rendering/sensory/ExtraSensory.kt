@@ -1,12 +1,12 @@
 package org.infinite.features.rendering.sensory
 
-import net.minecraft.client.render.entity.state.ItemEntityRenderState
-import net.minecraft.client.render.entity.state.LivingEntityRenderState
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState
-import net.minecraft.entity.Entity
-import net.minecraft.entity.ItemEntity
-import net.minecraft.entity.mob.MobEntity
-import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.client.renderer.entity.state.AvatarRenderState
+import net.minecraft.client.renderer.entity.state.ItemEntityRenderState
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.Mob
+import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.entity.player.Player
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.rendering.sensory.esp.ContainerEsp
 import org.infinite.features.rendering.sensory.esp.ItemEsp
@@ -99,13 +99,13 @@ class ExtraSensory : ConfigurableFeature(initialEnabled = false) {
     ) {
         if (method.value == Method.OutLine) {
             when (entity) {
-                is PlayerEntity -> {
+                is Player -> {
                     if (playerEsp.value) {
                         cir.returnValue = true
                     }
                 }
 
-                is MobEntity -> {
+                is Mob -> {
                     if (mobEsp.value) {
                         cir.returnValue = true
                     }
@@ -133,13 +133,13 @@ class ExtraSensory : ConfigurableFeature(initialEnabled = false) {
                 }
             }
 
-            is PlayerEntity -> {
-                if (state is PlayerEntityRenderState) {
+            is Player -> {
+                if (state is AvatarRenderState) {
                     PlayerEsp.handleRenderState(entity, state, tickProgress, ci)
                 }
             }
 
-            is MobEntity -> {
+            is Mob -> {
                 if (state is LivingEntityRenderState) {
                     MobEsp.handleRenderState(entity, state, tickProgress, ci)
                 }

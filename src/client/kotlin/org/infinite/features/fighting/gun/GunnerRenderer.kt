@@ -1,12 +1,12 @@
 package org.infinite.features.fighting.gun
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.world.ClientWorld
-import net.minecraft.entity.Entity
-import net.minecraft.util.hit.HitResult
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.Vec3d
-import net.minecraft.world.RaycastContext
+import net.minecraft.client.Minecraft
+import net.minecraft.client.multiplayer.ClientLevel
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.level.ClipContext
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.HitResult
+import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
@@ -48,7 +48,7 @@ object GunnerRenderer {
         // クロスボウ状況テキスト: ホットバー中央に配置（アイテム描画位置を参考にY調整）
         val itemRenderY = height - 16 - 3 // hotbarコードのo位置
         val bowText = "$loadedCrossbow / $totalCrossbow"
-        val bowTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(bowText)
+        val bowTextWidth = Minecraft.getInstance().font.width(bowText)
         graphics2D.drawText(
             bowText,
             centerX - bowTextWidth / 2,
@@ -58,7 +58,7 @@ object GunnerRenderer {
         )
 
         val gunnerText = "$gunnerCount"
-        val arrowTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(gunnerText)
+        val arrowTextWidth = Minecraft.getInstance().font.width(gunnerText)
         graphics2D.drawText(
             gunnerText,
             centerX + hotbarWidth / 2 - arrowTextWidth,
@@ -181,22 +181,22 @@ object GunnerRenderer {
             val velocity = orbit.velocity(drawTick)
 
             // 速度がゼロに近い場合はスキップ (終点付近など)
-            if (velocity.lengthSquared() < 0.0001) {
+            if (velocity.lengthSqr() < 0.0001) {
                 currentTick += step
                 continue
             }
 
             // 2. 軌道の接線ベクトル（速度）を地面に平行な平面に射影 (xz平面)
-            val tangentFlat = Vec3d(velocity.x, 0.0, velocity.z).normalize()
+            val tangentFlat = Vec3(velocity.x, 0.0, velocity.z).normalize()
 
             // 3. 地面に平行で、接線に直交するベクトル（横線の方向）を計算
             // tangentFlat = (tx, 0, tz) -> vecFlat = (-tz, 0, tx)
-            val vecFlat = Vec3d(-tangentFlat.z, 0.0, tangentFlat.x).normalize()
+            val vecFlat = Vec3(-tangentFlat.z, 0.0, tangentFlat.x).normalize()
 
             // 4. 横線の開始点と終了点を計算
             // 横線の中心(pos)から、横線の方向に halfWidth だけ移動
-            val start = pos.subtract(vecFlat.multiply(lineHalfWidth))
-            val end = pos.add(vecFlat.multiply(lineHalfWidth))
+            val start = pos.subtract(vecFlat.scale(lineHalfWidth))
+            val end = pos.add(vecFlat.scale(lineHalfWidth))
 
             // 5. 描画
             // 軌道の色を決定 (エンティティ命中なら虹色、そうでなければ白)
@@ -218,7 +218,7 @@ object GunnerRenderer {
 }
 
 class CrossBowOrbit(
-    client: MinecraftClient,
+    client: Minecraft,
 ) {
     // 矢の物理パラメータ
     private val gravity = -0.05 // 重力加速度 (下方向)
@@ -227,18 +227,18 @@ class CrossBowOrbit(
 
     // シミュレーションパラメータ
     private val maxLength = 1000 // 最大シミュレーションティック数
-    private val world: ClientWorld = client.world ?: throw IllegalStateException("ClientWorld is null")
+    private val world: ClientLevel = client.level ?: throw IllegalStateException("ClientWorld is null")
     private val player = client.player ?: throw IllegalStateException("ClientPlayer is null")
 
     // 結果格納
-    val orbit: List<Vec3d> // 軌道上の点のリスト
+    val orbit: List<Vec3> // 軌道上の点のリスト
     val finalHit: HitResult.Type // 衝突結果 (MISS, BLOCK, ENTITY)
 
     init {
         // 現在のプレイヤーの状態を取得
-        var currentPos = player.eyePos
-        val yaw = player.yaw
-        val pitch = player.pitch
+        var currentPos = player.eyePosition
+        val yaw = player.yRot
+        val pitch = player.xRot
 
         // 1. 角度をラジアンに変換
         val yawRadians = Math.toRadians(yaw.toDouble())
@@ -248,10 +248,10 @@ class CrossBowOrbit(
         val vX = -sin(yawRadians) * cos(pitchRadians)
         val vY = -sin(pitchRadians)
         val vZ = cos(yawRadians) * cos(pitchRadians)
-        var velocity = Vec3d(vX, vY, vZ).multiply(power)
+        var velocity = Vec3(vX, vY, vZ).scale(power)
 
         // 軌道と衝突結果を格納する可変リストと変数
-        val tempOrbit: MutableList<Vec3d> = ArrayList(maxLength)
+        val tempOrbit: MutableList<Vec3> = ArrayList(maxLength)
         var currentHit: HitResult.Type = HitResult.Type.MISS // 初期位置のダミー
 
         // シミュレーションループ
@@ -261,28 +261,28 @@ class CrossBowOrbit(
             tempOrbit.add(currentPos)
             // 4-1. ブロック衝突判定
             val blockHit =
-                world.raycast(
-                    RaycastContext(
+                world.clip(
+                    ClipContext(
                         previousPos,
                         currentPos,
-                        RaycastContext.ShapeType.COLLIDER, // 固形ブロックとの衝突
-                        RaycastContext.FluidHandling.NONE, // 流体は無視
+                        ClipContext.Block.COLLIDER, // 固形ブロックとの衝突
+                        ClipContext.Fluid.NONE, // 流体は無視
                         player, // レイキャストの実行者 (特定のエンティティを無視するため)
                     ),
                 )
 
             if (blockHit.type != HitResult.Type.MISS) {
                 // ブロックに衝突した場合、軌道を衝突点まで修正し、ループを終了
-                tempOrbit[tempOrbit.lastIndex] = blockHit.pos // 最後の点を衝突点に置換
+                tempOrbit[tempOrbit.lastIndex] = blockHit.location // 最後の点を衝突点に置換
                 currentHit = blockHit.type
                 return@repeat
             }
 
             // 4-2. エンティティ衝突判定 (ブロックに衝突しなかった場合のみ)
             // Raycast用のBoxを作成 (始点と終点を含む最小のAABB)
-            val searchBox = Box(previousPos, currentPos).expand(1.0) // 判定を広げるために少し拡大
+            val searchBox = AABB(previousPos, currentPos).inflate(1.0) // 判定を広げるために少し拡大
             val entities =
-                world.getOtherEntities(player, searchBox) { entity: Entity ->
+                world.getEntities(player, searchBox) { entity: Entity ->
                     entity.isAlive && entity != player // 衝突可能で生きているエンティティ (プレイヤー自身は除く)
                 }
 
@@ -292,17 +292,17 @@ class CrossBowOrbit(
             // 衝突したエンティティの中で最も近いものを探す
             for (entity in entities) {
                 // エンティティの衝突Boxと線分(previousPos -> currentPos)の衝突をチェック
-                val box = entity.boundingBox.expand(0.3) // 矢の衝突判定のためBoxを少し拡大
-                val intersection = box.raycast(previousPos, currentPos)
+                val box = entity.boundingBox.inflate(0.3) // 矢の衝突判定のためBoxを少し拡大
+                val intersection = box.clip(previousPos, currentPos)
 
                 if (intersection.isPresent) {
                     val e = intersection.get()
-                    val hitPos = Vec3d(e.x, e.y, e.z)
-                    val distSq = previousPos.squaredDistanceTo(hitPos)
+                    val hitPos = Vec3(e.x, e.y, e.z)
+                    val distSq = previousPos.distanceToSqr(hitPos)
                     if (distSq < closestDistanceSq) {
                         closestDistanceSq = distSq
                         entityHit =
-                            net.minecraft.util.hit
+                            net.minecraft.world.phys
                                 .EntityHitResult(entity, hitPos)
                     }
                 }
@@ -310,7 +310,7 @@ class CrossBowOrbit(
 
             if (entityHit != null) {
                 // エンティティに衝突した場合、軌道を衝突点まで修正し、ループを終了
-                tempOrbit[tempOrbit.lastIndex] = entityHit.pos
+                tempOrbit[tempOrbit.lastIndex] = entityHit.location
                 currentHit = entityHit.type
                 return@repeat
             }
@@ -323,7 +323,7 @@ class CrossBowOrbit(
             velocity = velocity.add(0.0, gravity, 0.0)
 
             // 空気抵抗適用: (1.0 - resistance) を乗算
-            velocity = velocity.multiply(1.0 - resistance)
+            velocity = velocity.scale(1.0 - resistance)
         }
 
         // 結果をプロパティに設定
@@ -335,7 +335,7 @@ class CrossBowOrbit(
      * 指定されたティックにおける予測位置を返します。
      * @param tick 予測したい時間（ティック）。0.0 はプレイヤーの視点位置（始点）を意味します。
      */
-    fun pos(tick: Float): Vec3d {
+    fun pos(tick: Float): Vec3 {
         // 0.0 tick はシミュレーションの始点（プレイヤーの eyePos）を返す
         if (tick <= 0.0f) {
             // NOTE: プレイヤーの eyePos は CrossBowOrbit のプロパティとして保持されている必要がありますが、
@@ -371,16 +371,16 @@ class CrossBowOrbit(
         val posNext = orbit[index + 1]
 
         // 線形補間: pos_interpolated = pos_int + (pos_next - pos_int) * fraction
-        return posInt.add(posNext.subtract(posInt).multiply(fraction.toDouble()))
+        return posInt.add(posNext.subtract(posInt).scale(fraction.toDouble()))
     }
 
     /**
      * 指定されたティックにおける予測速度を返します。
      * 速度は、位置の差分 (P(T+1) - P(T)) から近似されます。
      */
-    fun velocity(tick: Float): Vec3d {
+    fun velocity(tick: Float): Vec3 {
         // 速度は位置の差から近似されるため、最低2点が必要です。
-        if (orbit.size < 2) return Vec3d.ZERO
+        if (orbit.size < 2) return Vec3.ZERO
 
         // 速度は P(T+1) - P(T) で近似される。T=0 の速度は P(1) - P(0) で、
         // P(1)は orbit[0] に格納されているが、P(0)（初期位置）がないため、
@@ -420,6 +420,6 @@ class CrossBowOrbit(
         val velNext = orbit[index + 2].subtract(orbit[index + 1])
 
         // 線形補間: vel_interpolated = vel_int + (vel_next - vel_int) * fraction
-        return velInt.add(velNext.subtract(velInt).multiply(fraction.toDouble()))
+        return velInt.add(velNext.subtract(velInt).scale(fraction.toDouble()))
     }
 }

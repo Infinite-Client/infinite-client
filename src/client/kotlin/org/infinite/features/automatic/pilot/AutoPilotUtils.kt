@@ -1,10 +1,10 @@
 package org.infinite.features.automatic.pilot
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.enchantment.Enchantments
-import net.minecraft.item.ItemStack
-import net.minecraft.item.Items
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.world.item.enchantment.Enchantments
 import org.infinite.InfiniteClient
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
@@ -18,7 +18,7 @@ class LandingSpot(
     val score: Double, // 標高と平坦度に基づくスコア
 ) {
     fun horizontalDistance(): Double {
-        val player = MinecraftClient.getInstance().player ?: return 0.0
+        val player = Minecraft.getInstance().player ?: return 0.0
         return player.y - y
     }
 }
@@ -41,14 +41,14 @@ internal data class ElytraInfo(
  * チェストスロットに装備されているものは無視します。
  */
 internal fun findBestElytraInInventory(): ElytraInfo? {
-    val playerInv = MinecraftClient.getInstance().player?.inventory ?: return null
+    val playerInv = Minecraft.getInstance().player?.inventory ?: return null
     val invManager = InventoryManager
     var bestElytra: ElytraInfo? = null
 
     // すべてのインベントリスロット (ホットバーとバックパック) をチェック
     // ホットバー (0-8) -> InventoryManager.Hotbar(i)
     for (i in 0 until 9) {
-        val stack = playerInv.getStack(i)
+        val stack = playerInv.getItem(i)
         if (isElytra(stack)) {
             val durability = invManager.durabilityPercentage(stack) * 100
             if ((bestElytra == null || durability > bestElytra.durability) &&
@@ -68,7 +68,7 @@ internal fun findBestElytraInInventory(): ElytraInfo? {
     // バックパック (9-35, Backpack index 0-26) -> InventoryManager.Backpack(i)
     for (i in 0 until 27) {
         val slotIndex = 9 + i
-        val stack = playerInv.getStack(slotIndex)
+        val stack = playerInv.getItem(slotIndex)
         if (isElytra(stack)) {
             val durability = invManager.durabilityPercentage(stack) * 100
             if ((bestElytra == null || durability > bestElytra.durability) &&
@@ -89,13 +89,13 @@ internal fun findBestElytraInInventory(): ElytraInfo? {
 }
 
 fun flightTime(): Double {
-    val playerInv = MinecraftClient.getInstance().player?.inventory ?: return 0.0
+    val playerInv = Minecraft.getInstance().player?.inventory ?: return 0.0
     val invManager = InventoryManager
     var total = currentFlightTime()
 
     // インベントリ内のエリトラ
     for (i in 0 until 9) {
-        val stack = playerInv.getStack(i)
+        val stack = playerInv.getItem(i)
         if (isElytra(stack)) {
             val durability = invManager.durability(stack)
             val level = enchantLevel(stack, Enchantments.UNBREAKING)
@@ -106,7 +106,7 @@ fun flightTime(): Double {
 
     for (i in 0 until 27) {
         val slotIndex = 9 + i
-        val stack = playerInv.getStack(slotIndex)
+        val stack = playerInv.getItem(slotIndex)
         if (isElytra(stack)) {
             val durability = invManager.durability(stack)
             val level = enchantLevel(stack, Enchantments.UNBREAKING)
@@ -135,7 +135,7 @@ fun currentFlightTime(): Double {
  * 秒数を Dd Hh Mm Ss 形式の文字列に変換します。
  */
 fun formatSecondsToDHMS(totalSeconds: Long): String {
-    if (totalSeconds < 0) return Text.translatable("time.na").string
+    if (totalSeconds < 0) return Component.translatable("time.na").string
 
     val secondsInDay = 24 * 60 * 60L
     val secondsInHour = 60 * 60L
@@ -151,13 +151,13 @@ fun formatSecondsToDHMS(totalSeconds: Long): String {
     val seconds = remainingSeconds % secondsInMinute
 
     val parts = mutableListOf<String>()
-    if (days > 0) parts.add(Text.translatable("time.unit.day", days).string)
-    if (hours > 0 || days > 0) parts.add(Text.translatable("time.unit.hour", hours).string)
-    if (minutes > 0 || hours > 0 || days > 0) parts.add(Text.translatable("time.unit.minute", minutes).string)
-    parts.add(Text.translatable("time.unit.second", seconds).string)
+    if (days > 0) parts.add(Component.translatable("time.unit.day", days).string)
+    if (hours > 0 || days > 0) parts.add(Component.translatable("time.unit.hour", hours).string)
+    if (minutes > 0 || hours > 0 || days > 0) parts.add(Component.translatable("time.unit.minute", minutes).string)
+    parts.add(Component.translatable("time.unit.second", seconds).string)
 
     // 全て0秒の場合は "0s"
-    if (parts.isEmpty()) return Text.translatable("time.zero_seconds").string
+    if (parts.isEmpty()) return Component.translatable("time.zero_seconds").string
 
     // 冗長にならないよう、最大3つの単位まで表示
     return parts.take(3).joinToString(" ")

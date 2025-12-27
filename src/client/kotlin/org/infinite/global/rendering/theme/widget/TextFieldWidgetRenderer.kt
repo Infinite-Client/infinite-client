@@ -1,26 +1,25 @@
 package org.infinite.global.rendering.theme.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.font.TextRenderer
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.cursor.StandardCursors
-import net.minecraft.client.gui.widget.TextFieldWidget
-import net.minecraft.text.OrderedText
-import net.minecraft.util.Util
-import net.minecraft.util.math.MathHelper
+import com.mojang.blaze3d.platform.cursor.CursorTypes
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Font
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.EditBox
+import net.minecraft.util.FormattedCharSequence
+import net.minecraft.util.Mth
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import java.util.Objects
 import kotlin.math.min
 
 class TextFieldWidgetRenderer(
-    val widget: TextFieldWidget,
+    val widget: EditBox,
 ) {
-    private val client: MinecraftClient = MinecraftClient.getInstance()
-    private val textRenderer: TextRenderer = client.textRenderer
+    private val client: Minecraft = Minecraft.getInstance()
+    private val textRenderer: Font = client.font
 
     fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
@@ -36,7 +35,7 @@ class TextFieldWidgetRenderer(
             val infoColor = colors.infoColor // 提案テキスト（Suggestion）に適用（元のコードは-8355712）
 
             // 1. 背景と枠線の描画
-            if (widget.drawsBackground()) {
+            if (widget.isBordered) {
                 graphics2D.fill(
                     widget.x,
                     widget.y,
@@ -59,12 +58,12 @@ class TextFieldWidgetRenderer(
 
             // 3. 描画するテキストの準備
             // カーソル（キャレット）の描画位置（stringの先頭からのインデックス）
-            val startCursorIndexInScreenString: Int = widget.selectionStart - widget.firstCharacterIndex
+            val startCursorIndexInScreenString: Int = widget.cursorPos - widget.displayPos
 
             // 画面幅に収まるように切り詰められたテキスト
             val screenVisibleText: String =
-                textRenderer.trimToWidth(
-                    widget.text.substring(widget.firstCharacterIndex),
+                textRenderer.plainSubstrByWidth(
+                    widget.value.substring(widget.displayPos),
                     widget.innerWidth,
                 )
 
@@ -74,11 +73,11 @@ class TextFieldWidgetRenderer(
 
             // カーソル点滅ロジック: フォーカスがあり、時間で点滅、かつ選択開始位置が表示されているか
             val shouldDrawBlinkingCursor =
-                widget.isFocused && (Util.getMeasuringTimeMs() - widget.lastSwitchFocusTime) / 300L % 2L == 0L && isSelectionStartVisible
+                widget.isFocused && (System.currentTimeMillis() - widget.focusedTime) / 300L % 2L == 0L && isSelectionStartVisible
 
             // 選択終了インデックス（画面上の表示範囲にクランプ）
             val endCursorIndexInScreenString =
-                MathHelper.clamp(widget.selectionEnd - widget.firstCharacterIndex, 0, screenVisibleText.length)
+                Mth.clamp(widget.highlightPos - widget.displayPos, 0, screenVisibleText.length)
 
             // 現在のテキスト描画X座標
             var textRenderX: Int = widget.textX
@@ -87,9 +86,9 @@ class TextFieldWidgetRenderer(
             if (!screenVisibleText.isEmpty()) {
                 val textBeforeCursor =
                     if (isSelectionStartVisible) screenVisibleText.take(startCursorIndexInScreenString) else screenVisibleText
-                val orderedTextBeforeCursor: OrderedText? = widget.format(textBeforeCursor, widget.firstCharacterIndex)
+                val orderedTextBeforeCursor: FormattedCharSequence = widget.applyFormat(textBeforeCursor, widget.displayPos)
 
-                context.drawText(
+                context.drawString(
                     textRenderer,
                     orderedTextBeforeCursor,
                     textRenderX,
@@ -97,13 +96,13 @@ class TextFieldWidgetRenderer(
                     textColor,
                     widget.textShadow,
                 )
-                textRenderX += textRenderer.getWidth(orderedTextBeforeCursor) + 1
+                textRenderX += textRenderer.width(orderedTextBeforeCursor) + 1
             }
 
             // 5. カーソル（キャレット）の位置計算
             // テキストの末尾（最大長）に達していない、または最大長に達しているか
             val isCursorAtEndOrMaximized =
-                widget.selectionStart < widget.text.length || widget.text.length >= widget.maxLength
+                widget.cursorPos < widget.value.length || widget.value.length >= widget.maxLength
 
             // カーソル描画X座標の初期値
             var cursorRenderX = textRenderX
@@ -119,22 +118,22 @@ class TextFieldWidgetRenderer(
 
             // 6. 選択範囲の後ろのテキストの描画
             if (!screenVisibleText.isEmpty() && isSelectionStartVisible && startCursorIndexInScreenString < screenVisibleText.length) {
-                context.drawText(
+                context.drawString(
                     textRenderer,
-                    widget.format(screenVisibleText.substring(startCursorIndexInScreenString), widget.selectionStart),
+                    widget.applyFormat(screenVisibleText.substring(startCursorIndexInScreenString), widget.cursorPos),
                     textRenderX,
                     widget.textY,
                     textColor,
                     widget.textShadow,
                 )
             }
-
+            val hint = widget.hint
             // 7. プレースホルダーテキストの描画
-            if (widget.placeholder != null && screenVisibleText.isEmpty() && !widget.isFocused) {
+            if (hint != null && screenVisibleText.isEmpty() && !widget.isFocused) {
                 // プレースホルダーの描画位置は、テキストの描画が始まる位置 (k) から
-                context.drawTextWithShadow(
+                context.drawString(
                     textRenderer,
-                    widget.placeholder,
+                    hint,
                     textRenderX,
                     widget.textY,
                     secondaryColor,
@@ -143,7 +142,7 @@ class TextFieldWidgetRenderer(
 
             // 8. 提案テキスト（Suggestion）の描画
             if (!isCursorAtEndOrMaximized && widget.suggestion != null) {
-                context.drawText(
+                context.drawString(
                     textRenderer,
                     widget.suggestion,
                     cursorRenderX - 1, // カーソル位置から
@@ -156,7 +155,7 @@ class TextFieldWidgetRenderer(
             // 9. 選択範囲（ハイライト）の描画
             if (endCursorIndexInScreenString != startCursorIndexInScreenString) {
                 val endSelectionX: Int =
-                    widget.textX + textRenderer.getWidth(screenVisibleText.take(endCursorIndexInScreenString))
+                    widget.textX + textRenderer.width(screenVisibleText.take(endCursorIndexInScreenString))
 
                 // 描画範囲のクランプ処理を分かりやすい変数名に
                 val selectionStartXClamped = min(cursorRenderX, widget.x + widget.width)
@@ -164,10 +163,10 @@ class TextFieldWidgetRenderer(
 
                 // 選択範囲のY座標
                 val selectionYStart: Int = widget.textY - 1
-                Objects.requireNonNull<TextRenderer?>(textRenderer)
+                Objects.requireNonNull<Font?>(textRenderer)
                 val selectionYEnd: Int = selectionYStart + 1 + 9 // テキストの高さに依存
 
-                context.drawSelection(selectionStartXClamped, selectionYStart, selectionEndXClamped, selectionYEnd, false)
+                context.textHighlight(selectionStartXClamped, selectionYStart, selectionEndXClamped, selectionYEnd, false)
             }
 
             // 10. ブリンキングカーソル（キャレット）の描画
@@ -176,7 +175,7 @@ class TextFieldWidgetRenderer(
                     // カーソルが文字の間にある場合（縦棒）
                     val caretYStart: Int = widget.textY - 1
                     val caretXEnd = cursorRenderX + 1
-                    Objects.requireNonNull<TextRenderer?>(textRenderer)
+                    Objects.requireNonNull<Font?>(textRenderer)
                     val caretYEnd: Int = caretYStart + 1 + 9 // テキストの高さに依存
 
                     context.fill(
@@ -188,13 +187,13 @@ class TextFieldWidgetRenderer(
                     ) // foregroundColorで描画
                 } else {
                     // カーソルがテキストの末尾の後の場合（アンダースコア）
-                    context.drawText(textRenderer, "_", cursorRenderX, widget.textY, foregroundColor, widget.textShadow)
+                    context.drawString(textRenderer, "_", cursorRenderX, widget.textY, foregroundColor, widget.textShadow)
                 }
             }
 
             // 11. マウスカーソルの設定
             if (widget.isHovered) {
-                context.setCursor(if (widget.isEditable) StandardCursors.IBEAM else StandardCursors.NOT_ALLOWED)
+                context.requestCursor(if (widget.isEditable) CursorTypes.IBEAM else CursorTypes.NOT_ALLOWED)
             }
         }
     }

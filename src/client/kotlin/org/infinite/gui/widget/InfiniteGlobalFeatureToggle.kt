@@ -1,11 +1,11 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.global.ConfigurableGlobalFeature
 import org.infinite.global.GlobalFeature
@@ -20,10 +20,10 @@ class InfiniteGlobalFeatureToggle(
     val globalFeature: GlobalFeature<out ConfigurableGlobalFeature>,
     private val isSelected: Boolean, // New parameter
     private val featureDescription: String,
-) : ClickableWidget(x, y, width, height, Text.literal(globalFeature.name)) {
+) : AbstractWidget(x, y, width, height, Component.literal(globalFeature.name)) {
     val toggleButton: InfiniteToggleButton
     private val resetButton: InfiniteButton // New reset button
-    private val textRenderer = MinecraftClient.getInstance().textRenderer
+    private val textRenderer = Minecraft.getInstance().font
 
     init {
         val buttonWidth = 50
@@ -51,7 +51,7 @@ class InfiniteGlobalFeatureToggle(
                 y,
                 resetButtonWidth,
                 height,
-                Text.literal("R"), // Placeholder for reset icon/text
+                Component.literal("R"), // Placeholder for reset icon/text
             ) {
                 // OnPress action for reset button
                 configurableGlobalFeature.reset() // Reset feature's enabled state
@@ -59,7 +59,7 @@ class InfiniteGlobalFeatureToggle(
                     setting.reset() // Reset individual settings
                 }
                 InfiniteClient.log(
-                    Text
+                    Component
                         .translatable(
                             "command.infinite.config.reset.globalFeature",
                             globalFeature.name,
@@ -74,32 +74,32 @@ class InfiniteGlobalFeatureToggle(
     }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         graphics2D.drawText(
-            Text.literal(globalFeature.name),
+            Component.literal(globalFeature.name),
             x + 5, // 左端から少しパディング
-            y + (height - textRenderer.fontHeight) / 2, // 垂直方向中央
+            y + (height - textRenderer.lineHeight) / 2, // 垂直方向中央
             InfiniteClient.currentColors().foregroundColor,
             true, // shadow = true
         )
 
-        var descriptionY = y + (height - textRenderer.fontHeight) / 2 + textRenderer.fontHeight + 2 // タイトルの下2ピクセル
+        var descriptionY = y + (height - textRenderer.lineHeight) / 2 + textRenderer.lineHeight + 2 // タイトルの下2ピクセル
 
         featureDescription.split("\n").forEach { line ->
             graphics2D.drawText(
-                Text.literal(line),
+                Component.literal(line),
                 x + 5, // 左端から少しパディング
                 descriptionY,
                 InfiniteClient.currentColors().secondaryColor,
                 true, // shadow = true
             )
-            descriptionY += textRenderer.fontHeight + 1 // 次の行へ
+            descriptionY += textRenderer.lineHeight + 1 // 次の行へ
         }
         toggleButton.x = x + width - toggleButton.width
         toggleButton.y = y
@@ -118,13 +118,13 @@ class InfiniteGlobalFeatureToggle(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean =
         toggleButton.mouseClicked(click, doubled) ||
             resetButton.mouseClicked(click, doubled) // Handle reset button click
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        this.appendDefaultNarrations(builder)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        this.defaultButtonNarrationText(builder)
     }
 }

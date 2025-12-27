@@ -1,11 +1,11 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
@@ -16,8 +16,8 @@ class InfiniteSelectionListField(
     width: Int,
     height: Int,
     private val setting: FeatureSetting<*>,
-) : ClickableWidget(x, y, width, height, Text.literal(setting.name)) {
-    private val textRenderer = MinecraftClient.getInstance().textRenderer
+) : AbstractWidget(x, y, width, height, Component.literal(setting.name)) {
+    private val textRenderer = Minecraft.getInstance().font
     private var cycleButton: InfiniteButton
     private val buttonWidth: Int
 
@@ -30,7 +30,7 @@ class InfiniteSelectionListField(
             }
         buttonWidth =
             (
-                options.maxOfOrNull { textRenderer.getWidth(it) + 8 }
+                options.maxOfOrNull { textRenderer.width(it) + 8 }
                     ?: 0
             ).coerceAtLeast(50)
 
@@ -52,11 +52,11 @@ class InfiniteSelectionListField(
         }
     }
 
-    private fun getCurrentSettingValueAsText(): Text =
+    private fun getCurrentSettingValueAsText(): Component =
         when (setting) {
-            is FeatureSetting.EnumSetting<*> -> Text.literal(setting.value.name)
-            is FeatureSetting.StringListSetting -> Text.literal(setting.value)
-            else -> Text.literal("N/A")
+            is FeatureSetting.EnumSetting<*> -> Component.literal(setting.value.name)
+            is FeatureSetting.StringListSetting -> Component.literal(setting.value)
+            else -> Component.literal("N/A")
         }
 
     private fun cycleOption() {
@@ -67,14 +67,14 @@ class InfiniteSelectionListField(
                 val currentIndex = setting.options.indexOf(setting.value)
                 val nextIndex = (currentIndex + 1) % setting.options.size
                 setting.updateValueFromEnumStar(setting.options[nextIndex])
-                cycleButton.message = Text.literal(setting.value.name)
+                cycleButton.message = Component.literal(setting.value.name)
             }
 
             is FeatureSetting.StringListSetting -> {
                 val currentIndex = setting.options.indexOf(setting.value)
                 val nextIndex = (currentIndex + 1) % setting.options.size
                 setting.set(setting.options[nextIndex])
-                cycleButton.message = Text.literal(setting.value)
+                cycleButton.message = Component.literal(setting.value)
             }
 
             else -> {}
@@ -82,12 +82,12 @@ class InfiniteSelectionListField(
     }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         val textX = x + 5 // Padding from left edge
         val totalTextHeight: Int
@@ -95,12 +95,12 @@ class InfiniteSelectionListField(
         val descriptionY: Int?
 
         if (setting.descriptionKey.isNotBlank()) {
-            totalTextHeight = textRenderer.fontHeight * 2 + 2 // Name + padding + Description
+            totalTextHeight = textRenderer.lineHeight * 2 + 2 // Name + padding + Description
             nameY = y + (height - totalTextHeight) / 2
-            descriptionY = nameY + textRenderer.fontHeight + 2
+            descriptionY = nameY + textRenderer.lineHeight + 2
 
             graphics2D.drawText(
-                Text.translatable(setting.name),
+                Component.translatable(setting.name),
                 textX,
                 nameY,
                 InfiniteClient
@@ -109,7 +109,7 @@ class InfiniteSelectionListField(
                 true, // shadow = true
             )
             graphics2D.drawText(
-                Text.translatable(setting.descriptionKey),
+                Component.translatable(setting.descriptionKey),
                 textX,
                 descriptionY,
                 InfiniteClient
@@ -118,11 +118,11 @@ class InfiniteSelectionListField(
                 true, // shadow = true
             )
         } else {
-            totalTextHeight = textRenderer.fontHeight // Only name
+            totalTextHeight = textRenderer.lineHeight // Only name
             nameY = y + (height - totalTextHeight) / 2
 
             graphics2D.drawText(
-                Text.translatable(setting.name),
+                Component.translatable(setting.name),
                 textX,
                 nameY,
                 InfiniteClient
@@ -138,11 +138,11 @@ class InfiniteSelectionListField(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean = cycleButton.mouseClicked(click, doubled)
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        this.appendDefaultNarrations(builder)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        this.defaultButtonNarrationText(builder)
     }
 }

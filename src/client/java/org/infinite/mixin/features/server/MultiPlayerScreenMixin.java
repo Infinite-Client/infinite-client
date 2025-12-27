@@ -1,10 +1,10 @@
 package org.infinite.mixin.features.server;
 
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.chat.Component;
 import org.infinite.InfiniteClient;
 import org.infinite.features.server.connection.AutoConnect;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,12 +13,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(MultiplayerScreen.class)
+@Mixin(JoinMultiplayerScreen.class)
 public class MultiPlayerScreenMixin extends Screen {
 
-  @Unique private ButtonWidget lastServerButton;
+  @Unique private Button lastServerButton;
 
-  protected MultiPlayerScreenMixin(Text title) {
+  protected MultiPlayerScreenMixin(Component title) {
     super(title);
   }
 
@@ -30,9 +30,9 @@ public class MultiPlayerScreenMixin extends Screen {
   @Inject(at = @At("TAIL"), method = "init()V")
   private void onInit(CallbackInfo ci) {
     lastServerButton =
-        addDrawableChild(
-            ButtonWidget.builder(Text.literal("Last Server"), b -> joinLastServer())
-                .dimensions(width / 2 - 154, 10, 100, 20)
+        addRenderableWidget(
+            Button.builder(Component.literal("Last Server"), b -> joinLastServer())
+                .bounds(width / 2 - 154, 10, 100, 20)
                 .build());
     updateLastServerButton();
   }
@@ -40,11 +40,11 @@ public class MultiPlayerScreenMixin extends Screen {
   @Unique
   private void joinLastServer() {
     AutoConnect autoConnect = autoConnect();
-    if (autoConnect != null) autoConnect.joinLastServer((MultiplayerScreen) (Object) this);
+    if (autoConnect != null) autoConnect.joinLastServer((JoinMultiplayerScreen) (Object) this);
   }
 
-  @Inject(at = @At("HEAD"), method = "connect(Lnet/minecraft/client/network/ServerInfo;)V")
-  private void onConnect(ServerInfo entry, CallbackInfo ci) {
+  @Inject(at = @At("HEAD"), method = "join(Lnet/minecraft/client/multiplayer/ServerData;)V")
+  private void onConnect(ServerData entry, CallbackInfo ci) {
     AutoConnect autoConnect = autoConnect();
     if (autoConnect != null) {
       autoConnect.setLastServer(entry);

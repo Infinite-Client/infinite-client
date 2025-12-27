@@ -1,8 +1,8 @@
 package org.infinite.features.rendering.detailinfo
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.entity.LivingEntity
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
+import net.minecraft.world.entity.LivingEntity
 import org.infinite.InfiniteClient
 import org.infinite.features.rendering.ui.HyperUi
 import org.infinite.libs.graphics.Graphics2D
@@ -22,14 +22,14 @@ object DetailInfoRenderer {
 
     fun render(
         graphics2d: Graphics2D,
-        client: MinecraftClient,
+        client: Minecraft,
         detailInfoFeature: DetailInfo,
     ) {
         val detail = detailInfoFeature.targetDetail ?: return
-        val interactionManager = client.interactionManager ?: return
+        val interactionManager = client.gameMode ?: return
         val isTargetInReach = detailInfoFeature.isTargetInReach
 
-        val screenWidth = client.window.scaledWidth
+        val screenWidth = client.window.guiScaledWidth
         val widthSetting = detailInfoFeature.getSetting("Width")?.value as? Int ?: return
         val startY =
             run {
@@ -69,8 +69,8 @@ object DetailInfoRenderer {
                     uiWidth,
                     isTargetInReach,
                 )
-                if (interactionManager.isBreakingBlock) {
-                    val progress = interactionManager.currentBreakingProgress.coerceIn(0.0f, 1.0f)
+                if (interactionManager.isDestroying) {
+                    val progress = interactionManager.destroyProgress.coerceIn(0.0f, 1.0f)
                     val infoText = TimeFormatter.getBreakingTimeText(progress, client)
                     drawBar(graphics2d, startX, endX, endY, progress, infoText)
                 }
@@ -81,7 +81,7 @@ object DetailInfoRenderer {
                 val entity = detail.entity
                 if (entity is LivingEntity) {
                     val progress = entity.health / entity.maxHealth
-                    val infoText = Text.literal("HP: ${"%.1f".format(entity.health)} / ${entity.maxHealth}")
+                    val infoText = Component.literal("HP: ${"%.1f".format(entity.health)} / ${entity.maxHealth}")
                     drawBar(graphics2d, startX, endX, endY, progress, infoText)
                 }
             }
@@ -115,13 +115,13 @@ object DetailInfoRenderer {
         endX: Int,
         endY: Int,
         progress: Float,
-        infoText: Text,
+        infoText: Component,
     ) {
         val barY = endY - BORDER_WIDTH - BAR_HEIGHT - BAR_PADDING
         val barStartX = startX + BORDER_WIDTH + BAR_PADDING
         val barEndX = endX - BORDER_WIDTH - BAR_PADDING
         val barWidth = barEndX - barStartX
-        val font = MinecraftClient.getInstance().textRenderer
+        val font = Minecraft.getInstance().font
 
         val fillWidth = (barWidth * progress).toInt()
         val barBackgroundColor =
@@ -143,7 +143,7 @@ object DetailInfoRenderer {
         graphics2d.drawText(
             infoText.string,
             barStartX,
-            barY - font.fontHeight - 2,
+            barY - font.lineHeight - 2,
             InfiniteClient
                 .theme()
                 .colors.foregroundColor,

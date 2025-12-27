@@ -1,6 +1,6 @@
 package org.infinite.features.rendering.ui
 
-import net.minecraft.util.math.MathHelper
+import net.minecraft.util.Mth
 import org.infinite.InfiniteClient
 import org.infinite.features.automatic.pilot.AutoPilot
 import org.infinite.features.automatic.pilot.flightTime
@@ -124,7 +124,7 @@ class ElytraFlightUiRenderer : ClientInterface() {
             )
         val textOffset = sqrt(2.0) * renderSize
         for ((degree, char) in compassPoints) {
-            val relativeYaw = MathHelper.wrapDegrees(degree - direction.yaw)
+            val relativeYaw = Mth.wrapDegrees(degree - direction.yaw)
             val relativeRad = toRadians(relativeYaw)
             val textX = centerX + (sin(relativeRad) * textOffset).toInt().coerceIn(-renderSize, renderSize)
             val textY = centerY - (cos(relativeRad) * textOffset).toInt().coerceIn(-renderSize, renderSize)
@@ -310,10 +310,10 @@ class ElytraFlightUiRenderer : ClientInterface() {
         val player = player ?: return null
         val world = world ?: return null
         val autoPilot = InfiniteClient.getFeature(AutoPilot::class.java) ?: return null
-        val yaw = player.getLerpedYaw(ticKProgress).toDouble()
-        val pitch = player.getLerpedPitch(ticKProgress).toDouble()
+        val yaw = player.getYRot(ticKProgress).toDouble()
+        val pitch = player.getXRot(ticKProgress).toDouble()
         val directions = CameraRoll(yaw, pitch)
-        val pos = player.getLerpedPos(ticKProgress)
+        val pos = player.getPosition(ticKProgress)
         val seaHeight = world.seaLevel
         val altitude = pos.y - seaHeight
         val speed = autoPilot.flySpeed

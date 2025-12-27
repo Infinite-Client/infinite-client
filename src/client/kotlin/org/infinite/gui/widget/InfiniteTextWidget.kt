@@ -1,11 +1,11 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.screen.narration.NarrationPart
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarratedElementType
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.network.chat.Component
 import org.infinite.libs.graphics.Graphics2D
 
 class InfiniteTextWidget(
@@ -13,18 +13,18 @@ class InfiniteTextWidget(
     width: Int,
     y: Int,
     height: Int,
-    private val text: Text,
+    private val text: Component,
     private val color: Int, // The color is directly passed, so no theme colors here.
-) : ClickableWidget(x, y, width, height, text) {
+) : AbstractWidget(x, y, width, height, text) {
     private val padding = 2
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         graphics2D.drawText(
             text,
@@ -34,7 +34,7 @@ class InfiniteTextWidget(
         )
     }
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        builder.put(NarrationPart.TITLE, text)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        builder.add(NarratedElementType.TITLE, text)
     }
 }

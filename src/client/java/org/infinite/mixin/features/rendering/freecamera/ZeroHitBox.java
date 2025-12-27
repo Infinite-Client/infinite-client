@@ -1,8 +1,8 @@
-package org.infinite.mixin.features.rendering.freecamera; // あなたのパッケージ名に置き換えてください
+package org.infinite.mixin.features.rendering.freecamera;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Box;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.camera.FreeCamera;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,11 +15,11 @@ public abstract class ZeroHitBox {
 
   // 衝突ボックスを返すメソッドをフックする
   @Inject(method = "getBoundingBox", at = @At("HEAD"), cancellable = true)
-  private void zeroBoundingBox(CallbackInfoReturnable<Box> cir) {
+  private void zeroBoundingBox(CallbackInfoReturnable<AABB> cir) {
     if (!InfiniteClient.INSTANCE.isFeatureEnabled(FreeCamera.class)) return;
     Entity entity = (Entity) (Object) this;
-    if (entity instanceof PlayerEntity) {
-      Box zeroBox = new Box(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    if (entity instanceof Player) {
+      AABB zeroBox = new AABB(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
       cir.setReturnValue(zeroBox);
       cir.cancel();
     }

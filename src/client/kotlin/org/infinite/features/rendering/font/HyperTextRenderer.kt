@@ -1,33 +1,30 @@
 package org.infinite.features.rendering.font
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.font.BakedGlyph
-import net.minecraft.client.font.FontManager
-import net.minecraft.client.font.FontStorage
-import net.minecraft.client.font.GlyphMetrics
-import net.minecraft.client.font.GlyphProvider
-import net.minecraft.client.font.TextHandler
-import net.minecraft.client.font.TextRenderer
-import net.minecraft.text.Style
-import net.minecraft.util.Identifier
-import net.minecraft.util.math.MathHelper
-import net.minecraft.util.math.random.Random
+import com.mojang.blaze3d.font.GlyphInfo
+import net.minecraft.client.Minecraft
+import net.minecraft.client.StringSplitter
+import net.minecraft.client.gui.Font
+import net.minecraft.client.gui.GlyphSource
+import net.minecraft.client.gui.font.FontManager
+import net.minecraft.client.gui.font.FontSet
+import net.minecraft.client.gui.font.glyphs.BakedGlyph
+import net.minecraft.network.chat.Style
+import net.minecraft.resources.Identifier
+import net.minecraft.util.Mth
+import net.minecraft.util.RandomSource
 
 class HyperTextRenderer(
     val fontManager: FontManager,
-) : TextRenderer(fontManager.anyFonts),
-    TextHandler.WidthRetriever {
+) : Font(fontManager.anyGlyphs),
+    StringSplitter.WidthProvider {
     init {
-        this.handler = TextHandler(this)
+        this.splitter = StringSplitter(this)
     }
 
     override fun getWidth(
         codePoint: Int,
-        style: Style?,
-    ): Float {
-        val style = style ?: return 0f
-        return this.getGlyph(codePoint, style)?.metrics?.getAdvance(style.isBold) ?: 0f
-    }
+        style: Style,
+    ): Float = this.getGlyph(codePoint, style).info()?.getAdvance(style.isBold) ?: 0f
 
     class HyperFonts(
         val regularIdentifier: Identifier,
@@ -39,12 +36,12 @@ class HyperTextRenderer(
     // カスタムフォントのIdentifier
     private var hyperFonts: HyperFonts =
         HyperFonts(
-            Identifier.of("minecraft", "default"),
-            Identifier.of("minecraft", "default"),
-            Identifier.of("minecraft", "default"),
-            Identifier.of("minecraft", "default"),
+            Identifier.fromNamespaceAndPath("minecraft", "default"),
+            Identifier.fromNamespaceAndPath("minecraft", "default"),
+            Identifier.fromNamespaceAndPath("minecraft", "default"),
+            Identifier.fromNamespaceAndPath("minecraft", "default"),
         )
-    private val random = Random.create()
+    private val random = RandomSource.create()
 
     fun defineFont(hyperFonts: HyperFonts) {
         this.hyperFonts = hyperFonts
@@ -59,8 +56,8 @@ class HyperTextRenderer(
         }
 
     class ZeroBoldOffsetMetrics(
-        private val baseMetrics: GlyphMetrics,
-    ) : GlyphMetrics by baseMetrics {
+        private val baseMetrics: GlyphInfo,
+    ) : GlyphInfo by baseMetrics {
         override fun getAdvance(bold: Boolean): Float = super.getAdvance(bold)
 
         override fun getBoldOffset(): Float = 0.0f
@@ -70,33 +67,32 @@ class HyperTextRenderer(
 
     class CustomBakedGlyph(
         private val baseGlyph: BakedGlyph,
-        metrics: GlyphMetrics,
+        metrics: GlyphInfo,
     ) : BakedGlyph by baseGlyph {
         private val customMetrics = metrics
 
-        override fun getMetrics(): GlyphMetrics = customMetrics
+        override fun info(): GlyphInfo = customMetrics
     }
 
     // HyperTextRenderer クラス内の変更
     override fun getGlyph(
         codePoint: Int,
-        style: Style?,
-    ): BakedGlyph? {
-        val style = style ?: return null
+        style: Style,
+    ): BakedGlyph {
         if (!isEnabled) {
             return super.getGlyph(codePoint, style)
         }
         val fontId = getHyperFontIdentifier(style)
-        val fontStorage: FontStorage = fontManager.getStorageInternal(fontId)
-        val glyphProvider: GlyphProvider = fontStorage.getGlyphs(false)
-        var bakedGlyph = glyphProvider.get(codePoint)
+        val fontStorage: FontSet = fontManager.getFontSetRaw(fontId)
+        val glyphProvider: GlyphSource = fontStorage.source(false)
+        var bakedGlyph = glyphProvider.getGlyph(codePoint)
         if (style.isObfuscated && codePoint != 32) {
-            val i = MathHelper.ceil(bakedGlyph.metrics.getAdvance(false))
-            bakedGlyph = glyphProvider.getObfuscated(random, i)
+            val i = Mth.ceil(bakedGlyph.info().getAdvance(false))
+            bakedGlyph = glyphProvider.getRandomGlyph(random, i)
         }
         if (style.isBold) {
             // 太字スタイルのグリフが取得できた場合、標準の二重描画を抑制する
-            val zeroBoldMetrics = ZeroBoldOffsetMetrics(bakedGlyph.metrics)
+            val zeroBoldMetrics = ZeroBoldOffsetMetrics(bakedGlyph.info())
             return CustomBakedGlyph(bakedGlyph, zeroBoldMetrics)
         }
 
@@ -104,12 +100,12 @@ class HyperTextRenderer(
     }
 
     private var isEnabled = false
-    private val client: MinecraftClient
-        get() = MinecraftClient.getInstance()
+    private val client: Minecraft
+        get() = Minecraft.getInstance()
 
     private fun reinitChatHud() {
-        val chatHud = client.inGameHud.chatHud
-        chatHud.refresh()
+        val chatHud = client.gui.chat
+        chatHud.refreshTrimmedMessages()
     }
 
     fun enable() {

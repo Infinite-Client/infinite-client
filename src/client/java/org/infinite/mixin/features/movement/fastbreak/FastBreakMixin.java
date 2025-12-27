@@ -1,6 +1,6 @@
 package org.infinite.mixin.features.movement.fastbreak;
 
-import net.minecraft.client.network.ClientPlayerInteractionManager;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import org.infinite.InfiniteClient;
 import org.infinite.features.movement.braek.FastBreak;
 import org.spongepowered.asm.mixin.Mixin;
@@ -8,14 +8,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ClientPlayerInteractionManager.class)
+@Mixin(MultiPlayerGameMode.class)
 public abstract class FastBreakMixin {
 
   @Inject(method = "tick", at = @At("TAIL"))
   private void resetBlockBreakingCooldown(CallbackInfo ci) {
     FastBreak fastBreak = InfiniteClient.INSTANCE.getFeature(FastBreak.class);
     if (fastBreak != null && fastBreak.isEnabled()) {
-      fastBreak.handle((ClientPlayerInteractionManagerAccessor) this);
+      fastBreak.handle((MultiPlayerGameModeAccessor) this);
     }
   }
 }

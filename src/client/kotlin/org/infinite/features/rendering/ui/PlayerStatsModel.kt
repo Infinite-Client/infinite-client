@@ -1,6 +1,6 @@
 package org.infinite.features.rendering.ui
 
-import net.minecraft.client.network.ClientPlayerEntity
+import net.minecraft.client.player.LocalPlayer
 import org.infinite.libs.client.player.PlayerStatsManager
 import org.infinite.libs.client.player.PlayerStatsManager.PlayerStats
 import org.infinite.settings.FeatureSetting
@@ -20,12 +20,12 @@ class PlayerStatsModel(
         private set
     private var fireTicks = 0
 
-    fun tick(player: ClientPlayerEntity) {
+    fun tick(player: LocalPlayer) {
         // 1. 統計情報の更新
         currentStats = statsManager.stats() ?: return
 
         // 2. fireTicksの更新 (元のロジックを保持)
-        fireTicks = max(fireTicks, player.fireTicks)
+        fireTicks = max(fireTicks, player.remainingFireTicks)
         if (fireTicks > 0) fireTicks--
         if (!player.isOnFire) fireTicks = 0
 
@@ -44,7 +44,7 @@ class PlayerStatsModel(
     }
 
     // 推定ダメージの計算 (HyperUiから移動)
-    fun estimatedTotalDamage(player: ClientPlayerEntity): Double = damageCalculator.estimations(player, fireTicks)
+    fun estimatedTotalDamage(player: LocalPlayer): Double = damageCalculator.estimations(player, fireTicks)
 
     // 描画用の体力プログレスの計算 (HyperUiから移動)
     fun calculateDrawnHpProgress(estimatedTotalDamage: Double): Double {
@@ -56,7 +56,7 @@ class PlayerStatsModel(
     }
 
     // 満腹度/飽和度の計算 (HyperUiから移動)
-    fun getFoodProgress(player: ClientPlayerEntity): Pair<Double, Double> {
+    fun getFoodProgress(player: LocalPlayer): Pair<Double, Double> {
         val s = currentStats ?: return 0.0 to 0.0
         val (nutritionInfo, saturationInfo) = statsManager.foodSaturation(player)
         val hungerProgress = (s.hungerProgress + nutritionInfo).coerceIn(0.0, 1.0)

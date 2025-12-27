@@ -9,8 +9,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.put
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.client.MinecraftClient
-import net.minecraft.util.WorldSavePath
+import net.minecraft.client.Minecraft
+import net.minecraft.world.level.storage.LevelResource
 import org.infinite.settings.FeatureSetting
 import java.nio.file.Path
 import kotlin.collections.component1
@@ -49,19 +49,19 @@ object ConfigManager {
         val configDir = gameDir.resolve("infinite").resolve("config")
 
         // Determine if single player or multiplayer
-        val client = MinecraftClient.getInstance()
-        val isSinglePlayer = client.isIntegratedServerRunning // Check if integrated server is running
+        val client = Minecraft.getInstance()
+        val isSinglePlayer = client.hasSingleplayerServer() // Check if integrated server is running
 
         val serverName =
             if (isSinglePlayer) {
-                client.server
-                    ?.getSavePath(WorldSavePath.ROOT)
+                client.singleplayerServer
+                    ?.getWorldPath(LevelResource.ROOT)
                     ?.parent
                     ?.fileName
                     ?.toString()
                     ?: "single_player_world" // Use world name for single player
             } else {
-                client.currentServerEntry?.address ?: "multi_player_server" // Use server address for multiplayer
+                client.currentServer?.ip ?: "multi_player_server" // Use server address for multiplayer
             }
 
         return if (isSinglePlayer) {

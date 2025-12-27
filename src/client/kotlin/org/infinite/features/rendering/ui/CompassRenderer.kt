@@ -1,6 +1,6 @@
 package org.infinite.features.rendering.ui
 
-import net.minecraft.util.math.MathHelper
+import net.minecraft.util.Mth
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.transparent
@@ -24,7 +24,7 @@ class CompassRenderer(
         val centerX = width / 2
 
         // 現在のプレイヤーのヨー角を正規化
-        val currentYaw = MathHelper.wrapDegrees(playerYaw)
+        val currentYaw = Mth.wrapDegrees(playerYaw)
 
         // 主要な方角
         val cardinalPoints = mapOf(0f to "S", 90f to "W", 180f to "N", 270f to "E")
@@ -48,7 +48,7 @@ class CompassRenderer(
         )
 
         for (degree in 0 until 360 step 5) { // 5度刻みで目盛りをチェック
-            val relativeDegree = MathHelper.wrapDegrees(degree - currentYaw)
+            val relativeDegree = Mth.wrapDegrees(degree - currentYaw)
 
             // 表示範囲内にある場合のみ描画
             if (relativeDegree >= -displayRangeDegrees && relativeDegree <= displayRangeDegrees) {

@@ -1,13 +1,13 @@
 package org.infinite.features.rendering.sensory.esp
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.render.entity.state.ItemEntityRenderState
-import net.minecraft.entity.ItemEntity
-import net.minecraft.item.ItemStack
-import net.minecraft.util.Rarity
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.MathHelper
-import net.minecraft.util.math.Vec3d
+import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.entity.state.ItemEntityRenderState
+import net.minecraft.util.Mth
+import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Rarity
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import org.infinite.features.rendering.sensory.ExtraSensory
 import org.infinite.libs.graphics.Graphics3D // Graphics3D をインポート
 import org.infinite.libs.graphics.render.RenderUtils
@@ -15,10 +15,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 object ItemEsp {
     private fun itemEntities(): List<ItemEntity> {
-        return MinecraftClient
+        return Minecraft
             .getInstance()
-            .world
-            ?.entities
+            .level
+            ?.entitiesForRendering()
             ?.filter {
                 it is ItemEntity
             }?.map {
@@ -46,8 +46,8 @@ object ItemEsp {
                 RenderUtils.ColorBox(
                     rarityColor(it),
                     itemBox(it, tickProgress)
-                        .offset(0.0, expand, 0.0)
-                        .expand(expand),
+                        .move(0.0, expand, 0.0)
+                        .inflate(expand),
                 )
             }
 
@@ -89,33 +89,33 @@ object ItemEsp {
             }
         }
 
-    fun rarityColor(entity: ItemEntity): Int = rarityColor(entity.stack)
+    fun rarityColor(entity: ItemEntity): Int = rarityColor(entity.item)
 
     private fun itemBox(
         entity: ItemEntity,
         tickProgress: Float,
-    ): Box {
+    ): AABB {
         // When an entity is removed, it stops moving and its lastRenderX/Y/Z
         // values are no longer updated.
         if (entity.isRemoved) return entity.boundingBox
-        val offset: Vec3d =
+        val offset: Vec3 =
             itemPos(
                 entity,
                 tickProgress,
-            ).subtract(entity.entityPos)
-        return entity.boundingBox.offset(offset)
+            ).subtract(entity.position())
+        return entity.boundingBox.move(offset)
     }
 
     private fun itemPos(
         entity: ItemEntity,
         partialTicks: Float,
-    ): Vec3d {
-        if (entity.isRemoved) return entity.entityPos
+    ): Vec3 {
+        if (entity.isRemoved) return entity.position()
 
-        val x: Double = MathHelper.lerp(partialTicks.toDouble(), entity.lastRenderX, entity.x)
-        val y: Double = MathHelper.lerp(partialTicks.toDouble(), entity.lastRenderY, entity.y)
-        val z: Double = MathHelper.lerp(partialTicks.toDouble(), entity.lastRenderZ, entity.z)
-        return Vec3d(x, y, z)
+        val x: Double = Mth.lerp(partialTicks.toDouble(), entity.xOld, entity.x)
+        val y: Double = Mth.lerp(partialTicks.toDouble(), entity.yOld, entity.y)
+        val z: Double = Mth.lerp(partialTicks.toDouble(), entity.zOld, entity.z)
+        return Vec3(x, y, z)
     }
 
     fun handleRenderState(

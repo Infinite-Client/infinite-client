@@ -1,10 +1,11 @@
 package org.infinite.features.automatic.branch
 
-import net.minecraft.block.Blocks
-import net.minecraft.screen.slot.SlotActionType
-import net.minecraft.text.Text
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Direction
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.network.chat.Component
+import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.Blocks
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.utils.backpack.BackPackManager
@@ -194,20 +195,20 @@ class BranchMiner : ConfigurableFeature() {
     }
 
     private fun handleInitialize() {
-        val pos = player?.blockPos ?: return
-        val yaw = player?.yaw ?: return
+        val pos = player?.blockPosition() ?: return
+        val yaw = player?.yRot ?: return
 
         // 初期情報を記録
         initialPosition = pos
-        initialDirection = Direction.fromHorizontalDegrees(yaw.toDouble())
-        branchStartPosition = pos.offset(initialDirection!!)
+        initialDirection = Direction.fromYRot(yaw.toDouble())
+        branchStartPosition = pos.relative(initialDirection!!)
 
         // チェストを検索
         nearestChest = findNearestChest(pos, chestSearchRadius.value)
 
-        InfiniteClient.log(Text.literal("§a[BranchMiner] Initialized at ${pos.toShortString()}"))
+        InfiniteClient.log(Component.literal("§a[BranchMiner] Initialized at ${pos.toShortString()}"))
         if (nearestChest != null) {
-            InfiniteClient.log(Text.literal("§a[BranchMiner] Chest found at ${nearestChest?.toShortString()}"))
+            InfiniteClient.log(Component.literal("§a[BranchMiner] Chest found at ${nearestChest?.toShortString()}"))
         }
 
         state = State.Scan
@@ -225,8 +226,8 @@ class BranchMiner : ConfigurableFeature() {
 
         // ブランチをスキャン
         for (distance in 1..maxLength) {
-            val checkPos1 = startPos.offset(direction, distance)
-            val checkPos2 = checkPos1.up()
+            val checkPos1 = startPos.relative(direction, distance)
+            val checkPos2 = checkPos1.above()
 
             // 現在のブロック状態
             val state1 = currentWorld.getBlockState(checkPos1)
@@ -237,8 +238,8 @@ class BranchMiner : ConfigurableFeature() {
             for (dir in Direction.entries) {
                 if (dir == opposite) continue
 
-                val adjacentLower = checkPos1.offset(dir)
-                val adjacentUpper = checkPos2.offset(dir)
+                val adjacentLower = checkPos1.relative(dir)
+                val adjacentUpper = checkPos2.relative(dir)
                 val adjacentStateLower = currentWorld.getBlockState(adjacentLower)
                 val adjacentStateUpper = currentWorld.getBlockState(adjacentUpper)
 
@@ -283,13 +284,13 @@ class BranchMiner : ConfigurableFeature() {
             scanDistance = distance
         }
 
-        branchEndPosition = startPos.offset(direction, scanDistance)
+        branchEndPosition = startPos.relative(direction, scanDistance)
         InfiniteClient.log(
-            Text.literal("§a[BranchMiner] Scanned branch: ${branchBlocksToMine.size} blocks, distance: $scanDistance"),
+            Component.literal("§a[BranchMiner] Scanned branch: ${branchBlocksToMine.size} blocks, distance: $scanDistance"),
         )
 
         if (scanDistance == 0) {
-            InfiniteClient.log(Text.literal("§c[BranchMiner] Unable to find safe path for branch. Disabling..."))
+            InfiniteClient.log(Component.literal("§c[BranchMiner] Unable to find safe path for branch. Disabling..."))
             disable()
             return
         }
@@ -312,11 +313,11 @@ class BranchMiner : ConfigurableFeature() {
                 blockPosList = branchBlocksToMine,
                 stateRegister = { if (isEnabled()) null else AiAction.AiActionState.Failure },
                 onSuccessAction = {
-                    InfiniteClient.log(Text.literal("§a[BranchMiner] Branch mining completed"))
+                    InfiniteClient.log(Component.literal("§a[BranchMiner] Branch mining completed"))
                     moveToBranchEnd()
                 },
                 onFailureAction = {
-                    InfiniteClient.log(Text.literal("§c[BranchMiner] Branch mining failed"))
+                    InfiniteClient.log(Component.literal("§c[BranchMiner] Branch mining failed"))
                     handleEmergency()
                 },
             ),
@@ -353,14 +354,14 @@ class BranchMiner : ConfigurableFeature() {
         if (exposedOres.isEmpty() && currentOreIndex == 0) {
             scanWallsForOres()
             if (exposedOres.isEmpty()) {
-                InfiniteClient.log(Text.literal("§a[BranchMiner] No ores found"))
+                InfiniteClient.log(Component.literal("§a[BranchMiner] No ores found"))
                 state = State.Check
                 return
             }
 
             // ブランチ終端から開始点へ向かう順にソート
             sortOresByDistance()
-            InfiniteClient.log(Text.literal("§a[BranchMiner] Found ${exposedOres.size} ore blocks"))
+            InfiniteClient.log(Component.literal("§a[BranchMiner] Found ${exposedOres.size} ore blocks"))
         }
 
         // 全ての鉱石を採掘完了
@@ -415,7 +416,7 @@ class BranchMiner : ConfigurableFeature() {
         val currentWorld = world ?: return
 
         val box =
-            net.minecraft.util.math.Box(
+            net.minecraft.world.phys.AABB(
                 centerPos.x - 3.0,
                 centerPos.y - 3.0,
                 centerPos.z - 3.0,
@@ -425,13 +426,13 @@ class BranchMiner : ConfigurableFeature() {
             )
 
         val itemEntities =
-            currentWorld.getEntitiesByClass(
-                net.minecraft.entity.ItemEntity::class.java,
+            currentWorld.getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity::class.java,
                 box,
             ) { true }
 
         for (itemEntity in itemEntities) {
-            val itemPos = itemEntity.blockPos
+            val itemPos = itemEntity.blockPosition()
             AiInterface.add(
                 BlockPosMovementAction(
                     x = itemPos.x,
@@ -480,7 +481,7 @@ class BranchMiner : ConfigurableFeature() {
                     performChestStorage()
                 },
                 onFailureAction = {
-                    InfiniteClient.log(Text.literal("§c[BranchMiner] Failed to reach chest"))
+                    InfiniteClient.log(Component.literal("§c[BranchMiner] Failed to reach chest"))
                     state = State.Next
                 },
             ),
@@ -504,7 +505,7 @@ class BranchMiner : ConfigurableFeature() {
             }
 
             waitTicks > 30 -> {
-                InfiniteClient.log(Text.literal("§a[BranchMiner] Items stored in chest"))
+                InfiniteClient.log(Component.literal("§a[BranchMiner] Items stored in chest"))
                 returnToBranchStart()
             }
         }
@@ -517,7 +518,7 @@ class BranchMiner : ConfigurableFeature() {
     private fun storeMinedItems() {
         val currentPlayer = player ?: return
         val interaction = interactionManager ?: return
-        val screenHandler = currentPlayer.currentScreenHandler ?: return
+        val screenHandler = currentPlayer.containerMenu ?: return
         val backPackManager = InfiniteClient.getFeature(BackPackManager::class.java)
 
         // 1. 現在開いているコンテナがアイテムを格納できる汎用タイプであることを確認
@@ -526,11 +527,11 @@ class BranchMiner : ConfigurableFeature() {
         // Inventory や None ではなく、Generic または ShulkerBox であることを確認（その他の特殊コンテナは除外）
         if (currentType != ContainerManager.ContainerType.ShulkerBox && currentType !is ContainerManager.ContainerType.Generic) {
             // 現在開いている画面が格納に適したコンテナではない
-            InfiniteClient.log(Text.literal("§c[BranchMiner] Not a generic storage container."))
+            InfiniteClient.log(Component.literal("§c[BranchMiner] Not a generic storage container."))
             return
         }
 
-        val syncId = screenHandler.syncId
+        val syncId = screenHandler.containerId
         val playerInvSize = 36 // ホットバー9スロット + バックパック27スロット
         val hotbarSize = 9
 
@@ -598,17 +599,17 @@ class BranchMiner : ConfigurableFeature() {
         // ★ BackPackManagerの一時停止/再開をregisterで置き換え
         backPackManager?.register {
             for (screenSlotId in startSlot until endSlot) {
-                val stack = screenHandler.slots.getOrNull(screenSlotId)?.stack ?: continue
+                val stack = screenHandler.slots.getOrNull(screenSlotId)?.item ?: continue
 
                 if (stack.isEmpty) {
                     continue
                 }
 
-                interaction.clickSlot(
+                interaction.handleInventoryMouseClick(
                     syncId,
                     screenSlotId,
                     0,
-                    SlotActionType.QUICK_MOVE,
+                    ClickType.QUICK_MOVE,
                     currentPlayer,
                 )
             }
@@ -639,22 +640,22 @@ class BranchMiner : ConfigurableFeature() {
         if (AiInterface.actions.isNotEmpty()) return
 
         val currentStartPos = branchStartPosition ?: return
-        val mainStartPos = initialPosition?.offset(initialDirection!!) ?: return
+        val mainStartPos = initialPosition?.relative(initialDirection!!) ?: return
         val direction = initialDirection ?: return
-        val leftDirection = direction.rotateYCounterclockwise()
+        val leftDirection = direction.counterClockWise
 
         // メイン通路の現在位置を計算（初期開始点からどれだけ左に移動したか）
         val currentOffset = calculateMainTunnelOffset(mainStartPos, currentStartPos, leftDirection)
 
         // 次のメイン通路位置（さらに左へ）
         val moveDistance = branchInterval.value + 1
-        val nextMainPos = mainStartPos.offset(leftDirection, currentOffset + moveDistance)
+        val nextMainPos = mainStartPos.relative(leftDirection, currentOffset + moveDistance)
 
         // メイン通路の現在位置から次の位置までの通路を掘る
         val pathBlocks = mutableListOf<BlockPos>()
         for (i in 1..moveDistance) {
-            val checkPos = currentStartPos.offset(leftDirection, i)
-            val checkPosUp = checkPos.up()
+            val checkPos = currentStartPos.relative(leftDirection, i)
+            val checkPosUp = checkPos.above()
 
             val state1 = world?.getBlockState(checkPos)
             val state2 = world?.getBlockState(checkPosUp)
@@ -727,7 +728,7 @@ class BranchMiner : ConfigurableFeature() {
 
         // ダメージチェック
         if (currentPlayer.health < currentPlayer.maxHealth * 0.5f) {
-            InfiniteClient.log(Text.literal("§c[BranchMiner] Low health detected!"))
+            InfiniteClient.log(Component.literal("§c[BranchMiner] Low health detected!"))
             return false
         }
 
@@ -737,7 +738,7 @@ class BranchMiner : ConfigurableFeature() {
     }
 
     private fun handleEmergency() {
-        InfiniteClient.log(Text.literal("§c[BranchMiner] Emergency! Returning to initial position..."))
+        InfiniteClient.log(Component.literal("§c[BranchMiner] Emergency! Returning to initial position..."))
         val initPos =
             initialPosition ?: run {
                 disable()
@@ -771,11 +772,11 @@ class BranchMiner : ConfigurableFeature() {
         for (x in -radius..radius) {
             for (y in -radius..radius) {
                 for (z in -radius..radius) {
-                    val checkPos = center.add(x, y, z)
+                    val checkPos = center.offset(x, y, z)
                     val state = currentWorld.getBlockState(checkPos)
 
                     if (state?.block == Blocks.CHEST || state?.block == Blocks.TRAPPED_CHEST) {
-                        val distance = center.getSquaredDistance(checkPos)
+                        val distance = center.distSqr(checkPos)
                         if (distance < minDistance) {
                             minDistance = distance
                             nearest = checkPos
@@ -803,7 +804,7 @@ class BranchMiner : ConfigurableFeature() {
             val current = queue.removeFirst()
 
             for (direction in Direction.entries) {
-                val neighbor = current.offset(direction)
+                val neighbor = current.relative(direction)
                 if (neighbor !in visited) {
                     val state = currentWorld.getBlockState(neighbor)
                     if (state?.isAir == true) {
@@ -832,11 +833,11 @@ class BranchMiner : ConfigurableFeature() {
         val distance = calculateDistance(startPos, endPos, direction)
 
         for (i in 0..distance) {
-            val centerPos = startPos.offset(direction, i)
+            val centerPos = startPos.relative(direction, i)
 
             // 下のブロックの周囲をチェック
             for (checkDirection in Direction.entries) {
-                val checkPos = centerPos.offset(checkDirection)
+                val checkPos = centerPos.relative(checkDirection)
                 if (checkPos !in allOrePositions) {
                     val state = currentWorld.getBlockState(checkPos)
                     if (isOreBlock(state?.block)) {
@@ -848,9 +849,9 @@ class BranchMiner : ConfigurableFeature() {
             }
 
             // 上のブロックの周囲をチェック
-            val upperPos = centerPos.up()
+            val upperPos = centerPos.above()
             for (checkDirection in Direction.entries) {
-                val checkPos = upperPos.offset(checkDirection)
+                val checkPos = upperPos.relative(checkDirection)
                 if (checkPos !in allOrePositions) {
                     val state = currentWorld.getBlockState(checkPos)
                     if (isOreBlock(state?.block)) {
@@ -865,10 +866,10 @@ class BranchMiner : ConfigurableFeature() {
 
     private fun sortOresByDistance() {
         val endPos = branchEndPosition ?: return
-        exposedOres.sortBy { it.getSquaredDistance(endPos) }
+        exposedOres.sortBy { it.distSqr(endPos) }
     }
 
-    private fun isOreBlock(block: net.minecraft.block.Block?): Boolean {
+    private fun isOreBlock(block: Block?): Boolean {
         if (block == null) return false
 
         val oreBlocks =
@@ -915,7 +916,7 @@ class BranchMiner : ConfigurableFeature() {
             oreList.add(current)
 
             for (direction in Direction.entries) {
-                val neighbor = current.offset(direction)
+                val neighbor = current.relative(direction)
                 if (neighbor !in visited && neighbor !in globalVisited) {
                     val state = currentWorld.getBlockState(neighbor)
                     if (isOreBlock(state?.block)) {
@@ -932,7 +933,7 @@ class BranchMiner : ConfigurableFeature() {
         val currentWorld = world ?: return
 
         for (direction in Direction.entries) {
-            val checkPos = minedPos.offset(direction)
+            val checkPos = minedPos.relative(direction)
             if (checkPos !in exposedOres) {
                 val state = currentWorld.getBlockState(checkPos)
                 if (isOreBlock(state?.block)) {
@@ -962,7 +963,7 @@ class BranchMiner : ConfigurableFeature() {
         val currentWorld = world ?: return
 
         val box =
-            net.minecraft.util.math.Box(
+            net.minecraft.world.phys.AABB(
                 minOf(startPos.x, endPos.x) - 5.0,
                 minOf(startPos.y, endPos.y) - 5.0,
                 minOf(startPos.z, endPos.z) - 5.0,
@@ -972,13 +973,13 @@ class BranchMiner : ConfigurableFeature() {
             )
 
         val itemEntities =
-            currentWorld.getEntitiesByClass(
-                net.minecraft.entity.ItemEntity::class.java,
+            currentWorld.getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity::class.java,
                 box,
             ) { true }
 
         for (itemEntity in itemEntities) {
-            val itemPos = itemEntity.blockPos
+            val itemPos = itemEntity.blockPosition()
             AiInterface.add(
                 BlockPosMovementAction(
                     x = itemPos.x,
@@ -997,8 +998,8 @@ class BranchMiner : ConfigurableFeature() {
         collectedItems.clear()
         val playerInv = inventory ?: return
 
-        for (i in 0 until playerInv.size()) {
-            val stack = playerInv.getStack(i)
+        for (i in 0 until playerInv.containerSize) {
+            val stack = playerInv.getItem(i)
             if (!stack.isEmpty) {
                 val itemName = stack.item.toString()
                 collectedItems[itemName] = collectedItems.getOrDefault(itemName, 0) + stack.count
@@ -1007,10 +1008,10 @@ class BranchMiner : ConfigurableFeature() {
     }
 
     private fun reportCollectedItems() {
-        InfiniteClient.log(Text.literal("§e[BranchMiner] === Collected Items ==="))
+        InfiniteClient.log(Component.literal("§e[BranchMiner] === Collected Items ==="))
         for ((item, count) in collectedItems) {
-            InfiniteClient.log(Text.literal("§e  - $item: $count"))
+            InfiniteClient.log(Component.literal("§e  - $item: $count"))
         }
-        InfiniteClient.log(Text.literal("§e[BranchMiner] Empty slots: ${InventoryManager.emptySlots}"))
+        InfiniteClient.log(Component.literal("§e[BranchMiner] Empty slots: ${InventoryManager.emptySlots}"))
     }
 }

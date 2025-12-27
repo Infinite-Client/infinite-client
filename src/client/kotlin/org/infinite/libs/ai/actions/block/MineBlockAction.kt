@@ -1,7 +1,7 @@
 package org.infinite.libs.ai.actions.block
 
 import baritone.api.BaritoneAPI
-import net.minecraft.util.math.BlockPos
+import net.minecraft.core.BlockPos
 import org.infinite.InfiniteClient
 import org.infinite.libs.ai.interfaces.AiAction
 
@@ -56,7 +56,7 @@ class MineBlockAction(
         val nearestBlock: BlockPos =
             blockPosList.minByOrNull { pos ->
                 // プレイヤー位置とブロック位置の距離の二乗を計算（sqrtを省略して高速化）
-                pos.getSquaredDistance(playerPos.x, playerPos.y, playerPos.z)
+                pos.distToLowCornerSqr(playerPos.x, playerPos.y, playerPos.z)
             } ?: return
 
         // 最も近いブロックが現在のターゲットと同じ場合は再設定しない

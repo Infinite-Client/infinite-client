@@ -1,12 +1,12 @@
 package org.infinite.mixin.features.rendering.detailinfo;
 
 import java.util.Objects;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
-import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
-import net.minecraft.network.packet.s2c.play.ScreenHandlerPropertyUpdateS2CPacket;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.game.ClientboundContainerSetContentPacket;
+import net.minecraft.network.protocol.game.ClientboundContainerSetDataPacket;
+import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
+import net.minecraft.world.level.block.Blocks;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.detailinfo.DetailInfo;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,14 +14,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ClientPlayNetworkHandler.class)
-public abstract class ClientPlayNetworkHandlerMixin {
+@Mixin(ClientPacketListener.class)
+public abstract class ClientPacketListenerMixin {
 
-  @Inject(method = "onOpenScreen", at = @At("HEAD"), cancellable = true)
-  private void DetailInfo$cancelOpenScreen(OpenScreenS2CPacket packet, CallbackInfo ci) {
+  @Inject(method = "handleOpenScreen", at = @At("HEAD"), cancellable = true)
+  private void DetailInfo$cancelOpenScreen(ClientboundOpenScreenPacket packet, CallbackInfo ci) {
     DetailInfo detailInfo = InfiniteClient.INSTANCE.getFeature(DetailInfo.class);
     if (detailInfo != null && detailInfo.getShouldCancelScanScreen()) {
-      if (packet.getScreenHandlerType() == detailInfo.getExpectedScreenType()) {
+      if (packet.getType() == detailInfo.getExpectedScreenType()) {
         detailInfo.setShouldCancelScanScreen(false);
         ci.cancel();
       } else {
@@ -33,11 +33,12 @@ public abstract class ClientPlayNetworkHandlerMixin {
     }
   }
 
-  @Inject(method = "onInventory", at = @At("HEAD"))
-  private void DetailInfo$processInventory(InventoryS2CPacket packet, CallbackInfo ci) {
+  @Inject(method = "handleContainerContent", at = @At("HEAD"))
+  private void DetailInfo$processInventory(
+      ClientboundContainerSetContentPacket packet, CallbackInfo ci) {
     if (InfiniteClient.INSTANCE.isSettingEnabled(DetailInfo.class, "InnerChest")) {
-      var items = packet.contents();
-      int syncId = packet.syncId();
+      var items = packet.items();
+      int syncId = packet.containerId();
       DetailInfo detailInfo = InfiniteClient.INSTANCE.getFeature(DetailInfo.class);
       if (detailInfo != null) {
         detailInfo.handleChestContents(syncId, items);
@@ -45,9 +46,9 @@ public abstract class ClientPlayNetworkHandlerMixin {
     }
   }
 
-  @Inject(method = "onScreenHandlerPropertyUpdate", at = @At("HEAD"))
+  @Inject(method = "handleContainerSetData", at = @At("HEAD"))
   private void DetailInfo$processFurnaceProgress(
-      ScreenHandlerPropertyUpdateS2CPacket packet, CallbackInfo ci) {
+      ClientboundContainerSetDataPacket packet, CallbackInfo ci) {
     if (InfiniteClient.INSTANCE.isSettingEnabled(DetailInfo.class, "InnerChest")) {
       DetailInfo detailInfo = InfiniteClient.INSTANCE.getFeature(DetailInfo.class);
       var targetDetail = Objects.requireNonNull(detailInfo).getTargetDetail();
@@ -55,11 +56,11 @@ public abstract class ClientPlayNetworkHandlerMixin {
           && targetDetail.getPos() != null
           && InfiniteClient.INSTANCE.isSettingEnabled(DetailInfo.class, "InnerChest")) {
         var pos = targetDetail.getPos();
-        var syncId = packet.getSyncId();
-        var propertyId = packet.getPropertyId();
+        var syncId = packet.getContainerId();
+        var propertyId = packet.getId();
         var value = packet.getValue();
-        var client = MinecraftClient.getInstance();
-        var world = client.world;
+        var client = Minecraft.getInstance();
+        var world = client.level;
         if (world != null) {
           var blockState = world.getBlockState(targetDetail.getPos());
           if (blockState != null)

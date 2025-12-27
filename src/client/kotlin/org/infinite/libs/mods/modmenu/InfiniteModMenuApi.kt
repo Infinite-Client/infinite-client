@@ -3,7 +3,7 @@ package org.infinite.libs.mods.modmenu
 import com.terraformersmc.modmenu.api.ConfigScreenFactory
 import com.terraformersmc.modmenu.api.ModMenuApi
 import com.terraformersmc.modmenu.api.UpdateChecker
-import net.minecraft.client.gui.screen.Screen
+import net.minecraft.client.gui.screens.Screen
 import org.infinite.gui.screen.GlobalSettingsScreen
 
 // Kotlinでは、クラス名の末尾に「Api」を付けず、実装するインターフェイスを

@@ -1,12 +1,12 @@
 package org.infinite.features.utils.map
 
 import com.google.gson.Gson
+import com.mojang.blaze3d.platform.NativeImage
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.texture.NativeImage
-import net.minecraft.client.texture.NativeImageBackedTexture
-import net.minecraft.util.Identifier
-import net.minecraft.util.WorldSavePath
+import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.texture.DynamicTexture
+import net.minecraft.resources.Identifier
+import net.minecraft.world.level.storage.LevelResource
 import java.awt.image.BufferedImage
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
@@ -17,7 +17,7 @@ object MapTextureManager {
     private const val CHUNK_SIZE = 16
 
     // キャッシュキーは dimension_chunkX_chunkZ_fileName になります
-    private val textureCache: ConcurrentHashMap<String, NativeImageBackedTexture> = ConcurrentHashMap()
+    private val textureCache: ConcurrentHashMap<String, DynamicTexture> = ConcurrentHashMap()
     private val gson = Gson()
 
     /**
@@ -57,27 +57,27 @@ object MapTextureManager {
 
         // 3. NativeImageBackedTextureの管理と更新
         val cacheKey = "${dimensionKey}_${chunkX}_${chunkZ}_$fileName"
-        val identifier = Identifier.of("infinite", "map_chunk_$cacheKey")
-        val client = MinecraftClient.getInstance()
+        val identifier = Identifier.fromNamespaceAndPath("infinite", "map_chunk_$cacheKey")
+        val client = Minecraft.getInstance()
         val textureManager = client.textureManager
 
         val nativeImage = NativeImage(image.width, image.height, true) // true = ARGB
         for (imgY in 0 until image.height) {
             for (imgX in 0 until image.width) {
-                nativeImage.setColorArgb(imgX, imgY, image.getRGB(imgX, imgY))
+                nativeImage.setPixel(imgX, imgY, image.getRGB(imgX, imgY))
             }
         }
 
         val existingTexture = textureCache[cacheKey]
         if (existingTexture != null) {
             // Update existing texture (テクスチャを置き換える)
-            existingTexture.image?.close() // 古い NativeImage を解放
-            existingTexture.image = nativeImage
+            existingTexture.pixels?.close() // 古い NativeImage を解放
+            existingTexture.setPixels(nativeImage)
             existingTexture.upload() // GPUにアップロード
         } else {
             // Register new texture
-            val newTexture = NativeImageBackedTexture({ "map_chunk_$cacheKey" }, nativeImage)
-            textureManager.registerTexture(identifier, newTexture)
+            val newTexture = DynamicTexture({ "map_chunk_$cacheKey" }, nativeImage)
+            textureManager.register(identifier, newTexture)
             textureCache[cacheKey] = newTexture
         }
         return identifier
@@ -95,27 +95,27 @@ object MapTextureManager {
         val cacheKey = "${dimensionKey}_${chunkX}_${chunkZ}_$fileName"
         // 既にキャッシュされている場合は再ロードしない
         if (textureCache.containsKey(cacheKey)) {
-            return Identifier.of("infinite", "map_chunk_$cacheKey")
+            return Identifier.fromNamespaceAndPath("infinite", "map_chunk_$cacheKey")
         }
         val chunkDir = getChunkDirectory(chunkX, chunkZ, dimensionKey)
         val inputFile = chunkDir.resolve(fileName).toFile()
         if (!inputFile.exists()) {
             return null // ファイルが存在しない場合はスキップ
         }
-        val identifier = Identifier.of("infinite", "map_chunk_$cacheKey")
-        val client = MinecraftClient.getInstance()
+        val identifier = Identifier.fromNamespaceAndPath("infinite", "map_chunk_$cacheKey")
+        val client = Minecraft.getInstance()
         val textureManager = client.textureManager
         try {
             val image = ImageIO.read(inputFile) ?: throw IllegalStateException("ImageIO failed to read file: $fileName")
             val nativeImage = NativeImage(image.width, image.height, true)
             for (imgY in 0 until image.height) {
                 for (imgX in 0 until image.width) {
-                    nativeImage.setColorArgb(imgX, imgY, image.getRGB(imgX, imgY))
+                    nativeImage.setPixel(imgX, imgY, image.getRGB(imgX, imgY))
                 }
             }
             // テクスチャを登録・キャッシュ
-            val newTexture = NativeImageBackedTexture({ "map_chunk_$cacheKey" }, nativeImage)
-            textureManager.registerTexture(identifier, newTexture)
+            val newTexture = DynamicTexture({ "map_chunk_$cacheKey" }, nativeImage)
+            textureManager.register(identifier, newTexture)
             textureCache[cacheKey] = newTexture
             return identifier
         } catch (e: Exception) {
@@ -135,13 +135,13 @@ object MapTextureManager {
         fileName: String,
     ) {
         val cacheKey = "${dimensionKey}_${chunkX}_${chunkZ}_$fileName"
-        val identifier = Identifier.of("infinite", "map_chunk_$cacheKey")
-        val client = MinecraftClient.getInstance()
+        val identifier = Identifier.fromNamespaceAndPath("infinite", "map_chunk_$cacheKey")
+        val client = Minecraft.getInstance()
         val textureManager = client.textureManager
         val texture = textureCache.remove(cacheKey)
         if (texture != null) {
             // 1. Minecraftのテクスチャマネージャーから登録を解除（GPU/GLメモリの解放）
-            textureManager.destroyTexture(identifier)
+            textureManager.release(identifier)
             // 2. NativeImageを閉じる（Javaメモリの解放）
             texture.close()
         }
@@ -177,7 +177,7 @@ object MapTextureManager {
     ): Identifier? {
         val cacheKey = "${dimensionKey}_${chunkX}_${chunkZ}_$fileName"
         return if (textureCache.containsKey(cacheKey)) {
-            Identifier.of("infinite", "map_chunk_$cacheKey")
+            Identifier.fromNamespaceAndPath("infinite", "map_chunk_$cacheKey")
         } else {
             null
         }
@@ -187,11 +187,11 @@ object MapTextureManager {
      * キャッシュされているすべてのテクスチャをクリアし、Minecraftのテクスチャマネージャーから登録解除します。
      */
     fun clearCache() {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val textureManager = client.textureManager
         textureCache.forEach { (key, texture) ->
-            val identifier = Identifier.of("infinite", "map_chunk_$key")
-            textureManager.destroyTexture(identifier)
+            val identifier = Identifier.fromNamespaceAndPath("infinite", "map_chunk_$key")
+            textureManager.release(identifier)
             texture.close()
         }
         textureCache.clear()
@@ -205,19 +205,19 @@ object MapTextureManager {
      * マップデータを保存するベースディレクトリのパスを返します。
      */
     private fun getMapDataDirectory(dimension: String): Path {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val gameDir = FabricLoader.getInstance().gameDir
-        val isSinglePlayer = client.isIntegratedServerRunning
+        val isSinglePlayer = client.hasSingleplayerServer()
 
         val serverName =
             if (isSinglePlayer) {
-                client.server
-                    ?.getSavePath(WorldSavePath.ROOT)
+                client.singleplayerServer
+                    ?.getWorldPath(LevelResource.ROOT)
                     ?.parent
                     ?.fileName
                     ?.toString() ?: "single_player_world"
             } else {
-                client.currentServerEntry?.address ?: "multi_player_server"
+                client.currentServer?.ip ?: "multi_player_server"
             }
 
         val dataName = "maps"
@@ -241,8 +241,8 @@ object MapTextureManager {
 
     val dimensionKey: String
         get() {
-            val world = MinecraftClient.getInstance().world ?: return "minecraft_overworld"
-            val dimensionId = world.registryKey.value
+            val world = Minecraft.getInstance().level ?: return "minecraft_overworld"
+            val dimensionId = world.dimension().identifier()
             return dimensionId?.toString()?.replace("_", "-")?.replace(":", "_") ?: "minecraft_overworld"
         }
 }

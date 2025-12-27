@@ -1,13 +1,13 @@
 package org.infinite.gui.theme.official
 
-import net.minecraft.util.Identifier
+import net.minecraft.resources.Identifier
 import org.infinite.gui.theme.Theme
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.gui.theme.ThemeIcon
 import org.infinite.utils.rendering.getRainbowColor
 import java.awt.Color as AwtColor
 
-class InfiniteTheme : Theme("infinite", InfiniteColor(), ThemeIcon(Identifier.of("infinite", "icon.png"), 256, 256))
+class InfiniteTheme : Theme("infinite", InfiniteColor(), ThemeIcon(Identifier.fromNamespaceAndPath("infinite", "icon.png"), 256, 256))
 
 class InfiniteColor : ThemeColors() {
     // 🎨 新しいカラーパレット

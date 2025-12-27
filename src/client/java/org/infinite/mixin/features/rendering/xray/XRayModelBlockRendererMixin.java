@@ -2,19 +2,19 @@ package org.infinite.mixin.features.rendering.xray;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.render.block.BlockModelRenderer;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.BlockRenderView;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.state.BlockState;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.xray.XRay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin(BlockModelRenderer.class)
-public abstract class XRayBlockModelRendererMixin implements ItemConvertible {
+@Mixin(ModelBlockRenderer.class)
+public abstract class XRayModelBlockRendererMixin implements ItemLike {
 
   /**
    * Makes X-Ray work when neither Sodium nor Indigo are running. Also gets called while Indigo is
@@ -25,15 +25,15 @@ public abstract class XRayBlockModelRendererMixin implements ItemConvertible {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/block/Block;shouldDrawSide(Lnet/minecraft/block/BlockState;Lnet/minecraft/block/BlockState;Lnet/minecraft/util/math/Direction;)Z"),
+                  "Lnet/minecraft/world/level/block/Block;shouldRenderFace(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;)Z"),
       method =
-          "shouldDrawFace(Lnet/minecraft/world/BlockRenderView;Lnet/minecraft/block/BlockState;ZLnet/minecraft/util/math/Direction;Lnet/minecraft/util/math/BlockPos;)Z")
+          "shouldRenderFace(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/world/level/block/state/BlockState;ZLnet/minecraft/core/Direction;Lnet/minecraft/core/BlockPos;)Z")
   private static boolean onRenderSmoothOrFlat(
       BlockState state, // 現在のブロックの状態 (blockState)
       BlockState otherState, // 隣接ブロックの状態 (neighborState)
       Direction side, // チェックしている面 (side)
       Operation<Boolean> original,
-      BlockRenderView world,
+      BlockAndTintGetter world,
       BlockState stateButFromTheOtherMethod,
       boolean cull,
       Direction sideButFromTheOtherMethod,

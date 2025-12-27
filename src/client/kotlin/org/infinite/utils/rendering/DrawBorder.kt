@@ -1,10 +1,10 @@
 package org.infinite.utils.rendering
 
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.util.math.ColorHelper
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.util.ARGB
 import org.infinite.InfiniteClient
 
-fun DrawContext.drawBorder(
+fun GuiGraphics.drawBorder(
     x: Int,
     y: Int,
     width: Int,
@@ -19,7 +19,7 @@ fun DrawContext.drawBorder(
 }
 
 object ColorUtils {
-    private val OUT_OF_REACH_COLOR = ColorHelper.getArgb(255, 150, 150, 150)
+    private val OUT_OF_REACH_COLOR = ARGB.color(255, 150, 150, 150)
 
     fun getGradientColor(
         progress: Float,
@@ -42,7 +42,7 @@ object ColorUtils {
             b = (255 * p).toInt()
         }
 
-        return ColorHelper.getArgb(alpha, r, g, b)
+        return ARGB.color(alpha, r, g, b)
     }
 
     fun getFeatureColor(isInReach: Boolean): Int =

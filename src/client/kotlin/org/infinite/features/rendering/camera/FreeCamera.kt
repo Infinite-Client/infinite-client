@@ -1,8 +1,8 @@
 package org.infinite.features.rendering.camera
 
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket
-import net.minecraft.util.math.Vec3d
-import net.minecraft.world.GameMode
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
+import net.minecraft.world.level.GameType
+import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics3D
@@ -26,20 +26,20 @@ class FreeCamera : ConfigurableFeature(initialEnabled = false) {
         listOf(
             speed,
         )
-    private var currentMode: GameMode? = GameMode.SURVIVAL
+    private var currentMode: GameType? = GameType.SURVIVAL
 
     override fun onDisabled() {
-        // Teleport player back to original position
-        client.player?.setPos(originalPos.x, originalPos.y, originalPos.z)
-        client.player?.yaw = originalYaw
-        client.player?.pitch = originalPitch
+        val player = player ?: return
+        player.setPosRaw(originalPos.x, originalPos.y, originalPos.z)
+        player.yRot = originalYaw
+        player.xRot = originalPitch
     }
 
     override fun onStart() {
         disable()
     }
 
-    private var originalPos = Vec3d.ZERO
+    private var originalPos = Vec3.ZERO
     private var originalYaw: Float = 0.0f
     private var originalPitch: Float = 0.0f
     private var originalIsOnGround: Boolean = false
@@ -47,10 +47,10 @@ class FreeCamera : ConfigurableFeature(initialEnabled = false) {
     private var lastHealth: Float = 0.0f // Store player's health from previous tick
 
     override fun onEnabled() {
-        originalPos = player?.eyePos ?: Vec3d.ZERO
-        originalYaw = player?.yaw ?: 0.0f
-        originalPitch = player?.pitch ?: 0.0f
-        originalIsOnGround = player?.isOnGround ?: true
+        originalPos = player?.eyePosition ?: Vec3.ZERO
+        originalYaw = player?.yRot ?: 0.0f
+        originalPitch = player?.xRot ?: 0.0f
+        originalIsOnGround = player?.onGround() ?: true
         originalHorizontalCollision = player?.horizontalCollision ?: false
         lastHealth = player?.health ?: 0.0f // Capture initial health
     }
@@ -72,32 +72,32 @@ class FreeCamera : ConfigurableFeature(initialEnabled = false) {
         lastHealth = currentHealth // Update lastHealth for the next tick
 
         // Send a "still" packet with original position and current rotation
-        if (player.networkHandler != null) {
-            player.networkHandler.sendPacket(
-                PlayerMoveC2SPacket.Full(
+        if (player.connection != null) {
+            player.connection.send(
+                ServerboundMovePlayerPacket.PosRot(
                     originalPos.x,
                     originalPos.y,
                     originalPos.z,
-                    player.yaw, // Use current player yaw
-                    player.pitch, // Use current player pitch
+                    player.yRot, // Use current player yaw
+                    player.xRot, // Use current player pitch
                     originalIsOnGround,
                     originalHorizontalCollision,
                 ),
             )
         }
 
-        player.velocity = Vec3d.ZERO
+        player.deltaMovement = Vec3.ZERO
         player.abilities.flying = false
-        player.isOnGround = false
-        val moveForward = options.forwardKey.isPressed
-        val moveBackward = options.backKey.isPressed
-        val moveLeft = options.leftKey.isPressed
-        val moveRight = options.rightKey.isPressed
-        val moveTop = options.jumpKey.isPressed
-        val moveBottom = options.sneakKey.isPressed
+        player.setOnGround(false)
+        val moveForward = options.keyUp.isDown
+        val moveBackward = options.keyDown.isDown
+        val moveLeft = options.keyLeft.isDown
+        val moveRight = options.keyRight.isDown
+        val moveTop = options.keyJump.isDown
+        val moveBottom = options.keyShift.isDown
         // 水平方向の速度は0
         // 現在のY軸の回転角度 (Yaw) をラジアンに変換
-        val yawRadians = Math.toRadians(player.yaw.toDouble())
+        val yawRadians = Math.toRadians(player.yRot.toDouble())
         var deltaX = 0.0
         var deltaY = 0.0
         var deltaZ = 0.0
@@ -121,8 +121,8 @@ class FreeCamera : ConfigurableFeature(initialEnabled = false) {
         val velocityZ = deltaZ * cos(yawRadians) + deltaX * sin(yawRadians)
         // 速度設定を適用してプレイヤーに速度を設定
         val currentSpeed = speed.value.toDouble()
-        player.velocity =
-            Vec3d(
+        player.deltaMovement =
+            Vec3(
                 velocityX * currentSpeed,
                 deltaY * currentSpeed,
                 velocityZ * currentSpeed,
@@ -131,7 +131,7 @@ class FreeCamera : ConfigurableFeature(initialEnabled = false) {
 
     override fun render3d(graphics3D: Graphics3D) {
         val lineColor = InfiniteClient.theme().colors.infoColor
-        val currentPos = client.player?.getLerpedPos(graphics3D.tickCounter.getTickProgress(true)) ?: return
+        val currentPos = client.player?.getPosition(graphics3D.tickCounter.getGameTimeDeltaPartialTick(true)) ?: return
         graphics3D.renderLine(originalPos, currentPos, lineColor, true)
     }
 }

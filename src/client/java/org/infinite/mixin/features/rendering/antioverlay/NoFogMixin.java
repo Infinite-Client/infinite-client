@@ -3,7 +3,7 @@ package org.infinite.mixin.features.rendering.antioverlay;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import java.nio.ByteBuffer;
-import net.minecraft.client.render.fog.FogRenderer;
+import net.minecraft.client.renderer.fog.FogRenderer;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.overlay.AntiOverlay;
 import org.joml.Vector4f;
@@ -14,12 +14,12 @@ import org.spongepowered.asm.mixin.injection.At;
 public class NoFogMixin {
   @WrapOperation(
       method =
-          "applyFog(Lnet/minecraft/client/render/Camera;ILnet/minecraft/client/render/RenderTickCounter;FLnet/minecraft/client/world/ClientWorld;)Lorg/joml/Vector4f;",
+          "setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lorg/joml/Vector4f;",
       at =
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/render/fog/FogRenderer;applyFog(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
+                  "Lnet/minecraft/client/renderer/fog/FogRenderer;updateBuffer(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
   private void wrapApplyFog(
       FogRenderer instance,
       ByteBuffer buffer,

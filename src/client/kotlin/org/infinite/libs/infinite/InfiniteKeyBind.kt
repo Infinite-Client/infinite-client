@@ -1,11 +1,11 @@
 package org.infinite.libs.infinite
 
+import com.mojang.blaze3d.platform.InputConstants
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
-import net.minecraft.client.option.KeyBinding
-import net.minecraft.client.util.InputUtil
-import net.minecraft.text.Text
-import net.minecraft.util.Identifier
+import net.minecraft.client.KeyMapping
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.gui.screen.InfiniteScreen
@@ -13,10 +13,10 @@ import org.infinite.utils.toSnakeCase
 import org.lwjgl.glfw.GLFW
 
 object InfiniteKeyBind {
-    private var menuKeyBinding: KeyBinding? = null
+    private var menuKeyBinding: KeyMapping? = null
 
     data class ToggleKeyBindingHandler(
-        val keyBinding: KeyBinding,
+        val keyBinding: KeyMapping,
         val feature: ConfigurableFeature,
     )
 
@@ -28,12 +28,12 @@ object InfiniteKeyBind {
         mutableListOf()
 
     fun registerKeybindings() {
-        val keyBindingCategory = KeyBinding.Category.create(Identifier.of("gameplay", "infinite"))
+        val keyBindingCategory = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("gameplay", "infinite"))
         menuKeyBinding =
             KeyBindingHelper.registerKeyBinding(
-                KeyBinding(
+                KeyMapping(
                     "key.infinite-client.open_menu",
-                    InputUtil.Type.KEYSYM,
+                    InputConstants.Type.KEYSYM,
                     GLFW.GLFW_KEY_RIGHT_SHIFT,
                     keyBindingCategory,
                 ),
@@ -48,9 +48,9 @@ object InfiniteKeyBind {
                 toggleKeyBindings +=
                     ToggleKeyBindingHandler(
                         KeyBindingHelper.registerKeyBinding(
-                            KeyBinding(
+                            KeyMapping(
                                 translationKey,
-                                InputUtil.Type.KEYSYM,
+                                InputConstants.Type.KEYSYM,
                                 configurableFeature.toggleKeyBind.value,
                                 keyBindingCategory,
                             ),
@@ -69,11 +69,11 @@ object InfiniteKeyBind {
         }
 
         ClientTickEvents.END_CLIENT_TICK.register { client ->
-            while (menuKeyBinding!!.wasPressed()) {
-                client.setScreen(InfiniteScreen(Text.literal("")))
+            while (menuKeyBinding!!.consumeClick()) {
+                client.setScreen(InfiniteScreen(Component.literal("")))
             }
             for (toggleKeyBind in toggleKeyBindings) {
-                while (toggleKeyBind.keyBinding.wasPressed()) {
+                while (toggleKeyBind.keyBinding.consumeClick()) {
                     // 修正 2: enabled.valueをトグル（否定を代入）します
                     if (toggleKeyBind.feature.isEnabled()) {
                         toggleKeyBind.feature.disable()
@@ -85,7 +85,7 @@ object InfiniteKeyBind {
             for ((feature, actionKeyBindList) in actionKeyBindings) {
                 if (feature.isEnabled()) {
                     for (actionKeyBind in actionKeyBindList) {
-                        while (actionKeyBind.keyBinding.wasPressed()) {
+                        while (actionKeyBind.keyBinding.consumeClick()) {
                             actionKeyBind.action()
                         }
                     }
@@ -97,7 +97,7 @@ object InfiniteKeyBind {
     fun checkTranslations(): List<String> {
         val result = mutableListOf<String>()
         for (key in translationKeyList) {
-            if (Text.translatable(key).string == key) {
+            if (Component.translatable(key).string == key) {
                 result.add(key)
             }
         }

@@ -1,11 +1,11 @@
 package org.infinite.features.movement.braek
 
-import net.minecraft.block.Block
-import net.minecraft.registry.Registries
-import net.minecraft.util.Hand
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.Direction
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.phys.AABB
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics3D
@@ -99,8 +99,8 @@ class VeinBreak : ConfigurableFeature() {
 
     private fun rayCast() {
         val interactionManager = interactionManager ?: return
-        if (interactionManager.isBreakingBlock) {
-            val pos = interactionManager.currentBreakingPos
+        if (interactionManager.isDestroying) {
+            val pos = interactionManager.destroyBlockPos
             add(pos)
         }
     }
@@ -119,7 +119,7 @@ class VeinBreak : ConfigurableFeature() {
      * ブロックが設定リストに含まれている鉱石ブロックであるかを確認する。
      */
     private fun isOreBlock(block: Block): Boolean {
-        val blockId = Registries.BLOCK.getId(block).toString()
+        val blockId = BuiltInRegistries.BLOCK.getKey(block).toString()
         return blockList.value.contains(blockId)
     }
 
@@ -130,7 +130,7 @@ class VeinBreak : ConfigurableFeature() {
      */
     private fun findVein(startPos: BlockPos) {
         blocksToMine.clear()
-        val world = client.world ?: return
+        val world = client.level ?: return
         val queue: Queue<BlockPos> = LinkedList()
         val visited = mutableSetOf<BlockPos>()
         if (!isOreBlock(world.getBlockState(startPos).block)) {
@@ -146,7 +146,7 @@ class VeinBreak : ConfigurableFeature() {
             val currentPos = queue.poll()
 
             // 破壊範囲のチェック（distanceSq < rangeSq で、プレイヤーからではなくstartPosからの距離で判定）
-            if (currentPos.getSquaredDistance(startPos) > rangeSq) {
+            if (currentPos.distSqr(startPos) > rangeSq) {
                 continue // 範囲外のブロックはスキップ
             }
 
@@ -158,11 +158,11 @@ class VeinBreak : ConfigurableFeature() {
 
                 // 隣接ブロックを探索キューに追加
                 for (direction in Direction.entries) {
-                    val neighborPos = currentPos.offset(direction)
+                    val neighborPos = currentPos.relative(direction)
 
                     if (
                         !visited.contains(neighborPos) &&
-                        neighborPos.getSquaredDistance(startPos) <= rangeSq // 探索範囲内のチェック
+                        neighborPos.distSqr(startPos) <= rangeSq // 探索範囲内のチェック
                     ) {
                         val neighborBlock = world.getBlockState(neighborPos).block
                         if (isOreBlock(neighborBlock)) {
@@ -183,7 +183,7 @@ class VeinBreak : ConfigurableFeature() {
      * LinearBreakとほぼ同じ破壊ロジックを使用。
      */
     private fun mine() {
-        val interactionManager = client.interactionManager ?: return
+        val interactionManager = client.gameMode ?: return
         val player = player ?: return
 
         // 修正点: 設定が無効な場合のみ、ホットバー切り替え時のキャンセルチェックを行う
@@ -193,7 +193,7 @@ class VeinBreak : ConfigurableFeature() {
                     startHotbarSlot = autoToolCallBack
                 } else {
                     // ホットバーが切り替わった場合、破壊をキャンセルしリストから削除
-                    interactionManager.cancelBlockBreaking()
+                    interactionManager.stopDestroyBlock()
                     blocksToMine.remove(currentBreakingPos)
                     // 状態をリセット
                     currentBreakingPos = null
@@ -209,7 +209,7 @@ class VeinBreak : ConfigurableFeature() {
         // 1. 破壊対象のブロックがない場合、現在の破壊を中止
         if (blocksToMine.isEmpty()) {
             if (currentBreakingPos != null) {
-                interactionManager.cancelBlockBreaking()
+                interactionManager.stopDestroyBlock()
                 currentBreakingPos = null
                 currentBreakingSide = null
                 currentBreakingProgress = 0.0f
@@ -219,10 +219,10 @@ class VeinBreak : ConfigurableFeature() {
 
         // 2. ターゲットの決定とブロック状態のチェック
         val targetPos = blocksToMine.first()
-        val blockState = client.world?.getBlockState(targetPos)
+        val blockState = client.level?.getBlockState(targetPos)
 
         // ターゲットブロックが空気または置換可能なら、破壊リストから削除
-        if (blockState?.isAir == true || blockState?.isReplaceable == true) {
+        if (blockState?.isAir == true || blockState?.canBeReplaced() == true) {
             blocksToMine.remove(targetPos)
             currentBreakingPos = null
             currentBreakingProgress = 0.0f
@@ -243,13 +243,13 @@ class VeinBreak : ConfigurableFeature() {
         // 4. 破壊開始またはターゲット変更
         if (currentBreakingPos == null || currentBreakingPos != params.pos) {
             // 前の破壊を中止
-            interactionManager.cancelBlockBreaking()
+            interactionManager.stopDestroyBlock()
 
             // サーバーに視点変更パケットを送信
             BlockUtils.faceVectorPacket(params.hitVec)
 
             // 破壊開始
-            interactionManager.updateBlockBreakingProgress(params.pos, params.side)
+            interactionManager.continueDestroyBlock(params.pos, params.side)
 
             // 状態の更新
             currentBreakingPos = params.pos
@@ -267,8 +267,8 @@ class VeinBreak : ConfigurableFeature() {
             // 5. 進行中: 進行パケットを送信し、進行度を更新
             val pos = currentBreakingPos!!
             val side = currentBreakingSide!!
-            interactionManager.updateBlockBreakingProgress(pos, side)
-            currentBreakingProgress = interactionManager.currentBreakingProgress
+            interactionManager.continueDestroyBlock(pos, side)
+            currentBreakingProgress = interactionManager.destroyProgress
 
             val fastBreak = InfiniteClient.getFeature(FastBreak::class.java) ?: return
             if (fastBreak.isEnabled() && !fastBreak.safeMode.value) {
@@ -283,7 +283,7 @@ class VeinBreak : ConfigurableFeature() {
 
         // 6. 手を振る
         if (swingHand.value) {
-            player.swingHand(Hand.MAIN_HAND)
+            player.swing(InteractionHand.MAIN_HAND)
         }
     }
 
@@ -293,7 +293,7 @@ class VeinBreak : ConfigurableFeature() {
         // 破壊対象ブロックのアウトライン描画
         val boxes =
             blocksToMine.map { pos ->
-                val box = Box(pos)
+                val box = AABB(pos)
                 RenderUtils.ColorBox(color, box)
             }
         graphics3D.renderLinedColorBoxes(boxes, true)
@@ -310,7 +310,7 @@ class VeinBreak : ConfigurableFeature() {
             val maxZ = pos.z + 1.0 - offset
 
             // 進行度に応じて縮小/拡大するボックス
-            val dynamicBox = Box(minX, minY, minZ, maxX, maxY, maxZ).contract(0.005)
+            val dynamicBox = AABB(minX, minY, minZ, maxX, maxY, maxZ).deflate(0.005)
 
             val boxes = listOf(RenderUtils.ColorBox(color, dynamicBox))
             graphics3D.renderSolidColorBoxes(boxes, true)
@@ -338,8 +338,8 @@ class VeinBreak : ConfigurableFeature() {
     }
 
     override fun onDisabled() {
-        val interactionManager = client.interactionManager ?: return
-        interactionManager.cancelBlockBreaking()
+        val interactionManager = client.gameMode ?: return
+        interactionManager.stopDestroyBlock()
         blocksToMine.clear()
         currentBreakingPos = null
         currentBreakingSide = null

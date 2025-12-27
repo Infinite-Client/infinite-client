@@ -1,16 +1,16 @@
 package org.infinite.mixin.features.rendering.freecamera;
 
 import com.mojang.authlib.GameProfile;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.camera.FreeCamera;
 import org.spongepowered.asm.mixin.Mixin;
 
-@Mixin(ClientPlayerEntity.class)
-public class ClientPlayerEntityMixin extends AbstractClientPlayerEntity {
-  public ClientPlayerEntityMixin(ClientWorld world, GameProfile profile) {
+@Mixin(LocalPlayer.class)
+public class LocalPlayerMixin extends AbstractClientPlayer {
+  public LocalPlayerMixin(ClientLevel world, GameProfile profile) {
     super(world, profile);
   }
 

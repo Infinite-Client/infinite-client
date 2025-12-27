@@ -1,8 +1,8 @@
 package org.infinite.global.rendering.theme.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.widget.PlayerSkinWidget
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.PlayerSkinWidget
 import org.infinite.InfiniteClient
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.graphics.Graphics2D // Import Graphics2D
@@ -11,12 +11,12 @@ class PlayerSkinWidgetRenderer(
     val widget: PlayerSkinWidget,
 ) {
     fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter) // Instantiate Graphics2D
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker) // Instantiate Graphics2D
 
         val x = widget.x
         val y = widget.y

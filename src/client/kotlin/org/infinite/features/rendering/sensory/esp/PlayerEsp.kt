@@ -1,11 +1,11 @@
 package org.infinite.features.rendering.sensory.esp
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState
-import net.minecraft.entity.player.PlayerEntity
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.MathHelper
-import net.minecraft.util.math.Vec3d
+import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.entity.state.AvatarRenderState
+import net.minecraft.util.Mth
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import org.infinite.features.rendering.sensory.ExtraSensory
 import org.infinite.libs.graphics.Graphics3D // Graphics3D をインポート
 import org.infinite.libs.graphics.render.RenderUtils
@@ -19,18 +19,18 @@ object PlayerEsp {
             .colors.aquaAccentColor
     private const val EXPAND = 0.05
 
-    private fun otherPlayers(): List<PlayerEntity> {
-        val client = MinecraftClient.getInstance()
-        val world = client.world
+    private fun otherPlayers(): List<Player> {
+        val client = Minecraft.getInstance()
+        val world = client.level
         val self = client.player
 
         return world
-            ?.entities
+            ?.entitiesForRendering()
             ?.filter {
                 // PlayerEntity かつ 自分自身ではない
-                it is PlayerEntity && it != self && it.isAlive
+                it is Player && it != self && it.isAlive
             }?.map {
-                it as PlayerEntity
+                it as Player
             }
             ?: return emptyList()
     }
@@ -45,7 +45,7 @@ object PlayerEsp {
         value: ExtraSensory.Method, // Graphics3D を引数として受け取る
     ) {
         if (value == ExtraSensory.Method.OutLine) return
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
 
         // Graphics3D から tickProgress を取得
         val tickProgress = graphics3d.tickProgress
@@ -57,18 +57,18 @@ object PlayerEsp {
             players.map { player ->
                 RenderUtils.ColorBox(
                     BOX_COLOR,
-                    playerBox(player, tickProgress).expand(EXPAND),
+                    playerBox(player, tickProgress).inflate(EXPAND),
                 )
             }
         // Graphics3D のメソッドを呼び出す
         graphics3d.renderLinedColorBoxes(renderBoxes, true)
 
         // 2. 自分とプレイヤーを結ぶ直線を描画
-        val selfPos = client.player?.getLerpedPos(graphics3d.tickCounter.getTickProgress(true)) ?: return
+        val selfPos = client.player?.getPosition(graphics3d.tickCounter.getGameTimeDeltaPartialTick(true)) ?: return
         for (player in players) {
             val playerPos = playerPos(player, tickProgress)
             // プレイヤーの足元ではなく、目の高さ（中間点）を使用
-            val playerLineTarget = playerPos.add(0.0, player.height / 2.0, 0.0)
+            val playerLineTarget = playerPos.add(0.0, player.bbHeight / 2.0, 0.0)
 
             // 距離を計算 (X, Y, Zの距離)
             val dx = selfPos.x - playerLineTarget.x
@@ -87,36 +87,36 @@ object PlayerEsp {
      * プレイヤーの現在の描画位置に基づいてBoxを取得する
      */
     private fun playerBox(
-        entity: PlayerEntity,
+        entity: Player,
         tickProgress: Float,
-    ): Box {
+    ): AABB {
         if (entity.isRemoved) return entity.boundingBox
-        val offset: Vec3d =
+        val offset: Vec3 =
             playerPos(
                 entity,
                 tickProgress,
-            ).subtract(entity.entityPos)
-        return entity.boundingBox.offset(offset)
+            ).subtract(entity.position())
+        return entity.boundingBox.move(offset)
     }
 
     /**
      * tickProgress (partialTicks) を使用して、プレイヤーの補間された位置を計算する
      */
     private fun playerPos(
-        entity: PlayerEntity,
+        entity: Player,
         partialTicks: Float,
-    ): Vec3d {
-        if (entity.isRemoved) return entity.entityPos
+    ): Vec3 {
+        if (entity.isRemoved) return entity.position()
 
-        val x: Double = MathHelper.lerp(partialTicks.toDouble(), entity.lastRenderX, entity.x)
-        val y: Double = MathHelper.lerp(partialTicks.toDouble(), entity.lastRenderY, entity.y)
-        val z: Double = MathHelper.lerp(partialTicks.toDouble(), entity.lastRenderZ, entity.z)
-        return Vec3d(x, y, z)
+        val x: Double = Mth.lerp(partialTicks.toDouble(), entity.xOld, entity.x)
+        val y: Double = Mth.lerp(partialTicks.toDouble(), entity.yOld, entity.y)
+        val z: Double = Mth.lerp(partialTicks.toDouble(), entity.zOld, entity.z)
+        return Vec3(x, y, z)
     }
 
     fun handleRenderState(
-        entity: PlayerEntity,
-        state: PlayerEntityRenderState,
+        entity: Player,
+        state: AvatarRenderState,
         tickProgress: Float,
         ci: CallbackInfo,
     ) {

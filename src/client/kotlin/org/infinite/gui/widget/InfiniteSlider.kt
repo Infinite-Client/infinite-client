@@ -1,12 +1,12 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
-import net.minecraft.util.math.MathHelper
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
+import net.minecraft.util.Mth
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
@@ -17,8 +17,8 @@ class InfiniteSlider<T : Number>(
     width: Int,
     height: Int,
     private val setting: FeatureSetting<T>,
-) : ClickableWidget(x, y, width, height, Text.literal(setting.name)) {
-    private val textRenderer = MinecraftClient.getInstance().textRenderer
+) : AbstractWidget(x, y, width, height, Component.literal(setting.name)) {
+    private val textRenderer = Minecraft.getInstance().font
     private var dragging = false
     private val knobWidth = 4
 
@@ -37,23 +37,23 @@ class InfiniteSlider<T : Number>(
                 is FeatureSetting.DoubleSetting -> String.format("%.3f", setting.value)
                 else -> throw IllegalStateException("InfiniteSlider can only be used with IntSetting or FloatSetting")
             }
-        message = Text.translatable(setting.name).append(": $formattedValue")
+        message = Component.translatable(setting.name).append(": $formattedValue")
     }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         val textX = x + 5 // Padding from left edge
         var currentY = y + 2 // Start drawing text from top with small padding
 
         // --- 設定名 (左上) ---
         graphics2D.drawText(
-            Text.translatable(setting.name),
+            Component.translatable(setting.name),
             textX,
             currentY,
             InfiniteClient
@@ -70,8 +70,8 @@ class InfiniteSlider<T : Number>(
                 is FeatureSetting.DoubleSetting -> String.format("%.3f", setting.value)
                 else -> "" // 通常は発生しない
             }
-        val valueText = Text.literal(formattedValue)
-        val valueTextWidth = textRenderer.getWidth(valueText)
+        val valueText = Component.literal(formattedValue)
+        val valueTextWidth = textRenderer.width(valueText)
         val valueTextX = x + width - 5 - valueTextWidth // 右端から5pxパディング
 
         graphics2D.drawText(
@@ -85,11 +85,11 @@ class InfiniteSlider<T : Number>(
         )
         // -----------------------
 
-        currentY += textRenderer.fontHeight + 2 // Move Y down for description
+        currentY += textRenderer.lineHeight + 2 // Move Y down for description
 
         if (setting.descriptionKey.isNotBlank()) {
             graphics2D.drawText(
-                Text.translatable(setting.descriptionKey),
+                Component.translatable(setting.descriptionKey),
                 textX,
                 currentY,
                 InfiniteClient
@@ -157,7 +157,7 @@ class InfiniteSlider<T : Number>(
         val maxX = x + width - 5.0 - knobWidth
 
         // マウス位置をスライダー範囲にクランプ
-        val clampedMouseX = MathHelper.clamp(mouseX, minX, maxX)
+        val clampedMouseX = Mth.clamp(mouseX, minX, maxX)
 
         // クランプされたX位置から進行度 (0.0F〜1.0F) を計算
         val progress = ((clampedMouseX - minX) / (maxX - minX)).toFloat()
@@ -191,7 +191,7 @@ class InfiniteSlider<T : Number>(
      * マウスがクリックされたとき、ドラッグ状態を開始し、初期値を設定します。
      */
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         if (isMouseOver(click.x, click.y) && click.button() == 0) {
@@ -207,7 +207,7 @@ class InfiniteSlider<T : Number>(
      * マウスがドラッグされているとき、スライダーの値を更新します。
      */
     override fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
     ): Boolean {
@@ -221,7 +221,7 @@ class InfiniteSlider<T : Number>(
     /**
      * マウスがリリースされたとき、ドラッグ状態を終了します。
      */
-    override fun mouseReleased(click: Click): Boolean {
+    override fun mouseReleased(click: MouseButtonEvent): Boolean {
         if (dragging) {
             dragging = false
             return true // ドラッグを終了したので true を返す
@@ -229,7 +229,7 @@ class InfiniteSlider<T : Number>(
         return super.mouseReleased(click)
     }
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        this.appendDefaultNarrations(builder)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        this.defaultButtonNarrationText(builder)
     }
 }

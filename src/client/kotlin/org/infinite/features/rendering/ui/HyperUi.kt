@@ -1,7 +1,7 @@
 package org.infinite.features.rendering.ui
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.network.ClientPlayerEntity
+import net.minecraft.client.Minecraft
+import net.minecraft.client.player.LocalPlayer
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.gui.theme.ThemeColors
@@ -43,7 +43,7 @@ class HyperUi : ConfigurableFeature() {
     // --- ライフサイクル/Tick処理 ---
 
     override fun onTick() {
-        val player = MinecraftClient.getInstance().player ?: return
+        val player = Minecraft.getInstance().player ?: return
         // データモデルにTick処理を委譲
         statsModel.tick(player)
     }
@@ -59,7 +59,7 @@ class HyperUi : ConfigurableFeature() {
         val s = statsModel.currentStats ?: return
         val e = statsModel.easingManager // EasingManagerをモデルから取得
         val colors = InfiniteClient.theme().colors
-        val player = MinecraftClient.getInstance().player ?: return
+        val player = Minecraft.getInstance().player ?: return
 
         // Easing値の計算とデータ準備
         statsModel.ease()
@@ -83,12 +83,12 @@ class HyperUi : ConfigurableFeature() {
         hotbarRenderer.render(graphics2D, colors)
 
         // 飛行UIレンダリング (変更なし)
-        if (player.isGliding) {
+        if (player.isFallFlying) {
             flightUiRenderer.render(graphics2D)
         }
 
         // 方位計の描画
-        compassRenderer.render(graphics2D, player.getLerpedYaw(graphics2D.tickProgress), colors)
+        compassRenderer.render(graphics2D, player.getYRot(graphics2D.tickProgress), colors)
 
         // クロスヘアの描画
         crosshairRenderer.render(graphics2D)
@@ -104,13 +104,13 @@ class HyperUi : ConfigurableFeature() {
     // 省略: renderStatsTextの実装 (元のコードから必要な部分を抽出・調整)
     private fun renderStatsText(
         graphics2D: Graphics2D,
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         colors: ThemeColors,
     ) {
         val statsManager = PlayerStatsManager // 再度参照
         val diveTime = statsManager.diveSeconds(player)
         val transparentOfAirProgress = min(1.0, (1.0 - (statsModel.currentStats?.airProgress ?: 0.0)) * 10)
-        val isSubmerged = if (player.isSubmergedInWater) 1.0 else 0.0
+        val isSubmerged = if (player.isUnderWater) 1.0 else 0.0
 
         val diveTimeString = "${diveTime}s"
         if (diveTime > 0) {
@@ -133,7 +133,7 @@ class HyperUi : ConfigurableFeature() {
                 colors.foregroundColor.transparent(255),
             )
         }
-        val sprinting = player.isSprinting && !player.isSwimming && !player.isGliding
+        val sprinting = player.isSprinting && !player.isSwimming && !player.isFallFlying
         if (sprinting) {
             val sprintTime = statsManager.sprintMeters(player)
             val sprintableLength = "${sprintTime}m"

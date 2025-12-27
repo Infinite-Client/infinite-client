@@ -1,7 +1,7 @@
 package org.infinite.features.movement.walk
 
-import net.minecraft.client.option.KeyBinding
-import net.minecraft.util.math.Box
+import net.minecraft.client.KeyMapping
+import net.minecraft.world.phys.AABB
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
@@ -28,19 +28,19 @@ class SafeWalk : ConfigurableFeature(initialEnabled = false) {
     fun onPreMotion() {
         if (!isEnabled()) return
         val player = client.player ?: return
-        if (!sneakAtEdges || !player.isOnGround) {
+        if (!sneakAtEdges || !player.onGround()) {
             if (sneaking) setSneaking(false)
             return
         }
-        val box: Box = player.boundingBox
-        val adjustedBox: Box =
+        val box: AABB = player.boundingBox
+        val adjustedBox: AABB =
             box
-                .stretch(0.0, (-player.stepHeight).toDouble(), 0.0)
+                .expandTowards(0.0, (-player.maxUpStep()).toDouble(), 0.0)
                 // 縁からedgeDistanceの分だけ内側に縮小する
-                .expand(-edgeDistance, 0.0, -edgeDistance)
+                .inflate(-edgeDistance, 0.0, -edgeDistance)
 
         var shouldClip = false
-        if (client.world?.isSpaceEmpty(player, adjustedBox) == true) {
+        if (client.level?.noCollision(player, adjustedBox) == true) {
             shouldClip = true
         }
 
@@ -54,9 +54,9 @@ class SafeWalk : ConfigurableFeature(initialEnabled = false) {
      * プレイヤーのスニークキーの押下状態を強制的に設定する。
      */
     private fun setSneaking(sneaking: Boolean) {
-        val sneakKey: KeyBinding = client.options.sneakKey
+        val sneakKey: KeyMapping = client.options.keyShift
 
-        sneakKey.isPressed = sneaking
+        sneakKey.setDown(sneaking)
 
         this.sneaking = sneaking
     }

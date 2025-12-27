@@ -1,18 +1,18 @@
 package org.infinite.features.fighting.shield
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.entity.Entity
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.attribute.EntityAttributes
-import net.minecraft.entity.mob.CreeperEntity
-import net.minecraft.entity.mob.HostileEntity
-import net.minecraft.entity.mob.MagmaCubeEntity
-import net.minecraft.entity.mob.MobEntity
-import net.minecraft.entity.mob.SlimeEntity
-import net.minecraft.entity.projectile.ProjectileEntity
-import net.minecraft.item.Items
-import net.minecraft.util.math.Vec3d
+import net.minecraft.client.Minecraft
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.Mob
+import net.minecraft.world.entity.ai.attributes.Attributes
+import net.minecraft.world.entity.monster.Creeper
+import net.minecraft.world.entity.monster.MagmaCube
+import net.minecraft.world.entity.monster.Monster
+import net.minecraft.world.entity.monster.Slime
+import net.minecraft.world.entity.projectile.Projectile
+import net.minecraft.world.item.Items
+import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.AimInterface
@@ -44,9 +44,9 @@ class AutoShield : ConfigurableFeature(initialEnabled = false) {
             meleeRangeMultiplierSetting,
         )
 
-    class AutoShieldTarget : AimTarget.EntityTarget(e = MinecraftClient.getInstance().player!!) {
-        val player: ClientPlayerEntity
-            get() = MinecraftClient.getInstance().player!!
+    class AutoShieldTarget : AimTarget.EntityTarget(e = Minecraft.getInstance().player!!) {
+        val player: LocalPlayer
+            get() = Minecraft.getInstance().player!!
         override val entity: Entity
             get() {
                 val autoShield = InfiniteClient.getFeature(AutoShield::class.java) ?: return player
@@ -61,7 +61,7 @@ class AutoShield : ConfigurableFeature(initialEnabled = false) {
         val playerEntity = player ?: return
         val detectionRange = detectionRangeSetting.value
         val controller = ControllerInterface
-        val useKeyBinding = options.useKey
+        val useKeyBinding = options.keyUse
 
         // --- ステップ 1: 危険な状況を検知する ---
         val threateningEntity: Entity? = getThreateningEntity(detectionRange)
@@ -81,7 +81,7 @@ class AutoShield : ConfigurableFeature(initialEnabled = false) {
             }
 
             // --- 🛡️ 照準制御の追加: 危険源の方向を向く ---
-            if (threateningEntity is ProjectileEntity || threateningEntity is HostileEntity) {
+            if (threateningEntity is Projectile || threateningEntity is Monster) {
                 if (!isAimTaskRegistered) {
                     isAimTaskRegistered = true
                     val aimTask =
@@ -124,11 +124,11 @@ class AutoShield : ConfigurableFeature(initialEnabled = false) {
         val currentWorld = world ?: return null
         val currentPlayer = player ?: return null
 
-        val box = currentPlayer.boundingBox.expand(range)
+        val box = currentPlayer.boundingBox.inflate(range)
 
         val entities =
-            currentWorld.getOtherEntities(currentPlayer, box) { entity ->
-                entity is LivingEntity || entity is ProjectileEntity
+            currentWorld.getEntities(currentPlayer, box) { entity ->
+                entity is LivingEntity || entity is Projectile
             }
 
         for (entity in entities) {
@@ -142,8 +142,8 @@ class AutoShield : ConfigurableFeature(initialEnabled = false) {
 
     // isExplosionThreat (変更なし)
     private fun isExplosionThreat(entity: Entity): Boolean {
-        if (entity is CreeperEntity) {
-            val fuseTicks = entity.getLerpedFuseTime(client.renderTickCounter.getTickProgress(false))
+        if (entity is Creeper) {
+            val fuseTicks = entity.getSwelling(client.deltaTracker.getGameTimeDeltaPartialTick(false))
             return fuseTicks < 30
         }
         return false
@@ -151,15 +151,15 @@ class AutoShield : ConfigurableFeature(initialEnabled = false) {
 
     // isProjectileThreat (変更なし)
     private fun isProjectileThreat(entity: Entity): Boolean {
-        if (entity !is ProjectileEntity) return false
+        if (entity !is Projectile) return false
         val playerBox = player?.boundingBox ?: return false
         val predictionTicks = predictionTicksSetting.value
-        var pos: Vec3d = entity.getLerpedPos(0f)
-        val velocity: Vec3d = entity.velocity
+        var pos: Vec3 = entity.getPosition(0f)
+        val velocity: Vec3 = entity.deltaMovement
 
         repeat(predictionTicks) {
             pos = pos.add(velocity)
-            val projectileBox = entity.boundingBox.offset(pos.subtract(entity.getLerpedPos(0f)))
+            val projectileBox = entity.boundingBox.move(pos.subtract(entity.getPosition(0f)))
             if (playerBox.intersects(projectileBox)) {
                 return true
             }
@@ -174,19 +174,19 @@ class AutoShield : ConfigurableFeature(initialEnabled = false) {
     private fun isMeleeThreat(entity: Entity): Boolean {
         val playerEntity = player ?: return false
         // 1. 距離判定: 設定された倍率に基づき防御開始リーチ内かチェック
-        val mobReach = 1.0 + (entity.width / 2.0) + (playerEntity.width / 2.0)
+        val mobReach = 1.0 + (entity.bbWidth / 2.0) + (playerEntity.bbWidth / 2.0)
         val requiredDistance = mobReach * meleeRangeMultiplierSetting.value
         val distance = entity.distanceTo(playerEntity)
-        if (entity is SlimeEntity || entity is MagmaCubeEntity) {
+        if (entity is Slime || entity is MagmaCube) {
             // スライム系は距離が近ければ（近接モブの防御開始リーチ内であれば）脅威と見なす
-            val mobReach = 1.0 + (entity.width / 2.0) + (playerEntity.width / 2.0)
+            val mobReach = 1.0 + (entity.bbWidth / 2.0) + (playerEntity.bbWidth / 2.0)
             val requiredDistance = mobReach * meleeRangeMultiplierSetting.value
             // ターゲットの有無に関わらず、防御開始距離内なら防御
             if (distance < requiredDistance) {
                 return true
             }
         }
-        if (entity !is HostileEntity) return false
+        if (entity !is Monster) return false
 
         if (distance >= requiredDistance) {
             return false // 距離が遠すぎる
@@ -195,14 +195,14 @@ class AutoShield : ConfigurableFeature(initialEnabled = false) {
         // MobEntityの攻撃クールダウンや攻撃モーションをチェック（高度な判断）
 
         // 敵対モブがプレイヤーをターゲットにしているか
-        val mobEntity = (entity as? MobEntity) ?: return false
+        val mobEntity = (entity as? Mob) ?: return false
         val isTargetingPlayer = mobEntity.target == playerEntity
-        val lastAttacked = mobEntity.lastAttackTime
+        val lastAttacked = mobEntity.lastHurtMobTimestamp
         val attackSpeedAttribute =
-            mobEntity.attributes.getCustomInstance(EntityAttributes.ATTACK_SPEED)
+            mobEntity.attributes.getInstance(Attributes.ATTACK_SPEED)
         val attackSpeedAttributeValue = attackSpeedAttribute?.value ?: 4.0
         val attackSpeed = 20 / attackSpeedAttributeValue
-        val currentTick = world?.time ?: return false
+        val currentTick = world?.gameTime ?: return false
         // 攻撃準備完了の最も簡単なチェック:
         // リーチ内に入っていて、かつ、プレイヤーをターゲットにしているなら、攻撃が「差し迫っている」と判断
 

@@ -1,10 +1,10 @@
 package org.infinite.features.fighting.mace
 
-import net.minecraft.enchantment.Enchantments
-import net.minecraft.entity.LivingEntity
-import net.minecraft.item.Items
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.Vec3d
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.item.Items
+import net.minecraft.world.item.enchantment.Enchantments
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.AimInterface
@@ -36,7 +36,7 @@ class MaceAssist : ConfigurableFeature() {
     private var fallDistance = 0.0
     private var isCollision = false
     private var remainTick = 0
-    private var calculatedPos: Vec3d = Vec3d.ZERO
+    private var calculatedPos: Vec3 = Vec3.ZERO
 
     // 💡 追加: この落下中に攻撃が実行されたかを追跡するフラグ
     private var hasAttackedInFall = false
@@ -83,8 +83,8 @@ class MaceAssist : ConfigurableFeature() {
     override fun render3d(graphics3D: Graphics3D) {
         updateCalculatedPositions(graphics3D.tickProgress)
         val player = player ?: return
-        if (haveMace && !hasAttackedInFall && remainTick >= reactTickSetting.value && !player.isOnGround) {
-            val radius = player.entityInteractionRange
+        if (haveMace && !hasAttackedInFall && remainTick >= reactTickSetting.value && !player.onGround()) {
+            val radius = player.entityInteractionRange()
             val pos = calculatedPos
             val centerX = pos.x
             val centerY = pos.y
@@ -119,8 +119,8 @@ class MaceAssist : ConfigurableFeature() {
             val x2 = radius * cos(angle2)
             val z2 = radius * sin(angle2)
             // Y座標は0 (translateで既に centerY に移動しているため)
-            val start = Vec3d(x1, 0.0, z1)
-            val end = Vec3d(x2, 0.0, z2)
+            val start = Vec3(x1, 0.0, z1)
+            val end = Vec3(x2, 0.0, z2)
             lines.add(Line(start, end, color))
         }
         // 描画
@@ -132,14 +132,14 @@ class MaceAssist : ConfigurableFeature() {
      * * @param smashPos 予測された衝突地点 (落下地点のPos)
      * @return ターゲット条件を満たす LivingEntity のリスト
      */
-    private fun searchTargetEntities(smashPos: Vec3d): List<LivingEntity> {
+    private fun searchTargetEntities(smashPos: Vec3): List<LivingEntity> {
         val player = player ?: return emptyList()
         val world = world ?: return emptyList()
         // メイスのスマッシュ攻撃のターゲット検索範囲（例: 5ブロック半径）
-        val searchRadius = player.entityInteractionRange
+        val searchRadius = player.entityInteractionRange()
         // 衝突予測地点を中心とした検索範囲を定義
         val searchBox =
-            Box(
+            AABB(
                 smashPos.x - searchRadius,
                 smashPos.y - searchRadius,
                 smashPos.z - searchRadius,
@@ -149,7 +149,7 @@ class MaceAssist : ConfigurableFeature() {
             )
         // 指定された範囲内のすべての LivingEntity を検索し、フィルタリングする
         return world
-            .getOtherEntities(player, searchBox)
+            .getEntities(player, searchBox)
             .filter { entity ->
                 entity != player && entity is LivingEntity &&
                     entity.isAlive
@@ -158,9 +158,9 @@ class MaceAssist : ConfigurableFeature() {
     }
 
     private fun calcFallDistance() {
-        val velocity = player?.velocity ?: return
+        val velocity = player?.deltaMovement ?: return
         val y = velocity.y
-        if (player?.isOnGround == true) {
+        if (player?.onGround() == true) {
             hasAttackedInFall = false
         }
         if (y > 0) {
@@ -178,8 +178,8 @@ class MaceAssist : ConfigurableFeature() {
         override fun check(): AimTaskConditionReturn {
             val player = player ?: return AimTaskConditionReturn.Failure
             if (player.fallDistance == 0.0) return AimTaskConditionReturn.Failure
-            return if (player.distanceTo(target) < player.entityInteractionRange) {
-                interactionManager?.attackEntity(player, target)
+            return if (player.distanceTo(target) < player.entityInteractionRange()) {
+                interactionManager?.attack(player, target)
                 AimTaskConditionReturn.Force
             } else {
                 AimTaskConditionReturn.Exec
@@ -202,14 +202,14 @@ class MaceAssist : ConfigurableFeature() {
     private fun calcFallPosition(
         ticks: Int,
         progress: Float,
-    ): Triple<Vec3d, Boolean, Int>? {
+    ): Triple<Vec3, Boolean, Int>? {
         if (vehicle != null) return null
         val player = player ?: return null
         val world = world ?: return null
-        var velocity = player.velocity
-        val gravity = player.finalGravity // 重力加速度
+        var velocity = player.deltaMovement
+        val gravity = player.gravity // 重力加速度
         val friction = 0.98 // エンティティの速度に適用される摩擦
-        var pos = player.getLerpedPos(progress) // プレイヤーの現在位置 (Posクラスを想定)
+        var pos = player.getPosition(progress) // プレイヤーの現在位置 (Posクラスを想定)
         var isCollision = false
         var remainingTick = ticks
         for (i in 0 until ticks) {
@@ -218,12 +218,12 @@ class MaceAssist : ConfigurableFeature() {
             // プレイヤーの現在の位置 (player.posなど) を想定していると思われます。
             isCollision =
                 world
-                    .getBlockOrFluidCollisions(player, player.boundingBox.offset(nextPos.subtract(playerPos!!)))
+                    .getBlockAndLiquidCollisions(player, player.boundingBox.move(nextPos.subtract(playerPos!!)))
                     .toList()
                     .isNotEmpty()
             if (isCollision) break
             pos = nextPos
-            velocity = velocity.multiply(friction)
+            velocity = velocity.scale(friction)
             velocity = velocity.subtract(0.0, gravity, 0.0)
             remainingTick = i
         }

@@ -1,10 +1,10 @@
 package org.infinite.mixin.features.rendering.detailinfo;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.ChestBlockEntity;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.detailinfo.DetailInfo;
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,7 +30,7 @@ public abstract class ChestMixin {
   @Unique private static Boolean cancelFlag = false;
 
   // アニメーションの停止 (getAnimationProgress)
-  @Inject(method = "getAnimationProgress", at = @At("RETURN"), cancellable = true)
+  @Inject(method = "getOpenNess", at = @At("RETURN"), cancellable = true)
   private void infiniteClient$forceZeroChestAnimation(
       float tickProgress, CallbackInfoReturnable<Float> cir) {
     if (shouldCancel()) {
@@ -47,7 +47,7 @@ public abstract class ChestMixin {
   // サウンドの停止 (playSound - static)
   @Inject(method = "playSound", at = @At("HEAD"), cancellable = true)
   private static void infiniteClient$cancelChestSound(
-      World world, BlockPos pos, BlockState state, SoundEvent soundEvent, CallbackInfo ci) {
+      Level world, BlockPos pos, BlockState state, SoundEvent soundEvent, CallbackInfo ci) {
     if (cancelFlag) {
       ci.cancel();
     }

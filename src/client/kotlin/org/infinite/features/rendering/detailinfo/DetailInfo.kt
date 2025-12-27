@@ -3,39 +3,39 @@ package org.infinite.features.rendering.detailinfo
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.block.Block
-import net.minecraft.block.Blocks
-import net.minecraft.block.ChestBlock
-import net.minecraft.block.entity.BarrelBlockEntity
-import net.minecraft.block.entity.BlastFurnaceBlockEntity
-import net.minecraft.block.entity.BlockEntity
-import net.minecraft.block.entity.BrewingStandBlockEntity
-import net.minecraft.block.entity.ChestBlockEntity
-import net.minecraft.block.entity.EnderChestBlockEntity
-import net.minecraft.block.entity.FurnaceBlockEntity
-import net.minecraft.block.entity.HopperBlockEntity
-import net.minecraft.block.entity.LootableContainerBlockEntity
-import net.minecraft.block.entity.ShulkerBoxBlockEntity
-import net.minecraft.block.entity.SmokerBlockEntity
-import net.minecraft.block.enums.ChestType
-import net.minecraft.client.MinecraftClient
-import net.minecraft.entity.Entity
-import net.minecraft.entity.projectile.ProjectileUtil
-import net.minecraft.item.ItemStack
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket
-import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket
-import net.minecraft.predicate.entity.EntityPredicates
-import net.minecraft.registry.Registries
-import net.minecraft.screen.ScreenHandlerType
-import net.minecraft.util.Hand
-import net.minecraft.util.Identifier
-import net.minecraft.util.WorldSavePath
-import net.minecraft.util.collection.DefaultedList
-import net.minecraft.util.hit.BlockHitResult
-import net.minecraft.util.hit.EntityHitResult
-import net.minecraft.util.hit.HitResult
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.MathHelper
+import net.minecraft.client.Minecraft
+import net.minecraft.core.BlockPos
+import net.minecraft.core.NonNullList
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket
+import net.minecraft.resources.Identifier
+import net.minecraft.util.Mth
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.EntitySelector
+import net.minecraft.world.entity.projectile.ProjectileUtil
+import net.minecraft.world.inventory.MenuType
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.block.ChestBlock
+import net.minecraft.world.level.block.entity.BarrelBlockEntity
+import net.minecraft.world.level.block.entity.BlastFurnaceBlockEntity
+import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.entity.BrewingStandBlockEntity
+import net.minecraft.world.level.block.entity.ChestBlockEntity
+import net.minecraft.world.level.block.entity.EnderChestBlockEntity
+import net.minecraft.world.level.block.entity.FurnaceBlockEntity
+import net.minecraft.world.level.block.entity.HopperBlockEntity
+import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity
+import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity
+import net.minecraft.world.level.block.entity.SmokerBlockEntity
+import net.minecraft.world.level.block.state.properties.ChestType
+import net.minecraft.world.level.storage.LevelResource
+import net.minecraft.world.phys.BlockHitResult
+import net.minecraft.world.phys.EntityHitResult
+import net.minecraft.world.phys.HitResult
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
@@ -62,13 +62,13 @@ data class FurnaceData(
     var litTotalTime: Int = 0,
     var cookingTimeSpent: Int = 0,
     var cookingTotalTime: Int = 200,
-    val inventory: DefaultedList<ItemStack> = DefaultedList.ofSize(3, ItemStack.EMPTY),
+    val inventory: NonNullList<ItemStack> = NonNullList.withSize(3, ItemStack.EMPTY),
 )
 
 data class BrewingData(
     var brewTime: Int = 0,
     var fuel: Int = 0,
-    val inventory: DefaultedList<ItemStack> = DefaultedList.ofSize(5, ItemStack.EMPTY),
+    val inventory: NonNullList<ItemStack> = NonNullList.withSize(5, ItemStack.EMPTY),
 )
 
 class DetailInfo : ConfigurableFeature(initialEnabled = false) {
@@ -114,20 +114,20 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
         entityInteractionRange: Double,
     ): HitResult {
         var d = max(blockInteractionRange, entityInteractionRange)
-        var e = MathHelper.square(d)
-        val vec3d = camera.getCameraPosVec(1f)
-        val hitResult = camera.raycast(d, 1f, false)
-        val f = hitResult.getPos().squaredDistanceTo(vec3d)
+        var e = Mth.square(d)
+        val vec3d = camera.getEyePosition(1f)
+        val hitResult = camera.pick(d, 1f, false)
+        val f = hitResult.location.distanceToSqr(vec3d)
         if (hitResult.type != HitResult.Type.MISS) {
             e = f
             d = sqrt(f)
         }
 
-        val vec3d2 = camera.getRotationVec(1f)
+        val vec3d2 = camera.getViewVector(1f)
         val vec3d3 = vec3d.add(vec3d2.x * d, vec3d2.y * d, vec3d2.z * d)
-        val box = camera.boundingBox.stretch(vec3d2.multiply(d)).expand(1.0, 1.0, 1.0)
-        val entityHitResult = ProjectileUtil.raycast(camera, vec3d, vec3d3, box, EntityPredicates.CAN_HIT, e)
-        return if (entityHitResult != null && entityHitResult.getPos().squaredDistanceTo(vec3d) < f) {
+        val box = camera.boundingBox.expandTowards(vec3d2.scale(d)).inflate(1.0, 1.0, 1.0)
+        val entityHitResult = ProjectileUtil.getEntityHitResult(camera, vec3d, vec3d3, box, EntitySelector.CAN_BE_PICKED, e)
+        return if (entityHitResult != null && entityHitResult.location.distanceToSqr(vec3d) < f) {
             entityHitResult
         } else {
             hitResult
@@ -146,7 +146,7 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
 
     var shouldCancelScanScreen: Boolean = false
     var scanTargetBlockEntity: BlockEntity? = null
-    var expectedScreenType: ScreenHandlerType<*>? = null
+    var expectedScreenType: MenuType<*>? = null
     var scanTimer = 0
 
     var targetDetail: TargetDetail? = null
@@ -172,18 +172,18 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
         targetDetail = null
         isTargetInReach = true
 
-        val client = MinecraftClient.getInstance() ?: return
-        val world = client.world ?: return
+        val client = Minecraft.getInstance() ?: return
+        val world = client.level ?: return
         val dimension = getDimensionKey()
         if (!scannedInventoryData.containsKey(dimension)) {
             loadData(dimension)
         }
-        val clientCommonNetworkHandler = client.networkHandler ?: return
-        var hitResult = client.crosshairTarget ?: return
+        val clientCommonNetworkHandler = client.connection ?: return
+        var hitResult = client.hitResult ?: return
         if (hitResult.type == HitResult.Type.MISS) {
             val entity: Entity? = client.cameraEntity
             if (entity != null) {
-                if (client.world != null && client.player != null) {
+                if (client.level != null && client.player != null) {
                     val reach = getSetting("Reach")?.value as? Double ?: 20.0
                     hitResult = findCrosshairTarget(entity, reach, reach)
                     isTargetInReach = false
@@ -195,8 +195,8 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
                 if (getSetting("EntityInfo")?.value == true) {
                     val entityHitResult = hitResult as EntityHitResult
                     val entity = entityHitResult.entity
-                    val entityPos = entity.blockPos
-                    val entityName = entity.type.name.string
+                    val entityPos = entity.blockPosition()
+                    val entityName = entity.type.description.string
                     targetDetail = TargetDetail.EntityDetail(entity, entityPos, entityName)
                 }
             }
@@ -210,7 +210,7 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
 
                     targetDetail = TargetDetail.BlockDetail(blockState.block, blockPos)
 
-                    if (blockEntity is LootableContainerBlockEntity ||
+                    if (blockEntity is RandomizableContainerBlockEntity ||
                         blockEntity is FurnaceBlockEntity ||
                         blockEntity is SmokerBlockEntity ||
                         blockEntity is BlastFurnaceBlockEntity ||
@@ -219,51 +219,51 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
                     ) {
                         if (scanTimer <= 0) {
                             if (getSetting("InnerChest")?.value == true) {
-                                if (client.currentScreen == null) {
+                                if (client.screen == null) {
                                     // Set expected screen type based on block entity
                                     expectedScreenType =
                                         when (blockEntity) {
                                             is ChestBlockEntity -> {
-                                                val chestType = blockState.get(ChestBlock.CHEST_TYPE)
+                                                val chestType = blockState.getValue(ChestBlock.TYPE)
                                                 if (chestType ==
                                                     ChestType.SINGLE
                                                 ) {
-                                                    ScreenHandlerType.GENERIC_9X3
+                                                    MenuType.GENERIC_9x3
                                                 } else {
-                                                    ScreenHandlerType.GENERIC_9X6
+                                                    MenuType.GENERIC_9x6
                                                 }
                                             }
 
                                             is BarrelBlockEntity -> {
-                                                ScreenHandlerType.GENERIC_9X3
+                                                MenuType.GENERIC_9x3
                                             }
 
                                             is ShulkerBoxBlockEntity -> {
-                                                ScreenHandlerType.SHULKER_BOX
+                                                MenuType.SHULKER_BOX
                                             }
 
                                             is EnderChestBlockEntity -> {
-                                                ScreenHandlerType.GENERIC_9X3
+                                                MenuType.GENERIC_9x3
                                             }
 
                                             is HopperBlockEntity -> {
-                                                ScreenHandlerType.HOPPER
+                                                MenuType.HOPPER
                                             }
 
                                             is FurnaceBlockEntity -> {
-                                                ScreenHandlerType.FURNACE
+                                                MenuType.FURNACE
                                             }
 
                                             is SmokerBlockEntity -> {
-                                                ScreenHandlerType.SMOKER
+                                                MenuType.SMOKER
                                             }
 
                                             is BlastFurnaceBlockEntity -> {
-                                                ScreenHandlerType.BLAST_FURNACE
+                                                MenuType.BLAST_FURNACE
                                             }
 
                                             is BrewingStandBlockEntity -> {
-                                                ScreenHandlerType.BREWING_STAND
+                                                MenuType.BREWING_STAND
                                             }
 
                                             else -> {
@@ -272,8 +272,8 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
                                         }
 
                                     if (expectedScreenType != null) {
-                                        clientCommonNetworkHandler.sendPacket(
-                                            PlayerInteractBlockC2SPacket(Hand.MAIN_HAND, blockHitResultCasted, 0),
+                                        clientCommonNetworkHandler.send(
+                                            ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, blockHitResultCasted, 0),
                                         )
                                         scanTargetBlockEntity = blockEntity
                                         shouldCancelScanScreen = true
@@ -353,48 +353,48 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
 
             // チェストの結合処理
             if (entity is ChestBlockEntity) {
-                val world = MinecraftClient.getInstance().world ?: return
-                val blockState = world.getBlockState(entity.pos)
-                if (blockState.block is ChestBlock && blockState.contains(ChestBlock.CHEST_TYPE)) {
-                    val chestType = blockState.get(ChestBlock.CHEST_TYPE)
+                val world = Minecraft.getInstance().level ?: return
+                val blockState = world.getBlockState(entity.blockPos)
+                if (blockState.block is ChestBlock && blockState.hasProperty(ChestBlock.TYPE)) {
+                    val chestType = blockState.getValue(ChestBlock.TYPE)
                     if (chestType != ChestType.SINGLE) {
-                        val facing = blockState.get(ChestBlock.FACING)
+                        val facing = blockState.getValue(ChestBlock.FACING)
                         val otherOffset =
-                            if (chestType == ChestType.RIGHT) facing.rotateYClockwise() else facing.rotateYCounterclockwise()
-                        val otherPos = entity.pos.offset(otherOffset)
+                            if (chestType == ChestType.RIGHT) facing.clockWise else facing.counterClockWise
+                        val otherPos = entity.blockPos.relative(otherOffset)
                         val otherState = world.getBlockState(otherPos)
 
                         // ダブルチェストの場合、2つのBlockPosに分割して保存
-                        if (otherState.block == Blocks.CHEST && otherState.get(ChestBlock.CHEST_TYPE) != ChestType.SINGLE) {
+                        if (otherState.block == Blocks.CHEST && otherState.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
                             val singleChestSize = 27
                             val firstHalf = containerItems.take(singleChestSize)
                             val secondHalf = containerItems.drop(singleChestSize)
 
-                            val leftPos = if (chestType == ChestType.RIGHT) entity.pos else otherPos
-                            val rightPos = if (chestType == ChestType.LEFT) entity.pos else otherPos
+                            val leftPos = if (chestType == ChestType.RIGHT) entity.blockPos else otherPos
+                            val rightPos = if (chestType == ChestType.LEFT) entity.blockPos else otherPos
 
                             scannedInventoryData[dimension]!![leftPos] = InventoryData(inventoryType, firstHalf)
                             scannedInventoryData[dimension]!![rightPos] = InventoryData(inventoryType, secondHalf)
                         } else {
                             // シングルチェストとして保存
-                            scannedInventoryData[dimension]!![entity.pos] = InventoryData(inventoryType, containerItems)
+                            scannedInventoryData[dimension]!![entity.blockPos] = InventoryData(inventoryType, containerItems)
                         }
                     } else {
                         // シングルチェストとして保存
-                        scannedInventoryData[dimension]!![entity.pos] = InventoryData(inventoryType, containerItems)
+                        scannedInventoryData[dimension]!![entity.blockPos] = InventoryData(inventoryType, containerItems)
                     }
                 } else {
                     // その他のチェストとして保存 (例: Trapped Chest)
-                    scannedInventoryData[dimension]!![entity.pos] = InventoryData(inventoryType, containerItems)
+                    scannedInventoryData[dimension]!![entity.blockPos] = InventoryData(inventoryType, containerItems)
                 }
             } else if (containerSize > 0) {
                 // チェスト以外のコンテナとして保存
-                scannedInventoryData[dimension]!![entity.pos] = InventoryData(inventoryType, containerItems)
+                scannedInventoryData[dimension]!![entity.blockPos] = InventoryData(inventoryType, containerItems)
             }
 
             // 全てのコンテナのスキャン終了処理
             scanTargetBlockEntity = null
-            MinecraftClient.getInstance().networkHandler?.sendPacket(CloseHandledScreenC2SPacket(syncId))
+            Minecraft.getInstance().connection?.send(ServerboundContainerClosePacket(syncId))
         }
     }
 
@@ -405,16 +405,16 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
 
     private fun getDataDirectory(dimension: String? = null): Path {
         val gameDir = FabricLoader.getInstance().gameDir
-        val isSinglePlayer = client.isIntegratedServerRunning // Check if integrated server is running
+        val isSinglePlayer = client.hasSingleplayerServer() // Check if integrated server is running
         val serverName =
             if (isSinglePlayer) {
-                client.server
-                    ?.getSavePath(WorldSavePath.ROOT)
+                client.singleplayerServer
+                    ?.getWorldPath(LevelResource.ROOT)
                     ?.parent
                     ?.fileName
                     ?.toString() ?: "single_player_world" // Use world name for single player
             } else {
-                client.currentServerEntry?.address ?: "multi_player_server" // Use server address for multiplayer
+                client.currentServer?.ip ?: "multi_player_server" // Use server address for multiplayer
             }
         val dataName = "inventories"
         // Use a default dimension key or the provided one
@@ -430,8 +430,8 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
 
     // Helper function to get a clean dimension key
     private fun getDimensionKey(): String {
-        val world = MinecraftClient.getInstance().world ?: return "minecraft_overworld"
-        val dimensionId = world.registryKey.value
+        val world = Minecraft.getInstance().level ?: return "minecraft_overworld"
+        val dimensionId = world.dimension().identifier()
         return dimensionId?.toString()?.replace(":", "_") ?: "minecraft_overworld"
     }
 
@@ -472,7 +472,7 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
                 val chunkKey = getChunkKey(pos)
                 val posKey = "${pos.x}_${pos.y}_${pos.z}"
                 val serialItems =
-                    invData.items.map { SerializableItemStack(Registries.ITEM.getId(it.item).toString(), it.count) }
+                    invData.items.map { SerializableItemStack(BuiltInRegistries.ITEM.getKey(it.item).toString(), it.count) }
                 val serialData = SerializableInventoryData(invData.type.name, serialItems)
                 if (!chunks.containsKey(chunkKey)) {
                     chunks[chunkKey] = mutableMapOf()
@@ -506,7 +506,7 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
                 val pos = BlockPos(x, y, z)
                 val items =
                     serialData.items.map {
-                        val item = Registries.ITEM.get(Identifier.of(it.itemId))
+                        val item = BuiltInRegistries.ITEM.getValue(Identifier.parse(it.itemId))
                         ItemStack(item, it.count)
                     }
                 val invType = InventoryType.valueOf(serialData.type)
@@ -516,7 +516,7 @@ class DetailInfo : ConfigurableFeature(initialEnabled = false) {
     }
 
     override fun render2d(graphics2D: Graphics2D) {
-        DetailInfoRenderer.render(graphics2D, MinecraftClient.getInstance() ?: return, this)
+        DetailInfoRenderer.render(graphics2D, Minecraft.getInstance() ?: return, this)
     }
 
     override fun stop() {

@@ -1,7 +1,7 @@
 package org.infinite.mixin.features.rendering.hypertag;
 
-import net.minecraft.client.render.entity.LivingEntityRenderer;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.world.entity.LivingEntity;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.tag.HyperTag;
 import org.spongepowered.asm.mixin.Mixin;
@@ -17,9 +17,9 @@ public abstract class LivingEntityRendererMixin {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/MinecraftClient;getInstance()Lnet/minecraft/client/MinecraftClient;",
+                  "Lnet/minecraft/client/Minecraft;getInstance()Lnet/minecraft/client/Minecraft;",
               ordinal = 0),
-      method = "hasLabel(Lnet/minecraft/entity/LivingEntity;D)Z",
+      method = "shouldShowName(Lnet/minecraft/world/entity/LivingEntity;D)Z",
       cancellable = true)
   private void shouldForceLabel(
       LivingEntity entity, double distanceSq, CallbackInfoReturnable<Boolean> cir) {

@@ -1,22 +1,22 @@
 package org.infinite.libs.graphics
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gl.GpuSampler
-import net.minecraft.client.gl.RenderPipelines
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.render.RenderTickCounter
-import net.minecraft.client.render.item.KeyedItemRenderState
-import net.minecraft.client.texture.TextureSetup
-import net.minecraft.item.ItemDisplayContext
-import net.minecraft.item.ItemStack
-import net.minecraft.text.StringVisitable
-import net.minecraft.text.Text
-import net.minecraft.util.Identifier
-import net.minecraft.util.Language
-import net.minecraft.util.crash.CrashException
-import net.minecraft.util.crash.CrashReport
-import net.minecraft.util.math.ColorHelper
-import net.minecraft.util.math.MathHelper
+import com.mojang.blaze3d.textures.GpuSampler
+import net.minecraft.CrashReport
+import net.minecraft.ReportedException
+import net.minecraft.client.DeltaTracker
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.render.TextureSetup
+import net.minecraft.client.renderer.RenderPipelines
+import net.minecraft.client.renderer.item.TrackingItemStackRenderState
+import net.minecraft.locale.Language
+import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.FormattedText
+import net.minecraft.resources.Identifier
+import net.minecraft.util.ARGB
+import net.minecraft.util.Mth
+import net.minecraft.world.item.ItemDisplayContext
+import net.minecraft.world.item.ItemStack
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.utils.average
 import org.infinite.utils.rendering.drawBorder
@@ -38,19 +38,19 @@ import kotlin.math.sin
  * @property tickCounter レンダリングティックの情報
  */
 class Graphics2D(
-    private val context: DrawContext,
-    val tickCounter: RenderTickCounter = MinecraftClient.getInstance().renderTickCounter,
+    private val context: GuiGraphics,
+    val tickCounter: DeltaTracker = Minecraft.getInstance().deltaTracker,
 ) : ClientInterface() {
-    val matrixStack: Matrix3x2fStack = context.matrices
+    val matrixStack: Matrix3x2fStack = context.pose()
 
     /** 部分ティックの進行度 */
-    val tickProgress: Float = tickCounter.getTickProgress(false)
+    val tickProgress: Float = tickCounter.getGameTimeDeltaPartialTick(false)
 
     /** 画面の幅 */
     val width: Int
-        get() = context.scaledWindowWidth
+        get() = context.guiWidth()
     val height: Int
-        get() = context.scaledWindowHeight
+        get() = context.guiHeight()
 
     // ----------------------------------------------------------------------
     // MatrixState/Transform 状態管理 (Canvasの save/restore に相当)
@@ -139,7 +139,7 @@ class Graphics2D(
             translate(-(x + width / 2), -(y + height / 2))
         }
 
-        context.drawTexture(
+        context.blit(
             RenderPipelines.GUI_TEXTURED,
             identifier,
             x.toInt(),
@@ -221,9 +221,9 @@ class Graphics2D(
         shadow: Boolean = true,
     ) {
         if (shadow) {
-            context.drawTextWithShadow(client.textRenderer, text, x, y, color)
+            context.drawString(client.font, text, x, y, color)
         } else {
-            context.drawText(client.textRenderer, text, x, y, color, false)
+            context.drawString(client.font, text, x, y, color, false)
         }
     }
 
@@ -245,23 +245,23 @@ class Graphics2D(
         val tx = x.toInt()
         val ty = y.toInt()
         if (shadow) {
-            context.drawTextWithShadow(client.textRenderer, text, tx, ty, color)
+            context.drawString(client.font, text, tx, ty, color)
         } else {
-            context.drawText(client.textRenderer, text, tx, ty, color, false)
+            context.drawString(client.font, text, tx, ty, color, false)
         }
     }
 
     fun drawText(
-        text: Text,
+        text: Component,
         x: Int,
         y: Int,
         color: Int,
         shadow: Boolean = true,
     ) {
         if (shadow) {
-            context.drawTextWithShadow(client.textRenderer, text, x, y, color)
+            context.drawString(client.font, text, x, y, color)
         } else {
-            context.drawText(client.textRenderer, text, x, y, color, false)
+            context.drawString(client.font, text, x, y, color, false)
         }
     }
 
@@ -274,12 +274,12 @@ class Graphics2D(
         y3: Float,
         color: Int,
     ) {
-        val pose = Matrix3x2f(context.matrices)
-        val scissor = context.scissorStack.peekLast()
-        context.state.addSimpleElement(
+        val pose = Matrix3x2f(context.pose())
+        val scissor = context.scissorStack.peek()
+        context.guiRenderState.submitGuiElement(
             TriangleRenderState(
                 RenderPipelines.GUI,
-                TextureSetup.empty(),
+                TextureSetup.noTexture(),
                 pose,
                 x1,
                 y1,
@@ -302,21 +302,21 @@ class Graphics2D(
         color: Int,
         size: Int = 1,
     ) {
-        val scale: Int = MinecraftClient.getInstance().window.scaleFactor
+        val scale: Int = Minecraft.getInstance().window.guiScale
         val x = x1 * scale
         val y = y1 * scale
         val w = (x2 - x1) * scale
         val h = (y2 - y1) * scale
-        val angle = MathHelper.atan2(h.toDouble(), w.toDouble()).toFloat()
-        val length = MathHelper.sqrt(w * w + h * h).roundToInt()
+        val angle = Mth.atan2(h.toDouble(), w.toDouble()).toFloat()
+        val length = Mth.sqrt(w * w + h * h).roundToInt()
 
-        context.matrices.pushMatrix()
-        context.matrices.scale(1f / scale)
-        context.matrices.translate(x, y)
-        context.matrices.rotate(angle)
-        context.matrices.translate(-0.5f, -0.5f)
+        context.pose().pushMatrix()
+        context.pose().scale(1f / scale)
+        context.pose().translate(x, y)
+        context.pose().rotate(angle)
+        context.pose().translate(-0.5f, -0.5f)
         context.fill(0, -size / 2, length - 1, size / 2, color)
-        context.matrices.popMatrix()
+        context.pose().popMatrix()
     }
 
     /**
@@ -398,7 +398,7 @@ class Graphics2D(
 
         val segments = radius.roundToInt()
 
-        return MathHelper.clamp(segments, minSegments, maxSegments)
+        return Mth.clamp(segments, minSegments, maxSegments)
     }
 
     fun fillCircle(
@@ -560,12 +560,12 @@ class Graphics2D(
         y4: Float,
         color: Int,
     ) {
-        val pose = Matrix3x2f(context.matrices)
-        val scissor = context.scissorStack.peekLast()
-        context.state.addSimpleElement(
+        val pose = Matrix3x2f(context.pose())
+        val scissor = context.scissorStack.peek()
+        context.guiRenderState.submitGuiElement(
             QuadrilateralRenderState(
                 RenderPipelines.GUI,
-                TextureSetup.empty(),
+                TextureSetup.noTexture(),
                 pose,
                 x1,
                 y1,
@@ -605,12 +605,12 @@ class Graphics2D(
         y2: Float,
         color: Int,
     ) {
-        val pose = Matrix3x2f(context.matrices)
-        val scissor = context.scissorStack.peekLast()
-        context.state.addSimpleElement(
+        val pose = Matrix3x2f(context.pose())
+        val scissor = context.scissorStack.peek()
+        context.guiRenderState.submitGuiElement(
             RectangleRenderState(
                 RenderPipelines.GUI,
-                TextureSetup.empty(),
+                TextureSetup.noTexture(),
                 pose,
                 x1,
                 y1,
@@ -684,7 +684,7 @@ class Graphics2D(
             translate(-centerX, -centerY)
         }
 
-        context.drawTexture(
+        context.blit(
             RenderPipelines.GUI_TEXTURED,
             identifier,
             x.toInt(),
@@ -700,9 +700,9 @@ class Graphics2D(
         popState()
     }
 
-    fun textWidth(text: String): Int = MinecraftClient.getInstance().textRenderer.getWidth(text)
+    fun textWidth(text: String): Int = Minecraft.getInstance().font.width(text)
 
-    fun fontHeight(): Int = MinecraftClient.getInstance().textRenderer.fontHeight
+    fun fontHeight(): Int = Minecraft.getInstance().font.lineHeight
 
     fun drawRotatedTexture(
         identifier: Identifier,
@@ -768,7 +768,7 @@ class Graphics2D(
                 val (x2, y2) = lines[i + 1]
                 val dx = x2 - x1
                 val dy = y2 - y1
-                val length = MathHelper.sqrt(dx * dx + dy * dy)
+                val length = Mth.sqrt(dx * dx + dy * dy)
                 normalX = -(dy / length) // 垂直ベクトルのX (-dy)
                 normalY = dx / length // 垂直ベクトルのY (dx)
             } else if (nextPoint == null) {
@@ -777,7 +777,7 @@ class Graphics2D(
                 val (x2, y2) = lines[i]
                 val dx = x2 - x1
                 val dy = y2 - y1
-                val length = MathHelper.sqrt(dx * dx + dy * dy)
+                val length = Mth.sqrt(dx * dx + dy * dy)
                 normalX = -(dy / length) // 垂直ベクトルのX (-dy)
                 normalY = dx / length // 垂直ベクトルのY (dx)
             } else {
@@ -791,8 +791,8 @@ class Graphics2D(
                 val v2x = nx - cx // 次の線分の方向
                 val v2y = ny - cy
 
-                val length1 = MathHelper.sqrt(v1x * v1x + v1y * v1y)
-                val length2 = MathHelper.sqrt(v2x * v2x + v2y * v2y)
+                val length1 = Mth.sqrt(v1x * v1x + v1y * v1y)
+                val length2 = Mth.sqrt(v2x * v2x + v2y * v2y)
 
                 // 単位方向ベクトル
                 val u1x = v1x / length1
@@ -803,7 +803,7 @@ class Graphics2D(
                 // 2つの線分の単位方向ベクトルの和
                 val sumX = u1x + u2x
                 val sumY = u1y + u2y
-                val sumLength = MathHelper.sqrt(sumX * sumX + sumY * sumY)
+                val sumLength = Mth.sqrt(sumX * sumX + sumY * sumY)
 
                 // 角度の二等分線に沿った単位ベクトル
                 val bisectorX = if (sumLength != 0f) sumX / sumLength else u1x
@@ -822,7 +822,7 @@ class Graphics2D(
 
                 // 非常に小さな値で割るのを防ぐ
                 val scale =
-                    if (MathHelper.abs(cosThetaHalf) < 0.0001f) {
+                    if (Mth.abs(cosThetaHalf) < 0.0001f) {
                         1.0f // マイターが適用されない直線の場合
                     } else {
                         1.0f / cosThetaHalf
@@ -848,7 +848,7 @@ class Graphics2D(
                     // 簡単化のため、凹ジョイントでは単純な平均法線を使用
                     val perpSumX = -(u1y + u2y)
                     val perpSumY = u1x + u2x
-                    val perpSumLength = MathHelper.sqrt(perpSumX * perpSumX + perpSumY * perpSumY)
+                    val perpSumLength = Mth.sqrt(perpSumX * perpSumX + perpSumY * perpSumY)
                     normalX = if (perpSumLength != 0f) perpSumX / perpSumLength else perp1X
                     normalY = if (perpSumLength != 0f) perpSumY / perpSumLength else perp1Y
                 }
@@ -944,8 +944,8 @@ class Graphics2D(
     ) {
         if (stack.isEmpty) return
         val size = 16f
-        val keyedItemRenderState = KeyedItemRenderState()
-        this.client.itemModelManager.clearAndUpdate(
+        val keyedItemRenderState = TrackingItemStackRenderState()
+        this.client.itemModelResolver.updateForTopItem(
             keyedItemRenderState,
             stack,
             ItemDisplayContext.GUI,
@@ -954,29 +954,29 @@ class Graphics2D(
             0,
         )
         try {
-            context.state.addItem(
+            context.guiRenderState.submitItem(
                 ItemRenderState(
                     stack.item.name.toString(),
                     Matrix3x2f(this.matrixStack),
                     keyedItemRenderState,
                     x,
                     y,
-                    context.scissorStack.peekLast(),
+                    context.scissorStack.peek(),
                 ),
             )
         } catch (throwable: Throwable) {
-            val crashReport = CrashReport.create(throwable, "Rendering item")
-            val crashReportSection = crashReport.addElement("Item being rendered")
-            crashReportSection.add("Item Type") { stack.item.toString() }
-            crashReportSection.add("Item Components") { stack.getComponents().toString() }
-            crashReportSection.add("Item Foil") { stack.hasGlint().toString() }
-            throw CrashException(crashReport)
+            val crashReport = CrashReport.forThrowable(throwable, "Rendering item")
+            val crashReportSection = crashReport.addCategory("Item being rendered")
+            crashReportSection.setDetail("Item Type") { stack.item.toString() }
+            crashReportSection.setDetail("Item Components") { stack.getComponents().toString() }
+            crashReportSection.setDetail("Item Foil") { stack.hasFoil().toString() }
+            throw ReportedException(crashReport)
         }
 
         // 個数の描画
         if (stack.count > 1) {
             val text = stack.count.toString()
-            val textColor = ColorHelper.getArgb((alpha * 255).toInt(), 255, 255, 255)
+            val textColor = ARGB.color((alpha * 255).toInt(), 255, 255, 255)
             drawText(
                 text,
                 x + size - textWidth(text),
@@ -987,13 +987,13 @@ class Graphics2D(
         }
 
         // 耐久値の描画
-        if (stack.isDamageable && stack.damage > 0) {
-            val progress = (stack.maxDamage - stack.damage).toFloat() / stack.maxDamage.toFloat()
+        if (stack.isDamageableItem && stack.damageValue > 0) {
+            val progress = (stack.maxDamage - stack.damageValue).toFloat() / stack.maxDamage.toFloat()
             val barHeight = 2f
             val barY = y + size - barHeight
             val alphaInt = (alpha * 255).toInt()
 
-            rect(x, barY, x + size, barY + barHeight, ColorHelper.getArgb(alphaInt, 0, 0, 0))
+            rect(x, barY, x + size, barY + barHeight, ARGB.color(alphaInt, 0, 0, 0))
             // 耐久値の進捗バー
             val fillWidth = (size * progress).toInt()
             if (fillWidth > 0) {
@@ -1026,7 +1026,7 @@ class Graphics2D(
     }
 
     fun centeredText(
-        text: Text,
+        text: Component,
         x: Int,
         y: Int,
         color: Int,

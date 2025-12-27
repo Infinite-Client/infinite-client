@@ -1,8 +1,8 @@
 package org.infinite.libs.ai.actions.movement
 
 import baritone.api.BaritoneAPI
-import net.minecraft.entity.Entity
-import net.minecraft.util.math.BlockPos
+import net.minecraft.core.BlockPos
+import net.minecraft.world.entity.Entity
 import org.infinite.InfiniteClient
 import org.infinite.libs.ai.interfaces.AiAction
 
@@ -34,7 +34,7 @@ class EntityPosMovementAction(
     }
 
     val pos: BlockPos
-        get() = player!!.blockPos
+        get() = player!!.blockPosition()
 
     fun baritoneCheck(): Boolean =
         try {

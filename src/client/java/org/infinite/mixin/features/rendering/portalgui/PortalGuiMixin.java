@@ -1,11 +1,11 @@
 package org.infinite.mixin.features.rendering.portalgui;
 
 import com.mojang.authlib.GameProfile;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.portalgui.PortalGui;
 import org.objectweb.asm.Opcodes;
@@ -17,15 +17,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ClientPlayerEntity.class)
-public abstract class PortalGuiMixin extends AbstractClientPlayerEntity {
+@Mixin(LocalPlayer.class)
+public abstract class PortalGuiMixin extends AbstractClientPlayer {
   @Shadow(aliases = "client")
   @Final
-  protected MinecraftClient client;
+  protected Minecraft minecraft;
 
   @Unique private Screen tempCurrentScreen;
 
-  public PortalGuiMixin(ClientWorld world, GameProfile profile) {
+  public PortalGuiMixin(ClientLevel world, GameProfile profile) {
     super(world, profile);
   }
 
@@ -38,16 +38,16 @@ public abstract class PortalGuiMixin extends AbstractClientPlayerEntity {
           @At(
               value = "FIELD",
               target =
-                  "Lnet/minecraft/client/MinecraftClient;currentScreen:Lnet/minecraft/client/gui/screen/Screen;",
+                  "Lnet/minecraft/client/Minecraft;screen:Lnet/minecraft/client/gui/screens/Screen;",
               opcode = Opcodes.GETFIELD,
               ordinal = 0),
-      method = "tickNausea(Z)V")
+      method = "handlePortalTransitionEffect(Z)V")
   private void beforeTickNausea(boolean fromPortalEffect, CallbackInfo ci) {
     // Feature: PortalGui の有効性チェック
     if (!InfiniteClient.INSTANCE.isFeatureEnabled(PortalGui.class)) return;
 
-    tempCurrentScreen = client.currentScreen;
-    client.currentScreen = null;
+    tempCurrentScreen = minecraft.screen;
+    minecraft.screen = null;
   }
 
   /** PortalGui: Restores the current screen. */
@@ -55,14 +55,14 @@ public abstract class PortalGuiMixin extends AbstractClientPlayerEntity {
       at =
           @At(
               value = "FIELD",
-              target = "Lnet/minecraft/client/network/ClientPlayerEntity;nauseaIntensity:F",
+              target = "Lnet/minecraft/client/player/LocalPlayer;portalEffectIntensity:F",
               opcode = Opcodes.GETFIELD,
               ordinal = 1),
-      method = "tickNausea(Z)V")
+      method = "handlePortalTransitionEffect(Z)V")
   private void afterTickNausea(boolean fromPortalEffect, CallbackInfo ci) {
     if (tempCurrentScreen == null) return;
 
-    client.currentScreen = tempCurrentScreen;
+    minecraft.screen = tempCurrentScreen;
     tempCurrentScreen = null;
   }
 }

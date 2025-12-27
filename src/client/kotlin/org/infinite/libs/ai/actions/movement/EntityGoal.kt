@@ -1,7 +1,7 @@
 package org.infinite.libs.ai.actions.movement
 
 import baritone.api.pathing.goals.Goal
-import net.minecraft.entity.Entity
+import net.minecraft.world.entity.Entity
 import org.infinite.libs.client.player.ClientInterface
 import kotlin.math.abs
 import kotlin.math.pow
@@ -18,7 +18,7 @@ class EntityGoal(
         y: Int,
         z: Int,
     ): Boolean {
-        val targetPos = target.blockPos
+        val targetPos = target.blockPosition()
         val inX = abs(targetPos.x - x) <= (radius ?: 0.0)
         val inY = abs(targetPos.y - y) <= height
         val inZ = abs(targetPos.z - z) <= (radius ?: 0.0)
@@ -30,8 +30,8 @@ class EntityGoal(
         y: Int,
         z: Int,
     ): Double {
-        val tickProgress = client.renderTickCounter.getTickProgress(false)
-        val targetPos = target.getLerpedPos(tickProgress)
+        val tickProgress = client.deltaTracker.getGameTimeDeltaPartialTick(false)
+        val targetPos = target.getPosition(tickProgress)
         val distX = (targetPos.x - x).pow(2)
         val distY = (targetPos.y - y).pow(2)
         val distZ = (targetPos.z - z).pow(2)

@@ -1,12 +1,12 @@
 package org.infinite.features.utils.food
 
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.component.DataComponentTypes
-import net.minecraft.component.type.ConsumableComponent
-import net.minecraft.component.type.FoodComponent
-import net.minecraft.entity.effect.StatusEffects
-import net.minecraft.item.consume.ApplyEffectsConsumeEffect
-import net.minecraft.item.consume.TeleportRandomlyConsumeEffect
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.core.component.DataComponents
+import net.minecraft.world.effect.MobEffects
+import net.minecraft.world.food.FoodProperties
+import net.minecraft.world.item.component.Consumable
+import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect
+import net.minecraft.world.item.consume_effects.TeleportRandomlyConsumeEffect
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.utils.backpack.BackPackManager
@@ -97,7 +97,7 @@ class FoodManager : ConfigurableFeature() {
 
     // UseKeyがトグル（切り替え）モードかどうか
     private val isUseKeyToggleMode: Boolean
-        get() = options.useToggled.value
+        get() = options.toggleUse().get()
 
     override fun onEnabled() {
         oldSlot = -1
@@ -114,13 +114,13 @@ class FoodManager : ConfigurableFeature() {
     override fun onTick() {
         val player = player ?: return
 
-        if (player.abilities.creativeMode || !player.canConsume(false)) {
+        if (player.abilities.instabuild || !player.canEat(false)) {
             if (isEating()) stopEating()
             delayTicks = 0 // 無効な状態ではディレイをリセット
             return
         }
 
-        val hungerManager = player.hungerManager
+        val hungerManager = player.foodData
         val foodLevel = hungerManager.foodLevel
         val targetHungerI = (targetHunger.value * 2).toInt()
         val minHungerI = (minHunger.value * 2).toInt()
@@ -138,7 +138,7 @@ class FoodManager : ConfigurableFeature() {
         if (isEating()) {
             delayTicks = 0 // 食事中はディレイ不要
             if (!isUseKeyToggleMode) {
-                options.useKey.isPressed = true
+                options.keyUse.setDown(true)
             }
 
             if (!player.isUsingItem) {
@@ -166,14 +166,14 @@ class FoodManager : ConfigurableFeature() {
 
         // 外部要因による食事のキャンセル判定
         val isMoving = (
-            options.forwardKey.isPressed ||
-                options.backKey.isPressed ||
-                options.leftKey.isPressed ||
-                options.rightKey.isPressed
+            options.keyUp.isDown ||
+                options.keyDown.isDown ||
+                options.keyLeft.isDown ||
+                options.keyRight.isDown
         )
-        val isAttacking = options.attackKey.isPressed
+        val isAttacking = options.keyAttack.isDown
 
-        if (client.currentScreen != null ||
+        if (client.screen != null ||
             (!eatWhileMoving.value && isMoving) ||
             (!eatWhileAttacking.value && isAttacking)
         ) {
@@ -233,7 +233,7 @@ class FoodManager : ConfigurableFeature() {
         }
 
         // --- 修正箇所 3 (食事開始のシグナル): トグル/ホールド対応 ---
-        options.useKey.isPressed = true
+        options.keyUse.setDown(true)
         // --- 修正箇所 3 終了 ---
     }
 
@@ -241,7 +241,7 @@ class FoodManager : ConfigurableFeature() {
     // ※ 以下のメソッドは元のコードから変更なし
 
     private fun findBestFoodSlot(maxPoints: Int): Int {
-        var bestFood: FoodComponent? = null
+        var bestFood: FoodProperties? = null
         var bestSlot = -1
         var bestHealingPotential = 0f
 
@@ -251,10 +251,10 @@ class FoodManager : ConfigurableFeature() {
         for (slot in slotsToSearch) {
             val stack = InventoryManager.get(slotToInventoryIndex(slot) ?: continue)
 
-            if (!stack.contains(DataComponentTypes.FOOD)) continue
+            if (!stack.has(DataComponents.FOOD)) continue
 
-            val food = stack.get(DataComponentTypes.FOOD) ?: continue
-            val consumable = stack.get(DataComponentTypes.CONSUMABLE)
+            val food = stack.get(DataComponents.FOOD) ?: continue
+            val consumable = stack.get(DataComponents.CONSUMABLE)
 
             if (!isAllowedFood(consumable)) continue
 
@@ -263,9 +263,9 @@ class FoodManager : ConfigurableFeature() {
             var currentHealingPotential = 0f
             if (consumable != null) {
                 for (effect in consumable.onConsumeEffects()) {
-                    if (effect is ApplyEffectsConsumeEffect) {
+                    if (effect is ApplyStatusEffectsConsumeEffect) {
                         for (statusEffectInstance in effect.effects()) {
-                            if (statusEffectInstance.effectType.value() == StatusEffects.SATURATION) {
+                            if (statusEffectInstance.effect.value() == MobEffects.SATURATION) {
                                 currentHealingPotential += statusEffectInstance.amplifier + 1
                             }
                         }
@@ -298,13 +298,13 @@ class FoodManager : ConfigurableFeature() {
         }
 
     private fun stopEating() {
-        options.useKey.isPressed = false
+        options.keyUse.setDown(false)
         inventory?.selectedSlot = oldSlot
         oldSlot = -1
         delayTicks = 0 // 停止時もディレイリセット
     }
 
-    private fun isAllowedFood(consumable: ConsumableComponent?): Boolean {
+    private fun isAllowedFood(consumable: Consumable?): Boolean {
         if (consumable == null) return false
 
         for (consumeEffect in consumable.onConsumeEffects()) {
@@ -312,10 +312,10 @@ class FoodManager : ConfigurableFeature() {
                 return false
             }
 
-            if (consumeEffect is ApplyEffectsConsumeEffect) {
+            if (consumeEffect is ApplyStatusEffectsConsumeEffect) {
                 for (effect in consumeEffect.effects()) {
-                    val entry = effect.effectType
-                    if (!allowRottenFlesh.value && entry.value() == StatusEffects.HUNGER) {
+                    val entry = effect.effect
+                    if (!allowRottenFlesh.value && entry.value() == MobEffects.HUNGER) {
                         return false
                     }
                 }
@@ -326,7 +326,7 @@ class FoodManager : ConfigurableFeature() {
 
     private fun isEating(): Boolean = oldSlot != -1
 
-    private fun isInjured(player: ClientPlayerEntity): Boolean {
+    private fun isInjured(player: LocalPlayer): Boolean {
         val injuryThresholdI = (injuryThreshold.value * 2).toInt()
         return player.health < player.maxHealth - injuryThresholdI
     }

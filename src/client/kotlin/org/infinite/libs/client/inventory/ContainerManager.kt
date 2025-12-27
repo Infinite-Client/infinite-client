@@ -1,12 +1,12 @@
 package org.infinite.libs.client.inventory
 
-import net.minecraft.item.ItemStack
-import net.minecraft.screen.ScreenHandlerType
-import net.minecraft.screen.slot.SlotActionType
-import net.minecraft.util.hit.BlockHitResult
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Direction
-import net.minecraft.util.math.Vec3d
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.inventory.MenuType
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.phys.BlockHitResult
+import net.minecraft.world.phys.Vec3
 import org.infinite.libs.client.player.ClientInterface
 
 object ContainerManager : ClientInterface() {
@@ -146,23 +146,23 @@ object ContainerManager : ClientInterface() {
         val currentPlayer = player ?: return false
         val interaction = interactionManager ?: return false
 
-        interaction.interactBlock(
+        interaction.useItemOn(
             currentPlayer,
-            currentPlayer.activeHand,
-            BlockHitResult(Vec3d.ofCenter(pos), Direction.UP, pos, false),
+            currentPlayer.usedItemHand,
+            BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false),
         )
         return true
     }
 
     fun close() {
-        if (client.currentScreen != null) {
-            player?.closeScreen()
+        if (client.screen != null) {
+            player?.clientSideCloseContainer()
         }
     }
 
     fun get(index: ContainerIndex): ItemStack? {
-        val screenHandler = player?.currentScreenHandler ?: return null
-        val currentScreenId = screenHandler.syncId
+        val screenHandler = player?.containerMenu ?: return null
+        val currentScreenId = screenHandler.containerId
 
         // プレイヤーの標準インベントリ画面 (ID 0) の場合はコンテナ操作ではないため null (これは不要なチェックかもしれませんが、元コードに合わせて残します)
         // if (currentScreenId == 0) return null
@@ -171,7 +171,7 @@ object ContainerManager : ClientInterface() {
         val containerSlotId = indexToNetworkSlot(index) ?: return null
 
         // 画面ハンドラーからアイテムスタックを取得
-        return screenHandler.slots.getOrNull(containerSlotId)?.stack
+        return screenHandler.slots.getOrNull(containerSlotId)?.item
     }
 
     fun swap(
@@ -180,7 +180,7 @@ object ContainerManager : ClientInterface() {
     ): Boolean {
         val currentPlayer = player ?: return false
         val interaction = interactionManager ?: return false
-        val currentScreenId = currentPlayer.currentScreenHandler.syncId
+        val currentScreenId = currentPlayer.containerMenu.containerId
 
         // indexToNetworkSlot 内でコンテナタイプのチェックが行われる
         val netFrom = indexToNetworkSlot(from) ?: return false // ★不正なIndexは中止★
@@ -188,35 +188,35 @@ object ContainerManager : ClientInterface() {
 
         try {
             // 3クリック スワップシーケンス
-            interaction.clickSlot(currentScreenId, netFrom, 0, SlotActionType.PICKUP, currentPlayer)
-            interaction.clickSlot(currentScreenId, netTo, 0, SlotActionType.PICKUP, currentPlayer)
-            interaction.clickSlot(currentScreenId, netFrom, 0, SlotActionType.PICKUP, currentPlayer)
+            interaction.handleInventoryMouseClick(currentScreenId, netFrom, 0, ClickType.PICKUP, currentPlayer)
+            interaction.handleInventoryMouseClick(currentScreenId, netTo, 0, ClickType.PICKUP, currentPlayer)
+            interaction.handleInventoryMouseClick(currentScreenId, netFrom, 0, ClickType.PICKUP, currentPlayer)
             return true
         } catch (_: Exception) {
             return false
         }
     }
 
-    fun cursorItem(): ItemStack? = player?.currentScreenHandler?.cursorStack
+    fun cursorItem(): ItemStack? = player?.containerMenu?.carried
 
     /**
      * 現在開いている画面ハンドラーに基づいて、コンテナのタイプを識別して返します。
      */
     fun containerType(): ContainerType {
-        val handler = player?.currentScreenHandler ?: return ContainerType.None
+        val handler = player?.containerMenu ?: return ContainerType.None
         val handlerType = handler.type
 
         return when (handlerType) {
             // プレイヤーインベントリ/汎用チェスト系
-            ScreenHandlerType.GENERIC_9X1 -> {
+            MenuType.GENERIC_9x1 -> {
                 ContainerType.Inventory
             }
 
-            ScreenHandlerType.GENERIC_9X2,
-            ScreenHandlerType.GENERIC_9X3,
-            ScreenHandlerType.GENERIC_9X4,
-            ScreenHandlerType.GENERIC_9X5,
-            ScreenHandlerType.GENERIC_9X6,
+            MenuType.GENERIC_9x2,
+            MenuType.GENERIC_9x3,
+            MenuType.GENERIC_9x4,
+            MenuType.GENERIC_9x5,
+            MenuType.GENERIC_9x6,
             -> {
                 // handler.slots.size からプレイヤーインベントリの標準スロット数 36 を引いてコンテナサイズを推定
                 val containerSize = handler.slots.size - 36
@@ -224,81 +224,81 @@ object ContainerManager : ClientInterface() {
             }
 
             // 3x3 グリッド系
-            ScreenHandlerType.GENERIC_3X3 -> {
+            MenuType.GENERIC_3x3 -> {
                 ContainerType.Generic3x3
             }
 
-            ScreenHandlerType.CRAFTER_3X3 -> {
+            MenuType.CRAFTER_3x3 -> {
                 ContainerType.Crafter3x3
             }
 
             // 溶鉱炉系
-            ScreenHandlerType.FURNACE -> {
+            MenuType.FURNACE -> {
                 ContainerType.Furnace
             }
 
-            ScreenHandlerType.SMOKER -> {
+            MenuType.SMOKER -> {
                 ContainerType.Smoker
             }
 
-            ScreenHandlerType.BLAST_FURNACE -> {
+            MenuType.BLAST_FURNACE -> {
                 ContainerType.BlastFurnace
             }
 
             // ツール/特殊系
-            ScreenHandlerType.ANVIL -> {
+            MenuType.ANVIL -> {
                 ContainerType.Anvil
             }
 
-            ScreenHandlerType.BEACON -> {
+            MenuType.BEACON -> {
                 ContainerType.Beacon
             }
 
-            ScreenHandlerType.BREWING_STAND -> {
+            MenuType.BREWING_STAND -> {
                 ContainerType.BrewingStand
             }
 
-            ScreenHandlerType.CRAFTING -> {
+            MenuType.CRAFTING -> {
                 ContainerType.Crafting
             }
 
-            ScreenHandlerType.ENCHANTMENT -> {
+            MenuType.ENCHANTMENT -> {
                 ContainerType.Enchantment
             }
 
-            ScreenHandlerType.GRINDSTONE -> {
+            MenuType.GRINDSTONE -> {
                 ContainerType.Grindstone
             }
 
-            ScreenHandlerType.HOPPER -> {
+            MenuType.HOPPER -> {
                 ContainerType.Hopper
             }
 
-            ScreenHandlerType.LECTERN -> {
+            MenuType.LECTERN -> {
                 ContainerType.Lectern
             }
 
-            ScreenHandlerType.LOOM -> {
+            MenuType.LOOM -> {
                 ContainerType.Loom
             }
 
-            ScreenHandlerType.MERCHANT -> {
+            MenuType.MERCHANT -> {
                 ContainerType.Merchant
             }
 
-            ScreenHandlerType.SHULKER_BOX -> {
+            MenuType.SHULKER_BOX -> {
                 ContainerType.ShulkerBox
             }
 
-            ScreenHandlerType.SMITHING -> {
+            MenuType.SMITHING -> {
                 ContainerType.Smithing
             }
 
-            ScreenHandlerType.CARTOGRAPHY_TABLE -> {
+            MenuType.CARTOGRAPHY_TABLE -> {
                 ContainerType.Cartography
             }
 
-            ScreenHandlerType.STONECUTTER -> {
+            MenuType.STONECUTTER -> {
                 ContainerType.Stonecutter
             }
 
@@ -313,7 +313,7 @@ object ContainerManager : ClientInterface() {
      * プレイヤーインベントリ (Inventory Type) の場合は 0 を返します。
      */
     private fun getContainerSlotCount(): Int {
-        val handler = player?.currentScreenHandler ?: return 0
+        val handler = player?.containerMenu ?: return 0
         return when (val type = containerType()) {
             is ContainerType.Generic -> {
                 type.size

@@ -1,11 +1,11 @@
 package org.infinite.features.fighting.impact
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.entity.Entity
-import net.minecraft.entity.LivingEntity
-import net.minecraft.util.hit.EntityHitResult
-import net.minecraft.util.math.MathHelper
+import net.minecraft.client.Minecraft
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.util.Mth
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.phys.EntityHitResult
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import kotlin.math.sqrt
@@ -35,26 +35,26 @@ class ImpactAttack : ConfigurableFeature(initialEnabled = false) {
         )
 
     override fun onTick() {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
-        val interactionManager = client.interactionManager ?: return
+        val interactionManager = client.gameMode ?: return
 
         // 必須チェック
-        if (client.world == null || player.isDead || !isEnabled()) {
+        if (client.level == null || player.isDeadOrDying || !isEnabled()) {
             stopAttack()
             return
         }
 
         // --- 1. ターゲットロックの処理 ---
         // プレイヤーが攻撃キーを押しているかチェック
-        val isAttackKeyPressed = client.options.attackKey.isPressed
+        val isAttackKeyPressed = client.options.keyAttack.isDown
 
         if (targetToFollow == null) {
             // ターゲットが未ロックの場合: 攻撃キーが押されていれば、視線先のエンティティをターゲットに設定する
 
             if (isAttackKeyPressed) {
                 // client.crosshairTarget は RaycastHitResult を返します
-                val hitResult = client.crosshairTarget
+                val hitResult = client.hitResult
 
                 // 視線先がエンティティであるか確認
                 if (hitResult is EntityHitResult) {
@@ -116,9 +116,9 @@ class ImpactAttack : ConfigurableFeature(initialEnabled = false) {
 
         // 攻撃を実行し、タイマーをリセット
         // 攻撃を実行する際は、プレイヤーが「振り」のアニメーションに入るようにし、手動攻撃と同じクールダウンロジックをトリガーさせます。
-        interactionManager.attackEntity(player, target)
+        interactionManager.attack(player, target)
         // 攻撃アニメーションのリセット（視覚的な問題回避のため）
-        player.swingHand(player.activeHand)
+        player.swing(player.usedItemHand)
 
         attackDelayTimer = delayPerAttack
     }
@@ -140,7 +140,7 @@ class ImpactAttack : ConfigurableFeature(initialEnabled = false) {
      * このメソッドは ConfigurableFeature から移動したものとします。
      */
     private fun faceEntity(
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         target: Entity,
     ) {
         val x = target.x - player.x
@@ -148,10 +148,10 @@ class ImpactAttack : ConfigurableFeature(initialEnabled = false) {
         val z = target.z - player.z
 
         val dist = sqrt(x * x + z * z)
-        val yaw = (MathHelper.atan2(z, x) * 180.0 / Math.PI).toFloat() - 90.0F
-        val pitch = (-(MathHelper.atan2(y, dist) * 180.0 / Math.PI)).toFloat()
+        val yaw = (Mth.atan2(z, x) * 180.0 / Math.PI).toFloat() - 90.0F
+        val pitch = (-(Mth.atan2(y, dist) * 180.0 / Math.PI)).toFloat()
 
-        player.yaw = yaw
-        player.pitch = pitch
+        player.setYRot(yaw)
+        player.setXRot(pitch)
     }
 }

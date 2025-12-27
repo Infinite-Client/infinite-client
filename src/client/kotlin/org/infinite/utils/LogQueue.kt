@@ -1,14 +1,14 @@
 package org.infinite.utils
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
-import net.minecraft.client.MinecraftClient
-import net.minecraft.text.MutableText
+import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.MutableComponent
 import org.infinite.InfiniteClient
 import java.util.concurrent.ConcurrentLinkedQueue
 
 object LogQueue : ClientTickEvents.EndTick {
     // プレイヤーに送信待ちのメッセージを格納するスレッドセーフなキュー
-    private val messageQueue = ConcurrentLinkedQueue<MutableText>()
+    private val messageQueue = ConcurrentLinkedQueue<MutableComponent>()
     private const val MESSAGES_PER_TICK = 8 // 1ティックあたりに処理するメッセージの数
 
     /**
@@ -17,7 +17,7 @@ object LogQueue : ClientTickEvents.EndTick {
      *
      * @param message プレイヤーに送信するメッセージ
      */
-    fun enqueueMessage(message: MutableText) {
+    fun enqueueMessage(message: MutableComponent) {
         messageQueue.add(message)
     }
 
@@ -25,7 +25,7 @@ object LogQueue : ClientTickEvents.EndTick {
      * クライアントのティックの終わりに呼び出されます。
      * キューからメッセージを取り出し、プレイヤーに送信します。
      */
-    override fun onEndTick(client: MinecraftClient) {
+    override fun onEndTick(client: Minecraft) {
         repeat(MESSAGES_PER_TICK) {
             val message = messageQueue.poll() // キューからメッセージを取り出す
             if (message != null) {
@@ -33,7 +33,7 @@ object LogQueue : ClientTickEvents.EndTick {
                 if (player == null) {
                     println(message.string)
                 } else {
-                    player.sendMessage(message, false)
+                    player.displayClientMessage(message, false)
                 }
             } else {
                 return

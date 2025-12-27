@@ -1,10 +1,11 @@
 package org.infinite.features.rendering.sensory.esp
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.registry.Registries
-import net.minecraft.util.math.BlockPos
-import net.minecraft.world.chunk.ChunkSection
-import net.minecraft.world.dimension.DimensionType
+import net.minecraft.client.Minecraft
+import net.minecraft.core.BlockPos
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.level.chunk.ChunkAccess
+import net.minecraft.world.level.chunk.LevelChunkSection
+import net.minecraft.world.level.dimension.DimensionType
 import org.infinite.InfiniteClient
 import org.infinite.features.rendering.sensory.ExtraSensory
 import org.infinite.libs.graphics.Graphics3D
@@ -67,8 +68,8 @@ object PortalEsp {
             is WorldManager.Chunk.BlockUpdate -> {
                 val pos = chunk.packet.pos
                 // world.getBlockState(pos)はメインスレッドで安全に呼び出せる
-                val blockState = MinecraftClient.getInstance().world?.getBlockState(pos)
-                val blockId = blockState?.block?.let { Registries.BLOCK.getId(it).toString() }
+                val blockState = Minecraft.getInstance().level?.getBlockState(pos)
+                val blockId = blockState?.block?.let { BuiltInRegistries.BLOCK.getKey(it).toString() }
                 val color = blockId?.let { getColorForBlock(it) }
 
                 if (color != null) {
@@ -81,8 +82,8 @@ object PortalEsp {
             }
 
             is WorldManager.Chunk.DeltaUpdate -> {
-                chunk.packet.visitUpdates { pos, state ->
-                    val blockId = Registries.BLOCK.getId(state.block).toString()
+                chunk.packet.runUpdates { pos, state ->
+                    val blockId = BuiltInRegistries.BLOCK.getKey(state.block).toString()
                     val color = getColorForBlock(blockId)
 
                     if (color != null) {
@@ -101,12 +102,12 @@ object PortalEsp {
      * 毎ティック呼ばれる。プレイヤーを中心に、チャンクを順番に走査する (インクリメンタルスキャン)。
      */
     fun tick() {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
 
         // プレイヤーの現在地を中心とするチャンク座標
-        val centerChunkX = player.chunkPos.x
-        val centerChunkZ = player.chunkPos.z
+        val centerChunkX = player.chunkPosition().x
+        val centerChunkZ = player.chunkPosition().z
 
         // 走査すべきチャンクの相対座標をインデックスから計算
         // (X, Z)オフセットは [-SCAN_RADIUS_CHUNKS, SCAN_RADIUS_CHUNKS] の範囲になる
@@ -131,23 +132,23 @@ object PortalEsp {
         chunkX: Int,
         chunkZ: Int,
     ) {
-        val client = MinecraftClient.getInstance()
-        val world = client.world ?: return
-        if (world.dimension != currentDimension) {
-            currentDimension = world.dimension
+        val client = Minecraft.getInstance()
+        val world = client.level ?: return
+        if (world.dimensionType() != currentDimension) {
+            currentDimension = world.dimensionType()
             clear()
             currentScanIndex = 0
             return
         }
         // チャンクがロードされているかを確認し、取得
-        val chunk: net.minecraft.world.chunk.Chunk? = world.getChunk(chunkX, chunkZ)
+        val chunk: ChunkAccess? = world.getChunk(chunkX, chunkZ)
 
         if (chunk != null) {
             // チャンク内のすべてのセクションを走査
-            for (chunkY in 0 until chunk.sectionArray.size) {
-                val section = chunk.sectionArray[chunkY]
-                if (section != null && !section.isEmpty) {
-                    scanChunkSection(chunkX, chunkY, chunkZ, section, chunk.bottomY)
+            for (chunkY in 0 until chunk.sections.size) {
+                val section = chunk.sections[chunkY]
+                if (section != null && !section.hasOnlyAir()) {
+                    scanChunkSection(chunkX, chunkY, chunkZ, section, chunk.minY)
                 }
             }
         }
@@ -160,7 +161,7 @@ object PortalEsp {
         chunkX: Int,
         chunkY: Int,
         chunkZ: Int,
-        section: ChunkSection,
+        section: LevelChunkSection,
         minY: Int,
     ) {
         val chunkLength = 16
@@ -169,7 +170,7 @@ object PortalEsp {
             for (z in 0 until chunkLength) {
                 for (x in 0 until chunkLength) {
                     val blockState = section.getBlockState(x, y, z)
-                    val blockId = Registries.BLOCK.getId(blockState.block).toString()
+                    val blockId = BuiltInRegistries.BLOCK.getKey(blockState.block).toString()
                     getColorForBlock(blockId)?.let { color ->
                         val blockX = (chunkX * chunkLength) + x
                         val blockY = (chunkY * chunkLength + minY) + y

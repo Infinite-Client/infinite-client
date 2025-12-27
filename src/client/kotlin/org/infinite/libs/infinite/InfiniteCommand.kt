@@ -7,11 +7,11 @@ import com.mojang.brigadier.suggestion.SuggestionProvider
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.command.CommandRegistryAccess
-import net.minecraft.command.CommandSource
-import net.minecraft.registry.Registries
-import net.minecraft.text.Text
-import net.minecraft.util.Formatting
+import net.minecraft.ChatFormatting
+import net.minecraft.commands.CommandBuildContext
+import net.minecraft.commands.SharedSuggestionProvider
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.network.chat.Component
 import org.infinite.ConfigManager
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
@@ -22,7 +22,7 @@ import org.infinite.settings.FeatureSetting
 object InfiniteCommand {
     fun registerCommands(
         dispatcher: CommandDispatcher<FabricClientCommandSource>,
-        registry: CommandRegistryAccess,
+        registry: CommandBuildContext,
     ) {
         val infiniteCommand =
             ClientCommandManager
@@ -227,7 +227,7 @@ object InfiniteCommand {
             _,
             b,
             ->
-            CommandSource.suggestMatching(
+            SharedSuggestionProvider.suggest(
                 InfiniteClient.featureCategories.flatMap { it.features.map { f -> f.name } },
                 b,
             )
@@ -253,7 +253,7 @@ object InfiniteCommand {
                             else -> true
                         }
                     }
-                CommandSource.suggestMatching(filtered.map { it.name }, b)
+                SharedSuggestionProvider.suggest(filtered.map { it.name }, b)
             } catch (_: Exception) {
             }
             b.buildFuture()
@@ -275,7 +275,7 @@ object InfiniteCommand {
                             if (isDel) {
                                 setting.value
                             } else if (isAdd) {
-                                Registries.BLOCK.ids.map { it.toString() }
+                                BuiltInRegistries.BLOCK.keySet().map { it.toString() }
                             } else {
                                 emptyList()
                             }
@@ -285,7 +285,7 @@ object InfiniteCommand {
                             if (isDel) {
                                 setting.value
                             } else if (isAdd) {
-                                Registries.ENTITY_TYPE.ids.map { it.toString() }
+                                BuiltInRegistries.ENTITY_TYPE.keySet().map { it.toString() }
                             } else {
                                 emptyList()
                             }
@@ -295,8 +295,8 @@ object InfiniteCommand {
                             if (isDel) {
                                 setting.value
                             } else if (isAdd) {
-                                ctx.source.client.networkHandler
-                                    ?.playerList
+                                ctx.source.client.connection
+                                    ?.onlinePlayers
                                     ?.map { it.profile.name }
                                     ?: emptyList()
                             } else {
@@ -320,7 +320,7 @@ object InfiniteCommand {
                             emptyList()
                         }
                     }
-                CommandSource.suggestMatching(suggestions, b)
+                SharedSuggestionProvider.suggest(suggestions, b)
             } catch (_: Exception) {
             }
             b.buildFuture()
@@ -356,7 +356,7 @@ object InfiniteCommand {
         key: String,
         vararg args: Any,
     ): Int {
-        InfiniteClient.error(Text.translatable(key, *args).string)
+        InfiniteClient.error(Component.translatable(key, *args).string)
         return 0
     }
 
@@ -364,9 +364,9 @@ object InfiniteCommand {
     // 既存関数（簡略化・安全）
     // ========================================
     private fun getTheme(): Int {
-        InfiniteClient.info(Text.translatable("command.infinite.theme.current", InfiniteClient.currentTheme).string)
+        InfiniteClient.info(Component.translatable("command.infinite.theme.current", InfiniteClient.currentTheme).string)
         InfiniteClient.info(
-            Text
+            Component
                 .translatable(
                     "command.infinite.theme.available",
                     InfiniteClient.themes.joinToString { it.name },
@@ -376,17 +376,17 @@ object InfiniteCommand {
     }
 
     private fun getThemeSuggestions(): SuggestionProvider<FabricClientCommandSource> =
-        SuggestionProvider { _, b -> CommandSource.suggestMatching(InfiniteClient.themes.map { it.name }, b) }
+        SuggestionProvider { _, b -> SharedSuggestionProvider.suggest(InfiniteClient.themes.map { it.name }, b) }
 
     private fun setTheme(ctx: CommandContext<FabricClientCommandSource>): Int {
         val name = StringArgumentType.getString(ctx, "name")
         if (InfiniteClient.themes.none { it.name.equals(name, true) }) {
-            InfiniteClient.error(Text.translatable("command.infinite.theme.notfound", name).string)
+            InfiniteClient.error(Component.translatable("command.infinite.theme.notfound", name).string)
             return 0
         }
         InfiniteClient.getGlobalFeature(ThemeSetting::class.java)?.themeSetting?.value = name
         ConfigManager.saveGlobalConfig()
-        InfiniteClient.info(Text.translatable("command.infinite.theme.changed", name).string)
+        InfiniteClient.info(Component.translatable("command.infinite.theme.changed", name).string)
         return 1
     }
 
@@ -418,7 +418,7 @@ object InfiniteCommand {
                         f.instance.settings.forEach { it.reset() }
                     }
                 }
-                InfiniteClient.info(Text.translatable("command.infinite.config.reset.all").string)
+                InfiniteClient.info(Component.translatable("command.infinite.config.reset.all").string)
                 1
             }
 
@@ -431,7 +431,7 @@ object InfiniteCommand {
                     f.instance.reset()
                     f.instance.settings.forEach { it.reset() }
                 }
-                InfiniteClient.info(Text.translatable("command.infinite.config.reset.category", cat).string)
+                InfiniteClient.info(Component.translatable("command.infinite.config.reset.category", cat).string)
                 1
             }
 
@@ -444,7 +444,7 @@ object InfiniteCommand {
                 feature.settings.forEach { setting ->
                     setting.reset()
                 }
-                InfiniteClient.info(Text.translatable("command.infinite.config.reset.feature", feat).string)
+                InfiniteClient.info(Component.translatable("command.infinite.config.reset.feature", feat).string)
                 1
             }
 
@@ -457,7 +457,7 @@ object InfiniteCommand {
                         ?: return sendError("command.infinite.setting.notfound", key, feat)
 
                 setting.reset()
-                InfiniteClient.info(Text.translatable("command.infinite.config.reset.setting", key, feat).string)
+                InfiniteClient.info(Component.translatable("command.infinite.config.reset.setting", key, feat).string)
                 1
             }
         }
@@ -475,10 +475,10 @@ object InfiniteCommand {
     private fun saveConfig(): Int =
         1.also {
             ConfigManager.saveConfig()
-            InfiniteClient.log(Text.translatable("command.infinite.config.save").string)
+            InfiniteClient.log(Component.translatable("command.infinite.config.save").string)
         }
 
-    private fun loadConfig(): Int = 1.also { InfiniteClient.log(Text.translatable("command.infinite.config.load").string) }
+    private fun loadConfig(): Int = 1.also { InfiniteClient.log(Component.translatable("command.infinite.config.load").string) }
 
     private fun toggleFeatureState(
         cat: String,
@@ -487,7 +487,7 @@ object InfiniteCommand {
         val f = InfiniteClient.searchFeature(cat, feat) ?: return 0
         f.toggle()
         InfiniteClient.info(
-            Text
+            Component
                 .translatable(
                     "command.infinite.feature.toggled",
                     feat,
@@ -506,7 +506,7 @@ object InfiniteCommand {
         if (f.isEnabled() == enable) return 0
         if (enable) f.enable() else f.disable()
         InfiniteClient.info(
-            Text
+            Component
                 .translatable(
                     "command.infinite.feature.toggled",
                     feat,
@@ -539,10 +539,10 @@ object InfiniteCommand {
                 }
             @Suppress("UNCHECKED_CAST")
             (s as FeatureSetting<Any>).value = value
-            InfiniteClient.info(Text.translatable("command.infinite.setting.changed", feat, key, value).string)
+            InfiniteClient.info(Component.translatable("command.infinite.setting.changed", feat, key, value).string)
             return 1
         } catch (e: Exception) {
-            InfiniteClient.error(Text.translatable("command.infinite.setting.parseerror", e.message).string)
+            InfiniteClient.error(Component.translatable("command.infinite.setting.parseerror", e.message as Any).string)
             return 0
         }
     }
@@ -568,10 +568,10 @@ object InfiniteCommand {
         val list = s.value
         if (add) {
             if (!list.contains(value)) list.add(value)
-            InfiniteClient.info(Text.translatable("command.infinite.setting.list.added", value, key).string)
+            InfiniteClient.info(Component.translatable("command.infinite.setting.list.added", value, key).string)
         } else {
             if (list.contains(value)) list.remove(value)
-            InfiniteClient.info(Text.translatable("command.infinite.setting.list.removed", value, key).string)
+            InfiniteClient.info(Component.translatable("command.infinite.setting.list.removed", value, key).string)
         }
         return 1
     }
@@ -581,8 +581,8 @@ object InfiniteCommand {
         feat: String,
     ): Int {
         val f = InfiniteClient.searchFeature(cat, feat) ?: return 0
-        val status = if (f.isEnabled()) "${Formatting.GREEN}enabled" else "${Formatting.RED}disabled"
-        InfiniteClient.info(Text.translatable("command.infinite.feature.status", feat, status).string)
+        val status = if (f.isEnabled()) "${ChatFormatting.GREEN}enabled" else "${ChatFormatting.RED}disabled"
+        InfiniteClient.info(Component.translatable("command.infinite.feature.status", feat, status).string)
         if (f.settings.isNotEmpty()) {
             f.settings.forEach { s -> InfiniteClient.log(" - ${s.name}: ${s.value}") }
         }
@@ -606,7 +606,7 @@ object InfiniteCommand {
 
     private fun getCategorySuggestions(): SuggestionProvider<FabricClientCommandSource> =
         SuggestionProvider { _, b ->
-            CommandSource.suggestMatching(
+            SharedSuggestionProvider.suggest(
                 InfiniteClient.featureCategories.map { it.name },
                 b,
             )
@@ -617,7 +617,7 @@ object InfiniteCommand {
             try {
                 val cat = StringArgumentType.getString(ctx, "category")
                 val c = InfiniteClient.featureCategories.find { it.name.equals(cat, true) }
-                CommandSource.suggestMatching(c?.features?.map { it.name } ?: emptyList(), b)
+                SharedSuggestionProvider.suggest(c?.features?.map { it.name } ?: emptyList(), b)
             } catch (_: Exception) {
             }
             b.buildFuture()
@@ -644,7 +644,7 @@ object InfiniteCommand {
                             it is FeatureSetting.EntityListSetting || it is FeatureSetting.PlayerListSetting
                     isList == list
                 }
-            CommandSource.suggestMatching(filtered.map { it.name }, b)
+            SharedSuggestionProvider.suggest(filtered.map { it.name }, b)
             b.buildFuture()
         }
 
@@ -672,7 +672,7 @@ object InfiniteCommand {
                         if (isDel) {
                             s.value
                         } else if (isAdd) {
-                            Registries.BLOCK.ids.map { it.toString() }
+                            BuiltInRegistries.BLOCK.keySet().map { it.toString() }
                         } else {
                             emptyList()
                         }
@@ -682,7 +682,7 @@ object InfiniteCommand {
                         if (isDel) {
                             s.value
                         } else if (isAdd) {
-                            Registries.ENTITY_TYPE.ids.map { it.toString() }
+                            BuiltInRegistries.ENTITY_TYPE.keySet().map { it.toString() }
                         } else {
                             emptyList()
                         }
@@ -692,8 +692,8 @@ object InfiniteCommand {
                         if (isDel) {
                             s.value
                         } else if (isAdd) {
-                            ctx.source.client.networkHandler
-                                ?.playerList
+                            ctx.source.client.connection
+                                ?.onlinePlayers
                                 ?.map { it.profile.name }
                                 ?: emptyList()
                         } else {
@@ -717,7 +717,7 @@ object InfiniteCommand {
                         emptyList()
                     }
                 }
-            CommandSource.suggestMatching(suggestions, b)
+            SharedSuggestionProvider.suggest(suggestions, b)
             b.buildFuture()
         }
 }

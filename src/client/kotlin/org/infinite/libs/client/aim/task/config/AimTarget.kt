@@ -1,11 +1,11 @@
 package org.infinite.libs.client.aim.task.config
 
-import net.minecraft.block.entity.BlockEntity
-import net.minecraft.client.MinecraftClient
-import net.minecraft.command.argument.EntityAnchorArgumentType
-import net.minecraft.entity.Entity
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Vec3d
+import net.minecraft.client.Minecraft
+import net.minecraft.commands.arguments.EntityAnchorArgument
+import net.minecraft.core.BlockPos
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.phys.Vec3
 import org.infinite.libs.client.aim.camera.CameraRoll
 
 /**
@@ -34,10 +34,10 @@ sealed class AimTarget {
         val blockPos: BlockPos,
         val face: BlockFace = BlockFace.Center, // デフォルトを中央 (CENTER) に設定
     ) : AimTarget() {
-        constructor(b: BlockEntity, face: BlockFace = BlockFace.Center) : this(b.pos, face)
+        constructor(b: BlockEntity, face: BlockFace = BlockFace.Center) : this(b.blockPos, face)
 
-        fun pos(offset: Double = 0.5): Vec3d {
-            val center = blockPos.toCenterPos()
+        fun pos(offset: Double = 0.5): Vec3 {
+            val center = blockPos.center
             return when (this.face) {
                 BlockFace.Center -> center
 
@@ -62,7 +62,7 @@ sealed class AimTarget {
     }
 
     open class WaypointTarget(
-        p: Vec3d,
+        p: Vec3,
     ) : AimTarget() {
         open val pos = p
     }
@@ -75,20 +75,20 @@ sealed class AimTarget {
 
     fun lookAt() {
         val pos = pos() ?: return
-        MinecraftClient.getInstance().player?.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, pos)
+        Minecraft.getInstance().player?.lookAt(EntityAnchorArgument.Anchor.EYES, pos)
     }
 
     /**
      * AimTargetのワールド内位置を計算して返します。
      * RollTargetなど、位置を持たない場合は null を返します。
      */
-    fun pos(): Vec3d? =
+    fun pos(): Vec3? =
         when (this) { // when式の対象を 'this' に変更し、スマートキャストを有効化
             is EntityTarget -> {
                 // MinecraftClient.getInstance().renderTickCounter.getTickProgress(false) を使用
                 // Entityの位置に目線の高さを加算
                 this.entity
-                    .getLerpedPos(MinecraftClient.getInstance().renderTickCounter.getTickProgress(false))
+                    .getPosition(Minecraft.getInstance().deltaTracker.getGameTimeDeltaPartialTick(false))
                     .add(0.0, this.entity.getEyeHeight(this.entity.pose).toDouble(), 0.0)
             }
 

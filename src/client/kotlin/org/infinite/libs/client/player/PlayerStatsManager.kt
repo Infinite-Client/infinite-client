@@ -4,13 +4,13 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.component.DataComponentTypes
-import net.minecraft.enchantment.Enchantments
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.attribute.EntityAttributes
-import net.minecraft.entity.effect.StatusEffects
-import net.minecraft.entity.player.HungerConstants
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.core.component.DataComponents
+import net.minecraft.world.effect.MobEffects
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.ai.attributes.Attributes
+import net.minecraft.world.food.FoodConstants
+import net.minecraft.world.item.enchantment.Enchantments
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.libs.server.mod.appleskin.ExhaustionSyncPayload
 import org.infinite.utils.item.enchantLevel
@@ -39,7 +39,7 @@ object PlayerStatsManager : ClientInterface() {
         val experienceLevel: Int, // 経験値レベル
     )
 
-    private const val MAX_EXHAUSTION = HungerConstants.EXHAUSTION_UNIT.toDouble()
+    private const val MAX_EXHAUSTION = FoodConstants.EXHAUSTION_DROP.toDouble()
     var exhaustion = 0.0
     private var stats: PlayerStats? = null
 
@@ -51,17 +51,17 @@ object PlayerStatsManager : ClientInterface() {
     }
 
     private fun manageHunger(
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         newStats: PlayerStats,
     ) {
         val stats = stats ?: return
-        val isSprinting = player.isSprinting && player.isOnGround
-        val isInWater = player.isTouchingWater
+        val isSprinting = player.isSprinting && player.onGround()
+        val isInWater = player.isInWater
         val isJumped = player.isJumping && !stats.isJumping
         val isDamaged = newStats.hpProgress < stats.hpProgress
         val moveLength =
             run {
-                val posDiff = player.velocity
+                val posDiff = player.deltaMovement
                 val x = posDiff.x
                 val z = posDiff.z
                 sqrt(x * x + z * z)
@@ -77,7 +77,7 @@ object PlayerStatsManager : ClientInterface() {
         if (isJumped) {
             exhaustion += if (isSprinting) 0.2 else 0.05
         }
-        val hungerEffect = player.getStatusEffect(StatusEffects.HUNGER)
+        val hungerEffect = player.getEffect(MobEffects.HUNGER)
         if (hungerEffect != null) {
             val level = hungerEffect.amplifier
             exhaustion += 0.02 * level
@@ -96,7 +96,7 @@ object PlayerStatsManager : ClientInterface() {
 
     fun stats(): PlayerStats? = stats
 
-    private fun updateStats(player: ClientPlayerEntity): PlayerStats {
+    private fun updateStats(player: LocalPlayer): PlayerStats {
         // 体力と吸収
         val hp = player.health
         val maxHp = player.maxHealth
@@ -104,18 +104,18 @@ object PlayerStatsManager : ClientInterface() {
         // 吸収量を取得。最大吸収量は20 (ハート10個分)
         val absorptionProgress = (player.absorptionAmount / maxHp).coerceAtMost(1f).toDouble()
         // 装甲 (Armor) と装甲強度 (Toughness)
-        val armorValue = player.armor.toDouble()
+        val armorValue = player.armorValue.toDouble()
         val maxArmor = 20.0
         val armorProgress: Double = armorValue / maxArmor
-        val toughnessValue = player.getAttributeValue(EntityAttributes.ARMOR_TOUGHNESS)
+        val toughnessValue = player.getAttributeValue(Attributes.ARMOR_TOUGHNESS)
         val maxToughness = 3.0 * 4 // 一般的な最大値
         val toughnessProgress = toughnessValue / maxToughness
 
         // 満腹度 (Hunger) と 隠し満腹度 (Saturation)
-        val hungerManager = player.hungerManager
+        val hungerManager = player.foodData
         val hungerLevel = hungerManager.foodLevel.toDouble()
         val saturationLevel = hungerManager.saturationLevel.toDouble()
-        val maxHunger = HungerConstants.FULL_FOOD_LEVEL.toDouble()
+        val maxHunger = FoodConstants.MAX_FOOD.toDouble()
         val exhaustionProgress = exhaustion / MAX_EXHAUSTION
         val saturationProgress =
             if (exhaustionProgress > saturationLevel) {
@@ -137,8 +137,8 @@ object PlayerStatsManager : ClientInterface() {
         val canNaturallyRegenerate: Boolean = hungerManager.foodLevel >= 18
 
         // 空気 (Air)
-        val air = player.air.toDouble()
-        val maxAir = player.maxAir.toDouble()
+        val air = player.airSupply.toDouble()
+        val maxAir = player.maxAirSupply.toDouble()
         val airProgress = air / maxAir
 
         // 乗り物の体力 (Vehicle Health)
@@ -174,11 +174,11 @@ object PlayerStatsManager : ClientInterface() {
      * 装備している食物アイテムから得られる栄養と飽和度の情報を取得します。
      * @return Pair<栄養度の進捗, 飽和度の進捗>
      */
-    fun foodSaturation(player: ClientPlayerEntity): Pair<Double, Double> {
-        val mainHandItem = player.mainHandStack
-        val offHandItem = player.offHandStack
+    fun foodSaturation(player: LocalPlayer): Pair<Double, Double> {
+        val mainHandItem = player.mainHandItem
+        val offHandItem = player.offhandItem
         val food =
-            mainHandItem.get(DataComponentTypes.FOOD) ?: offHandItem.get(DataComponentTypes.FOOD) ?: return 0.0 to 0.0
+            mainHandItem.get(DataComponents.FOOD) ?: offHandItem.get(DataComponents.FOOD) ?: return 0.0 to 0.0
         val maxHunger = 20.0
         val nutrition = food.nutrition / maxHunger
         val saturation = food.saturation / maxHunger
@@ -188,8 +188,8 @@ object PlayerStatsManager : ClientInterface() {
     /**
      * 残り潜水時間を秒単位で計算します。
      */
-    fun diveSeconds(player: ClientPlayerEntity): Int {
-        val remainAirTick = player.air
+    fun diveSeconds(player: LocalPlayer): Int {
+        val remainAirTick = player.airSupply
         val airMultiply =
             1 +
                 run {
@@ -197,12 +197,12 @@ object PlayerStatsManager : ClientInterface() {
                     val level = enchantLevel(helmetItem, Enchantments.RESPIRATION)
                     return@run level
                 }
-        val remainBreath = player.getStatusEffect(StatusEffects.WATER_BREATHING)?.duration ?: 0
+        val remainBreath = player.getEffect(MobEffects.WATER_BREATHING)?.duration ?: 0
         return (remainBreath + remainAirTick * airMultiply) / 20
     }
 
-    fun sprintMeters(player: ClientPlayerEntity): Int {
-        val hungerManager = player.hungerManager
+    fun sprintMeters(player: LocalPlayer): Int {
+        val hungerManager = player.foodData
         val maxExhaustion = MAX_EXHAUSTION
         val food = hungerManager.foodLevel
         val saturation = hungerManager.saturationLevel
@@ -213,8 +213,8 @@ object PlayerStatsManager : ClientInterface() {
         return (runnableLevel * maxExhaustion / exhaustionPerMeter).roundToInt()
     }
 
-    fun swimMeters(player: ClientPlayerEntity): Int {
-        val hungerManager = player.hungerManager
+    fun swimMeters(player: LocalPlayer): Int {
+        val hungerManager = player.foodData
         val maxExhaustion = MAX_EXHAUSTION
         val food = hungerManager.foodLevel
         val saturation = hungerManager.saturationLevel

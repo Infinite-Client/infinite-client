@@ -3,10 +3,10 @@ package org.infinite.mixin.infinite.gui;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.SplashOverlay;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.ColorHelper;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.LoadingOverlay;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
 import org.infinite.InfiniteClient;
 import org.infinite.global.rendering.loading.LoadingAnimationSetting;
 import org.infinite.global.rendering.theme.overlay.InfiniteLoadingScreenRenderer;
@@ -18,12 +18,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(SplashOverlay.class)
-public abstract class SplashOverlayMixin {
-  @Shadow private float progress;
-  @Shadow private long reloadCompleteTime;
-  @Shadow private long reloadStartTime;
-  @Shadow @Final private boolean reloading;
+@Mixin(LoadingOverlay.class)
+public abstract class LoadingOverlayMixin {
+  @Shadow private float currentProgress;
+  @Shadow private long fadeOutStart;
+  @Shadow private long fadeInStart;
+  @Shadow @Final private boolean fadeIn;
 
   @Unique
   private boolean shouldInject() {
@@ -38,13 +38,12 @@ public abstract class SplashOverlayMixin {
    */
   @Inject(method = "render", at = @At("HEAD"))
   private void infiniteClient$forceMonochromeBackground(
-      DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+      GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
     if (shouldInject()) {
       // 画面全体を黒 (0xFF000000) で塗りつぶします。
       // Alpha: 255 (FF), Red: 00, Green: 00, Blue: 00
-      int blackColor = ColorHelper.getArgb(255, 0, 0, 0);
-      context.fill(
-          0, 0, context.getScaledWindowWidth(), context.getScaledWindowHeight(), blackColor);
+      int blackColor = ARGB.color(255, 0, 0, 0);
+      context.fill(0, 0, context.guiWidth(), context.guiHeight(), blackColor);
     }
   }
 
@@ -52,11 +51,11 @@ public abstract class SplashOverlayMixin {
 
   @Inject(method = "render", at = @At("TAIL"))
   private void infiniteClient$renderCustomOverlay(
-      DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+      GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
     if (shouldInject()) {
       // カスタム描画を実行します。
       InfiniteLoadingScreenRenderer.render(
-          context, this.progress, this.reloadStartTime, this.reloadCompleteTime, this.reloading);
+          context, this.currentProgress, this.fadeInStart, this.fadeOutStart, this.fadeIn);
     }
   }
 
@@ -65,9 +64,9 @@ public abstract class SplashOverlayMixin {
   /** Mojangの背景塗りつぶし (DrawContext.fill) を抑制します。 これを抑制しないと、上で強制した黒背景の上に元のグラデーションが描画されてしまいます。 */
   @WrapOperation(
       method = "render",
-      at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;fill(IIIII)V"))
+      at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;fill(IIIII)V"))
   private void infiniteClient$wrapVanillaFill(
-      DrawContext instance, int x1, int y1, int x2, int y2, int color, Operation<Void> original) {
+      GuiGraphics instance, int x1, int y1, int x2, int y2, int color, Operation<Void> original) {
     if (!shouldInject()) {
       // カスタム機能が無効な場合のみ、元の fill 処理を実行
       original.call(instance, x1, y1, x2, y2, color);
@@ -81,9 +80,9 @@ public abstract class SplashOverlayMixin {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/gui/DrawContext;drawTexture(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/util/Identifier;IIFFIIIIIII)V"))
+                  "Lnet/minecraft/client/gui/GuiGraphics;blit(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIFFIIIIIII)V"))
   private void infiniteClient$wrapVanillaTexture(
-      DrawContext instance,
+      GuiGraphics instance,
       RenderPipeline pipeline,
       Identifier sprite,
       int x,
@@ -125,10 +124,10 @@ public abstract class SplashOverlayMixin {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/gui/screen/SplashOverlay;renderProgressBar(Lnet/minecraft/client/gui/DrawContext;IIIIF)V"))
+                  "Lnet/minecraft/client/gui/screens/LoadingOverlay;drawProgressBar(Lnet/minecraft/client/gui/GuiGraphics;IIIIF)V"))
   private void infiniteClient$wrapVanillaProgressBar(
-      SplashOverlay instance,
-      DrawContext context,
+      LoadingOverlay instance,
+      GuiGraphics context,
       int minX,
       int minY,
       int maxX,

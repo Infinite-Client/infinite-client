@@ -1,8 +1,8 @@
 package org.infinite.mixin.features.rendering.supersight;
 
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.LivingEntity;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.world.entity.LivingEntity;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.camera.CameraConfig;
 import org.infinite.features.rendering.sight.SuperSight;
@@ -18,7 +18,7 @@ abstract class GameRendererMixin {
 
   @Inject(
       at = @At("HEAD"),
-      method = "getNightVisionStrength(Lnet/minecraft/entity/LivingEntity;F)F",
+      method = "getNightVisionScale(Lnet/minecraft/world/entity/LivingEntity;F)F",
       cancellable = true)
   private static void onGetNightVisionStrength(
       LivingEntity entity, float tickDelta, CallbackInfoReturnable<Float> cir) {
@@ -28,9 +28,9 @@ abstract class GameRendererMixin {
 
   @Inject(
       at = @At("HEAD"),
-      method = "tiltViewWhenHurt(Lnet/minecraft/client/util/math/MatrixStack;F)V",
+      method = "bobHurt(Lcom/mojang/blaze3d/vertex/PoseStack;F)V",
       cancellable = true)
-  private void onTiltViewWhenHurt(MatrixStack matrices, float tickDelta, CallbackInfo ci) {
+  private void onTiltViewWhenHurt(PoseStack matrices, float tickDelta, CallbackInfo ci) {
     if (InfiniteClient.INSTANCE.isSettingEnabled(CameraConfig.class, "AntiHurtTilt")) ci.cancel();
   }
 }

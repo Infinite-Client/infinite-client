@@ -1,11 +1,11 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
 
@@ -15,9 +15,9 @@ class InfiniteSettingToggle(
     width: Int,
     height: Int,
     private val setting: FeatureSetting.BooleanSetting,
-) : ClickableWidget(x, y, width, height, Text.literal(setting.name)) {
+) : AbstractWidget(x, y, width, height, Component.literal(setting.name)) {
     private val toggleButton: InfiniteToggleButton
-    private val textRenderer = MinecraftClient.getInstance().textRenderer
+    private val textRenderer = Minecraft.getInstance().font
 
     init {
         val buttonWidth = 50
@@ -40,12 +40,12 @@ class InfiniteSettingToggle(
     }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         val textX = x + 5 // Padding from left edge
         val totalTextHeight: Int
@@ -53,12 +53,12 @@ class InfiniteSettingToggle(
         val descriptionY: Int?
 
         if (setting.descriptionKey.isNotBlank()) {
-            totalTextHeight = textRenderer.fontHeight * 2 + 2 // Name + padding + Description
+            totalTextHeight = textRenderer.lineHeight * 2 + 2 // Name + padding + Description
             nameY = y + (height - totalTextHeight) / 2
-            descriptionY = nameY + textRenderer.fontHeight + 2
+            descriptionY = nameY + textRenderer.lineHeight + 2
 
             graphics2D.drawText(
-                Text.translatable(setting.name),
+                Component.translatable(setting.name),
                 textX,
                 nameY,
                 org.infinite.InfiniteClient
@@ -67,7 +67,7 @@ class InfiniteSettingToggle(
                 true, // shadow = true
             )
             graphics2D.drawText(
-                Text.translatable(setting.descriptionKey),
+                Component.translatable(setting.descriptionKey),
                 textX,
                 descriptionY,
                 org.infinite.InfiniteClient
@@ -76,11 +76,11 @@ class InfiniteSettingToggle(
                 true, // shadow = true
             )
         } else {
-            totalTextHeight = textRenderer.fontHeight // Only name
+            totalTextHeight = textRenderer.lineHeight // Only name
             nameY = y + (height - totalTextHeight) / 2
 
             graphics2D.drawText(
-                Text.translatable(setting.name),
+                Component.translatable(setting.name),
                 textX,
                 nameY,
                 org.infinite.InfiniteClient
@@ -96,11 +96,11 @@ class InfiniteSettingToggle(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean = toggleButton.mouseClicked(click, doubled)
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        this.appendDefaultNarrations(builder)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        this.defaultButtonNarrationText(builder)
     }
 }

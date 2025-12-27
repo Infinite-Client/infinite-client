@@ -1,8 +1,8 @@
 package org.infinite.features.rendering.ui
 
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.entity.effect.StatusEffects
-import net.minecraft.util.Arm
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.world.effect.MobEffects
+import net.minecraft.world.entity.HumanoidArm
 import org.infinite.InfiniteClient
 import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.client.player.ClientInterface
@@ -22,7 +22,7 @@ class UiBarRenderer(
         s: PlayerStats,
         e: EasingManager,
         colors: ThemeColors,
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         drawnHpProgress: Double,
         hungerProgress: Double,
         saturationProgress: Double,
@@ -30,7 +30,7 @@ class UiBarRenderer(
         val p = config.padding.toDouble()
         val h = config.height.toDouble()
         val a = config.alpha
-        val hasOffHand = player.offHandStack?.isEmpty == false
+        val hasOffHand = player.offhandItem?.isEmpty == false
 
         // 状態異常のオーバーレイ設定
         val (hpOverlayColor, hpOverlayAlpha) = getHpStatusEffectOverlay(player)
@@ -235,7 +235,7 @@ class UiBarRenderer(
         graphics2D: Graphics2D,
         e: EasingManager,
         colors: ThemeColors,
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
     ) {
         val screenWidth = graphics2D.width
         val screenHeight = graphics2D.height
@@ -291,9 +291,9 @@ class UiBarRenderer(
             )
 
             // バーの左端に経験値量を表示
-            val currentExperienceAmount = (progress * player.nextLevelExperience).toInt()
-            val totalExperienceAmount = player.nextLevelExperience
-            val requiredForNextLevel = player.nextLevelExperience - currentExperienceAmount
+            val currentExperienceAmount = (progress * player.xpNeededForNextLevel).toInt()
+            val totalExperienceAmount = player.xpNeededForNextLevel
+            val requiredForNextLevel = player.xpNeededForNextLevel - currentExperienceAmount
             val experienceAmountText = "$currentExperienceAmount / $totalExperienceAmount"
             val requiredForNextLevelText = "($requiredForNextLevel)"
             val expTextX = startX + 2.0 // バーの左端から少し右にオフセット
@@ -367,9 +367,9 @@ class UiBarRenderer(
         val hotBarWidth = 180
         val offHandSlotSize = 30.0
         val offHandsSide =
-            when (options.mainArm.value) {
-                Arm.LEFT -> BarSide.Right
-                Arm.RIGHT -> BarSide.Left
+            when (options.mainHand().get()) {
+                HumanoidArm.LEFT -> BarSide.Right
+                HumanoidArm.RIGHT -> BarSide.Left
             }
         // 最大幅の計算ロジック
         val barMaxWidth =
@@ -429,15 +429,15 @@ class UiBarRenderer(
     }
 
     // ★ 状態異常オーバーレイを取得するヘルパー関数 (体力)
-    private fun getHpStatusEffectOverlay(player: ClientPlayerEntity): Pair<Int, Double> {
+    private fun getHpStatusEffectOverlay(player: LocalPlayer): Pair<Int, Double> {
         val defaultColor = 0 // 透明
         val colors = InfiniteClient.theme().colors
         // 毒 (Poison)
-        if (player.hasStatusEffect(StatusEffects.POISON)) {
+        if (player.hasEffect(MobEffects.POISON)) {
             return Pair(colors.emeraldAccentColor, 0.6)
         }
         // 衰弱 (Wither)
-        if (player.hasStatusEffect(StatusEffects.WITHER)) {
+        if (player.hasEffect(MobEffects.WITHER)) {
             return Pair(colors.foregroundColor, 0.7)
         }
         // 炎 (Fire)
@@ -445,7 +445,7 @@ class UiBarRenderer(
             return Pair(colors.orangeAccentColor, 0.8)
         }
         // 凍結 (Frozen)
-        if (player.isFrozen) {
+        if (player.isFullyFrozen) {
             return Pair(colors.oceanAccentColor, 0.5)
         }
 
@@ -453,12 +453,12 @@ class UiBarRenderer(
     }
 
     // ★ 状態異常オーバーレイを取得するヘルパー関数 (満腹度)
-    private fun getHungerStatusEffectOverlay(player: ClientPlayerEntity): Pair<Int, Double> {
+    private fun getHungerStatusEffectOverlay(player: LocalPlayer): Pair<Int, Double> {
         val defaultColor = 0
         val colors = InfiniteClient.theme().colors
 
         // 空腹 (Hunger)
-        if (player.hasStatusEffect(StatusEffects.HUNGER)) {
+        if (player.hasEffect(MobEffects.HUNGER)) {
             return Pair(colors.greenAccentColor, 0.7)
         }
 

@@ -1,6 +1,6 @@
 package org.infinite.utils.rendering
 
-import net.minecraft.util.math.ColorHelper
+import net.minecraft.util.ARGB
 import kotlin.math.roundToInt
 
 fun getRainbowColor(value: Float? = null): Int {
@@ -25,25 +25,25 @@ fun getRainbowColor(value: Float? = null): Int {
     val startColor = colors[currentSegmentIndex]
     val endColor = colors[currentSegmentIndex + 1]
 
-    return ColorHelper.getArgb(
+    return ARGB.color(
         255,
-        (ColorHelper.getRed(startColor) * (1 - segmentProgress) + ColorHelper.getRed(endColor) * segmentProgress).toInt(),
-        (ColorHelper.getGreen(startColor) * (1 - segmentProgress) + ColorHelper.getGreen(endColor) * segmentProgress).toInt(),
-        (ColorHelper.getBlue(startColor) * (1 - segmentProgress) + ColorHelper.getBlue(endColor) * segmentProgress).toInt(),
+        (ARGB.red(startColor) * (1 - segmentProgress) + ARGB.red(endColor) * segmentProgress).toInt(),
+        (ARGB.green(startColor) * (1 - segmentProgress) + ARGB.green(endColor) * segmentProgress).toInt(),
+        (ARGB.blue(startColor) * (1 - segmentProgress) + ARGB.blue(endColor) * segmentProgress).toInt(),
     )
 }
 
 fun Int.transparent(alpha: Int): Int {
     val alpha = alpha.coerceIn(0, 255)
-    return ColorHelper.getArgb(
+    return ARGB.color(
         alpha,
-        ColorHelper.getRed(
+        ARGB.red(
             this,
         ),
-        ColorHelper.getGreen(
+        ARGB.green(
             this,
         ),
-        ColorHelper.getBlue(
+        ARGB.blue(
             this,
         ),
     )

@@ -1,6 +1,6 @@
 package org.infinite.features.movement.builder
 
-import net.minecraft.util.math.Direction
+import net.minecraft.core.Direction
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
@@ -26,6 +26,6 @@ class Builder : ConfigurableFeature(initialEnabled = false) {
     private fun modifyPlacementOffset(direction: Direction) {
         currentPlacementOffset = direction
         // Optionally, provide feedback to the user via chat
-        InfiniteClient.log("Builder: Placement offset set to ${direction.asString()}")
+        InfiniteClient.log("Builder: Placement offset set to ${direction.serializedName}")
     }
 }

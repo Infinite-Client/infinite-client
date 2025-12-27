@@ -1,8 +1,8 @@
 package org.infinite.features.fighting.lockon
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.entity.LivingEntity
-import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.client.Minecraft
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.fighting.aimassist.AimAssist
@@ -97,9 +97,10 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
     }
 
     fun exec() {
-        if (lockedEntity == null ||
-            !lockedEntity!!.isAlive ||
-            (MinecraftClient.getInstance().player?.distanceTo(lockedEntity) ?: Float.MAX_VALUE) > range.value
+        val e = lockedEntity ?: return
+        if (
+            !e.isAlive ||
+            (Minecraft.getInstance().player?.distanceTo(e) ?: Float.MAX_VALUE) > range.value
         ) {
             lockedEntity = null
             disable()
@@ -133,7 +134,7 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
      * AimAssistが利用できない場合は Double.MAX_VALUE を返して優先度を下げます。
      */
     fun getAngle(
-        player: PlayerEntity,
+        player: Player,
         target: LivingEntity,
     ): Double = InfiniteClient.getFeature(AimAssist::class.java)?.calcFov(player, target) ?: Double.MAX_VALUE
 
@@ -141,7 +142,7 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
      * 角度と距離を正規化し、重み付けして総合スコアを計算します (低い方が優先)。
      */
     private fun calculateCombinedScore(
-        player: PlayerEntity,
+        player: Player,
         target: LivingEntity,
     ): Double {
         val distance = player.distanceTo(target).toDouble()
@@ -169,40 +170,43 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
     // ターゲット検索とロックオン
     // ----------------------------------------------------------------------
     private fun findAndLockTarget() {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
-        val world = client.world ?: return
+        val world = client.level ?: return
 
         val candidates =
-            world.entities
-                .filter { it is LivingEntity }
+            world
+                .entitiesForRendering()
+                .asSequence()
+                .filterIsInstance<LivingEntity>()
                 .filter { it != player && it.isAlive }
                 .filter {
-                    (players.value && it is PlayerEntity) || (mobs.value && it !is PlayerEntity)
+                    (players.value && it is Player) || (mobs.value && it !is Player)
                 }.filter { player.distanceTo(it) <= range.value }
-                .filter { isWithinFOV(player, it as LivingEntity, fov.value) }
+                .filter { isWithinFOV(player, it, fov.value) }
+                .toList()
 
         val target =
             when (priority.value) {
-                Priority.Direction -> candidates.minByOrNull { getAngle(player, it as LivingEntity) }
+                Priority.Direction -> candidates.minByOrNull { getAngle(player, it) }
                 Priority.Distance -> candidates.minByOrNull { player.distanceTo(it) }
-                Priority.Both -> candidates.minByOrNull { calculateCombinedScore(player, it as LivingEntity) }
+                Priority.Both -> candidates.minByOrNull { calculateCombinedScore(player, it) }
             }
 
-        lockedEntity = target as? LivingEntity
+        lockedEntity = target
     }
 
     private fun isWithinFOV(
-        player: PlayerEntity,
+        player: Player,
         target: LivingEntity,
         fovDegrees: Float,
     ): Boolean {
-        val playerLookVec = player.rotationVector.normalize()
+        val playerLookVec = player.lookAngle.normalize()
         val targetCenterVec = target.boundingBox.center
-        val targetVec = targetCenterVec.subtract(player.eyePos)
+        val targetVec = targetCenterVec.subtract(player.eyePosition)
         val targetLookVec = targetVec.normalize()
 
-        val dotProduct = playerLookVec.dotProduct(targetLookVec)
+        val dotProduct = playerLookVec.dot(targetLookVec)
         val angleRadians = acos(dotProduct.coerceIn(-1.0, 1.0))
         val angleDegrees = Math.toDegrees(angleRadians).toFloat()
 
@@ -258,7 +262,7 @@ class LockOn : ConfigurableFeature(initialEnabled = false) {
         // 1. 座標変換を実行し、プライベートフィールドに格納
         // ターゲットの目の高さの中央をターゲット座標とする
         val targetPos =
-            target.getLerpedPos(graphics3D.tickProgress).add(0.0, target.getEyeHeight(target.pose).toDouble(), 0.0)
+            target.getPosition(graphics3D.tickProgress).add(0.0, target.getEyeHeight(target.pose).toDouble(), 0.0)
         screenPos = graphics3D.toDisplayPos(targetPos)
 
         // 画面外の場合は、screenPos が null になり、2D 描画はスキップされる

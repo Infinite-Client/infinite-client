@@ -1,10 +1,10 @@
 package org.infinite.features.movement.braek
 
-import net.minecraft.block.Blocks
-import net.minecraft.util.Hand
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.Direction
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.phys.AABB
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics3D
@@ -73,14 +73,14 @@ class LinearBreak : ConfigurableFeature() {
         val range = breakRange.value
         val playerPos = playerPos ?: return
         // 2. 範囲外のブロックを安全に削除 (retainAllを使用)
-        blocksToMine.retainAll { it.isWithinDistance(playerPos, range) }
+        blocksToMine.retainAll { it.closerToCenterThan(playerPos, range) }
     }
 
     /**
      * 破壊リスト内のブロックをサーバーに破壊させる。
      */
     private fun mine() {
-        val interactionManager = client.interactionManager ?: return
+        val interactionManager = client.gameMode ?: return
         val player = player ?: return
 
         // 修正点: 設定が無効な場合のみ、ホットバー切り替え時のキャンセルチェックを行う
@@ -90,7 +90,7 @@ class LinearBreak : ConfigurableFeature() {
                     startHotbarSlot = autoToolCallBack
                 } else {
                     // ホットバーが切り替わった場合、破壊をキャンセルしリストから削除
-                    interactionManager.cancelBlockBreaking()
+                    interactionManager.stopDestroyBlock()
                     blocksToMine.remove(currentBreakingPos)
                     // 状態をリセット
                     currentBreakingPos = null
@@ -106,7 +106,7 @@ class LinearBreak : ConfigurableFeature() {
         // 1. 破壊対象のブロックがない場合、現在の破壊を中止
         if (blocksToMine.isEmpty()) {
             if (currentBreakingPos != null) {
-                interactionManager.cancelBlockBreaking()
+                interactionManager.stopDestroyBlock()
                 currentBreakingPos = null
                 currentBreakingSide = null
                 currentBreakingProgress = 0.0f
@@ -116,7 +116,7 @@ class LinearBreak : ConfigurableFeature() {
 
         // 2. ターゲットの決定とブロック状態のチェック
         val targetPos = blocksToMine.first()
-        val blockState = client.world?.getBlockState(targetPos) ?: return
+        val blockState = client.level?.getBlockState(targetPos) ?: return
 
         if (listOf(Blocks.WATER, Blocks.LAVA, Blocks.AIR, Blocks.BARRIER, Blocks.BEDROCK).contains(blockState.block)) {
             blocksToMine.remove(targetPos)
@@ -138,7 +138,7 @@ class LinearBreak : ConfigurableFeature() {
         // 4. 破壊開始またはターゲット変更
         if (currentBreakingPos == null || currentBreakingPos != params.pos) {
             // 前の破壊を中止
-            interactionManager.cancelBlockBreaking()
+            interactionManager.stopDestroyBlock()
 
             // サーバーに視点変更パケットを送信
             BlockUtils.faceVectorPacket(params.hitVec)
@@ -149,8 +149,8 @@ class LinearBreak : ConfigurableFeature() {
             currentBreakingSide = params.side
             currentBreakingProgress =
                 0.0f // 新しいブロックなので0か                                                              ら開始
-            interactionManager.attackBlock(params.pos, params.side)
-            interactionManager.updateBlockBreakingProgress(params.pos, params.side)
+            interactionManager.startDestroyBlock(params.pos, params.side)
+            interactionManager.continueDestroyBlock(params.pos, params.side)
 
             // IgnoreHotbarChangeが有効でない場合にのみスロットを保存
             startHotbarSlot =
@@ -163,8 +163,8 @@ class LinearBreak : ConfigurableFeature() {
             // 5. 進行中: 進行パケットを送信し、進行度を更新
             val pos = currentBreakingPos!!
             val side = currentBreakingSide!!
-            interactionManager.updateBlockBreakingProgress(pos, side)
-            currentBreakingProgress = interactionManager.currentBreakingProgress
+            interactionManager.continueDestroyBlock(pos, side)
+            currentBreakingProgress = interactionManager.destroyProgress
 
             val fastBreak = InfiniteClient.getFeature(FastBreak::class.java) ?: return
             if (fastBreak.isEnabled() && !fastBreak.safeMode.value) {
@@ -179,7 +179,7 @@ class LinearBreak : ConfigurableFeature() {
 
         // 6. 手を振る
         if (swingHand.value) {
-            player.swingHand(Hand.MAIN_HAND)
+            player.swing(InteractionHand.MAIN_HAND)
         }
     }
 
@@ -189,7 +189,7 @@ class LinearBreak : ConfigurableFeature() {
         // 破壊対象ブロックのアウトライン描画
         val boxes =
             blocksToMine.map { pos ->
-                val box = Box(pos)
+                val box = AABB(pos)
                 RenderUtils.ColorBox(color, box)
             }
         graphics3D.renderLinedColorBoxes(boxes, true)
@@ -207,7 +207,7 @@ class LinearBreak : ConfigurableFeature() {
             val maxZ = pos.z + 1.0 - offset
 
             // 進行度に応じて縮小/拡大するボックス
-            val dynamicBox = Box(minX, minY, minZ, maxX, maxY, maxZ).contract(0.005)
+            val dynamicBox = AABB(minX, minY, minZ, maxX, maxY, maxZ).deflate(0.005)
 
             val boxes = listOf(RenderUtils.ColorBox(color, dynamicBox))
             graphics3D.renderSolidColorBoxes(boxes, true)

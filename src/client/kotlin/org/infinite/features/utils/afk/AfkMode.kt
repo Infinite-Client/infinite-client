@@ -1,6 +1,6 @@
 package org.infinite.features.utils.afk
 
-import net.minecraft.text.Text
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
@@ -15,7 +15,7 @@ class AfkMode : ConfigurableFeature(initialEnabled = false) {
             hp = currentHp
         }
         if (currentHp < hp) {
-            InfiniteClient.warn(Text.translatable("afkmode.damage_detected").string)
+            InfiniteClient.warn(Component.translatable("afkmode.damage_detected").string)
             disable()
         }
     }

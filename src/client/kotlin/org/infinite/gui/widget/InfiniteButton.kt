@@ -1,11 +1,11 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 
@@ -14,16 +14,16 @@ class InfiniteButton(
     y: Int,
     width: Int,
     height: Int,
-    message: Text,
+    message: Component,
     private val onPress: () -> Unit,
-) : ClickableWidget(x, y, width, height, message) {
+) : AbstractWidget(x, y, width, height, message) {
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         val borderWidth = 1 // 1px border
         val colors = InfiniteClient.currentColors()
@@ -58,16 +58,16 @@ class InfiniteButton(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         if (!isMouseOver(click.x, click.y) || !active) return false
-        playDownSound(MinecraftClient.getInstance().soundManager)
+        playDownSound(Minecraft.getInstance().soundManager)
         onPress()
         return true
     }
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        appendDefaultNarrations(builder)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        defaultButtonNarrationText(builder)
     }
 }

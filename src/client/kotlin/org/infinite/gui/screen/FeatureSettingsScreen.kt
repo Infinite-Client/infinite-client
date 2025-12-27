@@ -1,12 +1,12 @@
 package org.infinite.gui.screen
 
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.Screen
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.text.Text
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.Feature
@@ -26,14 +26,14 @@ import org.infinite.utils.rendering.transparent
 class FeatureSettingsScreen(
     private val parent: Screen,
     private val feature: Feature<out ConfigurableFeature>,
-) : Screen(Text.literal(feature.name)) {
+) : Screen(Component.literal(feature.name)) {
     private var savedPageIndex: Int = 0
 
     // 遅延初期化を維持
     private lateinit var scrollableContainer: InfiniteScrollableContainer
 
-    override fun close() {
-        client?.setScreen(parent)
+    override fun onClose() {
+        minecraft?.setScreen(parent)
     }
 
     override fun init() {
@@ -43,7 +43,7 @@ class FeatureSettingsScreen(
             savedPageIndex = parent.pageIndex
         }
 
-        val settingWidgets = mutableListOf<ClickableWidget>()
+        val settingWidgets = mutableListOf<AbstractWidget>()
         var currentY = 50
         val widgetWidth = width - 40
         val defaultWidgetHeight = 20
@@ -182,27 +182,27 @@ class FeatureSettingsScreen(
                 height - 100,
                 settingWidgets,
             )
-        addDrawableChild(scrollableContainer)
+        addRenderableWidget(scrollableContainer)
         this.scrollableContainer = scrollableContainer
 
-        addDrawableChild(
+        addRenderableWidget(
             InfiniteButton(
                 width / 2 - 50,
                 height - 30,
                 100,
                 20,
-                Text.literal("Close"),
+                Component.literal("Close"),
             ) {
                 if (parent is InfiniteScreen) {
                     InfiniteScreen.selectedPageIndex = savedPageIndex
                 }
-                this.client?.setScreen(parent)
+                this.minecraft?.setScreen(parent)
             },
         )
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         if (scrollableContainer.mouseClicked(click, doubled)) return true
@@ -210,7 +210,7 @@ class FeatureSettingsScreen(
     }
 
     override fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
     ): Boolean {
@@ -218,7 +218,7 @@ class FeatureSettingsScreen(
         return super.mouseDragged(click, offsetX, offsetY)
     }
 
-    override fun mouseReleased(click: Click): Boolean {
+    override fun mouseReleased(click: MouseButtonEvent): Boolean {
         if (scrollableContainer.mouseReleased(click)) return true
         return super.mouseReleased(click)
     }
@@ -239,14 +239,14 @@ class FeatureSettingsScreen(
     // --- キーボードイベント (ParentElement.java の新しいシグネチャに合わせる) ---
 
     // ParentElement.java で確認された KeyInput シグネチャを使用
-    override fun keyPressed(input: KeyInput): Boolean {
+    override fun keyPressed(input: KeyEvent): Boolean {
         // scrollableContainer の古い keyPressed(keyCode, scanCode, modifiers) に転送
         if (scrollableContainer.keyPressed(input)) return true
         return super.keyPressed(input)
     }
 
     // ParentElement.java で確認された CharInput シグネチャを使用
-    override fun charTyped(input: CharInput): Boolean {
+    override fun charTyped(input: CharacterEvent): Boolean {
         // scrollableContainer の古い charTyped(chr, modifiers) に転送
         if (scrollableContainer.charTyped(input)) return true
         return super.charTyped(input)
@@ -255,7 +255,7 @@ class FeatureSettingsScreen(
     // --- レンダリングなど (変更なし) ---
 
     override fun render(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
@@ -272,18 +272,18 @@ class FeatureSettingsScreen(
                 .transparent(128),
         )
 
-        context.drawCenteredTextWithShadow(
-            textRenderer,
-            Text.literal(feature.name),
+        context.drawCenteredString(
+            font,
+            Component.literal(feature.name),
             width / 2,
             20,
             InfiniteClient
                 .currentColors()
                 .foregroundColor,
         )
-        context.drawCenteredTextWithShadow(
-            textRenderer,
-            Text.translatable(feature.descriptionKey),
+        context.drawCenteredString(
+            font,
+            Component.translatable(feature.descriptionKey),
             width / 2,
             35,
             InfiniteClient
@@ -295,5 +295,5 @@ class FeatureSettingsScreen(
         super.render(context, mouseX, mouseY, delta)
     }
 
-    override fun shouldPause(): Boolean = false
+    override fun isPauseScreen(): Boolean = false
 }

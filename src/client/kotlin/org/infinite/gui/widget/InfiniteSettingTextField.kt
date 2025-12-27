@@ -1,13 +1,13 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
 
@@ -17,9 +17,9 @@ class InfiniteSettingTextField(
     width: Int,
     height: Int,
     private val setting: FeatureSetting<*>, // Make generic
-) : ClickableWidget(x, y, width, height, Text.literal(setting.name)) {
+) : AbstractWidget(x, y, width, height, Component.literal(setting.name)) {
     private val textField: InfiniteTextField
-    private val textRenderer = MinecraftClient.getInstance().textRenderer
+    private val textRenderer = Minecraft.getInstance().font
 
     init {
         val inputType =
@@ -32,7 +32,7 @@ class InfiniteSettingTextField(
                 else -> InfiniteTextField.InputType.ANY_TEXT // Handle BlockColorListSetting and other unhandled types
             }
 
-        val labelWidth = textRenderer.getWidth(setting.name) // initでは概算で良い
+        val labelWidth = textRenderer.width(setting.name) // initでは概算で良い
         val inputFieldCalculatedWidth = width - (5 + labelWidth + 5 + 5) // Padding left, label, padding, padding right
 
         textField =
@@ -42,11 +42,11 @@ class InfiniteSettingTextField(
                 0, // y will be set in renderWidget
                 inputFieldCalculatedWidth.coerceAtLeast(50), // 最小幅を確保
                 height,
-                Text.literal(setting.value.toString()), // Convert value to String for display
+                Component.literal(setting.value.toString()), // Convert value to String for display
                 inputType,
             )
-        textField.text = setting.value.toString()
-        textField.setChangedListener { newText ->
+        textField.setValue(setting.value.toString())
+        textField.setResponder { newText ->
             when (setting) {
                 is FeatureSetting.IntSetting -> {
                     setting.value = newText.toIntOrNull() ?: setting.value
@@ -85,19 +85,19 @@ class InfiniteSettingTextField(
         }
         setting.addChangeListener {
             // setting.value が変更されたときに textField のテキストを更新
-            textField.text = it.toString()
+            textField.setValue(it.toString())
             // カーソル位置を調整する必要がある場合、ここに追加
             // textField.setCursorToEnd(false)
         }
     }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         val textX = x + 5 // Padding from left edge
         val totalTextHeight: Int
@@ -105,12 +105,12 @@ class InfiniteSettingTextField(
         val descriptionY: Int?
 
         if (setting.descriptionKey.isNotBlank()) {
-            totalTextHeight = textRenderer.fontHeight * 2 + 2 // Name + padding + Description
+            totalTextHeight = textRenderer.lineHeight * 2 + 2 // Name + padding + Description
             nameY = y + (height - totalTextHeight) / 2
-            descriptionY = nameY + textRenderer.fontHeight + 2
+            descriptionY = nameY + textRenderer.lineHeight + 2
 
             graphics2D.drawText(
-                Text.translatable(setting.name),
+                Component.translatable(setting.name),
                 textX,
                 nameY,
                 org.infinite.InfiniteClient
@@ -119,7 +119,7 @@ class InfiniteSettingTextField(
                 true, // shadow = true
             )
             graphics2D.drawText(
-                Text.translatable(setting.descriptionKey),
+                Component.translatable(setting.descriptionKey),
                 textX,
                 descriptionY,
                 org.infinite.InfiniteClient
@@ -128,11 +128,11 @@ class InfiniteSettingTextField(
                 true, // shadow = true
             )
         } else {
-            totalTextHeight = textRenderer.fontHeight // Only name
+            totalTextHeight = textRenderer.lineHeight // Only name
             nameY = y + (height - totalTextHeight) / 2
 
             graphics2D.drawText(
-                Text.translatable(setting.name),
+                Component.translatable(setting.name),
                 textX,
                 nameY,
                 org.infinite.InfiniteClient
@@ -142,12 +142,12 @@ class InfiniteSettingTextField(
             )
         }
 
-        val currentLabelWidth = textRenderer.getWidth(Text.translatable(setting.name))
+        val currentLabelWidth = textRenderer.width(Component.translatable(setting.name))
         textField.x = x + 5 + currentLabelWidth + 5
         textField.y = y + (height - textField.height) / 2
 
         // 現在の文字列の描画幅をベースにした理想の幅
-        val idealWidth = textRenderer.getWidth(textField.text) + 10 // テキストの幅 + 左右のパディング
+        val idealWidth = textRenderer.width(textField.value) + 10 // テキストの幅 + 左右のパディング
 
         // 親ウィジェットが提供する最大利用可能幅
         val maxAvailableWidth = width - (textField.x - x) - 5
@@ -160,7 +160,7 @@ class InfiniteSettingTextField(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         // まず、内部のtextFieldがクリックされたかどうかを試す
@@ -177,21 +177,21 @@ class InfiniteSettingTextField(
         return super.mouseClicked(click, doubled)
     }
 
-    override fun keyPressed(input: KeyInput): Boolean {
+    override fun keyPressed(input: KeyEvent): Boolean {
         if (textField.keyPressed(input)) {
             return true
         }
         return super.keyPressed(input)
     }
 
-    override fun charTyped(input: CharInput): Boolean {
+    override fun charTyped(input: CharacterEvent): Boolean {
         if (textField.charTyped(input)) {
             return true
         }
         return super.charTyped(input)
     }
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        this.appendDefaultNarrations(builder)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        this.defaultButtonNarrationText(builder)
     }
 }

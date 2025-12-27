@@ -1,7 +1,7 @@
 package org.infinite.mixin.infinite.gui;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.PlayerSkinWidget;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.PlayerSkinWidget;
 import org.infinite.InfiniteClient;
 import org.infinite.global.rendering.theme.ThemeSetting;
 import org.infinite.global.rendering.theme.widget.PlayerSkinWidgetRenderer;
@@ -15,7 +15,7 @@ public class PlayerSkinWidgetMixin {
 
   @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
   private void infiniteClient$renderWidget(
-      DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+      GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
     ThemeSetting themeSetting = InfiniteClient.INSTANCE.getGlobalFeature(ThemeSetting.class);
     if (themeSetting != null && themeSetting.isEnabled()) {
       PlayerSkinWidgetRenderer renderer =

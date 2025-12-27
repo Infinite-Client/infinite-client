@@ -1,9 +1,9 @@
 package org.infinite.features.utils.tool
 
-import net.minecraft.block.Block
-import net.minecraft.client.MinecraftClient
-import net.minecraft.item.Items
-import net.minecraft.registry.Registries
+import net.minecraft.client.Minecraft
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.item.Items
+import net.minecraft.world.level.block.Block
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.movement.braek.LinearBreak
@@ -106,7 +106,7 @@ class AutoTool : ConfigurableFeature(initialEnabled = false) {
      * 葉っぱ、蜘蛛の巣など、ハサミや剣が最適なブロックであるかを判定するヘルパー関数。
      */
     private fun isFineToolTarget(block: Block): Boolean {
-        val blockId = Registries.BLOCK.getId(block).toString()
+        val blockId = BuiltInRegistries.BLOCK.getKey(block).toString()
         return blockId.contains("leaves") ||
             blockId.contains("cobweb") ||
             blockId.contains("wool")
@@ -141,19 +141,19 @@ class AutoTool : ConfigurableFeature(initialEnabled = false) {
     }
 
     override fun onTick() {
-        val client = MinecraftClient.getInstance()
-        val currentTime = client.world?.time ?: 0L // 現在のティックを取得
+        val client = Minecraft.getInstance()
+        val currentTime = client.level?.gameTime ?: 0L // 現在のティックを取得
 
         val linearBreak = InfiniteClient.getFeature(LinearBreak::class.java)
         val veinBreak = InfiniteClient.getFeature(VeinBreak::class.java)
         val isLinearBreakWorking = linearBreak?.isWorking ?: false
         val isVeinBreakWorking = veinBreak?.isWorking ?: false
-        val isInteractingToBlock = interactionManager?.isBreakingBlock ?: false
+        val isInteractingToBlock = interactionManager?.isDestroying ?: false
         val blockPos =
             when {
                 isLinearBreakWorking -> linearBreak.currentBreakingPos
                 isVeinBreakWorking -> veinBreak.currentBreakingPos
-                else -> interactionManager?.currentBreakingPos
+                else -> interactionManager?.destroyBlockPos
             }
 
         val isMining = isInteractingToBlock || isLinearBreakWorking || isVeinBreakWorking

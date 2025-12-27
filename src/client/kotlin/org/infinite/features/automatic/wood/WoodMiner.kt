@@ -1,12 +1,12 @@
 package org.infinite.features.automatic.wood
 
-import net.minecraft.block.Block
-import net.minecraft.block.BlockState
-import net.minecraft.block.Blocks
-import net.minecraft.registry.Registries
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Vec3d
-import net.minecraft.util.math.Vec3i
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Vec3i
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.phys.Vec3
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.ai.AiInterface
 import org.infinite.libs.ai.actions.block.MineBlockAction
@@ -58,7 +58,7 @@ class WoodMiner : ConfigurableFeature() {
     }
 
     private fun isCustomLogBlock(block: Block): Boolean {
-        val blockId = Registries.BLOCK.getId(block).toString()
+        val blockId = BuiltInRegistries.BLOCK.getKey(block).toString()
         return woodTypes.value.contains(blockId)
     }
 
@@ -98,7 +98,7 @@ class WoodMiner : ConfigurableFeature() {
     // searchTreesのコードは変更なし
     private fun searchTrees(): List<Tree> {
         // ... (省略: searchTreesの元のコード)
-        val playerPos = player?.blockPos ?: return emptyList()
+        val playerPos = player?.blockPosition() ?: return emptyList()
         val r = searchRadius.value
         val h = searchHeight.value
         val trees = mutableListOf<Tree>()
@@ -129,7 +129,7 @@ class WoodMiner : ConfigurableFeature() {
                 }
             }
         }
-        return trees.sortedBy { it.rootPos.getSquaredDistance(playerPos) }
+        return trees.sortedBy { it.rootPos.distSqr(playerPos) }
     }
 
     // searchTreeFromRootのコードは変更なし
@@ -164,7 +164,7 @@ class WoodMiner : ConfigurableFeature() {
                 Vec3i(0, 0, 1),
                 Vec3i(0, 0, -1),
             )) {
-                val nextPos = currentPos.add(offset)
+                val nextPos = currentPos.offset(offset)
                 if (!visitedLogBlocks.contains(nextPos)) {
                     val block = world!!.getBlockState(nextPos).block
                     // 同じ種類の丸太ブロックであるかを確認
@@ -220,7 +220,7 @@ class WoodMiner : ConfigurableFeature() {
 
     private fun randomWalk() {
         val r = searchRadius.value
-        state = State.Goto(player!!.blockPos.add((-r..r).random(), 0, (-r..r).random()), isRandomMode = true)
+        state = State.Goto(player!!.blockPosition().offset((-r..r).random(), 0, (-r..r).random()), isRandomMode = true)
     }
 
     private fun handleGoto(goto: State.Goto) {
@@ -279,7 +279,7 @@ class WoodMiner : ConfigurableFeature() {
             val targetY = minY + 0.5 // アイテムはブロックの中心ではなく、地面付近にドロップする
             val targetZ = (minZ + maxZ) / 2.0 + 0.5
 
-            val targetPos = Vec3d(targetX, targetY, targetZ)
+            val targetPos = Vec3(targetX, targetY, targetZ)
 
             // LinearMovementActionでアイテムドロップ位置に移動
             AiInterface.add(

@@ -1,13 +1,13 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.client.input.CharInput
-import net.minecraft.client.input.KeyInput
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
@@ -19,14 +19,14 @@ class InfiniteBlockListField(
     width: Int,
     totalHeight: Int, // This is the total height of the InfiniteBlockListField widget
     private val setting: FeatureSetting.BlockListSetting,
-) : ClickableWidget(x, y, width, totalHeight, Text.literal(setting.name)) {
-    private val textRenderer = MinecraftClient.getInstance().textRenderer
+) : AbstractWidget(x, y, width, totalHeight, Component.literal(setting.name)) {
+    private val textRenderer = Minecraft.getInstance().font
     private val inputFieldHeight = 20
     private val padding = 5
     private val buttonSize = inputFieldHeight // Add button size is same as input field height
 
-    private val baseLabelHeight = textRenderer.fontHeight
-    private val descriptionHeight = textRenderer.fontHeight + 2
+    private val baseLabelHeight = textRenderer.lineHeight
+    private val descriptionHeight = textRenderer.lineHeight + 2
     private val totalLabelHeight = baseLabelHeight + descriptionHeight
     private val minHeaderHeight = totalLabelHeight + padding + inputFieldHeight + padding
 
@@ -43,7 +43,7 @@ class InfiniteBlockListField(
         scrollableListHeight = totalHeight - headerHeight
 
         // Initialize textField
-        val labelWidth = textRenderer.getWidth(setting.name)
+        val labelWidth = textRenderer.width(setting.name)
         val inputFieldWidth =
             width - (padding * 3) - labelWidth - buttonSize // Adjust width for padding, label, and button
 
@@ -54,11 +54,11 @@ class InfiniteBlockListField(
                 0, // y will be set in renderWidget
                 inputFieldWidth,
                 inputFieldHeight,
-                Text.literal(""),
+                Component.literal(""),
                 InfiniteTextField.InputType.BLOCK_ID,
             )
 
-        textField.setChangedListener { newText ->
+        textField.setResponder { newText ->
             currentInput = newText.trim()
         }
 
@@ -98,7 +98,7 @@ class InfiniteBlockListField(
                     0, // x will be set by scrollable container
                     0, // y will be set by scrollable container
                     itemWidth,
-                    textRenderer.fontHeight + padding * 2, // Height of each item
+                    textRenderer.lineHeight + padding * 2, // Height of each item
                     id,
                 ) { blockIdToRemove ->
                     removeIdFromList(blockIdToRemove)
@@ -117,7 +117,7 @@ class InfiniteBlockListField(
             if (idToAdd.isNotBlank() && !setting.value.contains(idToAdd)) {
                 setting.value.add(idToAdd)
                 updateScrollableContainer()
-                textField.text = ""
+                textField.setValue("")
                 currentInput = ""
             }
         }
@@ -152,12 +152,12 @@ class InfiniteBlockListField(
     }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         // ScrollableContainerを描画
         val containerX = x + padding
@@ -167,7 +167,7 @@ class InfiniteBlockListField(
 
         val labelX = x + padding
         graphics2D.drawText(
-            Text.translatable(setting.name),
+            Component.translatable(setting.name),
             labelX,
             y + padding,
             InfiniteClient
@@ -177,7 +177,7 @@ class InfiniteBlockListField(
         )
         if (setting.descriptionKey.isNotBlank()) {
             graphics2D.drawText(
-                Text.translatable(setting.descriptionKey),
+                Component.translatable(setting.descriptionKey),
                 labelX,
                 y + padding + baseLabelHeight + 2,
                 InfiniteClient.currentColors().foregroundColor,
@@ -223,7 +223,7 @@ class InfiniteBlockListField(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean {
         if (textField.mouseClicked(click, doubled)) {
@@ -260,7 +260,7 @@ class InfiniteBlockListField(
     }
 
     override fun mouseDragged(
-        click: Click,
+        click: MouseButtonEvent,
         offsetX: Double,
         offsetY: Double,
     ): Boolean {
@@ -268,12 +268,12 @@ class InfiniteBlockListField(
         return super.mouseDragged(click, offsetX, offsetY)
     }
 
-    override fun mouseReleased(click: Click): Boolean {
+    override fun mouseReleased(click: MouseButtonEvent): Boolean {
         if (scrollableContainer.mouseReleased(click)) return true
         return super.mouseReleased(click)
     }
 
-    override fun keyPressed(input: KeyInput): Boolean {
+    override fun keyPressed(input: KeyEvent): Boolean {
         val keyCode = input.key
 
         if (keyCode == GLFW.GLFW_KEY_ENTER && textField.isFocused) {
@@ -289,7 +289,7 @@ class InfiniteBlockListField(
         return super.keyPressed(input)
     }
 
-    override fun charTyped(input: CharInput): Boolean {
+    override fun charTyped(input: CharacterEvent): Boolean {
         if (textField.charTyped(input)) {
             return true
         }
@@ -299,7 +299,7 @@ class InfiniteBlockListField(
         return super.charTyped(input)
     }
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        textField.appendNarrations(builder)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        textField.updateNarration(builder)
     }
 }

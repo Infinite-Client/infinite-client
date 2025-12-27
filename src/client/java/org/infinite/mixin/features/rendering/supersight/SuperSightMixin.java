@@ -1,37 +1,37 @@
 package org.infinite.mixin.features.rendering.supersight;
 
 import com.mojang.authlib.GameProfile;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.Holder;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffects;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.sight.SuperSight;
 import org.spongepowered.asm.mixin.Mixin;
 
-@Mixin(ClientPlayerEntity.class)
-public abstract class SuperSightMixin extends AbstractClientPlayerEntity {
+@Mixin(LocalPlayer.class)
+public abstract class SuperSightMixin extends AbstractClientPlayer {
 
-  public SuperSightMixin(ClientWorld world, GameProfile profile) {
+  public SuperSightMixin(ClientLevel world, GameProfile profile) {
     super(world, profile);
   }
 
-  public boolean hasStatusEffect(RegistryEntry<StatusEffect> effect) {
+  public boolean hasEffect(Holder<MobEffect> effect) {
     // Feature: SuperSight
 
     // NightVision
-    if (effect == StatusEffects.NIGHT_VISION
+    if (effect == MobEffects.NIGHT_VISION
         && InfiniteClient.INSTANCE.isSettingEnabled(SuperSight.class, "NightVision")) return true;
 
     // AntiBlind (BLINDNESS, DARKNESS)
     if (InfiniteClient.INSTANCE.isSettingEnabled(SuperSight.class, "AntiBlind")) {
-      if (effect == StatusEffects.BLINDNESS || effect == StatusEffects.DARKNESS) return false;
+      if (effect == MobEffects.BLINDNESS || effect == MobEffects.DARKNESS) return false;
     }
 
     // 💡 修正点: 無限再帰を防ぐため、superを使って元のメソッドを呼び出す
-    return super.hasStatusEffect(effect);
+    return super.hasEffect(effect);
 
     // NOTE: ClientPlayerEntityはabstractではないため、thisを ClientPlayerEntity にキャストして呼び出している可能性があります。
     // より確実な方法は @Redirect または @Overwrite を使用することですが、

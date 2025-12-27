@@ -1,15 +1,15 @@
 package org.infinite.libs.graphics
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.option.Perspective
-import net.minecraft.client.render.Camera
-import net.minecraft.client.render.RenderTickCounter
-import net.minecraft.client.render.VertexConsumerProvider
-import net.minecraft.client.util.ObjectAllocator
-import net.minecraft.client.util.math.MatrixStack
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.Vec3d
+import com.mojang.blaze3d.resource.GraphicsResourceAllocator
+import com.mojang.blaze3d.vertex.PoseStack
+import net.minecraft.client.Camera
+import net.minecraft.client.CameraType
+import net.minecraft.client.DeltaTracker
+import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.MultiBufferSource
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import org.infinite.libs.client.aim.camera.CameraRoll
 import org.infinite.libs.graphics.render.RenderResources
 import org.infinite.libs.graphics.render.RenderUtils
@@ -20,8 +20,8 @@ import org.joml.Vector4f
 
 // ... (コンストラクタとプロパティは変更なし) ...
 class Graphics3D(
-    val allocator: ObjectAllocator,
-    val tickCounter: RenderTickCounter,
+    val allocator: GraphicsResourceAllocator,
+    val tickCounter: DeltaTracker,
     val renderBlockOutline: Boolean,
     val camera: Camera,
     positionMatrix: Matrix4f,
@@ -31,17 +31,17 @@ class Graphics3D(
     val vector4f: Vector4f,
     val bl: Boolean,
 ) {
-    val client: MinecraftClient = MinecraftClient.getInstance()
+    val client: Minecraft = Minecraft.getInstance()
 
-    val immediate: VertexConsumerProvider.Immediate =
-        client.bufferBuilders.entityVertexConsumers
+    val immediate: MultiBufferSource.BufferSource =
+        client.renderBuffers().bufferSource()
 
-    val matrixStack = MatrixStack()
+    val matrixStack = PoseStack()
 
-    val tickProgress: Float = tickCounter.getTickProgress(false)
+    val tickProgress: Float = tickCounter.getGameTimeDeltaPartialTick(false)
 
     init {
-        matrixStack.multiplyPositionMatrix(positionMatrix)
+        matrixStack.mulPose(positionMatrix)
     }
 
     // ----------------------------------------------------------------------
@@ -56,11 +56,11 @@ class Graphics3D(
     }
 
     fun pushMatrix() {
-        matrixStack.push()
+        matrixStack.pushPose()
     }
 
     fun popMatrix() {
-        matrixStack.pop()
+        matrixStack.popPose()
     }
 
     // ----------------------------------------------------------------------
@@ -72,7 +72,7 @@ class Graphics3D(
      * Graphics3Dが自動で VertexConsumer を取得し、RenderUtilsのコア関数に渡します。
      */
     fun renderLinedBox(
-        box: Box,
+        box: AABB,
         color: Int,
         isOverDraw: Boolean = false,
     ) {
@@ -128,8 +128,8 @@ class Graphics3D(
      * 2点間に直線を描画します (ワールド座標基準)。
      */
     fun renderLine(
-        start: Vec3d,
-        end: Vec3d,
+        start: Vec3,
+        end: Vec3,
         color: Int,
         isOverDraw: Boolean = false,
     ) {
@@ -142,12 +142,12 @@ class Graphics3D(
      * ワールド座標 (Vec3d) を画面座標 (DisplayPos) に変換します。
      * ターゲットがカメラの後ろにある場合や、画面外にある場合は null を返します。
      */
-    fun toDisplayPos(targetPos: Vec3d): Graphics2D.DisplayPos? {
+    fun toDisplayPos(targetPos: Vec3): Graphics2D.DisplayPos? {
         val camera = this.camera
         val window = client.window
         // Graphics2Dが使用するのと同じスケーリングされた幅/高さを取得
-        val scaledWidth = window.scaledWidth.toDouble()
-        val scaledHeight = window.scaledHeight.toDouble()
+        val scaledWidth = window.guiScaledWidth.toDouble()
+        val scaledHeight = window.guiScaledHeight.toDouble()
 
         // 1. ワールド座標から相対座標 (View Space) へ
         val camPos = RenderUtils.cameraPos()
@@ -159,7 +159,7 @@ class Graphics3D(
         val targetVector = Vector4f(relX, relY, relZ, 1.0f)
 
         // 2. ビュープロジェクション行列を合成し、ベクトルを変換
-        val modelViewMatrix = matrixStack.peek().positionMatrix
+        val modelViewMatrix = matrixStack.last().pose()
         val viewProjectionMatrix = Matrix4f(projectionMatrix).mul(modelViewMatrix)
         targetVector.mul(viewProjectionMatrix)
 
@@ -187,33 +187,33 @@ class Graphics3D(
         return Graphics2D.DisplayPos(x, y)
     }
 
-    private fun tracerOrigin(partialTicks: Float): Vec3d? {
-        val yaw: Double = client.player?.getYaw(partialTicks)?.toDouble() ?: return null
-        val pitch: Double = client.player?.getPitch(partialTicks)?.toDouble() ?: return null
-        var start: Vec3d =
-            CameraRoll(yaw, pitch).vec().multiply(5.0)
+    private fun tracerOrigin(partialTicks: Float): Vec3? {
+        val yaw: Double = client.player?.getViewYRot(partialTicks)?.toDouble() ?: return null
+        val pitch: Double = client.player?.getViewXRot(partialTicks)?.toDouble() ?: return null
+        var start: Vec3 =
+            CameraRoll(yaw, pitch).vec().scale(5.0)
         if (client.options
-                .perspective == Perspective.THIRD_PERSON_FRONT
+                .cameraType == CameraType.THIRD_PERSON_FRONT
         ) {
-            start = start.negate()
+            start = start.reverse()
         }
 
         return start
     }
 
     fun renderTracer(
-        end: Vec3d,
+        end: Vec3,
         color: Int,
         isOverDraw: Boolean,
     ) {
         val layer = RenderResources.renderLinedLayer(isOverDraw)
         val buffer = immediate.getBuffer(layer)
         val start = tracerOrigin(tickProgress) ?: return
-        val offset: Vec3d = RenderUtils.cameraPos().negate()
+        val offset: Vec3 = RenderUtils.cameraPos().reverse()
         RenderUtils.renderLine(matrixStack, start, end.add(offset), color, buffer)
     }
 
     fun render() {
-        immediate.draw()
+        immediate.endBatch()
     }
 }

@@ -1,6 +1,6 @@
 package org.infinite.features.rendering.shader
 
-import net.minecraft.client.MinecraftClient
+import net.minecraft.client.Minecraft
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import org.infinite.settings.Property
@@ -20,14 +20,14 @@ class SimpleShader : ConfigurableFeature(initialEnabled = false) {
 
     override fun onEnabled() {
         // シェーダーを有効化した際にワールドレンダラーをリロードし、変更を反映させる
-        MinecraftClient.getInstance().worldRenderer.reload()
+        Minecraft.getInstance().levelRenderer.allChanged()
         // TODO: ここでカスタムシェーダーをMinecraftのレンダリングパイプラインにフックするMixinのロジックが必要になります。
         // これはMinecraftのレンダリングコードに深く依存するため、Featureクラスの外部で実装されるべきです。
     }
 
     override fun onDisabled() {
         // シェーダーを無効化した際にワールドレンダラーをリロードし、デフォルトの状態に戻す
-        MinecraftClient.getInstance().worldRenderer.reload()
+        Minecraft.getInstance().levelRenderer.allChanged()
     }
 
     // 必要に応じて、onTick(), render2d(), render3d() などをオーバーライドできます。

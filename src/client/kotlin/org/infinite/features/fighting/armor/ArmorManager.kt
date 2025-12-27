@@ -1,12 +1,12 @@
 package org.infinite.features.fighting.armor
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.network.ClientPlayerEntity
-import net.minecraft.enchantment.Enchantments
-import net.minecraft.entity.EquipmentSlot
-import net.minecraft.item.ItemStack
-import net.minecraft.item.Items
-import net.minecraft.registry.Registries
+import net.minecraft.client.Minecraft
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.entity.EquipmentSlot
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.world.item.enchantment.Enchantments
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.utils.backpack.BackPackManager
@@ -90,7 +90,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
         val invManager = InventoryManager
 
         // Skip if a screen is open (e.g., inventory GUI)
-        if (client.currentScreen != null) return
+        if (client.screen != null) return
         val chestSlotIndex = InventoryIndex.Armor.Chest()
         val currentChestStack = invManager.get(chestSlotIndex)
         val previousChestplate = previousChestplate ?: return
@@ -122,14 +122,14 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
     }
 
     private fun handleElytraSwitch(
-        player: ClientPlayerEntity,
+        player: LocalPlayer,
         invManager: InventoryManager,
     ) {
         val chestSlotIndex = InventoryIndex.Armor.Chest()
         val currentChestStack = invManager.get(chestSlotIndex)
         val isCurrentElytra = currentChestStack.item == Items.ELYTRA
-        val options = MinecraftClient.getInstance().options ?: return
-        val isReleaseElytraPressed = options.sneakKey.isPressed && options.sprintKey.isPressed
+        val options = Minecraft.getInstance().options ?: return
+        val isReleaseElytraPressed = options.keyShift.isDown && options.keySprint.isDown
         val backPackManager = InfiniteClient.getFeature(BackPackManager::class.java)
         val previousChestplate = previousChestplate ?: return
 
@@ -140,7 +140,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
                 return
             }
 
-            val shouldAutoUnequip = player.isOnGround || player.isTouchingWater
+            val shouldAutoUnequip = player.onGround() || player.isInWater
 
             if (shouldAutoUnequip || isReleaseElytraPressed) {
                 // ★ BackPackManagerの一時停止/再開をregisterで置き換え
@@ -173,31 +173,31 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
                     }
                 }
                 // UnEquip時はwasJumpKeyPressedをリセット
-                wasJumpKeyPressed = options.jumpKey.isPressed
+                wasJumpKeyPressed = options.keyJump.isDown
                 return // Exit to avoid multiple operations in one tick
             }
         }
 
         // Update floating tick counter
-        floatTick = if (player.isOnGround) 0 else floatTick + 1
+        floatTick = if (player.onGround()) 0 else floatTick + 1
 
         // Trigger elytra equip if jumping in mid-air
-        val jumpInput = options.jumpKey.isPressed
+        val jumpInput = options.keyJump.isDown
 
         // ★追加: 水中脱出の例外条件
         // ピッチ角が-70.0度以下（-90度が真上）の場合を「上を向いている」と判断
-        val isLookingUpward = player.pitch <= -70.0f
+        val isLookingUpward = player.xRot <= -70.0f
         // 水中でジャンプキーが押されていて、真上を向いている場合、キー長押しを許可
-        val isWaterEscapeAttempt = jumpInput && player.isTouchingWater && isLookingUpward && !wasTouchingWater
+        val isWaterEscapeAttempt = jumpInput && player.isInWater && isLookingUpward && !wasTouchingWater
 
         // デフォルトの空中ジャンプ条件: 水中でない かつ 新規ジャンプ入力が必要
-        val isAirJumpAttempt = (jumpInput && !wasJumpKeyPressed) && !player.isTouchingWater
+        val isAirJumpAttempt = (jumpInput && !wasJumpKeyPressed) && !player.isInWater
 
         // エリトラ装着を試みるべき最終条件:
         // (新規ジャンプ または 水中脱出) かつ (空中浮遊中) かつ (遅延後) かつ (エリトラ未装着)
         val shouldAttemptElytra =
             (isAirJumpAttempt || isWaterEscapeAttempt) &&
-                !player.isOnGround &&
+                !player.onGround() &&
                 floatTick > 2 &&
                 !isCurrentElytra
 
@@ -226,7 +226,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
 
         // 次のティックのためにジャンプキーの状態を更新
         wasJumpKeyPressed = jumpInput
-        wasTouchingWater = player.isTouchingWater
+        wasTouchingWater = player.isInWater
     }
 
     private fun resetElytraState() {
@@ -269,7 +269,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
                 if (getItemEquipmentSlot(stack) != slot) continue
 
                 if (stack.isDamaged) {
-                    val durabilityPercent = (stack.maxDamage - stack.damage).toFloat() / stack.maxDamage * 100
+                    val durabilityPercent = (stack.maxDamage - stack.damageValue).toFloat() / stack.maxDamage * 100
                     if (durabilityPercent < durabilityThreshold.value) continue
                 }
 
@@ -335,11 +335,11 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
             if (stack.item != Items.ELYTRA) continue
 
             if (stack.isDamaged) {
-                val durabilityPercent = (stack.maxDamage - stack.damage).toFloat() / stack.maxDamage * 100
+                val durabilityPercent = (stack.maxDamage - stack.damageValue).toFloat() / stack.maxDamage * 100
                 if (durabilityPercent < durabilityThreshold.value) continue
             }
 
-            val durability = stack.maxDamage - stack.damage
+            val durability = stack.maxDamage - stack.damageValue
             if (durability > maxDurability) {
                 maxDurability = durability
                 bestSlot = index
@@ -350,7 +350,7 @@ class ArmorManager : ConfigurableFeature(initialEnabled = false) {
 
     private fun getItemEquipmentSlot(stack: ItemStack): EquipmentSlot? {
         if (stack.isEmpty) return null
-        val id = Registries.ITEM.getId(stack.item).path
+        val id = BuiltInRegistries.ITEM.getKey(stack.item).path
         return when {
             id.endsWith("helmet") || id.endsWith("head") -> EquipmentSlot.HEAD
             id.endsWith("chestplate") || id.endsWith("elytra") -> EquipmentSlot.CHEST

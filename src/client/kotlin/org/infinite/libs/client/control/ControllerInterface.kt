@@ -1,6 +1,6 @@
 package org.infinite.libs.client.control
 
-import net.minecraft.client.option.KeyBinding
+import net.minecraft.client.KeyMapping
 import org.infinite.InfiniteClient
 import java.util.concurrent.ConcurrentLinkedDeque
 
@@ -12,7 +12,7 @@ object ControllerInterface {
 
     // KeyActionを修正：remainingTicksを追加し、end()をtick()ロジックに統合
     class KeyAction(
-        val key: KeyBinding,
+        val key: KeyMapping,
         val kind: KeyActionKind,
         initialTicks: Int,
         val condition: () -> Boolean,
@@ -20,7 +20,7 @@ object ControllerInterface {
         var remainingTicks: Int = initialTicks
 
         // KeyBindingとKeyActionKindに基づく一意のID
-        val actionId: String = key.id
+        val actionId: String = key.name
 
         /**
          * アクションを実行し、残りのティック数を減らす。
@@ -31,21 +31,21 @@ object ControllerInterface {
             if (!condition()) {
                 // Pressアクションの場合は、状態をリセット
                 if (kind == KeyActionKind.Press) {
-                    key.isPressed = false
+                    key.setDown(false)
                 }
                 return true // 削除
             }
 
             when (kind) {
-                KeyActionKind.Press -> key.isPressed = true
-                KeyActionKind.Release -> key.isPressed = false
+                KeyActionKind.Press -> key.setDown(true)
+                KeyActionKind.Release -> key.setDown(false)
             }
 
             // ティック数が 0 になったら終了処理を行う
             if (remainingTicks <= 0) {
                 // Pressアクションの終了時、キーの状態をリセット
                 if (kind == KeyActionKind.Press) {
-                    key.isPressed = false
+                    key.setDown(false)
                 }
                 return true
             }
@@ -76,7 +76,7 @@ object ControllerInterface {
      * 指定したキーをtick数分、またはconditionがfalseになるまで押すアクションを追加します。
      */
     fun press(
-        key: KeyBinding,
+        key: KeyMapping,
         tick: Int = 1,
         condition: () -> Boolean = { true },
     ) {
@@ -88,7 +88,7 @@ object ControllerInterface {
      * 指定したキーをconditionがfalseになるまで押すアクションを追加します (tick数は実質無限: Int.MAX_VALUE)。
      */
     fun press(
-        key: KeyBinding,
+        key: KeyMapping,
         condition: () -> Boolean,
     ) = press(key, Int.MAX_VALUE, condition)
 
@@ -96,7 +96,7 @@ object ControllerInterface {
      * 指定したキーをtick数分、またはconditionがfalseになるまで離すアクションを追加します。
      */
     fun release(
-        key: KeyBinding,
+        key: KeyMapping,
         tick: Int = 1,
         condition: () -> Boolean = { true },
     ) {
@@ -108,7 +108,7 @@ object ControllerInterface {
      * 指定したキーをconditionがfalseになるまで離すアクションを追加します (tick数は実質無限)。
      */
     fun release(
-        key: KeyBinding,
+        key: KeyMapping,
         condition: () -> Boolean,
     ) = release(key, Int.MAX_VALUE, condition)
 

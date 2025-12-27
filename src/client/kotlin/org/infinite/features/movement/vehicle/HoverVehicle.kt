@@ -1,10 +1,11 @@
 package org.infinite.features.movement.vehicle
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.entity.vehicle.VehicleEntity
-import net.minecraft.util.Hand
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.Vec3d
+import net.minecraft.client.Minecraft
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.vehicle.VehicleEntity
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.automatic.pilot.AutoPilot
@@ -33,25 +34,25 @@ class HoverVehicle : ConfigurableFeature(initialEnabled = false) {
     override val settings: List<FeatureSetting<*>> = listOf(speed, acceleration)
 
     override fun onTick() {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
         val vehicle = player.vehicle
         // --- 自動再搭乗ロジック (変更なし) ---
         if (vehicle == null) {
-            val world = client.world ?: return
+            val world = client.level ?: return
             val x = player.x
             val y = player.y
             val z = player.z
-            val reach = player.entityInteractionRange
+            val reach = player.entityInteractionRange()
             val nearbyVehicle =
                 world
-                    .getOtherEntities(
+                    .getEntities(
                         player,
-                        Box(x - reach, y - reach, z - reach, x + reach, y + reach, z + reach),
+                        AABB(x - reach, y - reach, z - reach, x + reach, y + reach, z + reach),
                     ) { entity -> entity is VehicleEntity } // 全ての乗り物エンティティ
-                    .minByOrNull { it.squaredDistanceTo(player) }
+                    .minByOrNull { it.distanceToSqr(player) }
             if (nearbyVehicle != null) {
-                player.interact(nearbyVehicle, Hand.MAIN_HAND)
+                player.interactOn(nearbyVehicle, InteractionHand.MAIN_HAND)
                 return
             }
 
@@ -67,44 +68,44 @@ class HoverVehicle : ConfigurableFeature(initialEnabled = false) {
      * 加速力と最高速度の設定を使用して、ボートの速度を制御します。
      */
     private fun controlBoatMovement(
-        client: MinecraftClient,
-        vehicle: net.minecraft.entity.Entity,
+        client: Minecraft,
+        vehicle: Entity,
     ) {
         val options = client.options ?: return
         val player = client.player ?: return
         val maxSpeed = speed.value.toDouble() / 20 // 設定された最高速度 (m/s)
         val accelPerTick = acceleration.value.toDouble()
-        var inputVector = Vec3d.ZERO
+        var inputVector = Vec3.ZERO
         var moving = false
-        val yaw = player.yaw
-        val pitch = player.pitch
+        val yaw = player.yRot
+        val pitch = player.xRot
         val yawRadians = toRadians(yaw)
-        vehicle.setNoGravity(true)
+        vehicle.isNoGravity = true
         // --- 望ましい移動方向ベクトルを計算 ---
 
         // 前後移動 (W/S) - 視線方向
-        if (options.forwardKey.isPressed || options.backKey.isPressed) {
+        if (options.keyUp.isDown || options.keyDown.isDown) {
             val forwardDirection = CameraRoll(yaw.toDouble(), pitch.toDouble()).vec().normalize()
-            if (options.forwardKey.isPressed) {
+            if (options.keyUp.isDown) {
                 inputVector = inputVector.add(forwardDirection)
             }
-            if (options.backKey.isPressed) {
+            if (options.keyDown.isDown) {
                 inputVector = inputVector.subtract(forwardDirection)
             }
             moving = true
         }
 
         // 左右移動 (A/D) - 水平方向のストレイフ
-        if (options.leftKey.isPressed || options.rightKey.isPressed) {
+        if (options.keyLeft.isDown || options.keyRight.isDown) {
             val strafeX = cos(yawRadians).toDouble()
             val strafeZ = sin(yawRadians).toDouble()
             // ストレイフベクトル (水平)
-            val strafeVec = Vec3d(strafeX, 0.0, strafeZ)
+            val strafeVec = Vec3(strafeX, 0.0, strafeZ)
 
-            if (options.rightKey.isPressed) {
+            if (options.keyRight.isDown) {
                 inputVector = inputVector.subtract(strafeVec) // 右移動
             }
-            if (options.leftKey.isPressed) {
+            if (options.keyLeft.isDown) {
                 inputVector = inputVector.add(strafeVec) // 左移動
             }
             moving = true
@@ -112,8 +113,8 @@ class HoverVehicle : ConfigurableFeature(initialEnabled = false) {
 
         // 上昇/下降移動
         // 垂直方向の移動 (Jump/Sneak)
-        if (options.jumpKey.isPressed) {
-            inputVector = inputVector.multiply(acceleration.value + 1.0)
+        if (options.keyJump.isDown) {
+            inputVector = inputVector.scale(acceleration.value + 1.0)
             moving = true
         }
         // 注意: 原子のコードの 'options.sneakKey.isPressed = options.sneakKey.isPressed && player.isOnGround' は
@@ -122,7 +123,7 @@ class HoverVehicle : ConfigurableFeature(initialEnabled = false) {
 
         // --- 速度制御ロジック ---
 
-        val currentVelocity = vehicle.velocity
+        val currentVelocity = vehicle.deltaMovement
 
         if (moving) {
             // 望ましい移動方向を正規化
@@ -131,7 +132,7 @@ class HoverVehicle : ConfigurableFeature(initialEnabled = false) {
             val desiredVelocity =
                 if (inputVector.length() > maxSpeed) {
                     val desiredDirection = inputVector.normalize()
-                    desiredDirection.multiply(maxSpeed)
+                    desiredDirection.scale(maxSpeed)
                 } else {
                     inputVector
                 }
@@ -139,19 +140,19 @@ class HoverVehicle : ConfigurableFeature(initialEnabled = false) {
             var accelerationVector = desiredVelocity.subtract(currentVelocity)
 
             // 加速ベクトルが大きすぎる場合、`accelPerTick` に制限
-            if (accelerationVector.lengthSquared() > accelPerTick * accelPerTick) {
-                accelerationVector = accelerationVector.normalize().multiply(accelPerTick)
+            if (accelerationVector.lengthSqr() > accelPerTick * accelPerTick) {
+                accelerationVector = accelerationVector.normalize().scale(accelPerTick)
             }
 
             // 新しい速度を計算
             var newVelocity = currentVelocity.add(accelerationVector)
 
             // 最高速度でクランプ (丸め誤差などによる超過防止)
-            if (newVelocity.lengthSquared() > maxSpeed * maxSpeed) {
-                newVelocity = newVelocity.normalize().multiply(maxSpeed)
+            if (newVelocity.lengthSqr() > maxSpeed * maxSpeed) {
+                newVelocity = newVelocity.normalize().scale(maxSpeed)
             }
 
-            vehicle.velocity = newVelocity
+            vehicle.deltaMovement = newVelocity
         } else {
             // 移動キーが押されていない場合、減速（摩擦）を適用して停止させる
             // AutoPilotとの整合性を確保
@@ -165,18 +166,18 @@ class HoverVehicle : ConfigurableFeature(initialEnabled = false) {
 
                 if (stopDistance > currentSpeed) {
                     // 減速量が大きすぎて速度を反転させる場合、完全に停止させる
-                    vehicle.velocity = Vec3d.ZERO
+                    vehicle.deltaMovement = Vec3.ZERO
                 } else {
                     // 速度に摩擦係数を適用
                     if (InfiniteClient.isSettingEnabled(AutoPilot::class.java, "JeetFlight")) {
-                        vehicle.velocity = currentVelocity.multiply(1.0, friction, 1.0)
+                        vehicle.deltaMovement = currentVelocity.multiply(1.0, friction, 1.0)
                     } else {
-                        vehicle.velocity = currentVelocity.multiply(friction)
+                        vehicle.deltaMovement = currentVelocity.scale(friction)
                     }
                 }
             } else {
                 // 完全に停止している場合
-                vehicle.velocity = Vec3d.ZERO
+                vehicle.deltaMovement = Vec3.ZERO
             }
         }
     }
@@ -186,9 +187,9 @@ class HoverVehicle : ConfigurableFeature(initialEnabled = false) {
      * ボートが物理演算の影響を受けるように、ボートの重力を有効にします。
      */
     override fun onDisabled() {
-        val client = MinecraftClient.getInstance()
+        val client = Minecraft.getInstance()
         val player = client.player
         val vehicle = player?.vehicle
-        vehicle?.setNoGravity(false)
+        vehicle?.isNoGravity = false
     }
 }

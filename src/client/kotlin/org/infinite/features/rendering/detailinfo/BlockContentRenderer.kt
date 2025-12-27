@@ -1,10 +1,10 @@
 package org.infinite.features.rendering.detailinfo
 
-import net.minecraft.block.ChestBlock
-import net.minecraft.block.enums.ChestType
-import net.minecraft.client.MinecraftClient
-import net.minecraft.item.ItemStack
-import net.minecraft.registry.Registries
+import net.minecraft.client.Minecraft
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.block.ChestBlock
+import net.minecraft.world.level.block.state.properties.ChestType
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.transparent
@@ -18,22 +18,22 @@ object BlockContentRenderer {
      * チェスト以外の場合はそのままのデータを返します。
      */
     private fun getEffectiveInventoryData(
-        client: MinecraftClient,
+        client: Minecraft,
         detail: DetailInfo.TargetDetail.BlockDetail,
         feature: DetailInfo,
     ): InventoryData? {
         val detailPos = detail.pos ?: return null
         val effectiveData = feature.getChestContents(detailPos)
 
-        val blockState = client.world?.getBlockState(detailPos)
+        val blockState = client.level?.getBlockState(detailPos)
         // ダブルチェストの結合ロジック
         if (blockState?.block is ChestBlock && effectiveData?.type == InventoryType.CHEST && effectiveData.items.size == 27) {
-            val chestType = blockState.get(ChestBlock.CHEST_TYPE)
+            val chestType = blockState.getValue(ChestBlock.TYPE)
             if (chestType != ChestType.SINGLE) {
-                val facing = blockState.get(ChestBlock.FACING)
+                val facing = blockState.getValue(ChestBlock.FACING)
                 val otherOffset =
-                    if (chestType == ChestType.RIGHT) facing.rotateYClockwise() else facing.rotateYCounterclockwise()
-                val otherPos = detailPos.offset(otherOffset)
+                    if (chestType == ChestType.RIGHT) facing.clockWise else facing.counterClockWise
+                val otherPos = detailPos.relative(otherOffset)
 
                 val otherData = feature.getChestContents(otherPos)
                 if (otherData != null && otherData.items.size == 27) {
@@ -54,13 +54,13 @@ object BlockContentRenderer {
     }
 
     fun calculateHeight(
-        client: MinecraftClient,
+        client: Minecraft,
         detail: DetailInfo.TargetDetail.BlockDetail,
         feature: DetailInfo,
         uiWidth: Int,
         isTargetInReach: Boolean,
     ): Int {
-        val font = client.textRenderer
+        val font = client.font
         var requiredHeight = DetailInfoRenderer.BORDER_WIDTH + PADDING + ICON_SIZE + PADDING
 
         val effectiveData = getEffectiveInventoryData(client, detail, feature)
@@ -69,13 +69,13 @@ object BlockContentRenderer {
             requiredHeight += InventoryRenderer.calculateHeight(client, effectiveData, uiWidth)
         }
 
-        requiredHeight += font.fontHeight + 2 + DetailInfoRenderer.BORDER_WIDTH + PADDING
+        requiredHeight += font.lineHeight + 2 + DetailInfoRenderer.BORDER_WIDTH + PADDING
         return requiredHeight
     }
 
     fun draw(
         graphics2d: Graphics2D,
-        client: MinecraftClient,
+        client: Minecraft,
         detail: DetailInfo.TargetDetail.BlockDetail,
         feature: DetailInfo,
         startX: Int,
@@ -84,7 +84,7 @@ object BlockContentRenderer {
         isTargetInReach: Boolean,
     ) {
         if (detail.pos == null) return
-        val font = client.textRenderer
+        val font = client.font
         val iconX = startX + DetailInfoRenderer.BORDER_WIDTH + PADDING
         val iconY = startY + DetailInfoRenderer.BORDER_WIDTH + PADDING
         val textX = iconX + ICON_SIZE + PADDING
@@ -101,7 +101,7 @@ object BlockContentRenderer {
         )
 
         val correctTool = ToolChecker.getCorrectTool(detail.block)
-        val blockId = Registries.BLOCK.getId(detail.block).toString()
+        val blockId = BuiltInRegistries.BLOCK.getKey(detail.block).toString()
         val infoName = detail.block.name.string
 
         graphics2d.drawText(
@@ -113,7 +113,7 @@ object BlockContentRenderer {
                 .colors.foregroundColor,
             true,
         )
-        val nameWidth = font.getWidth(infoName)
+        val nameWidth = font.width(infoName)
         graphics2d.drawText(
             "($blockId)",
             textX + nameWidth + 5,

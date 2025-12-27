@@ -1,6 +1,6 @@
 package org.infinite.mixin.features.rendering.extrasensory;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.sensory.ExtraSensory;
 import org.spongepowered.asm.mixin.Mixin;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Entity.class)
 public class EntityMixin {
 
-  @Inject(method = "isGlowing", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "isCurrentlyGlowing", at = @At("HEAD"), cancellable = true)
   private void isGlowing(CallbackInfoReturnable<Boolean> cir) {
     ExtraSensory extraSensory = InfiniteClient.INSTANCE.getFeature(ExtraSensory.class);
     if (extraSensory != null

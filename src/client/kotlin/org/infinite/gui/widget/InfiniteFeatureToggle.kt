@@ -1,11 +1,11 @@
 package org.infinite.gui.widget
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.client.gui.Click
-import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
-import net.minecraft.client.gui.widget.ClickableWidget
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.Feature
@@ -20,7 +20,7 @@ class InfiniteFeatureToggle(
     val feature: Feature<out ConfigurableFeature>,
     private val isSelected: Boolean, // New parameter
     val onSettings: () -> Unit, // Made public
-) : ClickableWidget(x, y, width, height, Text.literal(feature.name)) {
+) : AbstractWidget(x, y, width, height, Component.literal(feature.name)) {
     val toggleButton: InfiniteToggleButton
     private val settingsButton: InfiniteButton
     private val resetButton: InfiniteButton // New reset button
@@ -54,7 +54,7 @@ class InfiniteFeatureToggle(
                 y,
                 settingsButtonWidth,
                 height,
-                Text.literal("S"),
+                Component.literal("S"),
             ) { onSettings() }
 
         resetButton =
@@ -63,14 +63,14 @@ class InfiniteFeatureToggle(
                 y,
                 resetButtonWidth,
                 height,
-                Text.literal("R"), // Placeholder for reset icon/text
+                Component.literal("R"), // Placeholder for reset icon/text
             ) {
                 // OnPress action for reset button
                 configurableFeature.reset() // Reset feature's enabled state
                 configurableFeature.settings.forEach { setting ->
                     setting.reset() // Reset individual settings
                 }
-                InfiniteClient.log(Text.translatable("command.infinite.config.reset.feature", feature.name).string)
+                InfiniteClient.log(Component.translatable("command.infinite.config.reset.feature", feature.name).string)
             }
 
         // Add listener to update toggle button when feature.enabled changes
@@ -80,16 +80,16 @@ class InfiniteFeatureToggle(
     }
 
     override fun renderWidget(
-        context: DrawContext,
+        context: GuiGraphics,
         mouseX: Int,
         mouseY: Int,
         delta: Float,
     ) {
-        val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
 
         // Draw button text
         graphics2D.drawText(
-            Text.literal(feature.name),
+            Component.literal(feature.name),
             x + 60,
             y + (height - 8) / 2,
             InfiniteClient
@@ -120,14 +120,14 @@ class InfiniteFeatureToggle(
     }
 
     override fun mouseClicked(
-        click: Click,
+        click: MouseButtonEvent,
         doubled: Boolean,
     ): Boolean =
         toggleButton.mouseClicked(click, doubled) ||
             settingsButton.mouseClicked(click, doubled) ||
             resetButton.mouseClicked(click, doubled) // Handle reset button click
 
-    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
-        this.appendDefaultNarrations(builder)
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        this.defaultButtonNarrationText(builder)
     }
 }

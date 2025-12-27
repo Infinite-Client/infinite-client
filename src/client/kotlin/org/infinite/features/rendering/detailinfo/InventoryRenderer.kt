@@ -1,8 +1,8 @@
 package org.infinite.features.rendering.detailinfo
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.item.ItemStack
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
+import net.minecraft.world.item.ItemStack
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.ColorUtils
 import org.infinite.utils.rendering.transparent
@@ -14,12 +14,12 @@ object InventoryRenderer {
     private const val BAR_HEIGHT = 4
 
     fun calculateHeight(
-        client: MinecraftClient,
+        client: Minecraft,
         inventoryData: InventoryData,
         uiWidth: Int,
     ): Int {
-        val font = client.textRenderer
-        var requiredHeight = font.fontHeight + 2
+        val font = client.font
+        var requiredHeight = font.lineHeight + 2
 
         if (inventoryData.items.isEmpty()) return requiredHeight + PADDING
 
@@ -30,13 +30,13 @@ object InventoryRenderer {
             InventoryType.FURNACE -> {
                 rowsNeeded = 2
                 requiredHeight += (rowsNeeded * SLOT_SIZE + 10) + barSpace
-                requiredHeight += 4 * (font.fontHeight + 2)
+                requiredHeight += 4 * (font.lineHeight + 2)
             }
 
             InventoryType.BREWING -> {
                 rowsNeeded = 2
                 requiredHeight += rowsNeeded * SLOT_SIZE + barSpace
-                requiredHeight += 2 * (font.fontHeight + 2)
+                requiredHeight += 2 * (font.lineHeight + 2)
                 requiredHeight += 2 * (BAR_HEIGHT + 2)
             }
 
@@ -66,7 +66,7 @@ object InventoryRenderer {
 
     fun draw(
         graphics2d: Graphics2D,
-        client: MinecraftClient,
+        client: Minecraft,
         inventoryData: InventoryData,
         startX: Int,
         currentY: Int,
@@ -74,10 +74,10 @@ object InventoryRenderer {
         isTargetInReach: Boolean,
         detailInfoFeature: DetailInfo,
     ): Int {
-        val font = client.textRenderer
+        val font = client.font
         var drawingY = currentY
         val featureColor = ColorUtils.getFeatureColor(isTargetInReach)
-        val headerText = Text.literal("Inventory: (${inventoryData.type})")
+        val headerText = Component.literal("Inventory: (${inventoryData.type})")
         val headerX = startX + DetailInfoRenderer.BORDER_WIDTH + PADDING
         graphics2d.drawText(
             headerText.string,
@@ -88,7 +88,7 @@ object InventoryRenderer {
                 .colors.foregroundColor,
             true,
         )
-        drawingY += font.fontHeight + 2
+        drawingY += font.lineHeight + 2
 
         if (inventoryData.items.isEmpty()) return drawingY + PADDING
 
@@ -109,8 +109,8 @@ object InventoryRenderer {
                 if (inputItem.count > 1) {
                     graphics2d.drawText(
                         inputItem.count.toString(),
-                        leftX + SLOT_SIZE - font.getWidth(inputItem.count.toString()) - 2,
-                        inputY + SLOT_SIZE - font.fontHeight,
+                        leftX + SLOT_SIZE - font.width(inputItem.count.toString()) - 2,
+                        inputY + SLOT_SIZE - font.lineHeight,
                         org.infinite.InfiniteClient
                             .theme()
                             .colors.foregroundColor,
@@ -125,8 +125,8 @@ object InventoryRenderer {
                 if (fuelItem.count > 1) {
                     graphics2d.drawText(
                         fuelItem.count.toString(),
-                        leftX + SLOT_SIZE - font.getWidth(fuelItem.count.toString()) - 2,
-                        fuelY + SLOT_SIZE - font.fontHeight,
+                        leftX + SLOT_SIZE - font.width(fuelItem.count.toString()) - 2,
+                        fuelY + SLOT_SIZE - font.lineHeight,
                         org.infinite.InfiniteClient
                             .theme()
                             .colors.foregroundColor,
@@ -142,8 +142,8 @@ object InventoryRenderer {
                 if (outputItem.count > 1) {
                     graphics2d.drawText(
                         outputItem.count.toString(),
-                        outputX + SLOT_SIZE - font.getWidth(outputItem.count.toString()) - 2,
-                        outputY + SLOT_SIZE - font.fontHeight,
+                        outputX + SLOT_SIZE - font.width(outputItem.count.toString()) - 2,
+                        outputY + SLOT_SIZE - font.lineHeight,
                         org.infinite.InfiniteClient
                             .theme()
                             .colors.foregroundColor,
@@ -217,7 +217,7 @@ object InventoryRenderer {
                         .colors.foregroundColor,
                     true,
                 )
-                drawingY += font.fontHeight + 2
+                drawingY += font.lineHeight + 2
 
                 val currentTimeLeft = (cookingTotalTime - cookingTimeSpent) / 20.0
                 graphics2d.drawText(
@@ -229,7 +229,7 @@ object InventoryRenderer {
                         .colors.foregroundColor,
                     true,
                 )
-                drawingY += font.fontHeight + 2
+                drawingY += font.lineHeight + 2
 
                 val inputCount = inputItem.count
                 val additional = if (cookingTimeSpent > 0) inputCount - 1 else inputCount
@@ -243,9 +243,9 @@ object InventoryRenderer {
                         .colors.foregroundColor,
                     true,
                 )
-                drawingY += font.fontHeight + 2
-                val fuelRegistry = client.world!!.fuelRegistry
-                val fuelLeftTick = litTimeRemaining + fuelItem.count * fuelRegistry.getFuelTicks(fuelItem)
+                drawingY += font.lineHeight + 2
+                val fuelRegistry = client.level!!.fuelValues()
+                val fuelLeftTick = litTimeRemaining + fuelItem.count * fuelRegistry.burnDuration(fuelItem)
                 val fuelLeft = fuelLeftTick / 20.0
                 graphics2d.drawText(
                     "Fuel remaining: ${TimeFormatter.formatTime(fuelLeft)}",
@@ -256,7 +256,7 @@ object InventoryRenderer {
                         .colors.foregroundColor,
                     true,
                 )
-                drawingY += font.fontHeight + 2
+                drawingY += font.lineHeight + 2
 
                 return drawingY + PADDING
             }
@@ -270,8 +270,8 @@ object InventoryRenderer {
                 if (ingredientItem.count > 1) {
                     graphics2d.drawText(
                         ingredientItem.count.toString(),
-                        ingredientX + SLOT_SIZE - font.getWidth(ingredientItem.count.toString()) - 2,
-                        itemY + SLOT_SIZE - font.fontHeight,
+                        ingredientX + SLOT_SIZE - font.width(ingredientItem.count.toString()) - 2,
+                        itemY + SLOT_SIZE - font.lineHeight,
                         org.infinite.InfiniteClient
                             .theme()
                             .colors.foregroundColor,
@@ -288,8 +288,8 @@ object InventoryRenderer {
                 if (blazeItem.count > 1) {
                     graphics2d.drawText(
                         blazeItem.count.toString(),
-                        blazeX + SLOT_SIZE - font.getWidth(blazeItem.count.toString()) - 2,
-                        row2Y + SLOT_SIZE - font.fontHeight,
+                        blazeX + SLOT_SIZE - font.width(blazeItem.count.toString()) - 2,
+                        row2Y + SLOT_SIZE - font.lineHeight,
                         org.infinite.InfiniteClient
                             .theme()
                             .colors.foregroundColor,
@@ -307,8 +307,8 @@ object InventoryRenderer {
                     if (potionItem.count > 1) {
                         graphics2d.drawText(
                             potionItem.count.toString(),
-                            potionX + SLOT_SIZE - font.getWidth(potionItem.count.toString()) - 2,
-                            row2Y + SLOT_SIZE - font.fontHeight,
+                            potionX + SLOT_SIZE - font.width(potionItem.count.toString()) - 2,
+                            row2Y + SLOT_SIZE - font.lineHeight,
                             org.infinite.InfiniteClient
                                 .theme()
                                 .colors.foregroundColor,
@@ -383,7 +383,7 @@ object InventoryRenderer {
                         .colors.foregroundColor,
                     true,
                 )
-                drawingY += font.fontHeight + 2
+                drawingY += font.lineHeight + 2
 
                 graphics2d.drawText(
                     "Fuel left: $fuel / 20 brews",
@@ -394,7 +394,7 @@ object InventoryRenderer {
                         .colors.foregroundColor,
                     true,
                 )
-                drawingY += font.fontHeight + 2
+                drawingY += font.lineHeight + 2
 
                 return drawingY + PADDING
             }
@@ -452,8 +452,8 @@ object InventoryRenderer {
                         if (itemCount > 1) {
                             graphics2d.drawText(
                                 itemCount.toString(),
-                                itemX + SLOT_SIZE - font.getWidth(itemCount.toString()) - 2,
-                                itemDrawingY + SLOT_SIZE - font.fontHeight,
+                                itemX + SLOT_SIZE - font.width(itemCount.toString()) - 2,
+                                itemDrawingY + SLOT_SIZE - font.lineHeight,
                                 org.infinite.InfiniteClient
                                     .theme()
                                     .colors.foregroundColor,
@@ -477,8 +477,8 @@ object InventoryRenderer {
         slotSize: Int,
     ) {
         graphics2d.drawItem(itemStack, x, y)
-        if (itemStack.isDamageable && itemStack.damage > 0) {
-            val durability = itemStack.maxDamage - itemStack.damage
+        if (itemStack.isDamageableItem && itemStack.damageValue > 0) {
+            val durability = itemStack.maxDamage - itemStack.damageValue
             val progress = durability.toFloat() / itemStack.maxDamage.toFloat()
             val barColor = ColorUtils.getGradientColor(progress)
             val barHeight = 2

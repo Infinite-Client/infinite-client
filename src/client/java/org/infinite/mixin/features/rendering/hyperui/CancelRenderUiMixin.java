@@ -1,6 +1,6 @@
 package org.infinite.mixin.features.rendering.hyperui;
 
-import net.minecraft.client.gui.hud.InGameHud;
+import net.minecraft.client.gui.Gui;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.ui.HyperUi;
 import org.spongepowered.asm.mixin.Mixin;
@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(InGameHud.class)
+@Mixin(Gui.class)
 public class CancelRenderUiMixin {
   // HyperUiが有効かどうかをチェックするヘルパーメソッド
   @Unique
@@ -22,7 +22,7 @@ public class CancelRenderUiMixin {
    * 体力バー（HP）の描画をキャンセルします。 InGameHud#renderHealthBar(MatrixStack) のようなメソッドにインジェクトします。 * @param ci
    * CallbackInfo for canceling the method execution.
    */
-  @Inject(method = "renderHealthBar", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "renderHearts", at = @At("HEAD"), cancellable = true)
   private void infinite$cancelHealthRender(CallbackInfo ci) {
     if (shouldCancel()) ci.cancel();
   }
@@ -46,7 +46,7 @@ public class CancelRenderUiMixin {
 
   // 乗り物の体力（Vehicle Health）の描画も同様に、該当する描画メソッドにインジェクトします。
   // 例: renderMountHealth (バージョンやLoaderによってメソッド名が異なります)
-  @Inject(method = "renderMountHealth", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "renderVehicleHealth", at = @At("HEAD"), cancellable = true)
   private void infinite$cancelMountHealthRender(CallbackInfo ci) {
     if (shouldCancel()) ci.cancel();
   }
@@ -56,12 +56,12 @@ public class CancelRenderUiMixin {
     if (shouldCancel()) ci.cancel();
   }
 
-  @Inject(method = "renderHotbar", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "renderItemHotbar", at = @At("HEAD"), cancellable = true)
   private void infinite$cancelHotbarRender(CallbackInfo ci) {
     if (shouldCancel()) ci.cancel();
   }
 
-  @Inject(method = "renderHeldItemTooltip", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "renderSelectedItemName", at = @At("HEAD"), cancellable = true)
   private void infinite$cancelHeldItemTooltipRender(CallbackInfo ci) {
     if (shouldCancel()) ci.cancel();
   }

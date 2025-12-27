@@ -1,13 +1,13 @@
 package org.infinite.features.automatic.tunnel
 
-import net.minecraft.item.Item
-import net.minecraft.registry.Registries
-import net.minecraft.util.Hand
-import net.minecraft.util.Identifier
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Box
-import net.minecraft.util.math.MathHelper
-import net.minecraft.util.math.Vec3d
+import net.minecraft.core.BlockPos
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.resources.Identifier
+import net.minecraft.util.Mth
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.item.Item
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
 import org.infinite.features.movement.braek.FastBreak
@@ -38,7 +38,7 @@ class ShieldMachine : ConfigurableFeature() {
         class Idle : State()
 
         class Walking(
-            val pos: Vec3d,
+            val pos: Vec3,
         ) : State()
 
         // 破壊対象を保持。LinkedHashSetで処理順を維持
@@ -60,7 +60,7 @@ class ShieldMachine : ConfigurableFeature() {
 
     // 初期化後に方向と開始位置を固定
     var direction: Direction? = null
-    var startPos: Vec3d? = null
+    var startPos: Vec3? = null
 
     private var fixedTunnelY: Int? = null
 
@@ -71,7 +71,7 @@ class ShieldMachine : ConfigurableFeature() {
     var aiActionCallback: Boolean? = null
 
     var currentBreakingPos: BlockPos? = null
-    private var currentBreakingSide: net.minecraft.util.math.Direction? = null
+    private var currentBreakingSide: net.minecraft.core.Direction? = null
     private var currentBreakingProgress: Float = 0.0f
 
     var walkingCallBack = true
@@ -117,7 +117,7 @@ class ShieldMachine : ConfigurableFeature() {
                 state = State.Idle()
                 return
             }
-        val item: Item = Registries.ITEM.get(Identifier.of(blockId))
+        val item: Item = BuiltInRegistries.ITEM.getValue(Identifier.parse(blockId))
 
         val inventoryIndex = InventoryManager.findFirstInMain(item)
 
@@ -132,19 +132,19 @@ class ShieldMachine : ConfigurableFeature() {
         // ★ BackPackManagerの一時停止/再開をregisterで置き換え
         backPackManager?.register {
             player.inventory.selectedSlot = hotbarSlot
-            val world = client.world ?: return@register // register内のラムダなのでreturn@register
+            val world = client.level ?: return@register // register内のラムダなのでreturn@register
 
             // 既にブロックが設置されているか、置き換え不可能なブロックがあるかチェック
             val targetState = world.getBlockState(targetPos)
-            if (!targetState.isAir && !targetState.isReplaceable) {
+            if (!targetState.isAir && !targetState.canBeReplaced()) {
                 blocksToPlace.remove(targetPos)
                 return@register
             }
 
             // 設置先の隣接ブロック (ここでは床を設置するため、下側を基準とする)
-            val neighbor = targetPos.down()
-            val side = net.minecraft.util.math.Direction.UP
-            val hitVec = Vec3d(targetPos.x + 0.5, targetPos.y + 0.5, targetPos.z + 0.5)
+            val neighbor = targetPos.below()
+            val side = net.minecraft.core.Direction.UP
+            val hitVec = Vec3(targetPos.x + 0.5, targetPos.y + 0.5, targetPos.z + 0.5)
 
             // BlockUtils.placeBlockがパケットを送信
             val placementAttempt = BlockUtils.placeBlock(neighbor, side, hitVec, hotbarSlot)
@@ -153,22 +153,22 @@ class ShieldMachine : ConfigurableFeature() {
                 // 💡 改善点: 設置パケット送信後、次のtickでブロックが実際に設置されたかを確認するロジックが必要だが、
                 // フレームワークの制限上、ここではパケット送信と同時にリストから削除し、手振りを行う（成功したと見なす）
                 blocksToPlace.remove(targetPos)
-                player.swingHand(Hand.MAIN_HAND)
+                player.swing(InteractionHand.MAIN_HAND)
             }
         }
-        val world = client.world ?: return
+        val world = client.level ?: return
 
         // 既にブロックが設置されているか、置き換え不可能なブロックがあるかチェック
         val targetState = world.getBlockState(targetPos)
-        if (!targetState.isAir && !targetState.isReplaceable) {
+        if (!targetState.isAir && !targetState.canBeReplaced()) {
             blocksToPlace.remove(targetPos)
             return
         }
 
         // 設置先の隣接ブロック (ここでは床を設置するため、下側を基準とする)
-        val neighbor = targetPos.down()
-        val side = net.minecraft.util.math.Direction.UP
-        val hitVec = Vec3d(targetPos.x + 0.5, targetPos.y + 0.5, targetPos.z + 0.5)
+        val neighbor = targetPos.below()
+        val side = net.minecraft.core.Direction.UP
+        val hitVec = Vec3(targetPos.x + 0.5, targetPos.y + 0.5, targetPos.z + 0.5)
 
         // BlockUtils.placeBlockがパケットを送信
         val placementAttempt = BlockUtils.placeBlock(neighbor, side, hitVec, hotbarSlot)
@@ -177,18 +177,18 @@ class ShieldMachine : ConfigurableFeature() {
             // 💡 改善点: 設置パケット送信後、次のtickでブロックが実際に設置されたかを確認するロジックが必要だが、
             // フレームワークの制限上、ここではパケット送信と同時にリストから削除し、手振りを行う（成功したと見なす）
             blocksToPlace.remove(targetPos)
-            player.swingHand(Hand.MAIN_HAND)
+            player.swing(InteractionHand.MAIN_HAND)
         }
     }
 
     private fun handleMining(mining: State.Mining) {
-        val interactionManager = client.interactionManager ?: return
+        val interactionManager = client.gameMode ?: return
         val player = player ?: return
         val blocksToMine = mining.pos
 
         if (blocksToMine.isEmpty()) {
             if (currentBreakingPos != null) {
-                interactionManager.cancelBlockBreaking()
+                interactionManager.stopDestroyBlock()
                 currentBreakingPos = null
                 currentBreakingSide = null
                 currentBreakingProgress = 0.0f
@@ -215,9 +215,9 @@ class ShieldMachine : ConfigurableFeature() {
         }
 
         val targetPos = blocksToMine.first()
-        val blockState = client.world?.getBlockState(targetPos)
+        val blockState = client.level?.getBlockState(targetPos)
 
-        if (blockState?.isAir == true || blockState?.isReplaceable == true) {
+        if (blockState?.isAir == true || blockState?.canBeReplaced() == true) {
             blocksToMine.remove(targetPos)
             currentBreakingPos = null
             currentBreakingProgress = 0.0f
@@ -240,9 +240,9 @@ class ShieldMachine : ConfigurableFeature() {
             }
 
         if (currentBreakingPos == null || currentBreakingPos != params.pos) {
-            interactionManager.cancelBlockBreaking()
+            interactionManager.stopDestroyBlock()
             BlockUtils.faceVectorPacket(params.hitVec)
-            interactionManager.updateBlockBreakingProgress(params.pos, params.side)
+            interactionManager.continueDestroyBlock(params.pos, params.side)
 
             currentBreakingPos = params.pos
             currentBreakingSide = params.side
@@ -250,7 +250,7 @@ class ShieldMachine : ConfigurableFeature() {
         } else {
             val pos = currentBreakingPos!!
             val side = currentBreakingSide!!
-            interactionManager.updateBlockBreakingProgress(pos, side)
+            interactionManager.continueDestroyBlock(pos, side)
             val fastBreak = InfiniteClient.getFeature(FastBreak::class.java) ?: return
             if (fastBreak.isEnabled()) {
                 fastBreak.handle(pos)
@@ -263,7 +263,7 @@ class ShieldMachine : ConfigurableFeature() {
             }
         }
 
-        player.swingHand(Hand.MAIN_HAND)
+        player.swing(InteractionHand.MAIN_HAND)
     }
 
     private fun handleWalking(walking: State.Walking) {
@@ -297,12 +297,12 @@ class ShieldMachine : ConfigurableFeature() {
     private fun initialization() {
         val player = player ?: return
         val currentPos = playerPos ?: return
-        val world = client.world ?: return
+        val world = client.level ?: return
         walkingCallBack = true
 
         // 💡 ドリフト防止: fixedTunnelYとdirection, startPosを最初に一度だけ設定
         if (direction == null) {
-            val yaw = MathHelper.wrapDegrees(player.yaw)
+            val yaw = Mth.wrapDegrees(player.yRot)
             direction =
                 when {
                     (yaw >= -135 && yaw < -45) -> Direction.East
@@ -363,10 +363,10 @@ class ShieldMachine : ConfigurableFeature() {
                     }
 
                     // 掘削対象の絶対座標
-                    val targetPos: BlockPos = centerBlockPos.add(xOffset, y, zOffset)
+                    val targetPos: BlockPos = centerBlockPos.offset(xOffset, y, zOffset)
 
                     val state = world.getBlockState(targetPos)
-                    if (!state.isAir && !state.isReplaceable) {
+                    if (!state.isAir && !state.canBeReplaced()) {
                         if (isLiquid(targetPos)) {
                             // 液体ブロック発見 -> 処理して終了
                             handleLiquidEncounter(targetPos)
@@ -432,7 +432,7 @@ class ShieldMachine : ConfigurableFeature() {
 
     // 💡 新規追加: 床の設置が必要な座標リストを取得する関数
     private fun getFloorPlacingPositions(): MutableList<BlockPos> {
-        val world = client.world ?: return mutableListOf()
+        val world = client.level ?: return mutableListOf()
         val currentDirection = direction ?: return mutableListOf()
         val width = tunnelWidth.value
 
@@ -471,11 +471,11 @@ class ShieldMachine : ConfigurableFeature() {
             }
 
             // 設置対象の絶対座標 (床の高さ)
-            val targetPos: BlockPos = centerBlockPos.add(xOffset, 0, zOffset) // Yオフセットは0 (fixedTunnelY)
+            val targetPos: BlockPos = centerBlockPos.offset(xOffset, 0, zOffset) // Yオフセットは0 (fixedTunnelY)
 
             val state = world.getBlockState(targetPos)
             // 空気ブロックまたは置き換え可能なブロック（穴が空いている）であれば設置対象とする
-            if (state.isAir || state.isReplaceable) {
+            if (state.isAir || state.canBeReplaced()) {
                 blocksToPlace.add(targetPos)
             }
         }
@@ -483,10 +483,10 @@ class ShieldMachine : ConfigurableFeature() {
     }
 
     private fun isLiquid(pos: BlockPos): Boolean {
-        val world = client.world ?: return false
+        val world = client.level ?: return false
         val state = world.getBlockState(pos)
         // 水と溶岩（静止/流体）をチェック
-        return state.fluidState.isStill || state.fluidState.isEmpty.not()
+        return state.fluidState.isSource || state.fluidState.isEmpty.not()
     }
 
     // 液体に遭遇した際の処理 (変更なし)
@@ -497,23 +497,23 @@ class ShieldMachine : ConfigurableFeature() {
                 retreatAndDisable()
                 return
             }
-        val item: Item = Registries.ITEM.get(Identifier.of(blockId))
+        val item: Item = BuiltInRegistries.ITEM.getValue(Identifier.parse(blockId))
         val inventoryIndex = InventoryManager.findFirstInMain(item)
 
         if (autoPlaceFloor.value && inventoryIndex is InventoryManager.InventoryIndex.Hotbar) {
             val hotbarSlot = inventoryIndex.index
             player.inventory.selectedSlot = hotbarSlot
 
-            val neighbor = liquidPos.down()
-            val side = net.minecraft.util.math.Direction.UP
-            val hitVec = Vec3d(liquidPos.x + 0.5, liquidPos.y + 0.5, liquidPos.z + 0.5)
+            val neighbor = liquidPos.below()
+            val side = net.minecraft.core.Direction.UP
+            val hitVec = Vec3(liquidPos.x + 0.5, liquidPos.y + 0.5, liquidPos.z + 0.5)
 
-            val world = client.world ?: return
-            world.breakBlock(liquidPos, false)
+            val world = client.level ?: return
+            world.destroyBlock(liquidPos, false)
             val placementSuccess = BlockUtils.placeBlock(neighbor, side, hitVec, hotbarSlot)
 
             if (placementSuccess && !isLiquid(liquidPos)) {
-                player.swingHand(Hand.MAIN_HAND)
+                player.swing(InteractionHand.MAIN_HAND)
                 state = State.Idle()
                 return
             }
@@ -542,15 +542,15 @@ class ShieldMachine : ConfigurableFeature() {
 
         val moveVec =
             when (currentDirection) {
-                Direction.East -> Vec3d(-1.0, 0.0, 0.0)
-                Direction.West -> Vec3d(1.0, 0.0, 0.0)
-                Direction.North -> Vec3d(0.0, 0.0, 1.0)
-                Direction.South -> Vec3d(0.0, 0.0, -1.0)
+                Direction.East -> Vec3(-1.0, 0.0, 0.0)
+                Direction.West -> Vec3(1.0, 0.0, 0.0)
+                Direction.North -> Vec3(0.0, 0.0, 1.0)
+                Direction.South -> Vec3(0.0, 0.0, -1.0)
             }
 
         val retreatPos =
-            currentPos.add(moveVec.x, 0.0, moveVec.z).withAxis(
-                net.minecraft.util.math.Direction.Axis.Y,
+            currentPos.add(moveVec.x, 0.0, moveVec.z).with(
+                net.minecraft.core.Direction.Axis.Y,
                 fixedY.toDouble() + 1.0,
             )
 
@@ -577,7 +577,7 @@ class ShieldMachine : ConfigurableFeature() {
      * プレイヤーが移動すべき1ブロック前方のエリアが空洞であるかチェックする
      */
     private fun isAreaClearForMovement(): Boolean {
-        val world = client.world ?: return false
+        val world = client.level ?: return false
         val currentDirection = direction ?: return false
 
         val width = tunnelWidth.value
@@ -623,11 +623,11 @@ class ShieldMachine : ConfigurableFeature() {
                 }
 
                 // 💡 修正: initialBlockPos を基準にオフセットを加算
-                val targetPos: BlockPos = initialBlockPos.add(xOffset, y, zOffset)
+                val targetPos: BlockPos = initialBlockPos.offset(xOffset, y, zOffset)
 
                 val state = world.getBlockState(targetPos)
                 // 液体ブロックも含め、空気か置き換え可能なブロック以外はクリアでない
-                if (!state.isAir && !state.isReplaceable && !isLiquid(targetPos)) {
+                if (!state.isAir && !state.canBeReplaced() && !isLiquid(targetPos)) {
                     return false
                 }
             }
@@ -658,17 +658,17 @@ class ShieldMachine : ConfigurableFeature() {
         // 進行方向への移動ベクトル（1ブロック分）
         val moveVec =
             when (currentDirection) {
-                Direction.East -> Vec3d(1.0, 0.0, 0.0)
-                Direction.West -> Vec3d(-1.0, 0.0, 0.0)
-                Direction.North -> Vec3d(0.0, 0.0, -1.0)
-                Direction.South -> Vec3d(0.0, 0.0, 1.0)
+                Direction.East -> Vec3(1.0, 0.0, 0.0)
+                Direction.West -> Vec3(-1.0, 0.0, 0.0)
+                Direction.North -> Vec3(0.0, 0.0, -1.0)
+                Direction.South -> Vec3(0.0, 0.0, 1.0)
             }
 
         // 💡 修正点: startPosから (movedBlocksCount) ブロック進んだ位置を目標座標とする
         val targetPos =
             initialPos
                 .add(moveVec.x * movedBlocksCount.toDouble(), 0.0, moveVec.z * movedBlocksCount.toDouble())
-                .withAxis(net.minecraft.util.math.Direction.Axis.Y, fixedY.toDouble() + 1.0) // Y座標を床+1.0で固定
+                .with(net.minecraft.core.Direction.Axis.Y, fixedY.toDouble() + 1.0) // Y座標を床+1.0で固定
 
         state = State.Walking(targetPos)
     }
@@ -682,7 +682,7 @@ class ShieldMachine : ConfigurableFeature() {
         miningState?.let {
             val boxes =
                 it.pos.map { pos ->
-                    val box = Box(pos)
+                    val box = AABB(pos)
                     RenderUtils.ColorBox(color.transparent(150), box)
                 }
             graphics3D.renderLinedColorBoxes(boxes, true)
@@ -692,7 +692,7 @@ class ShieldMachine : ConfigurableFeature() {
             val placingColor = color.transparent(150)
             val boxes =
                 it.pos.map { pos ->
-                    val box = Box(pos)
+                    val box = AABB(pos)
                     RenderUtils.ColorBox(placingColor, box)
                 }
             graphics3D.renderLinedColorBoxes(boxes, true)
@@ -708,7 +708,7 @@ class ShieldMachine : ConfigurableFeature() {
             val maxY = pos.y + 1.0 - offset
             val maxZ = pos.z + 1.0 - offset
 
-            val dynamicBox = Box(minX, minY, minZ, maxX, maxY, maxZ).contract(0.005)
+            val dynamicBox = AABB(minX, minY, minZ, maxX, maxY, maxZ).deflate(0.005)
             val boxes = listOf(RenderUtils.ColorBox(color.transparent(200), dynamicBox))
             graphics3D.renderSolidColorBoxes(boxes, true)
         }

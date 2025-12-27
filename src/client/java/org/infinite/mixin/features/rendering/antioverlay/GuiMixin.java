@@ -1,9 +1,9 @@
 package org.infinite.mixin.features.rendering.antioverlay;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.InGameHud;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import org.infinite.InfiniteClient;
 import org.infinite.features.rendering.overlay.AntiOverlay;
 import org.spongepowered.asm.mixin.Mixin;
@@ -11,16 +11,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(InGameHud.class)
-public class InGameHudMixin {
+@Mixin(Gui.class)
+public class GuiMixin {
 
   @Inject(
       at = @At("HEAD"),
       method =
-          "renderOverlay(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/util/Identifier;F)V",
+          "renderTextureOverlay(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/resources/Identifier;F)V",
       cancellable = true)
   private void onRenderOverlay(
-      DrawContext context, Identifier texture, float opacity, CallbackInfo ci) {
+      GuiGraphics context, Identifier texture, float opacity, CallbackInfo ci) {
     if (texture == null) {
       return;
     }
@@ -43,8 +43,8 @@ public class InGameHudMixin {
     }
   }
 
-  @Inject(at = @At("HEAD"), method = "renderVignetteOverlay", cancellable = true)
-  private void onRenderVignetteOverlay(DrawContext context, Entity entity, CallbackInfo ci) {
+  @Inject(at = @At("HEAD"), method = "renderVignette", cancellable = true)
+  private void onRenderVignetteOverlay(GuiGraphics context, Entity entity, CallbackInfo ci) {
 
     // ビネット（暗さ）オーバーレイのキャンセル
     // 「NoDarknessOverlay」設定を流用し、ビネットも制御すると仮定します。

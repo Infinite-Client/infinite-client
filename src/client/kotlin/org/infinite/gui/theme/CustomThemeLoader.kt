@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.util.Identifier
+import net.minecraft.resources.Identifier
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.file.Files
@@ -85,7 +85,7 @@ object CustomThemeLoader {
                 }
             val icon =
                 cfg.icon?.let {
-                    runCatching { ThemeIcon(Identifier.of(it)) }.getOrNull()
+                    runCatching { ThemeIcon(Identifier.parse(it)) }.getOrNull()
                 }
             Theme(cfg.name, colors, icon)
         }.onFailure { ex ->

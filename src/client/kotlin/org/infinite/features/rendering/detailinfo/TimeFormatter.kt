@@ -1,7 +1,7 @@
 package org.infinite.features.rendering.detailinfo
 
-import net.minecraft.client.MinecraftClient
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
 
 object TimeFormatter {
     fun formatTime(seconds: Double): String =
@@ -19,24 +19,24 @@ object TimeFormatter {
 
     fun getBreakingTimeText(
         progress: Float,
-        client: MinecraftClient,
-    ): Text {
-        val player = client.player ?: return Text.empty()
-        val world = client.world ?: return Text.empty()
-        val interactionManager = client.interactionManager ?: return Text.empty()
+        client: Minecraft,
+    ): Component {
+        val player = client.player ?: return Component.empty()
+        val world = client.level ?: return Component.empty()
+        val interactionManager = client.gameMode ?: return Component.empty()
 
-        val blockPos = interactionManager.currentBreakingPos
-        val blockState = client.world?.getBlockState(blockPos)
-        val destroySpeed = blockState?.calcBlockBreakingDelta(player, world, blockPos) ?: 0.0f
+        val blockPos = interactionManager.destroyBlockPos
+        val blockState = client.level?.getBlockState(blockPos)
+        val destroySpeed = blockState?.getDestroyProgress(player, world, blockPos) ?: 0.0f
 
-        if (destroySpeed <= 0.0001f) return Text.literal("Indestructible")
+        if (destroySpeed <= 0.0001f) return Component.literal("Indestructible")
 
         val totalTicks = 1.0f / destroySpeed
         val remainingTicks = (1.0f - progress) * totalTicks
         val totalSeconds = totalTicks / 20.0
         val remainingSeconds = remainingTicks / 20.0
 
-        return Text.literal(
+        return Component.literal(
             "Time: ${
                 formatTime(remainingSeconds)
             } / ${
