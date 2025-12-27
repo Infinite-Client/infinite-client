@@ -55,6 +55,8 @@ abstract class Category<K : KClass<out Feature>, V : Feature> {
         }
     }
 
+    fun translation(): String = translationKey
+
     /**
      * このカテゴリに属するすべての Feature の翻訳キーをリストで取得します。
      */

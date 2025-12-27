@@ -39,3 +39,8 @@ fun hsla(hue: Float, s: Float, l: Float, alpha: Float): Int {
     // 4. ビット演算で一つのIntに結合 (ARGB)
     return (a shl 24) or (r shl 16) or (g shl 8) or b
 }
+
+fun Int.red(value: Int): Int = (this and 0xFF00FFFF.toInt()) or (value shl 16)
+fun Int.green(value: Int): Int = (this and 0xFFFF00FF.toInt()) or (value shl 8)
+fun Int.blue(value: Int): Int = (this and 0xFFFFFF00.toInt()) or value
+fun Int.alpha(value: Int): Int = (this and 0x00FFFFFF) or (value shl 24)

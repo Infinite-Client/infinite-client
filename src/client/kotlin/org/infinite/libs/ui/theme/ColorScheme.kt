@@ -1,6 +1,42 @@
 package org.infinite.libs.ui.theme
 
 open class ColorScheme {
+    enum class SchemeType {
+        Dark, Light
+    }
+
+    open val backgroundColor: Int
+        get() = when (schemeType) {
+            SchemeType.Dark -> color(0f, 0f, 0.1f, 1f)
+            SchemeType.Light -> color(0f, 0f, 1f, 1f)
+        }
+    open val foregroundColor: Int
+        get() = when (schemeType) {
+            SchemeType.Light -> color(0f, 0f, 0.1f, 1f)
+            SchemeType.Dark -> color(0f, 0f, 1f, 1f)
+        }
+    open val surfaceColor: Int
+        get() = when (schemeType) {
+            SchemeType.Dark -> color(0f, 0f, 0.15f, 1f) // 少し明るい黒
+            SchemeType.Light -> color(0f, 0f, 0.95f, 1f) // 少し暗い白
+        }
+
+    // 選択状態を示すアクセントカラー（例: 青ベース）
+    open val accentColor: Int
+        get() = blueColor // または color(210f, 0.8f, 0.6f, 1f)
+
+    // 非活性（Disabled）なテキスト
+    open val secondaryTextColor: Int
+        get() = color(0f, 0f, 0.5f, 1f) // 中間グレー
+
+    // --- 追加: 状態変化用ヘルパー ---
+
+    /** 指定した色をマウスホバー用に少し明るく/強調する */
+    fun getHoverColor(baseColor: Int): Int {
+        return interpolate(baseColor, whiteColor, 0.2f)
+    }
+
+    open val schemeType = SchemeType.Dark
     open val redColor: Int = 0xFFFF0000.toInt()
     open val yellowColor: Int = 0xFFFFFF00.toInt()
     open val greenColor: Int = 0xFF00FF00.toInt()
