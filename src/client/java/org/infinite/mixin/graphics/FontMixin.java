@@ -22,68 +22,77 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Font.class)
 public abstract class FontMixin implements StringSplitter.WidthProvider {
 
-  @Shadow
-  protected abstract GlyphSource getGlyphSource(FontDescription fontDescription);
+    @Shadow
+    protected abstract GlyphSource getGlyphSource(FontDescription fontDescription);
 
-  // 自身(WidthProvider)を渡して、独自幅計算用のSplitterを保持
-  @Unique private final StringSplitter modernStringSplitter = new StringSplitter(this);
+    // 自身(WidthProvider)を渡して、独自幅計算用のSplitterを保持
+    @Unique
+    private final StringSplitter modernStringSplitter = new StringSplitter(this);
 
-  /** String (プレーンテキスト) の幅計算をフック */
-  @Inject(method = "width(Ljava/lang/String;)I", at = @At("HEAD"), cancellable = true)
-  public void onStringWidth(String string, CallbackInfoReturnable<Integer> cir) {
-    if (isUltimateFontEnabled()) {
-      // StringSplitterのstringWidthはfloatを返すため、intにキャスト
-      cir.setReturnValue((int) Math.ceil(this.modernStringSplitter.stringWidth(string)));
+    /**
+     * String (プレーンテキスト) の幅計算をフック
+     */
+    @Inject(method = "width(Ljava/lang/String;)I", at = @At("HEAD"), cancellable = true)
+    public void onStringWidth(String string, CallbackInfoReturnable<Integer> cir) {
+        if (isUltimateFontEnabled()) {
+            // StringSplitterのstringWidthはfloatを返すため、intにキャスト
+            cir.setReturnValue((int) Math.ceil(this.modernStringSplitter.stringWidth(string)));
+        }
     }
-  }
 
-  /** FormattedText (Component等のベース) の幅計算をフック */
-  @Inject(
-      method = "width(Lnet/minecraft/network/chat/FormattedText;)I",
-      at = @At("HEAD"),
-      cancellable = true)
-  public void onFormattedTextWidth(
-      FormattedText formattedText, CallbackInfoReturnable<Integer> cir) {
-    if (isUltimateFontEnabled()) {
-      cir.setReturnValue((int) Math.ceil(this.modernStringSplitter.stringWidth(formattedText)));
+    /**
+     * FormattedText (Component等のベース) の幅計算をフック
+     */
+    @Inject(
+            method = "width(Lnet/minecraft/network/chat/FormattedText;)I",
+            at = @At("HEAD"),
+            cancellable = true)
+    public void onFormattedTextWidth(
+            FormattedText formattedText, CallbackInfoReturnable<Integer> cir) {
+        if (isUltimateFontEnabled()) {
+            cir.setReturnValue((int) Math.ceil(this.modernStringSplitter.stringWidth(formattedText)));
+        }
     }
-  }
 
-  /** FormattedCharSequence (描画直前の整形済みテキスト) の幅計算をフック */
-  @Inject(
-      method = "width(Lnet/minecraft/util/FormattedCharSequence;)I",
-      at = @At("HEAD"),
-      cancellable = true)
-  public void onCharSequenceWidth(
-      FormattedCharSequence sequence, CallbackInfoReturnable<Integer> cir) {
-    if (isUltimateFontEnabled()) {
-      cir.setReturnValue((int) Math.ceil(this.modernStringSplitter.stringWidth(sequence)));
+    /**
+     * FormattedCharSequence (描画直前の整形済みテキスト) の幅計算をフック
+     */
+    @Inject(
+            method = "width(Lnet/minecraft/util/FormattedCharSequence;)I",
+            at = @At("HEAD"),
+            cancellable = true)
+    public void onCharSequenceWidth(
+            FormattedCharSequence sequence, CallbackInfoReturnable<Integer> cir) {
+        if (isUltimateFontEnabled()) {
+            cir.setReturnValue((int) Math.ceil(this.modernStringSplitter.stringWidth(sequence)));
+        }
     }
-  }
 
-  /** StringSplitter.WidthProvider の実装 ここで返される値が StringSplitter の計算の基礎になります */
-  @Override
-  public float getWidth(int codePoint, @NonNull Style style) {
-    MinecraftAccessor client = (MinecraftAccessor) Minecraft.getInstance();
-    IModernFontManager fontManager = (IModernFontManager) client.getFontManager();
-    try (FontSet fontSet = fontManager.ultimate$fontSetFromStyle(style)) {
-      if (fontSet != null) {
-        return fontSet.source(false).getGlyph(codePoint).info().getAdvance(false);
-      } else {
-        return this.getGlyphSource(style.getFont())
-            .getGlyph(codePoint)
-            .info()
-            .getAdvance(style.isBold());
-      }
+    /**
+     * StringSplitter.WidthProvider の実装 ここで返される値が StringSplitter の計算の基礎になります
+     */
+    @Override
+    public float getWidth(int codePoint, @NonNull Style style) {
+        MinecraftAccessor client = (MinecraftAccessor) Minecraft.getInstance();
+        IModernFontManager fontManager = (IModernFontManager) client.getFontManager();
+        @SuppressWarnings("resource")
+        FontSet fontSet = fontManager.ultimate$fontSetFromStyle(style);
+        if (fontSet != null) {
+            return fontSet.source(false).getGlyph(codePoint).info().getAdvance(false);
+        } else {
+            return this.getGlyphSource(style.getFont())
+                    .getGlyph(codePoint)
+                    .info()
+                    .getAdvance(style.isBold());
+        }
     }
-  }
 
-  @Unique
-  private boolean isUltimateFontEnabled() {
-    return UltimateClient.INSTANCE
-        .getGlobalFeatures()
-        .getRendering()
-        .getUltimateFontFeature()
-        .isEnabled();
-  }
+    @Unique
+    private boolean isUltimateFontEnabled() {
+        return UltimateClient.INSTANCE
+                .getGlobalFeatures()
+                .getRendering()
+                .getUltimateFontFeature()
+                .isEnabled();
+    }
 }

@@ -34,7 +34,7 @@ public abstract class FontManagerMixin implements IModernFontManager {
     Identifier targetId = Identifier.fromNamespaceAndPath("minecraft", id);
     FontSet set = this.fontSets.get(targetId);
     if (set == null) {
-      return this.fontSets.get(Identifier.fromNamespaceAndPath("minecraft", "uniform"));
+      return this.fontSets.get(Identifier.fromNamespaceAndPath("minecraft", "default"));
     }
     return set;
   }
@@ -44,7 +44,7 @@ public abstract class FontManagerMixin implements IModernFontManager {
     Identifier targetId = Identifier.fromNamespaceAndPath("minecraft", name);
     FontSet set = this.fontSets.get(targetId);
     if (set == null) {
-      return this.fontSets.get(Identifier.fromNamespaceAndPath("minecraft", "uniform"));
+      return this.fontSets.get(Identifier.fromNamespaceAndPath("minecraft", "default"));
     }
     return set;
   }
