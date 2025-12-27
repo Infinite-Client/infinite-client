@@ -74,15 +74,22 @@ class UISection(
         alpha: Int,
         renderContent: Boolean,
     ) {
-        // Draw the icon in the center of the panel
+        val backgroundColor =
+            InfiniteClient
+                .theme()
+                .colors.backgroundColor
+                .transparent(alpha)
+        context.drawBorder(x, y, width, height, borderColor)
+        context.fill(x, y, x + width, y + height, backgroundColor)
+
+        // Draw the icon in the center of the panel after the background so it stays visible
         val icon = InfiniteClient.theme().icon
         if (icon != null) {
             val iconWidth = if (icon.width > icon.height) 256 else 256 * icon.width / icon.height
             val iconHeight = if (icon.width < icon.height) 256 else 256 * icon.height / icon.width
             val iconX = x + (width - iconWidth) / 2
             val iconY = y + (height - iconHeight) / 2
-            val iconColor =
-                borderColor.transparent(128)
+            val iconColor = borderColor.transparent(128)
             context.drawTexture(
                 RenderPipelines.GUI_TEXTURED,
                 icon.identifier,
@@ -99,13 +106,6 @@ class UISection(
                 iconColor,
             )
         }
-        val backgroundColor =
-            InfiniteClient
-                .theme()
-                .colors.backgroundColor
-                .transparent(alpha)
-        context.drawBorder(x, y, width, height, borderColor)
-        context.fill(x, y, x + width, y + height, backgroundColor)
 
         val titleText =
             when (id) {
