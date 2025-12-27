@@ -66,7 +66,6 @@ class LocalCategoryWidget(
     // 標準的な onClick オーバーライド
     override fun onClick(mouseButtonEvent: MouseButtonEvent, bl: Boolean) {
         println("Selected category: ${localCategory.translation()}")
-        // 必要に応じて親スクリーンの pageIndex を更新
         parent.pageIndex = thisIndex
     }
 }
