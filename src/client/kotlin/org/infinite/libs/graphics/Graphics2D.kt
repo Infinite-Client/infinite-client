@@ -16,7 +16,7 @@ import java.util.*
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
  * zIndex を排除し、呼び出し順（画家のアルゴリズム）に従って描画コマンドを保持します。
  */
-class Graphics2D(
+open class Graphics2D(
     deltaTracker: DeltaTracker,
 ) : MinecraftInterface() {
     val gameDelta: Float = deltaTracker.gameTimeDeltaTicks
@@ -28,8 +28,6 @@ class Graphics2D(
     var textStyle: TextStyle = TextStyle()
     var enablePathGradient: Boolean = false // New property for gradient control
 
-    // zIndexによるソートが不要なため、単純なFIFOキューに変更
-    // 100は初期容量ではなく、最大容量の指定になるため、必要に応じて調整してください
     private val commandQueue = LinkedList<RenderCommand>()
 
     // Path2Dのインスタンスを追加
@@ -195,35 +193,11 @@ class Graphics2D(
         path2D.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y, style)
     }
 
-    // --- 変換API ---
-
-    /**
-     * 現在の変換行列に変換を適用します。
-     */
-    fun transform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
-        transformations.transform(m00, m10, m01, m11, m02, m12)
-    }
-
-    /**
-     * 現在の変換行列に移動変換を適用します。
-     */
-    fun translate(x: Float, y: Float) {
-        transformations.translate(x, y)
-    }
-
     /**
      * 現在の変換状態をスタックに保存します。
      */
     fun save() {
         transformations.save()
-    }
-
-    /**
-     * スタックから変換状態を復元します。
-     * スタックが空の場合は何もしません。
-     */
-    fun restore() {
-        transformations.restore()
     }
 
     fun text(text: String, x: Float, y: Float) {
@@ -238,6 +212,34 @@ class Graphics2D(
         val size = textStyle.size
         val font = textStyle.font
         commandQueue.add(RenderCommand.TextCentered(font, text, x, y, fillStyle, shadow, size))
+    }
+    private fun pushTransformCommand() {
+        commandQueue.add(RenderCommand.SetTransform(Matrix3x2f(transformMatrix)))
+    }
+
+    // 変換メソッドをオーバーライド/修正
+    fun translate(x: Float, y: Float) {
+        transformations.translate(x, y)
+        pushTransformCommand()
+    }
+
+    fun transform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
+        transformations.transform(m00, m10, m01, m11, m02, m12)
+        pushTransformCommand()
+    }
+
+    fun restore() {
+        transformations.restore()
+        pushTransformCommand() // 復元後も行列状態を同期
+    }
+
+    // --- クリッピング (GuiGraphics.enableScissor 準拠) ---
+    fun enableScissor(x: Int, y: Int, width: Int, height: Int) {
+        commandQueue.add(RenderCommand.EnableScissor(x, y, width, height))
+    }
+
+    fun disableScissor() {
+        commandQueue.add(RenderCommand.DisableScissor)
     }
 
     /**

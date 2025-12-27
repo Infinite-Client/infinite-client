@@ -3,20 +3,40 @@ package org.infinite
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
+import net.minecraft.client.KeyMapping
 import org.infinite.libs.config.ConfigManager
+import org.infinite.libs.core.features.feature.LocalFeature
+import org.infinite.libs.core.tick.SystemTicks
 import org.infinite.libs.core.tick.WorldTicks
+import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
 import org.infinite.libs.translation.TranslationChecker
+import org.infinite.libs.ui.screen.GameScreen
 import org.infinite.libs.ui.theme.Theme
 import org.infinite.libs.ui.theme.ThemeManager
 import org.infinite.ultimate.UltimateGlobalFeatures
 import org.infinite.ultimate.UltimateLocalFeatures
 import org.infinite.ultimate.theme.DefaultTheme
+import org.lwjgl.glfw.GLFW
 
-object UltimateClient : ClientModInitializer {
+object UltimateClient : MinecraftInterface(), ClientModInitializer {
     val globalFeatures = UltimateGlobalFeatures()
     val localFeatures = UltimateLocalFeatures()
+    val gameScreenBindingPair = LocalFeature.BindingPair(
+        KeyBindingHelper.registerKeyBinding(
+            KeyMapping(
+                "key.ultimate.game_options",
+                GLFW.GLFW_KEY_RIGHT_SHIFT,
+                KeyMapping.Category.GAMEPLAY,
+            ),
+        ),
+    ) {
+        client.execute {
+            client.setScreen(GameScreen())
+        }
+    }
     val worldTicks = WorldTicks(localFeatures)
     val themeManager: ThemeManager = ThemeManager(DefaultTheme())
     val theme: Theme
@@ -56,7 +76,7 @@ object UltimateClient : ClientModInitializer {
         }
 
         worldTicks.register()
-
+        SystemTicks.register()
         // --- Shutdown (マイクラ終了時) ---
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ ->
             // 4. すべての設定を最終保存

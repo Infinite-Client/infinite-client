@@ -1,5 +1,7 @@
 package org.infinite.libs.graphics.graphics2d.structs
 
+import org.joml.Matrix3x2f
+
 sealed interface RenderCommand {
     // 矩形の塗りつぶし
     data class FillRect(
@@ -60,4 +62,7 @@ sealed interface RenderCommand {
         val shadow: Boolean,
         val size: Float,
     ) : RenderCommand
+    data class SetTransform(val matrix: Matrix3x2f) : RenderCommand
+    data class EnableScissor(val x: Int, val y: Int, val width: Int, val height: Int) : RenderCommand
+    object DisableScissor : RenderCommand
 }

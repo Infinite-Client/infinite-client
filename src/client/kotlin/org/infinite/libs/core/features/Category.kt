@@ -42,9 +42,7 @@ abstract class Category<K : KClass<out Feature>, V : Feature> {
      * @param name null の場合はこのカテゴリ自身のキー、
      * Feature のクラス名（SimpleName）などが指定された場合はその Feature のキーを返します。
      */
-    fun translation(name: String? = null): String? {
-        if (name == null) return translationKey
-
+    fun translation(name: String): String? {
         // name が指定された場合、その名前を持つ Feature がこのカテゴリ内に存在するか確認
         // Feature の simpleName は通常 PascalCase なので、比較のために変換ロジックを考慮
         val featureExists = features.values.any {
@@ -61,7 +59,7 @@ abstract class Category<K : KClass<out Feature>, V : Feature> {
      * このカテゴリに属するすべての Feature の翻訳キーをリストで取得します。
      */
     val translations: List<String>
-        get() = listOf(translationKey) + features.values.map { it.translation()!! }
+        get() = listOf(translationKey) + features.values.map { it.translation() }
 
     private val translationKey: String by lazy {
         val modId = "ultimate"

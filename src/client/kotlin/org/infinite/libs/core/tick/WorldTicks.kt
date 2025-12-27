@@ -8,7 +8,6 @@ class WorldTicks(
     private val localFeatureCategories: LocalFeatureCategories,
 ) : TickInterface {
     override fun onStartTick() {
-        localFeatureCategories.keyBindingActions()
         localFeatureCategories.onStartTick()
     }
 

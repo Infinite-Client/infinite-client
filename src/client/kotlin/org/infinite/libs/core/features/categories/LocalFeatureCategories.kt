@@ -2,6 +2,7 @@ package org.infinite.libs.core.features.categories
 
 import kotlinx.coroutines.*
 import net.minecraft.client.DeltaTracker
+import org.infinite.UltimateClient
 import org.infinite.libs.core.features.FeatureCategories
 import org.infinite.libs.core.features.categories.category.LocalCategory
 import org.infinite.libs.core.features.feature.LocalFeature
@@ -97,6 +98,9 @@ abstract class LocalFeatureCategories : FeatureCategories<
         categories.values.forEach {
             result.addAll(it.registerAllActions())
         }
+        result.add(
+            UltimateClient.gameScreenBindingPair,
+        )
         result.forEach { TranslationChecker.add(it.mapping.name) }
         keybindingPairs = result.toList()
     }

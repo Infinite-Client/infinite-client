@@ -1,3 +1,3 @@
 package org.infinite.libs.graphics
 
-class Graphics3D
+open class Graphics3D
