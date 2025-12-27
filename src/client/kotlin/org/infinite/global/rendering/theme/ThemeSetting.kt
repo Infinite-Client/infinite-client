@@ -3,8 +3,8 @@ package org.infinite.global.rendering.theme
 import net.minecraft.client.gui.components.AbstractWidget
 import org.infinite.InfiniteClient
 import org.infinite.global.ConfigurableGlobalFeature
-import org.infinite.gui.widget.ThemeTileButton
-import org.infinite.gui.widget.ThemeTileContainer
+import org.infinite.libs.gui.widget.ThemeTileButton
+import org.infinite.libs.gui.widget.ThemeTileContainer
 import org.infinite.settings.FeatureSetting
 
 class ThemeSetting : ConfigurableGlobalFeature() {

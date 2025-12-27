@@ -1,0 +1,210 @@
+package org.infinite.libs.gui.widget
+
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.narration.NarratedElementType
+import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.world.level.block.Blocks
+import org.infinite.InfiniteClient
+import org.infinite.libs.graphics.Graphics2D
+import org.infinite.utils.rendering.drawBorder
+
+class BlockColorListItemWidget(
+    x: Int,
+    y: Int,
+    width: Int,
+    height: Int, // This height is for the individual item
+    private val blockId: String,
+    private val color: Int, // ARGB color
+    private val onRemove: (String) -> Unit,
+) : AbstractWidget(x, y, width, height, Component.literal(blockId)) {
+    private val textRenderer = Minecraft.getInstance().font
+    private val padding = 8
+    private val iconSize = 16
+    private val iconPadding = 2
+    private val iconTotalWidth = iconSize + iconPadding
+    private val removeButtonWidth = 20
+    private val removeButtonHeight = height
+    private val colorBoxSize = 16
+
+    // 削除ボタンのクリック可能領域を計算
+    private val removeButtonX: Int
+        get() = this.x + this.width - padding - removeButtonWidth
+    private val removeButtonY: Int
+        get() = this.y
+
+    /**
+     * ブロックID文字列から対応するItemStackを取得します。
+     * IDが無効な場合は代替となるItemStack（例：バリアブロック）を返します。
+     */
+    private fun getItemStackFromId(id: String): ItemStack =
+        try {
+            val identifier = Identifier.parse(id)
+            val block = BuiltInRegistries.BLOCK.getValue(identifier)
+            if (block != Blocks.AIR) {
+                block.asItem().defaultInstance
+            } else {
+                Items.BARRIER.defaultInstance
+            }
+        } catch (_: Exception) {
+            Items.BARRIER.defaultInstance
+        }
+
+    override fun renderWidget(
+        context: GuiGraphics,
+        mouseX: Int,
+        mouseY: Int,
+        delta: Float,
+    ) {
+        val graphics2D = Graphics2D(context, Minecraft.getInstance().deltaTracker)
+
+        // 1. アイテム全体の背景 (ホバー時のみ)
+        if (this.isHovered) {
+            context.fill(
+                this.x,
+                this.y,
+                this.x + this.width,
+                this.y + this.height,
+                InfiniteClient
+                    .currentColors()
+                    .primaryColor,
+            )
+        }
+
+        val itemX = x + padding
+        val iconX = itemX + 2
+        val iconY = y + (this.height - iconSize) / 2
+
+        // 2. アイコンの描画
+        val itemStack = getItemStackFromId(blockId)
+        context.renderItem(itemStack, iconX, iconY)
+        // 3. テキストの描画
+        val textX = iconX + iconTotalWidth
+        val textY = y + this.height / 2 - 4
+        graphics2D.drawText(
+            Component.literal(blockId),
+            textX,
+            textY,
+            InfiniteClient
+                .currentColors()
+                .foregroundColor,
+            true, // shadow = true
+        )
+
+        // 4. カラーボックスの描画
+        val colorBoxX = textX + textRenderer.width(blockId) + padding
+        val colorBoxY = y + (this.height - colorBoxSize) / 2
+        context.fill(
+            colorBoxX,
+            colorBoxY,
+            colorBoxX + colorBoxSize,
+            colorBoxY + colorBoxSize,
+            color,
+        )
+        context.drawBorder(
+            colorBoxX,
+            colorBoxY,
+            colorBoxSize,
+            colorBoxSize,
+            InfiniteClient
+                .currentColors()
+                .backgroundColor,
+        )
+
+        // 5. 削除ボタンの描画
+        val isRemoveButtonHovered = isMouseOverRemoveButton(mouseX.toDouble(), mouseY.toDouble())
+
+        val baseColor =
+            InfiniteClient
+                .currentColors()
+                .errorColor
+        val hoverColor =
+            InfiniteClient
+                .currentColors()
+                .errorColor
+        val removeColor = if (isRemoveButtonHovered) hoverColor else baseColor
+
+        context.fill(
+            removeButtonX,
+            removeButtonY,
+            removeButtonX + removeButtonWidth,
+            removeButtonY + removeButtonHeight,
+            removeColor,
+        )
+        context.drawBorder(
+            removeButtonX,
+            removeButtonY,
+            removeButtonWidth,
+            removeButtonHeight,
+            InfiniteClient
+                .currentColors()
+                .backgroundColor,
+        )
+
+        // 削除テキスト 'x' の描画
+        graphics2D.drawText(
+            "x",
+            removeButtonX + removeButtonWidth / 2 - 3,
+            removeButtonY + this.height / 2 - 4,
+            InfiniteClient
+                .currentColors()
+                .foregroundColor,
+            false, // shadow = false
+        )
+    }
+
+    /**
+     * マウスが削除ボタンの上にいるかチェックするヘルパーメソッド
+     * 注意: isMouseOver は ClickableWidget に定義されているため、このメソッドは個別のボタン判定に専念する。
+     */
+    private fun isMouseOverRemoveButton(
+        mouseX: Double,
+        mouseY: Double,
+    ): Boolean =
+        mouseX >= removeButtonX &&
+            mouseX < removeButtonX + removeButtonWidth &&
+            mouseY >= removeButtonY &&
+            mouseY < removeButtonY + removeButtonHeight
+
+    /**
+     * ★ 修正済み: Click オブジェクトを受け取る形式に再修正
+     */
+    override fun mouseClicked(
+        click: MouseButtonEvent,
+        doubled: Boolean,
+    ): Boolean {
+        // ClickableWidget の mouseClicked は、既に this.isMouseOver(click.x(), click.y()) をチェックしている。
+        // ここでは、クリックが削除ボタンの領域内であったかどうかを確認する。
+        if (this.isValidClickButton(click.buttonInfo()) && isMouseOverRemoveButton(click.x(), click.y())) {
+            // 削除ボタンをクリックした場合、アクションを実行
+            onRemove(blockId)
+            // 親クラスの onClick(click, doubled) は呼び出さない (クリック音を防ぐため)
+            // 代わりに ClickableWidget のチェックをスキップするため false を返す
+            return true
+        }
+
+        // 削除ボタン以外をクリックした場合は、親クラスの ClickableWidget.mouseClicked に処理を委譲。
+        // これにより、クリック音が鳴り、ウィジェットがフォーカスを得るなどの標準動作が行われる。
+        return super.mouseClicked(click, doubled)
+    }
+
+    override fun mouseReleased(click: MouseButtonEvent): Boolean = super.mouseReleased(click)
+
+    override fun mouseDragged(
+        click: MouseButtonEvent,
+        offsetX: Double,
+        offsetY: Double,
+    ): Boolean = super.mouseDragged(click, offsetX, offsetY)
+
+    override fun updateWidgetNarration(builder: NarrationElementOutput) {
+        builder.add(NarratedElementType.TITLE, Component.literal("Block Color List Item: $blockId"))
+        builder.add(NarratedElementType.HINT, Component.literal("Press Enter to remove this block."))
+    }
+}

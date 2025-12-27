@@ -2,11 +2,11 @@ package org.infinite.infinite.features.rendering.ui
 
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.HumanoidArm
-import org.infinite.gui.theme.ThemeColors
 import org.infinite.infinite.features.rendering.sensory.esp.ItemEsp
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.libs.graphics.Graphics2D
+import org.infinite.libs.gui.theme.ThemeColors
 import org.infinite.utils.item.enchantLevel
 import kotlin.math.roundToInt
 

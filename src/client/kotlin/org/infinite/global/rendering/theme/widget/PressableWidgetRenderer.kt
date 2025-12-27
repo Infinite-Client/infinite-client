@@ -9,8 +9,8 @@ import net.minecraft.client.gui.components.LockIconButton
 import net.minecraft.client.gui.components.SpriteIconButton
 import net.minecraft.client.gui.screens.inventory.PageButton
 import org.infinite.InfiniteClient
-import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.graphics.Graphics2D
+import org.infinite.libs.gui.theme.ThemeColors
 import org.infinite.utils.rendering.transparent
 
 class PressableWidgetRenderer(

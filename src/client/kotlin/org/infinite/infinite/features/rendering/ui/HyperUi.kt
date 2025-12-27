@@ -4,10 +4,10 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.player.LocalPlayer
 import org.infinite.InfiniteClient
 import org.infinite.feature.ConfigurableFeature
-import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.client.player.PlayerStatsManager
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
+import org.infinite.libs.gui.theme.ThemeColors
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.rendering.transparent
 import kotlin.math.min

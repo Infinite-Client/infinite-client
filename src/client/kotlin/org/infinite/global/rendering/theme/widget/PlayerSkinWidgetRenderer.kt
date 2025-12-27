@@ -4,8 +4,8 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.PlayerSkinWidget
 import org.infinite.InfiniteClient
-import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.graphics.Graphics2D // Import Graphics2D
+import org.infinite.libs.gui.theme.ThemeColors
 
 class PlayerSkinWidgetRenderer(
     val widget: PlayerSkinWidget,

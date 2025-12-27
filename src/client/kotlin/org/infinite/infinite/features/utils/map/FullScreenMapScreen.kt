@@ -7,8 +7,8 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.util.ARGB
 import org.infinite.InfiniteClient
-import org.infinite.gui.widget.InfiniteButton
 import org.infinite.libs.graphics.Graphics2D
+import org.infinite.libs.gui.widget.InfiniteButton
 import org.infinite.utils.rendering.transparent
 import org.infinite.utils.toRadians
 import kotlin.math.max

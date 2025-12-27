@@ -4,10 +4,10 @@ import net.minecraft.client.player.LocalPlayer
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.HumanoidArm
 import org.infinite.InfiniteClient
-import org.infinite.gui.theme.ThemeColors
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.libs.client.player.PlayerStatsManager.PlayerStats
 import org.infinite.libs.graphics.Graphics2D
+import org.infinite.libs.gui.theme.ThemeColors
 import org.infinite.utils.rendering.transparent
 import kotlin.math.max
 import kotlin.math.min

@@ -21,10 +21,6 @@ import org.infinite.global.GlobalFeatureCategory
 import org.infinite.global.rendering.GlobalRenderingFeatureCategory
 import org.infinite.global.rendering.theme.ThemeSetting
 import org.infinite.global.server.GlobalServerFeatureCategory
-import org.infinite.gui.theme.CustomThemeLoader
-import org.infinite.gui.theme.Theme
-import org.infinite.gui.theme.ThemeColors
-import org.infinite.gui.theme.official.officialThemes
 import org.infinite.infinite.features.FeatureCategory
 import org.infinite.infinite.features.automatic.AutomaticFeatureCategory
 import org.infinite.infinite.features.fighting.FightingFeatureCategory
@@ -38,6 +34,10 @@ import org.infinite.libs.client.control.ControllerInterface
 import org.infinite.libs.client.player.PlayerStatsManager
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
+import org.infinite.libs.gui.theme.CustomThemeLoader
+import org.infinite.libs.gui.theme.Theme
+import org.infinite.libs.gui.theme.ThemeColors
+import org.infinite.libs.gui.theme.official.officialThemes
 import org.infinite.libs.infinite.InfiniteAddon
 import org.infinite.libs.infinite.InfiniteCommand
 import org.infinite.libs.infinite.InfiniteKeyBind
