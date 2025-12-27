@@ -43,34 +43,33 @@ class LinearMovementAction(
         onSuccessAction()
     }
 
-    override fun state(): AiActionState =
-        stateRegister() ?: run {
-            // スタック検知と終了時のAuto Jumpリセット
-            if (isStuck) {
-                options.autoJump().set(originalAutoJump)
+    override fun state(): AiActionState = stateRegister() ?: run {
+        // スタック検知と終了時のAuto Jumpリセット
+        if (isStuck) {
+            options.autoJump().set(originalAutoJump)
+            return AiActionState.Failure
+        }
+
+        val tPos = pos
+        val pPos =
+            playerPos ?: run {
+                options.autoJump().set(originalAutoJump) // 失敗前にリセット
                 return AiActionState.Failure
             }
+        val dx = abs(tPos.x - pPos.x)
+        val dz = abs(tPos.z - pPos.z)
+        val inRangeXZ = (dx <= movementRange) && (dz <= movementRange)
+        val dy = abs(tPos.y - pPos.y)
+        val inRangeY = heightRange == null || dy <= heightRange
 
-            val tPos = pos
-            val pPos =
-                playerPos ?: run {
-                    options.autoJump().set(originalAutoJump) // 失敗前にリセット
-                    return AiActionState.Failure
-                }
-            val dx = abs(tPos.x - pPos.x)
-            val dz = abs(tPos.z - pPos.z)
-            val inRangeXZ = (dx <= movementRange) && (dz <= movementRange)
-            val dy = abs(tPos.y - pPos.y)
-            val inRangeY = heightRange == null || dy <= heightRange
-
-            return if (inRangeY && inRangeXZ) {
-                // 成功する直前にAuto Jumpを元の状態に戻す
-                options.autoJump().set(originalAutoJump)
-                AiActionState.Success
-            } else {
-                AiActionState.Progress
-            }
+        return if (inRangeY && inRangeXZ) {
+            // 成功する直前にAuto Jumpを元の状態に戻す
+            options.autoJump().set(originalAutoJump)
+            AiActionState.Success
+        } else {
+            AiActionState.Progress
         }
+    }
 
     override fun tick() {
         val player = player ?: return

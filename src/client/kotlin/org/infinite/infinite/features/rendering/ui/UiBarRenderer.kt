@@ -8,7 +8,7 @@ import org.infinite.libs.client.player.ClientInterface
 import org.infinite.libs.client.player.PlayerStatsManager.PlayerStats
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.gui.theme.ThemeColors
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 import kotlin.math.max
 import kotlin.math.min
 
@@ -42,7 +42,7 @@ class UiBarRenderer(
             1.0,
             h + p * 2.0,
             0.0,
-            colors.backgroundColor.transparent((255 * a).toInt()),
+            colors.backgroundColor.alpha((255 * a).toInt()),
             BarSide.Left,
             hasOffHand,
         )
@@ -51,7 +51,7 @@ class UiBarRenderer(
             1.0,
             h + p * 2.0,
             0.0,
-            colors.backgroundColor.transparent((255 * a).toInt()),
+            colors.backgroundColor.alpha((255 * a).toInt()),
             BarSide.Right,
             hasOffHand,
         )
@@ -60,7 +60,7 @@ class UiBarRenderer(
             1.0,
             h,
             p,
-            colors.backgroundColor.transparent((500 * a).toInt()),
+            colors.backgroundColor.alpha((500 * a).toInt()),
             BarSide.Right,
             hasOffHand,
         )
@@ -98,7 +98,7 @@ class UiBarRenderer(
             1.0,
             h,
             p,
-            colors.backgroundColor.transparent((500 * a).toInt()),
+            colors.backgroundColor.alpha((500 * a).toInt()),
             BarSide.Left,
             hasOffHand,
         )
@@ -120,7 +120,7 @@ class UiBarRenderer(
                 recoveryEndProgress, // 予測量を含めた進捗
                 h,
                 p,
-                colors.redAccentColor.transparent((100 * a).toInt()), // 非常に薄い赤（回復予測）
+                colors.redAccentColor.alpha((100 * a).toInt()), // 非常に薄い赤（回復予測）
                 BarSide.Left,
                 hasOffHand,
             )
@@ -157,7 +157,7 @@ class UiBarRenderer(
             1.0, // 常にバー全体を覆う
             h + p * 2.0,
             0.0,
-            hpOverlayColor.transparent((255 * a * hpOverlayAlpha).toInt()),
+            hpOverlayColor.alpha((255 * a * hpOverlayAlpha).toInt()),
             BarSide.Left,
             hasOffHand,
         )
@@ -207,7 +207,7 @@ class UiBarRenderer(
             1.0, // 常にバー全体を覆う
             h + p * 2.0,
             0.0,
-            hungerOverlayColor.transparent((255 * a * hungerOverlayAlpha).toInt()),
+            hungerOverlayColor.alpha((255 * a * hungerOverlayAlpha).toInt()),
             BarSide.Right,
             hasOffHand,
         )
@@ -263,7 +263,7 @@ class UiBarRenderer(
             startY,
             endX,
             endY,
-            colors.backgroundColor.transparent((255 * config.alpha).toInt()),
+            colors.backgroundColor.alpha((255 * config.alpha).toInt()),
         )
 
         // 経験値バー本体
@@ -272,7 +272,7 @@ class UiBarRenderer(
             startY,
             startX + barWidth * progress,
             endY,
-            colors.limeAccentColor.transparent((255 * config.alpha).toInt()),
+            colors.limeAccentColor.alpha((255 * config.alpha).toInt()),
         )
 
         // 経験値レベルの表示
@@ -334,7 +334,7 @@ class UiBarRenderer(
             progressMax,
             height,
             padding,
-            color.transparent((200 * alphaMultiplier).toInt()),
+            color.alpha((200 * alphaMultiplier).toInt()),
             side,
             hasOffHand,
         )
@@ -344,7 +344,7 @@ class UiBarRenderer(
             progressMin,
             height,
             padding,
-            color.transparent((255 * alphaMultiplier).toInt()),
+            color.alpha((255 * alphaMultiplier).toInt()),
             side,
             hasOffHand,
         )

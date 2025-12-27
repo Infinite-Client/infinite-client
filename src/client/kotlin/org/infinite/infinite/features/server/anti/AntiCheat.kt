@@ -55,10 +55,9 @@ class AntiCheat : ConfigurableFeature(initialEnabled = true) {
     private fun vecMin(
         a: Vec3,
         b: Vec3,
-    ): Vec3 =
-        if (a.lengthSqr() > b.lengthSqr()) {
-            b
-        } else {
-            a
-        }
+    ): Vec3 = if (a.lengthSqr() > b.lengthSqr()) {
+        b
+    } else {
+        a
+    }
 }

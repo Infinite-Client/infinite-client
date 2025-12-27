@@ -58,7 +58,7 @@ internal fun findBestElytraInInventory(): ElytraInfo? {
                             AutoPilot::class.java,
                         )?.elytraThreshold
                         ?.value ?: 100
-                )
+                    )
             ) {
                 bestElytra = ElytraInfo(InventoryIndex.Hotbar(i), durability)
             }
@@ -78,7 +78,7 @@ internal fun findBestElytraInInventory(): ElytraInfo? {
                             AutoPilot::class.java,
                         )?.elytraThreshold
                         ?.value ?: 100
-                )
+                    )
             ) {
                 bestElytra = ElytraInfo(InventoryIndex.Backpack(i), durability)
             }

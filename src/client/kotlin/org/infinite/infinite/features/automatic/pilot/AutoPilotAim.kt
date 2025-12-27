@@ -22,24 +22,24 @@ class AutoPilotAimTask(
     state: PilotState,
     bestLandingSpot: LandingSpot? = null,
 ) : AimTask(
-        if (state == PilotState.EmergencyLanding) AimPriority.Preferentially else AimPriority.Normally,
-        PilotAimTarget(
-            state,
-            bestLandingSpot,
-        ),
-        AutoPilotCondition(state),
-        AimCalculateMethod.Linear,
-        when (state) {
-            PilotState.EmergencyLanding -> 16.0
+    if (state == PilotState.EmergencyLanding) AimPriority.Preferentially else AimPriority.Normally,
+    PilotAimTarget(
+        state,
+        bestLandingSpot,
+    ),
+    AutoPilotCondition(state),
+    AimCalculateMethod.Linear,
+    when (state) {
+        PilotState.EmergencyLanding -> 16.0
 
-            PilotState.Landing -> 4.0
+        PilotState.Landing -> 4.0
 
-            PilotState.TakingOff -> 2.0
+        PilotState.TakingOff -> 2.0
 
-            // 【新規】離陸時のスムーズな移動
-            else -> 2.0
-        },
-    )
+        // 【新規】離陸時のスムーズな移動
+        else -> 2.0
+    },
+)
 
 /**
  * AimTask の実行条件を定義するクラス。
@@ -57,26 +57,25 @@ class AutoPilotCondition(
     /**
      * 実行条件をチェックします。
      */
-    override fun check(): AimTaskConditionReturn =
-        if (state != autoPilot.state) {
-            AimTaskConditionReturn.Success
-        } else if (tickCounter >= 20) {
-            autoPilot.aimTaskCallBack = null
-            AimTaskConditionReturn.Success
-        } else {
-            tickCounter++
-            when (state) {
-                PilotState.Idle -> AimTaskConditionReturn.Failure
-                PilotState.RiseFlying -> handleRiseFlying()
-                PilotState.FallFlying -> handleFallFlying()
-                PilotState.Gliding -> handleGliding()
-                PilotState.Circling -> handleCircling()
-                PilotState.Landing -> handleLanding()
-                PilotState.EmergencyLanding -> handleEmergencyLanding()
-                PilotState.JetFlying, PilotState.HoverFlying -> handleJetFlying()
-                PilotState.TakingOff -> handleTakingOff() // 【新規】離陸処理
-            }
+    override fun check(): AimTaskConditionReturn = if (state != autoPilot.state) {
+        AimTaskConditionReturn.Success
+    } else if (tickCounter >= 20) {
+        autoPilot.aimTaskCallBack = null
+        AimTaskConditionReturn.Success
+    } else {
+        tickCounter++
+        when (state) {
+            PilotState.Idle -> AimTaskConditionReturn.Failure
+            PilotState.RiseFlying -> handleRiseFlying()
+            PilotState.FallFlying -> handleFallFlying()
+            PilotState.Gliding -> handleGliding()
+            PilotState.Circling -> handleCircling()
+            PilotState.Landing -> handleLanding()
+            PilotState.EmergencyLanding -> handleEmergencyLanding()
+            PilotState.JetFlying, PilotState.HoverFlying -> handleJetFlying()
+            PilotState.TakingOff -> handleTakingOff() // 【新規】離陸処理
         }
+    }
 
     private fun handleJetFlying(): AimTaskConditionReturn {
         val distanceThreshold = autoPilot.landingStartDistance

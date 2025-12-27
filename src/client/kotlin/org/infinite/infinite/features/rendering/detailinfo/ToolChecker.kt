@@ -153,12 +153,11 @@ object ToolChecker {
         }
     }
 
-    fun getItemStackFromId(id: String): ItemStack =
-        try {
-            val identifier = Identifier.parse(id)
-            val item = BuiltInRegistries.ITEM.getValue(identifier)
-            if (item != Items.AIR) ItemStack(item) else ItemStack(Items.BARRIER)
-        } catch (_: Exception) {
-            ItemStack(Items.BARRIER)
-        }
+    fun getItemStackFromId(id: String): ItemStack = try {
+        val identifier = Identifier.parse(id)
+        val item = BuiltInRegistries.ITEM.getValue(identifier)
+        if (item != Items.AIR) ItemStack(item) else ItemStack(Items.BARRIER)
+    } catch (_: Exception) {
+        ItemStack(Items.BARRIER)
+    }
 }

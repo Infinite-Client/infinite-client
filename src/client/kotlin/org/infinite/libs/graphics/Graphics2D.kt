@@ -16,9 +16,9 @@ import net.minecraft.world.item.ItemDisplayContext
 import net.minecraft.world.item.ItemStack
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.utils.average
+import org.infinite.utils.rendering.alpha
 import org.infinite.utils.rendering.drawBorder
 import org.infinite.utils.rendering.getRainbowColor
-import org.infinite.utils.rendering.transparent
 import org.joml.Matrix3x2f
 import org.joml.Matrix3x2fStack
 import org.joml.Vector2d
@@ -994,7 +994,7 @@ class Graphics2D(
             // 耐久値の進捗バー
             val fillWidth = (size * progress).toInt()
             if (fillWidth > 0) {
-                val color = getRainbowColor(progress * 0.3f).transparent(alphaInt)
+                val color = getRainbowColor(progress * 0.3f).alpha(alphaInt)
                 rect(x, barY, x + fillWidth, barY + barHeight, color)
             }
         }

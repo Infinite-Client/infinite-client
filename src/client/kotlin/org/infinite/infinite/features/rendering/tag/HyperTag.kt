@@ -18,8 +18,8 @@ import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.settings.FeatureSetting
+import org.infinite.utils.rendering.alpha
 import org.infinite.utils.rendering.getRainbowColor
-import org.infinite.utils.rendering.transparent
 import kotlin.math.sqrt
 
 class HyperTag : ConfigurableFeature(initialEnabled = false) {
@@ -253,7 +253,7 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
 
         val fillWidth = (width * clampedProgress).toInt()
         if (fillWidth > 0) {
-            val healthColor = getRainbowColor(progress * 0.4f).transparent((alpha * 255).toInt())
+            val healthColor = getRainbowColor(progress * 0.4f).alpha((alpha * 255).toInt())
             graphics2d.fill(x, y, fillWidth, height, healthColor)
         }
     }
@@ -297,7 +297,7 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
         }
         if (entity.hasEffect(MobEffects.POISON)) {
             // 毒: 緑
-            return Pair(theme.greenAccentColor.transparent(0), 1.0f)
+            return Pair(theme.greenAccentColor.alpha(0), 1.0f)
         }
         if (entity.hasEffect(MobEffects.WITHER)) {
             // 衰弱: 暗い灰色/黒
@@ -483,35 +483,35 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
                     InfiniteClient
                         .theme()
                         .colors.infoColor
-                        .transparent(alphaInt)
+                        .alpha(alphaInt)
                 }
 
                 is Monster -> {
                     InfiniteClient
                         .theme()
                         .colors.errorColor
-                        .transparent(alphaInt)
+                        .alpha(alphaInt)
                 }
 
                 is AgeableMob -> {
                     InfiniteClient
                         .theme()
                         .colors.greenAccentColor
-                        .transparent(alphaInt)
+                        .alpha(alphaInt)
                 }
 
                 else -> {
                     InfiniteClient
                         .theme()
                         .colors.foregroundColor
-                        .transparent(alphaInt)
+                        .alpha(alphaInt)
                 }
             }
         val bgColor =
             InfiniteClient
                 .theme()
                 .colors.backgroundColor
-                .transparent((136 * alpha).toInt())
+                .alpha((136 * alpha).toInt())
 
         // render background
         graphics2D.fill(tagStartX, tagStartY, tagWidth, tagHeight, bgColor)
@@ -538,7 +538,7 @@ class HyperTag : ConfigurableFeature(initialEnabled = false) {
                 val overlayAlpha = (0.5f * alpha).coerceIn(0.0f, 1.0f)
 
                 // オーバーレイの塗りつぶし色
-                val overlayArgb = overlayColor.transparent((overlayAlpha * 255).toInt())
+                val overlayArgb = overlayColor.alpha((overlayAlpha * 255).toInt())
 
                 // オーバーレイの幅 (HPバー全体を覆う)
                 val overlayWidth = (barW * progressRatio).toInt().coerceAtLeast(barW)

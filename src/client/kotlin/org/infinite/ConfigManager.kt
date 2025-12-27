@@ -152,7 +152,7 @@ object ConfigManager {
                                                     )
                                                 }
                                             }
-                                    )
+                                        )
                                 }
                             GlobalFeatureConfig(feature.name, configurableFeature.isEnabled(), settingMap)
                         }
@@ -343,7 +343,7 @@ object ConfigManager {
                                                 )
                                             }
                                         }
-                                )
+                                    )
                             }
                         FeatureConfig(feature.name, configurableFeature.isEnabled(), settingMap)
                     }

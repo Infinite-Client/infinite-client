@@ -11,7 +11,7 @@ import net.minecraft.client.gui.screens.inventory.PageButton
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.gui.theme.ThemeColors
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 class PressableWidgetRenderer(
     val widget: AbstractButton,
@@ -33,8 +33,8 @@ class PressableWidgetRenderer(
         val alpha = widget.alpha
         val transparent = 255 * alpha
         // --- (背景とボーダーの描画ロジックは変更なし) ---
-        val borderColor = colors.primaryColor.transparent(transparent)
-        val textColor = colors.foregroundColor.transparent(transparent)
+        val borderColor = colors.primaryColor.alpha(transparent)
+        val textColor = colors.foregroundColor.alpha(transparent)
         val backgroundColor =
             when {
                 hovered -> {
@@ -48,7 +48,7 @@ class PressableWidgetRenderer(
                 else -> {
                     colors.secondaryColor
                 }
-            }.transparent(transparent)
+            }.alpha(transparent)
 
         graphics2D.fill(x, y, width, height, backgroundColor)
         val borderWidth = 1

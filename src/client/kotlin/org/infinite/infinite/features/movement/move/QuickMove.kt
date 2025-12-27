@@ -291,7 +291,7 @@ class QuickMove : ConfigurableFeature() {
                     0.0,
                     1.0,
                 ) * antiFrictionBoost
-        )
+            )
 
         val isApplyingCorrection = player.isUsingItem && player.onGround()
         val itemUseFactor =
@@ -343,7 +343,7 @@ class QuickMove : ConfigurableFeature() {
                         0.0,
                         1.0,
                     ) * itemUseFactor
-            ).coerceAtMost(
+                ).coerceAtMost(
                 accelerationLimit, // 速度超過を防ぐ上限
             )
 

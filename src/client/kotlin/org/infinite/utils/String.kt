@@ -1,35 +1,35 @@
 package org.infinite.utils
 
-import java.util.Locale.getDefault
+import java.util.*
 
-fun toSnakeCase(camelCaseString: String): String {
-    // 1. 小文字以外の文字（つまり大文字）の直前に '_' を挿入
-    //    ただし、文字列の先頭にある大文字の前には挿入しない
-    val withUnderscores =
-        camelCaseString.replace(
-            "([A-Z])".toRegex(), // 大文字にマッチ
-            "_$1", // マッチした大文字の前に '_' を挿入
-        )
-
-    // 2. 結果を全て小文字に変換し、先頭の不要な '_' を削除
-    //    (toRegex()の挙動により、先頭に大文字がある場合は最初に余分な '_' が付くため)
-    return withUnderscores
-        .lowercase(getDefault())
-        .removePrefix("_")
+/**
+ * 文字列を lower_snake_case に変換します。
+ * 例: "MyFeatureName" -> "my_feature_name"
+ */
+fun String.toLowerSnakeCase(): String {
+    if (this.isEmpty()) return this
+    return this.replace("([a-z0-9])([A-Z])".toRegex(), "$1_$2")
+        .lowercase(Locale.ROOT)
 }
 
-fun toKebabCase(camelCaseString: String): String {
-    // 1. 小文字以外の文字（つまり大文字）の直前に '-' を挿入
-    //    ただし、文字列の先頭にある大文字の前には挿入しない
-    val withUnderscores =
-        camelCaseString.replace(
-            "([A-Z])".toRegex(), // 大文字にマッチ
-            "-$1", // マッチした大文字の前に '-' を挿入
-        )
+/**
+ * 文字列を PascalCase (UpperCamelCase) に変換します。
+ * 例: "my_feature_name" -> "MyFeatureName"
+ */
+fun String.toUpperCamelCase(): String = this.split("_")
+    .joinToString("") { it.lowercase(Locale.ROOT).replaceFirstChar { char -> char.uppercase() } }
 
-    // 2. 結果を全て小文字に変換し、先頭の不要な '-' を削除
-    //    (toRegex()の挙動により、先頭に大文字がある場合は最初に余分な '-' が付くため)
-    return withUnderscores
-        .lowercase(getDefault())
-        .removePrefix("-")
+/**
+ * 文字列を camelCase (LowerCamelCase) に変換します。
+ * 例: "MyFeatureName" -> "myFeatureName"
+ */
+fun String.toLowerCamelCase(): String {
+    val pascal = this.toUpperCamelCase()
+    return pascal.replaceFirstChar { it.lowercase(Locale.ROOT) }
 }
+
+/**
+ * 文字列を kebab-case に変換します（翻訳キーやファイル名に便利）。
+ * 例: "MyFeature" -> "my-feature"
+ */
+fun String.toLowerKebabCase(): String = this.toLowerSnakeCase().replace("_", "-")

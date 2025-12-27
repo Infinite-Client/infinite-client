@@ -10,7 +10,7 @@ import net.minecraft.world.entity.player.Player
 import org.infinite.InfiniteClient
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.libs.graphics.Graphics2D
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 import org.infinite.utils.toRadians
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -22,19 +22,18 @@ object HyperMapRenderer : ClientInterface() {
     /**
      * エンティティの種類に基づいてドットの色を決定します。（アルファ値は含まない）
      */
-    fun getBaseDotColor(entity: LivingEntity): Int =
-        when (entity) {
-            is Player -> InfiniteClient.theme().colors.infoColor
+    fun getBaseDotColor(entity: LivingEntity): Int = when (entity) {
+        is Player -> InfiniteClient.theme().colors.infoColor
 
-            // プレイヤー: 水色 (ARGBのAなし)
-            is Monster -> InfiniteClient.theme().colors.errorColor
+        // プレイヤー: 水色 (ARGBのAなし)
+        is Monster -> InfiniteClient.theme().colors.errorColor
 
-            // 敵対モブ: 赤色
-            is AgeableMob -> InfiniteClient.theme().colors.greenAccentColor
+        // 敵対モブ: 赤色
+        is AgeableMob -> InfiniteClient.theme().colors.greenAccentColor
 
-            // 友好モブ: 緑色
-            else -> InfiniteClient.theme().colors.warnColor // それ以外（中立モブなど）: 黄色
-        }
+        // 友好モブ: 緑色
+        else -> InfiniteClient.theme().colors.warnColor // それ以外（中立モブなど）: 黄色
+    }
 
     /**
      * y軸方向のズレに基づいてアルファ値（透明度）を決定します。
@@ -92,7 +91,7 @@ object HyperMapRenderer : ClientInterface() {
             InfiniteClient
                 .theme()
                 .colors.backgroundColor
-                .transparent(128)
+                .alpha(128)
         val playerYaw = player.yHeadRot
         // 背景と外枠の描画
         graphics2d.fill(centerX - halfSizePx, centerY - halfSizePx, sizePx, sizePx, innerColor)
@@ -223,7 +222,7 @@ object HyperMapRenderer : ClientInterface() {
                 }
 
             val alpha = getAlphaBasedOnHeight(mob, player.y, featureHeight)
-            val finalDotColor = blendedColor.transparent(alpha)
+            val finalDotColor = blendedColor.alpha(alpha)
             val x = mobX.toFloat()
             val y = mobY.toFloat()
             graphics2d.rect(

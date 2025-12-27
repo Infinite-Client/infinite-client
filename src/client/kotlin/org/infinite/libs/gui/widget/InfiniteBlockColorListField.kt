@@ -35,9 +35,7 @@ class InfiniteBlockColorListField(
 
     private val blockIdTextField: InfiniteTextField
     private val colorTextField: InfiniteTextField
-    private lateinit var scrollableContainer: InfiniteScrollableContainer
-
-    private val blockColorItemWidgets = mutableListOf<BlockColorListItemWidget>()
+    private var scrollableContainer: InfiniteScrollableContainer
 
     init {
         // Calculate header and scrollable list heights based on totalHeight
@@ -139,8 +137,8 @@ class InfiniteBlockColorListField(
             if (idToAdd.isNotBlank() && colorToAdd != null && !setting.value.containsKey(idToAdd)) {
                 setting.value[idToAdd] = colorToAdd
                 updateScrollableContainer()
-                blockIdTextField.setValue("")
-                colorTextField.setValue("")
+                blockIdTextField.value = ""
+                colorTextField.value = ""
                 currentBlockIdInput = ""
                 currentColorInput = ""
             }

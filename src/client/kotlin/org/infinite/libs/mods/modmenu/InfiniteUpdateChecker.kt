@@ -44,41 +44,40 @@ class InfiniteUpdateChecker : UpdateChecker {
      * 最新バージョンを外部APIから取得し、現在のバージョンと比較する（非同期で実行）
      * @return 最新情報を含む UpdateInfo を CompletableFuture でラップして返します。
      */
-    override fun checkForUpdates(): UpdateInfo? =
-        CompletableFuture.supplyAsync({
-            try {
-                // 1. 現在のバージョンを取得
-                val currentVersion =
-                    FabricLoader
-                        .getInstance()
-                        .getModContainer(modId)
-                        .orElseThrow { IllegalStateException("Mod container for $modId not found.") }
-                        .metadata.version.friendlyString
+    override fun checkForUpdates(): UpdateInfo? = CompletableFuture.supplyAsync({
+        try {
+            // 1. 現在のバージョンを取得
+            val currentVersion =
+                FabricLoader
+                    .getInstance()
+                    .getModContainer(modId)
+                    .orElseThrow { IllegalStateException("Mod container for $modId not found.") }
+                    .metadata.version.friendlyString
 
-                // 2. 外部APIから最新バージョンとリンクを取得 (ブロッキングI/O)
-                val latestRelease = fetchLatestRelease()
-                // "v1.21.10-6" -> "1.21.10-6" のように 'v' プレフィックスを削除
-                val latestVersionString = latestRelease.tagName.removePrefix("v")
-                val downloadLink = latestRelease.htmlUrl
+            // 2. 外部APIから最新バージョンとリンクを取得 (ブロッキングI/O)
+            val latestRelease = fetchLatestRelease()
+            // "v1.21.10-6" -> "1.21.10-6" のように 'v' プレフィックスを削除
+            val latestVersionString = latestRelease.tagName.removePrefix("v")
+            val downloadLink = latestRelease.htmlUrl
 
-                // 3. バージョンの比較ロジック (Maven Artifactを使用)
-                val isOutdated = compareVersions(currentVersion, latestVersionString)
+            // 3. バージョンの比較ロジック (Maven Artifactを使用)
+            val isOutdated = compareVersions(currentVersion, latestVersionString)
 
-                if (isOutdated) {
-                    InfiniteUpdateInfo(
-                        isUpdate = true,
-                        link = downloadLink,
-                        channel = UpdateChannel.RELEASE,
-                    )
-                } else {
-                    null // 最新バージョンである場合
-                }
-            } catch (e: Exception) {
-                System.err.println("Failed to check for updates for mod '$modId': ${e.message}")
-                e.printStackTrace()
-                null
+            if (isOutdated) {
+                InfiniteUpdateInfo(
+                    isUpdate = true,
+                    link = downloadLink,
+                    channel = UpdateChannel.RELEASE,
+                )
+            } else {
+                null // 最新バージョンである場合
             }
-        }, updateCheckExecutors) as UpdateInfo?
+        } catch (e: Exception) {
+            System.err.println("Failed to check for updates for mod '$modId': ${e.message}")
+            e.printStackTrace()
+            null
+        }
+    }, updateCheckExecutors) as UpdateInfo?
 
     /**
      * GitHub APIから最新のリリース情報を取得する (OkHttp 5.3.0を使用)。

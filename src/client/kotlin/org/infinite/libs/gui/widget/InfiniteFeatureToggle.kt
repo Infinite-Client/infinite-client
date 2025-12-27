@@ -122,10 +122,9 @@ class InfiniteFeatureToggle(
     override fun mouseClicked(
         click: MouseButtonEvent,
         doubled: Boolean,
-    ): Boolean =
-        toggleButton.mouseClicked(click, doubled) ||
-            settingsButton.mouseClicked(click, doubled) ||
-            resetButton.mouseClicked(click, doubled) // Handle reset button click
+    ): Boolean = toggleButton.mouseClicked(click, doubled) ||
+        settingsButton.mouseClicked(click, doubled) ||
+        resetButton.mouseClicked(click, doubled) // Handle reset button click
 
     override fun updateWidgetNarration(builder: NarrationElementOutput) {
         this.defaultButtonNarrationText(builder)

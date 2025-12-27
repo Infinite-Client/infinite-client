@@ -1,6 +1,6 @@
 package org.infinite.libs.global
 
-import org.infinite.utils.toSnakeCase
+import org.infinite.utils.toLowerSnakeCase
 
 class GlobalFeature<T : ConfigurableGlobalFeature>(
     val instance: T,
@@ -26,8 +26,8 @@ class GlobalFeature<T : ConfigurableGlobalFeature>(
 
     fun generateKey(category: String): String {
         if (!::descriptionKey.isInitialized) {
-            val snakeCategory = toSnakeCase(category)
-            val snakeFeatureName = toSnakeCase(name)
+            val snakeCategory = category.toLowerSnakeCase()
+            val snakeFeatureName = name.toLowerSnakeCase()
             descriptionKey = "infinite.general_feature.$snakeCategory.$snakeFeatureName.description"
         }
         return descriptionKey

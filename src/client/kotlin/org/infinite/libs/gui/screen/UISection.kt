@@ -17,8 +17,8 @@ import org.infinite.libs.gui.widget.FeatureSearchWidget
 import org.infinite.libs.gui.widget.InfiniteButton
 import org.infinite.libs.gui.widget.InfiniteFeatureToggle
 import org.infinite.libs.gui.widget.InfiniteScrollableContainer
+import org.infinite.utils.rendering.alpha
 import org.infinite.utils.rendering.drawBorder
-import org.infinite.utils.rendering.transparent
 
 class UISection(
     val id: String,
@@ -82,7 +82,7 @@ class UISection(
             val iconX = x + (width - iconWidth) / 2
             val iconY = y + (height - iconHeight) / 2
             val iconColor =
-                borderColor.transparent(128)
+                borderColor.alpha(128)
             context.blit(
                 RenderPipelines.GUI_TEXTURED,
                 icon.identifier,
@@ -103,7 +103,7 @@ class UISection(
             InfiniteClient
                 .theme()
                 .colors.backgroundColor
-                .transparent(alpha)
+                .alpha(alpha)
         context.drawBorder(x, y, width, height, borderColor)
         context.fill(x, y, x + width, y + height, backgroundColor)
 

@@ -9,7 +9,7 @@ import net.minecraft.util.ARGB
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.gui.widget.InfiniteButton
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 import org.infinite.utils.toRadians
 import kotlin.math.max
 import kotlin.math.min
@@ -200,7 +200,7 @@ class FullScreenMapScreen(
             InfiniteClient
                 .theme()
                 .colors.infoColor
-                .transparent(255)
+                .alpha(255)
 
         // プレイヤーの位置 (画面中央を基準としたオフセット)
         val playerScreenX = (screenWidth / 2.0 + scaledPlayerDx).toFloat()
@@ -415,7 +415,7 @@ class FullScreenMapScreen(
                 }
 
             val alpha = HyperMapRenderer.getAlphaBasedOnHeight(mob, player.y, hyperMap.heightSetting.value)
-            val finalDotColor = blendedColor.transparent(alpha)
+            val finalDotColor = blendedColor.alpha(alpha)
 
             graphics2D.fill(
                 mobRenderX - mobDotRadius,

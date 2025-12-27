@@ -9,7 +9,7 @@ import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.gui.theme.ThemeColors
 import org.infinite.settings.FeatureSetting
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 import kotlin.math.min
 
 // EasingManager, DamageCalculator, RayCastRenderer, ElytraFlightUiRenderer は既存のものを使用
@@ -118,7 +118,7 @@ class HyperUi : ConfigurableFeature() {
                 diveTimeString,
                 graphics2D.width - graphics2D.textWidth(diveTimeString),
                 graphics2D.height - graphics2D.fontHeight(),
-                colors.foregroundColor.transparent(255 * isSubmerged * (1 + transparentOfAirProgress) / 2.0),
+                colors.foregroundColor.alpha(255 * isSubmerged * (1 + transparentOfAirProgress) / 2.0),
             )
         }
         val swimming = player.isSwimming && player.isSprinting
@@ -130,7 +130,7 @@ class HyperUi : ConfigurableFeature() {
                 swimmableLength,
                 graphics2D.width - graphics2D.textWidth(swimmableLength + spaceString + diveTimeString),
                 graphics2D.height - graphics2D.fontHeight(),
-                colors.foregroundColor.transparent(255),
+                colors.foregroundColor.alpha(255),
             )
         }
         val sprinting = player.isSprinting && !player.isSwimming && !player.isFallFlying
@@ -141,7 +141,7 @@ class HyperUi : ConfigurableFeature() {
                 sprintableLength,
                 graphics2D.width - graphics2D.textWidth(sprintableLength),
                 graphics2D.height - graphics2D.fontHeight(),
-                colors.foregroundColor.transparent(255),
+                colors.foregroundColor.alpha(255),
             )
         }
     }

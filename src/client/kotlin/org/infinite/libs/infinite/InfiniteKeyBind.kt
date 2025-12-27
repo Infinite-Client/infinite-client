@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier
 import org.infinite.InfiniteClient
 import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.gui.screen.InfiniteScreen
-import org.infinite.utils.toSnakeCase
+import org.infinite.utils.toLowerSnakeCase
 import org.lwjgl.glfw.GLFW
 
 object InfiniteKeyBind {
@@ -43,7 +43,7 @@ object InfiniteKeyBind {
             for (feature in category.features) {
                 val configurableFeature = feature.instance
                 val translationKey =
-                    "key.infinite-client.toggle.${toSnakeCase(category.name)}.${toSnakeCase(feature.name)}"
+                    "key.infinite-client.toggle.${category.name.toLowerSnakeCase()}.${feature.name.toLowerSnakeCase()}"
                 translationKeyList += translationKey
                 toggleKeyBindings +=
                     ToggleKeyBindingHandler(

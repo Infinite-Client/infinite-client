@@ -7,7 +7,7 @@ import org.infinite.infinite.features.automatic.pilot.flightTime
 import org.infinite.libs.client.aim.camera.CameraRoll
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.libs.graphics.Graphics2D
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 import org.infinite.utils.toRadians
 import kotlin.math.cos
 import kotlin.math.pow
@@ -77,9 +77,9 @@ class ElytraFlightUiRenderer : ClientInterface() {
         val (centerX, centerY) = width / 2 to height - bottomLength - renderSize
         val colors = InfiniteClient.theme().colors
         val alpha = 100
-        val accentColor = colors.primaryColor.transparent(alpha)
-        val airColor = colors.aquaAccentColor.transparent(alpha)
-        val groundColor = colors.limeAccentColor.transparent(alpha)
+        val accentColor = colors.primaryColor.alpha(alpha)
+        val airColor = colors.aquaAccentColor.alpha(alpha)
+        val groundColor = colors.limeAccentColor.alpha(alpha)
         val pitchHeight = sin(toRadians(direction.pitch))
         val startX = centerX - renderSize
         val startY = centerY - renderSize
@@ -157,7 +157,7 @@ class ElytraFlightUiRenderer : ClientInterface() {
         val colors = InfiniteClient.theme().colors
         val foregroundBaseColor = colors.foregroundColor
         val majorMarkBaseColor = colors.primaryColor
-        val backgroundColor = colors.backgroundColor.transparent(100)
+        val backgroundColor = colors.backgroundColor.alpha(100)
         val gaugeWidth = 32.0
         val gaugeRightX = width - 4
         val gaugeLeftX = gaugeRightX - gaugeWidth
@@ -194,7 +194,7 @@ class ElytraFlightUiRenderer : ClientInterface() {
 
         // 3. 現在の高度を示すポインター/ラインと数値表示 (変更なし)
         val pointerY = gaugeBottomY - gaugeHeight / 2.0
-        val pointerColor = majorMarkBaseColor.transparent(255)
+        val pointerColor = majorMarkBaseColor.alpha(255)
 
         graphics2D.drawLine(
             gaugeLeftX,
@@ -241,8 +241,8 @@ class ElytraFlightUiRenderer : ClientInterface() {
 
                 val markLength = if (isMajorMark) 12.0 else 8.0
 
-                val foregroundColor = foregroundBaseColor.transparent(currentAlpha)
-                val majorMarkColor = majorMarkBaseColor.transparent(currentAlpha)
+                val foregroundColor = foregroundBaseColor.alpha(currentAlpha)
+                val majorMarkColor = majorMarkBaseColor.alpha(currentAlpha)
                 val markColor = if (isMajorMark) majorMarkColor else foregroundColor
 
                 // 目盛り線

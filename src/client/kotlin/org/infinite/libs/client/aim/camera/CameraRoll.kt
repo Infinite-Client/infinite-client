@@ -19,21 +19,19 @@ class CameraRoll(
      * CameraRoll同士の足し算 (要素ごと)
      * operator fun plus(other: CameraRoll): CameraRoll
      */
-    operator fun plus(other: CameraRoll): CameraRoll =
-        CameraRoll(
-            yaw = this.yaw + other.yaw,
-            pitch = this.pitch + other.pitch,
-        )
+    operator fun plus(other: CameraRoll): CameraRoll = CameraRoll(
+        yaw = this.yaw + other.yaw,
+        pitch = this.pitch + other.pitch,
+    )
 
     /**
      * CameraRoll同士の引き算 (要素ごと)
      * operator fun minus(other: CameraRoll): CameraRoll
      */
-    operator fun minus(other: CameraRoll): CameraRoll =
-        CameraRoll(
-            yaw = this.yaw - other.yaw,
-            pitch = this.pitch - other.pitch,
-        )
+    operator fun minus(other: CameraRoll): CameraRoll = CameraRoll(
+        yaw = this.yaw - other.yaw,
+        pitch = this.pitch - other.pitch,
+    )
 
     operator fun times(scalar: Number): CameraRoll {
         val s = scalar.toDouble()

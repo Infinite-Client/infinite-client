@@ -45,10 +45,9 @@ object ColorUtils {
         return ARGB.color(alpha, r, g, b)
     }
 
-    fun getFeatureColor(isInReach: Boolean): Int =
-        if (isInReach) {
-            InfiniteClient.theme().colors.primaryColor
-        } else {
-            OUT_OF_REACH_COLOR
-        }
+    fun getFeatureColor(isInReach: Boolean): Int = if (isInReach) {
+        InfiniteClient.theme().colors.primaryColor
+    } else {
+        OUT_OF_REACH_COLOR
+    }
 }

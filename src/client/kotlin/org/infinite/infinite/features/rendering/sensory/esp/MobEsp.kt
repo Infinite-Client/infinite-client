@@ -63,29 +63,28 @@ object MobEsp {
     /**
      * モブの種別に基づいて色を決定する
      */
-    private fun mobColor(entity: LivingEntity): Int =
-        when (entity) {
-            is Monster -> {
-                org.infinite.InfiniteClient
-                    .theme()
-                    .colors.redAccentColor
-            }
-
-            // 敵対モブ -> 赤
-            is AgeableMob -> {
-                org.infinite.InfiniteClient
-                    .theme()
-                    .colors.greenAccentColor
-            }
-
-            // 友好モブ -> 緑
-            // 中立モブ、あるいはどちらにも分類されないモブ -> 黄
-            else -> {
-                org.infinite.InfiniteClient
-                    .theme()
-                    .colors.yellowAccentColor
-            }
+    private fun mobColor(entity: LivingEntity): Int = when (entity) {
+        is Monster -> {
+            org.infinite.InfiniteClient
+                .theme()
+                .colors.redAccentColor
         }
+
+        // 敵対モブ -> 赤
+        is AgeableMob -> {
+            org.infinite.InfiniteClient
+                .theme()
+                .colors.greenAccentColor
+        }
+
+        // 友好モブ -> 緑
+        // 中立モブ、あるいはどちらにも分類されないモブ -> 黄
+        else -> {
+            org.infinite.InfiniteClient
+                .theme()
+                .colors.yellowAccentColor
+        }
+    }
 
     /**
      * モブの現在の描画位置に基づいてBoxを取得する

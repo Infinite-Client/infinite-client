@@ -170,7 +170,7 @@ class FoodManager : ConfigurableFeature() {
                 options.keyDown.isDown ||
                 options.keyLeft.isDown ||
                 options.keyRight.isDown
-        )
+            )
         val isAttacking = options.keyAttack.isDown
 
         if (client.screen != null ||
@@ -289,13 +289,12 @@ class FoodManager : ConfigurableFeature() {
         return bestSlot
     }
 
-    private fun slotToInventoryIndex(slot: Int): InventoryManager.InventoryIndex? =
-        when (slot) {
-            in 0..8 -> InventoryManager.InventoryIndex.Hotbar(slot)
-            in 9..35 -> InventoryManager.InventoryIndex.Backpack(slot - 9)
-            40 -> InventoryManager.InventoryIndex.OffHand()
-            else -> null
-        }
+    private fun slotToInventoryIndex(slot: Int): InventoryManager.InventoryIndex? = when (slot) {
+        in 0..8 -> InventoryManager.InventoryIndex.Hotbar(slot)
+        in 9..35 -> InventoryManager.InventoryIndex.Backpack(slot - 9)
+        40 -> InventoryManager.InventoryIndex.OffHand()
+        else -> null
+    }
 
     private fun stopEating() {
         options.keyUse.isDown = false

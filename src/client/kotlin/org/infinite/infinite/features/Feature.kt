@@ -1,7 +1,7 @@
 package org.infinite.infinite.features
 
 import org.infinite.libs.feature.ConfigurableFeature
-import org.infinite.utils.toSnakeCase
+import org.infinite.utils.toLowerSnakeCase
 
 open class Feature<T : ConfigurableFeature>(
     val instance: T,
@@ -27,8 +27,8 @@ open class Feature<T : ConfigurableFeature>(
 
     fun generateKey(category: String): String {
         if (!::descriptionKey.isInitialized) {
-            val snakeCategory = toSnakeCase(category)
-            val snakeFeatureName = toSnakeCase(name)
+            val snakeCategory = category.toLowerSnakeCase()
+            val snakeFeatureName = category.toLowerSnakeCase()
             descriptionKey = "infinite.feature.$snakeCategory.$snakeFeatureName.description"
         }
         return descriptionKey

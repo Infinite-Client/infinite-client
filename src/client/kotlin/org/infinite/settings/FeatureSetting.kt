@@ -1,6 +1,6 @@
 package org.infinite.settings
 
-import org.infinite.utils.toSnakeCase
+import org.infinite.utils.toLowerSnakeCase
 
 sealed class FeatureSetting<T>(
     val name: String,
@@ -52,9 +52,9 @@ sealed class FeatureSetting<T>(
         featureName: String,
         name: String,
     ): String {
-        val snakeCategory = toSnakeCase(category)
-        val snakeFeatureName = toSnakeCase(featureName)
-        val snakeName = toSnakeCase(name)
+        val snakeCategory = category.toLowerSnakeCase()
+        val snakeFeatureName = featureName.toLowerSnakeCase()
+        val snakeName = name.toLowerSnakeCase()
         // スネークケースに変換した文字列を使用してdescriptionKeyを構築
         descriptionKey = "infinite.feature.$snakeCategory.$snakeFeatureName.$snakeName.description"
         return descriptionKey

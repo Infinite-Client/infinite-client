@@ -26,7 +26,7 @@ import org.infinite.libs.gui.widget.InfiniteSlider
 import org.infinite.libs.gui.widget.TabButton
 import org.infinite.libs.gui.widget.ThemeTileContainer
 import org.infinite.settings.FeatureSetting
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 import org.lwjgl.glfw.GLFW
 
 class GlobalSettingsScreen(
@@ -110,14 +110,13 @@ class GlobalSettingsScreen(
             .forEach { it.tab.isHighlighted = it.tab.message.string == getCategoryDisplayName(selectedCategory) }
     }
 
-    private fun getCategoryDisplayName(category: GlobalFeatureCategory?): String =
-        category?.let {
-            if (it.name == "Themes") {
-                "Themes"
-            } else {
-                Component.translatable("infinite.global_category.${it.name.lowercase()}").string
-            }
-        } ?: ""
+    private fun getCategoryDisplayName(category: GlobalFeatureCategory?): String = category?.let {
+        if (it.name == "Themes") {
+            "Themes"
+        } else {
+            Component.translatable("infinite.global_category.${it.name.lowercase()}").string
+        }
+    } ?: ""
 
     override fun render(
         context: GuiGraphics,
@@ -135,7 +134,7 @@ class GlobalSettingsScreen(
             InfiniteClient
                 .theme()
                 .colors.backgroundColor
-                .transparent(100),
+                .alpha(100),
         )
         sections.forEach { (category, section) ->
             val selected = category == selectedCategory

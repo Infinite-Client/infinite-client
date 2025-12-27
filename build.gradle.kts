@@ -125,7 +125,12 @@ spotless {
     }
     kotlin {
         target("src/**/*.kt")
-        ktlint("1.8.0")
+        ktlint("1.8.0").editorConfigOverride(
+            mapOf(
+                "ktlint_standard_no-wildcard-imports" to "disabled",
+                "ij_kotlin_allow_trailing_comma" to "true",
+            ),
+        )
     }
     groovyGradle {
         target("**/build.gradle")

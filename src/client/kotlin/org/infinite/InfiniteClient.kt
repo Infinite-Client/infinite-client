@@ -412,13 +412,12 @@ object InfiniteClient : ClientModInitializer {
     private fun createPrefixedMessage(
         prefixType: String,
         textColor: Int,
-    ): MutableComponent =
-        Component
-            .literal("[")
-            .withStyle(ChatFormatting.BOLD)
-            .append(rainbowText("Infinite Client").withStyle(ChatFormatting.BOLD))
-            .append(Component.literal(prefixType).withStyle { style -> style.withColor(textColor) })
-            .append(Component.literal("]: ").withStyle(ChatFormatting.RESET))
+    ): MutableComponent = Component
+        .literal("[")
+        .withStyle(ChatFormatting.BOLD)
+        .append(rainbowText("Infinite Client").withStyle(ChatFormatting.BOLD))
+        .append(Component.literal(prefixType).withStyle { style -> style.withColor(textColor) })
+        .append(Component.literal("]: ").withStyle(ChatFormatting.RESET))
 
     fun log(text: String) {
         val message =
@@ -481,30 +480,28 @@ object InfiniteClient : ClientModInitializer {
     fun searchFeature(
         category: String,
         name: String,
-    ): ConfigurableFeature? =
-        featureCategories
-            .find { it.name.equals(category, ignoreCase = true) }
-            ?.features
-            ?.find {
-                it.name.equals(
-                    name,
-                    ignoreCase = true,
-                )
-            }?.instance
+    ): ConfigurableFeature? = featureCategories
+        .find { it.name.equals(category, ignoreCase = true) }
+        ?.features
+        ?.find {
+            it.name.equals(
+                name,
+                ignoreCase = true,
+            )
+        }?.instance
 
     fun searchGlobalFeature(
         category: String,
         name: String,
-    ): ConfigurableFeature? =
-        globalFeatureCategories
-            .find { it.name.equals(category, ignoreCase = true) }
-            ?.features
-            ?.find {
-                it.name.equals(
-                    name,
-                    ignoreCase = true,
-                )
-            }?.instance
+    ): ConfigurableFeature? = globalFeatureCategories
+        .find { it.name.equals(category, ignoreCase = true) }
+        ?.features
+        ?.find {
+            it.name.equals(
+                name,
+                ignoreCase = true,
+            )
+        }?.instance
 
     fun <T : ConfigurableFeature> isFeatureEnabled(featureClass: Class<T>): Boolean {
         val feature = getFeature(featureClass) ?: return false

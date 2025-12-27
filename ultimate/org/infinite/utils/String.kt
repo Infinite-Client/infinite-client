@@ -16,7 +16,7 @@ fun String.toLowerSnakeCase(): String {
  * 文字列を PascalCase (UpperCamelCase) に変換します。
  * 例: "my_feature_name" -> "MyFeatureName"
  */
-fun String.toPascalCase(): String {
+fun String.toUpperCamelCase(): String {
     return this.split("_")
         .joinToString("") { it.lowercase(Locale.ROOT).replaceFirstChar { char -> char.uppercase() } }
 }
@@ -25,7 +25,7 @@ fun String.toPascalCase(): String {
  * 文字列を camelCase (LowerCamelCase) に変換します。
  * 例: "MyFeatureName" -> "myFeatureName"
  */
-fun String.toCamelCase(): String {
+fun String.toLowerCamelCase(): String {
     val pascal = this.toPascalCase()
     return pascal.replaceFirstChar { it.lowercase(Locale.ROOT) }
 }
@@ -34,6 +34,6 @@ fun String.toCamelCase(): String {
  * 文字列を kebab-case に変換します（翻訳キーやファイル名に便利）。
  * 例: "MyFeature" -> "my-feature"
  */
-fun String.toKebabCase(): String {
+fun String.toLowerKebabCase(): String {
     return this.toLowerSnakeCase().replace("_", "-")
 }

@@ -21,7 +21,7 @@ import org.infinite.libs.gui.widget.InfiniteSettingTextField
 import org.infinite.libs.gui.widget.InfiniteSettingToggle
 import org.infinite.libs.gui.widget.InfiniteSlider
 import org.infinite.settings.FeatureSetting
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 class FeatureSettingsScreen(
     private val parent: Screen,
@@ -269,7 +269,7 @@ class FeatureSettingsScreen(
             InfiniteClient
                 .currentColors()
                 .backgroundColor
-                .transparent(128),
+                .alpha(128),
         )
 
         context.drawCenteredString(

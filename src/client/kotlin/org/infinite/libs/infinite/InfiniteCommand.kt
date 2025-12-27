@@ -222,112 +222,108 @@ object InfiniteCommand {
 
     private fun getIValueArg() = ClientCommandManager.argument("value", StringArgumentType.greedyString()).suggests(getIValueSuggestions())
 
-    private fun getAllFeatureSuggestions(): SuggestionProvider<FabricClientCommandSource> =
-        SuggestionProvider {
+    private fun getAllFeatureSuggestions(): SuggestionProvider<FabricClientCommandSource> = SuggestionProvider {
             _,
             b,
-            ->
-            SharedSuggestionProvider.suggest(
-                InfiniteClient.featureCategories.flatMap { it.features.map { f -> f.name } },
-                b,
-            )
-        }
+        ->
+        SharedSuggestionProvider.suggest(
+            InfiniteClient.featureCategories.flatMap { it.features.map { f -> f.name } },
+            b,
+        )
+    }
 
-    private fun getIKeySuggestions(): SuggestionProvider<FabricClientCommandSource> =
-        SuggestionProvider { ctx, b ->
-            try {
-                val name = StringArgumentType.getString(ctx, "feature")
-                val feature = findFeature(name)?.instance ?: return@SuggestionProvider b.buildFuture()
-                val isList = ctx.nodes.any { it.node.name in listOf("add", "del") }
-                val isSet = ctx.nodes.any { it.node.name == "set" }
+    private fun getIKeySuggestions(): SuggestionProvider<FabricClientCommandSource> = SuggestionProvider { ctx, b ->
+        try {
+            val name = StringArgumentType.getString(ctx, "feature")
+            val feature = findFeature(name)?.instance ?: return@SuggestionProvider b.buildFuture()
+            val isList = ctx.nodes.any { it.node.name in listOf("add", "del") }
+            val isSet = ctx.nodes.any { it.node.name == "set" }
 
-                val filtered =
-                    feature.settings.filter { s ->
-                        val isListSetting =
-                            s is FeatureSetting.BlockListSetting ||
-                                s is FeatureSetting.EntityListSetting ||
-                                s is FeatureSetting.PlayerListSetting
-                        when {
-                            isList -> isListSetting
-                            isSet -> !isListSetting
-                            else -> true
-                        }
+            val filtered =
+                feature.settings.filter { s ->
+                    val isListSetting =
+                        s is FeatureSetting.BlockListSetting ||
+                            s is FeatureSetting.EntityListSetting ||
+                            s is FeatureSetting.PlayerListSetting
+                    when {
+                        isList -> isListSetting
+                        isSet -> !isListSetting
+                        else -> true
                     }
-                SharedSuggestionProvider.suggest(filtered.map { it.name }, b)
-            } catch (_: Exception) {
-            }
-            b.buildFuture()
+                }
+            SharedSuggestionProvider.suggest(filtered.map { it.name }, b)
+        } catch (_: Exception) {
         }
+        b.buildFuture()
+    }
 
-    private fun getIValueSuggestions(): SuggestionProvider<FabricClientCommandSource> =
-        SuggestionProvider { ctx, b ->
-            try {
-                val name = StringArgumentType.getString(ctx, "feature")
-                val feature = findFeature(name)?.instance ?: return@SuggestionProvider b.buildFuture()
-                val key = StringArgumentType.getString(ctx, "key")
-                val setting = feature.getSetting(key) ?: return@SuggestionProvider b.buildFuture()
-                val isAdd = ctx.nodes.any { it.node.name == "add" }
-                val isDel = ctx.nodes.any { it.node.name == "del" }
+    private fun getIValueSuggestions(): SuggestionProvider<FabricClientCommandSource> = SuggestionProvider { ctx, b ->
+        try {
+            val name = StringArgumentType.getString(ctx, "feature")
+            val feature = findFeature(name)?.instance ?: return@SuggestionProvider b.buildFuture()
+            val key = StringArgumentType.getString(ctx, "key")
+            val setting = feature.getSetting(key) ?: return@SuggestionProvider b.buildFuture()
+            val isAdd = ctx.nodes.any { it.node.name == "add" }
+            val isDel = ctx.nodes.any { it.node.name == "del" }
 
-                val suggestions =
-                    when (setting) {
-                        is FeatureSetting.BlockListSetting -> {
-                            if (isDel) {
-                                setting.value
-                            } else if (isAdd) {
-                                BuiltInRegistries.BLOCK.keySet().map { it.toString() }
-                            } else {
-                                emptyList()
-                            }
-                        }
-
-                        is FeatureSetting.EntityListSetting -> {
-                            if (isDel) {
-                                setting.value
-                            } else if (isAdd) {
-                                BuiltInRegistries.ENTITY_TYPE.keySet().map { it.toString() }
-                            } else {
-                                emptyList()
-                            }
-                        }
-
-                        is FeatureSetting.PlayerListSetting -> {
-                            if (isDel) {
-                                setting.value
-                            } else if (isAdd) {
-                                ctx.source.client.connection
-                                    ?.onlinePlayers
-                                    ?.map { it.profile.name }
-                                    ?: emptyList()
-                            } else {
-                                emptyList()
-                            }
-                        }
-
-                        is FeatureSetting.StringListSetting -> {
-                            setting.options
-                        }
-
-                        is FeatureSetting.BooleanSetting -> {
-                            listOf("true", "false")
-                        }
-
-                        is FeatureSetting.EnumSetting<*> -> {
-                            setting.options.map { it.toString() }
-                        }
-
-                        else -> {
+            val suggestions =
+                when (setting) {
+                    is FeatureSetting.BlockListSetting -> {
+                        if (isDel) {
+                            setting.value
+                        } else if (isAdd) {
+                            BuiltInRegistries.BLOCK.keySet().map { it.toString() }
+                        } else {
                             emptyList()
                         }
                     }
-                SharedSuggestionProvider.suggest(suggestions, b)
-            } catch (_: Exception) {
-            }
-            b.buildFuture()
-        }
 
-    private fun findFeature(name: String): Feature<out ConfigurableFeature>? =
-        InfiniteClient.featureCategories.flatMap { it.features }.find { it.name.equals(name, ignoreCase = true) }
+                    is FeatureSetting.EntityListSetting -> {
+                        if (isDel) {
+                            setting.value
+                        } else if (isAdd) {
+                            BuiltInRegistries.ENTITY_TYPE.keySet().map { it.toString() }
+                        } else {
+                            emptyList()
+                        }
+                    }
+
+                    is FeatureSetting.PlayerListSetting -> {
+                        if (isDel) {
+                            setting.value
+                        } else if (isAdd) {
+                            ctx.source.client.connection
+                                ?.onlinePlayers
+                                ?.map { it.profile.name }
+                                ?: emptyList()
+                        } else {
+                            emptyList()
+                        }
+                    }
+
+                    is FeatureSetting.StringListSetting -> {
+                        setting.options
+                    }
+
+                    is FeatureSetting.BooleanSetting -> {
+                        listOf("true", "false")
+                    }
+
+                    is FeatureSetting.EnumSetting<*> -> {
+                        setting.options.map { it.toString() }
+                    }
+
+                    else -> {
+                        emptyList()
+                    }
+                }
+            SharedSuggestionProvider.suggest(suggestions, b)
+        } catch (_: Exception) {
+        }
+        b.buildFuture()
+    }
+
+    private fun findFeature(name: String): Feature<out ConfigurableFeature>? = InfiniteClient.featureCategories.flatMap { it.features }.find { it.name.equals(name, ignoreCase = true) }
 
     private fun runAction(
         ctx: CommandContext<FabricClientCommandSource>,
@@ -375,8 +371,7 @@ object InfiniteCommand {
         return 1
     }
 
-    private fun getThemeSuggestions(): SuggestionProvider<FabricClientCommandSource> =
-        SuggestionProvider { _, b -> SharedSuggestionProvider.suggest(InfiniteClient.themes.map { it.name }, b) }
+    private fun getThemeSuggestions(): SuggestionProvider<FabricClientCommandSource> = SuggestionProvider { _, b -> SharedSuggestionProvider.suggest(InfiniteClient.themes.map { it.name }, b) }
 
     private fun setTheme(ctx: CommandContext<FabricClientCommandSource>): Int {
         val name = StringArgumentType.getString(ctx, "name")
@@ -463,20 +458,18 @@ object InfiniteCommand {
         }
     }
 
-    private fun getVersion(): Int =
-        1.also {
-            InfiniteClient.log(
-                "version ${
-                    FabricLoader.getInstance().getModContainer("infinite").get().metadata.version.friendlyString
-                }",
-            )
-        }
+    private fun getVersion(): Int = 1.also {
+        InfiniteClient.log(
+            "version ${
+                FabricLoader.getInstance().getModContainer("infinite").get().metadata.version.friendlyString
+            }",
+        )
+    }
 
-    private fun saveConfig(): Int =
-        1.also {
-            ConfigManager.saveConfig()
-            InfiniteClient.log(Component.translatable("command.infinite.config.save").string)
-        }
+    private fun saveConfig(): Int = 1.also {
+        ConfigManager.saveConfig()
+        InfiniteClient.log(Component.translatable("command.infinite.config.save").string)
+    }
 
     private fun loadConfig(): Int = 1.also { InfiniteClient.log(Component.translatable("command.infinite.config.load").string) }
 
@@ -590,134 +583,126 @@ object InfiniteCommand {
     }
 
     // 引数
-    private fun getCategoryArgument() =
-        ClientCommandManager.argument("category", StringArgumentType.word()).suggests(getCategorySuggestions())
+    private fun getCategoryArgument() = ClientCommandManager.argument("category", StringArgumentType.word()).suggests(getCategorySuggestions())
 
-    private fun getFeatureNameArgument() =
-        ClientCommandManager.argument("name", StringArgumentType.word()).suggests(getFeatureNameSuggestions())
+    private fun getFeatureNameArgument() = ClientCommandManager.argument("name", StringArgumentType.word()).suggests(getFeatureNameSuggestions())
 
-    private fun getSettingKeyArgument(f: ConfigurableFeature? = null) =
-        ClientCommandManager.argument("key", StringArgumentType.word()).suggests(getSettingKeySuggestions(f))
+    private fun getSettingKeyArgument(f: ConfigurableFeature? = null) = ClientCommandManager.argument("key", StringArgumentType.word()).suggests(getSettingKeySuggestions(f))
 
-    private fun getSettingValueArgument(f: ConfigurableFeature? = null) =
-        ClientCommandManager
-            .argument("value", StringArgumentType.greedyString())
-            .suggests(getSettingValueSuggestions(f))
+    private fun getSettingValueArgument(f: ConfigurableFeature? = null) = ClientCommandManager
+        .argument("value", StringArgumentType.greedyString())
+        .suggests(getSettingValueSuggestions(f))
 
-    private fun getCategorySuggestions(): SuggestionProvider<FabricClientCommandSource> =
-        SuggestionProvider { _, b ->
-            SharedSuggestionProvider.suggest(
-                InfiniteClient.featureCategories.map { it.name },
-                b,
-            )
+    private fun getCategorySuggestions(): SuggestionProvider<FabricClientCommandSource> = SuggestionProvider { _, b ->
+        SharedSuggestionProvider.suggest(
+            InfiniteClient.featureCategories.map { it.name },
+            b,
+        )
+    }
+
+    private fun getFeatureNameSuggestions(): SuggestionProvider<FabricClientCommandSource> = SuggestionProvider { ctx, b ->
+        try {
+            val cat = StringArgumentType.getString(ctx, "category")
+            val c = InfiniteClient.featureCategories.find { it.name.equals(cat, true) }
+            SharedSuggestionProvider.suggest(c?.features?.map { it.name } ?: emptyList(), b)
+        } catch (_: Exception) {
         }
+        b.buildFuture()
+    }
 
-    private fun getFeatureNameSuggestions(): SuggestionProvider<FabricClientCommandSource> =
-        SuggestionProvider { ctx, b ->
-            try {
-                val cat = StringArgumentType.getString(ctx, "category")
-                val c = InfiniteClient.featureCategories.find { it.name.equals(cat, true) }
-                SharedSuggestionProvider.suggest(c?.features?.map { it.name } ?: emptyList(), b)
-            } catch (_: Exception) {
-            }
-            b.buildFuture()
-        }
-
-    private fun getSettingKeySuggestions(f: ConfigurableFeature?): SuggestionProvider<FabricClientCommandSource> =
-        SuggestionProvider { ctx, b ->
-            val target =
-                f ?: run {
-                    try {
-                        val cat = StringArgumentType.getString(ctx, "category")
-                        val name = StringArgumentType.getString(ctx, "name")
-                        InfiniteClient.searchFeature(cat, name)
-                    } catch (_: Exception) {
-                        null
-                    }
-                } ?: return@SuggestionProvider b.buildFuture()
-
-            val isList = ctx.nodes.any { it.node.name in listOf("add", "del") }
-            val filtered =
-                target.settings.filter {
-                    val list =
-                        it is FeatureSetting.BlockListSetting ||
-                            it is FeatureSetting.EntityListSetting || it is FeatureSetting.PlayerListSetting
-                    isList == list
+    private fun getSettingKeySuggestions(f: ConfigurableFeature?): SuggestionProvider<FabricClientCommandSource> = SuggestionProvider { ctx, b ->
+        val target =
+            f ?: run {
+                try {
+                    val cat = StringArgumentType.getString(ctx, "category")
+                    val name = StringArgumentType.getString(ctx, "name")
+                    InfiniteClient.searchFeature(cat, name)
+                } catch (_: Exception) {
+                    null
                 }
-            SharedSuggestionProvider.suggest(filtered.map { it.name }, b)
-            b.buildFuture()
-        }
+            } ?: return@SuggestionProvider b.buildFuture()
 
-    private fun getSettingValueSuggestions(f: ConfigurableFeature?): SuggestionProvider<FabricClientCommandSource> =
-        SuggestionProvider { ctx, b ->
-            val target =
-                f ?: run {
-                    try {
-                        val cat = StringArgumentType.getString(ctx, "category")
-                        val name = StringArgumentType.getString(ctx, "name")
-                        InfiniteClient.searchFeature(cat, name)
-                    } catch (_: Exception) {
-                        null
-                    }
-                } ?: return@SuggestionProvider b.buildFuture()
+        val isList = ctx.nodes.any { it.node.name in listOf("add", "del") }
+        val filtered =
+            target.settings.filter {
+                val list =
+                    it is FeatureSetting.BlockListSetting ||
+                        it is FeatureSetting.EntityListSetting || it is FeatureSetting.PlayerListSetting
+                isList == list
+            }
+        SharedSuggestionProvider.suggest(filtered.map { it.name }, b)
+        b.buildFuture()
+    }
 
-            val key = StringArgumentType.getString(ctx, "key")
-            val s = target.getSetting(key) ?: return@SuggestionProvider b.buildFuture()
-            val isAdd = ctx.nodes.any { it.node.name == "add" }
-            val isDel = ctx.nodes.any { it.node.name == "del" }
+    private fun getSettingValueSuggestions(f: ConfigurableFeature?): SuggestionProvider<FabricClientCommandSource> = SuggestionProvider { ctx, b ->
+        val target =
+            f ?: run {
+                try {
+                    val cat = StringArgumentType.getString(ctx, "category")
+                    val name = StringArgumentType.getString(ctx, "name")
+                    InfiniteClient.searchFeature(cat, name)
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: return@SuggestionProvider b.buildFuture()
 
-            val suggestions =
-                when (s) {
-                    is FeatureSetting.BlockListSetting -> {
-                        if (isDel) {
-                            s.value
-                        } else if (isAdd) {
-                            BuiltInRegistries.BLOCK.keySet().map { it.toString() }
-                        } else {
-                            emptyList()
-                        }
-                    }
+        val key = StringArgumentType.getString(ctx, "key")
+        val s = target.getSetting(key) ?: return@SuggestionProvider b.buildFuture()
+        val isAdd = ctx.nodes.any { it.node.name == "add" }
+        val isDel = ctx.nodes.any { it.node.name == "del" }
 
-                    is FeatureSetting.EntityListSetting -> {
-                        if (isDel) {
-                            s.value
-                        } else if (isAdd) {
-                            BuiltInRegistries.ENTITY_TYPE.keySet().map { it.toString() }
-                        } else {
-                            emptyList()
-                        }
-                    }
-
-                    is FeatureSetting.PlayerListSetting -> {
-                        if (isDel) {
-                            s.value
-                        } else if (isAdd) {
-                            ctx.source.client.connection
-                                ?.onlinePlayers
-                                ?.map { it.profile.name }
-                                ?: emptyList()
-                        } else {
-                            emptyList()
-                        }
-                    }
-
-                    is FeatureSetting.StringListSetting -> {
-                        s.options
-                    }
-
-                    is FeatureSetting.BooleanSetting -> {
-                        listOf("true", "false")
-                    }
-
-                    is FeatureSetting.EnumSetting<*> -> {
-                        s.options.map { it.toString() }
-                    }
-
-                    else -> {
+        val suggestions =
+            when (s) {
+                is FeatureSetting.BlockListSetting -> {
+                    if (isDel) {
+                        s.value
+                    } else if (isAdd) {
+                        BuiltInRegistries.BLOCK.keySet().map { it.toString() }
+                    } else {
                         emptyList()
                     }
                 }
-            SharedSuggestionProvider.suggest(suggestions, b)
-            b.buildFuture()
-        }
+
+                is FeatureSetting.EntityListSetting -> {
+                    if (isDel) {
+                        s.value
+                    } else if (isAdd) {
+                        BuiltInRegistries.ENTITY_TYPE.keySet().map { it.toString() }
+                    } else {
+                        emptyList()
+                    }
+                }
+
+                is FeatureSetting.PlayerListSetting -> {
+                    if (isDel) {
+                        s.value
+                    } else if (isAdd) {
+                        ctx.source.client.connection
+                            ?.onlinePlayers
+                            ?.map { it.profile.name }
+                            ?: emptyList()
+                    } else {
+                        emptyList()
+                    }
+                }
+
+                is FeatureSetting.StringListSetting -> {
+                    s.options
+                }
+
+                is FeatureSetting.BooleanSetting -> {
+                    listOf("true", "false")
+                }
+
+                is FeatureSetting.EnumSetting<*> -> {
+                    s.options.map { it.toString() }
+                }
+
+                else -> {
+                    emptyList()
+                }
+            }
+        SharedSuggestionProvider.suggest(suggestions, b)
+        b.buildFuture()
+    }
 }

@@ -338,53 +338,51 @@ object InventoryManager : ClientInterface() {
      * InventoryIndexをプレイヤーインベントリ内の内部スロットインデックス (0-40) に変換します。
      * ホットバー: 0-8, バックパック: 9-35, 防具: 36-39, オフハンド: 40
      */
-    private fun indexToSlot(index: InventoryIndex): Int? =
-        when (index) {
-            is InventoryIndex.Armor -> {
-                when (index) {
-                    is InventoryIndex.Armor.Head -> 39
-                    is InventoryIndex.Armor.Chest -> 38
-                    is InventoryIndex.Armor.Legs -> 37
-                    is InventoryIndex.Armor.Foots -> 36
-                    else -> null
-                }
+    private fun indexToSlot(index: InventoryIndex): Int? = when (index) {
+        is InventoryIndex.Armor -> {
+            when (index) {
+                is InventoryIndex.Armor.Head -> 39
+                is InventoryIndex.Armor.Chest -> 38
+                is InventoryIndex.Armor.Legs -> 37
+                is InventoryIndex.Armor.Foots -> 36
+                else -> null
             }
-
-            is InventoryIndex.Hotbar -> {
-                index.index
-            }
-
-            is InventoryIndex.Backpack -> {
-                9 + index.index
-            }
-
-            is InventoryIndex.OffHand -> {
-                40
-            }
-
-            is InventoryIndex.MainHand -> {
-                inventory?.selectedSlot
-            } // nullチェックを追加
         }
+
+        is InventoryIndex.Hotbar -> {
+            index.index
+        }
+
+        is InventoryIndex.Backpack -> {
+            9 + index.index
+        }
+
+        is InventoryIndex.OffHand -> {
+            40
+        }
+
+        is InventoryIndex.MainHand -> {
+            inventory?.selectedSlot
+        } // nullチェックを追加
+    }
 
     /**
      * 内部スロットインデックスをネットワークパケットで使用されるスロットID (0-45) に変換します。
      * 通常のインベントリ画面 (ID 0) での使用を想定しています。
      */
-    fun toNetworkSlot(internalSlot: Int): Int =
-        when (internalSlot) {
-            // ホットバー (内部 0-8 -> ネットワーク 36-44)
-            in 0..8 -> internalSlot + 36
+    fun toNetworkSlot(internalSlot: Int): Int = when (internalSlot) {
+        // ホットバー (内部 0-8 -> ネットワーク 36-44)
+        in 0..8 -> internalSlot + 36
 
-            // 防具 (内部 36-39 -> ネットワーク 5-8: 逆順)
-            in 36..39 -> 44 - internalSlot
+        // 防具 (内部 36-39 -> ネットワーク 5-8: 逆順)
+        in 36..39 -> 44 - internalSlot
 
-            // オフハンド (内部 40 -> ネットワーク 45)
-            40 -> 45
+        // オフハンド (内部 40 -> ネットワーク 45)
+        40 -> 45
 
-            // バックパック (内部 9-35 -> ネットワーク 9-35)
-            else -> internalSlot
-        }
+        // バックパック (内部 9-35 -> ネットワーク 9-35)
+        else -> internalSlot
+    }
 
     /**
      * 指定されたアイテムを持つ最初の内部スロットインデックス (0-40) を検索します。

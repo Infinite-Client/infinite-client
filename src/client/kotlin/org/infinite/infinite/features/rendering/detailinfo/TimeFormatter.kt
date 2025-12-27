@@ -4,18 +4,17 @@ import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 
 object TimeFormatter {
-    fun formatTime(seconds: Double): String =
-        if (seconds >= 60) {
-            val minutes = (seconds / 60).toInt()
-            val remainingSeconds = seconds % 60
-            if (remainingSeconds >= 1) {
-                "%dmin %.1fs".format(minutes, remainingSeconds)
-            } else {
-                "%dmin".format(minutes)
-            }
+    fun formatTime(seconds: Double): String = if (seconds >= 60) {
+        val minutes = (seconds / 60).toInt()
+        val remainingSeconds = seconds % 60
+        if (remainingSeconds >= 1) {
+            "%dmin %.1fs".format(minutes, remainingSeconds)
         } else {
-            "%.1fs".format(seconds)
+            "%dmin".format(minutes)
         }
+    } else {
+        "%.1fs".format(seconds)
+    }
 
     fun getBreakingTimeText(
         progress: Float,

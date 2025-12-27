@@ -251,7 +251,7 @@ object RenderUtils {
                 ((r * 255).toInt() shl 16) or
                 ((g * 255).toInt() shl 8) or
                 (b * 255).toInt()
-        )
+            )
     }
 
     /**

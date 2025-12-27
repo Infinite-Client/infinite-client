@@ -47,13 +47,12 @@ class HyperTextRenderer(
         this.hyperFonts = hyperFonts
     }
 
-    private fun getHyperFontIdentifier(style: Style): Identifier =
-        when {
-            style.isBold && style.isItalic -> hyperFonts.italicBoldIdentifier
-            style.isBold -> hyperFonts.boldIdentifier
-            style.isItalic -> hyperFonts.italicIdentifier
-            else -> hyperFonts.regularIdentifier
-        }
+    private fun getHyperFontIdentifier(style: Style): Identifier = when {
+        style.isBold && style.isItalic -> hyperFonts.italicBoldIdentifier
+        style.isBold -> hyperFonts.boldIdentifier
+        style.isItalic -> hyperFonts.italicIdentifier
+        else -> hyperFonts.regularIdentifier
+    }
 
     class ZeroBoldOffsetMetrics(
         private val baseMetrics: GlyphInfo,

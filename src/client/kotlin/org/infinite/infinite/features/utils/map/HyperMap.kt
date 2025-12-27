@@ -11,7 +11,7 @@ import net.minecraft.world.level.levelgen.Heightmap
 import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 import java.awt.Color
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.min
@@ -127,7 +127,7 @@ class HyperMap : ConfigurableFeature() {
 
             else -> {
                 // MapColor.colorはRGB整数値なので、アルファ値を255として追加
-                state.getMapColor(world, pos).col.transparent(255)
+                state.getMapColor(world, pos).col.alpha(255)
             }
         }
     }

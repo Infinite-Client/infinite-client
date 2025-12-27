@@ -9,10 +9,9 @@ import org.infinite.libs.gui.screen.GlobalSettingsScreen
 // Kotlinでは、クラス名の末尾に「Api」を付けず、実装するインターフェイスを
 // クラス名に含めることが推奨される場合もありますが、このままでも問題ありません。
 class InfiniteModMenuApi : ModMenuApi {
-    override fun getModConfigScreenFactory(): ConfigScreenFactory<*> =
-        ConfigScreenFactory { screen: Screen? ->
-            GlobalSettingsScreen(screen)
-        }
+    override fun getModConfigScreenFactory(): ConfigScreenFactory<*> = ConfigScreenFactory { screen: Screen? ->
+        GlobalSettingsScreen(screen)
+    }
 
     override fun getProvidedConfigScreenFactories(): Map<String, ConfigScreenFactory<*>> = emptyMap()
 

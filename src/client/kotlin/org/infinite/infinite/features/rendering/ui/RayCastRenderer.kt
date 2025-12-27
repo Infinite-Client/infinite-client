@@ -7,7 +7,7 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.client.player.ClientInterface
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.render.RenderUtils
-import org.infinite.utils.rendering.transparent // 透明度ユーティリティのインポート
+import org.infinite.utils.rendering.alpha // 透明度ユーティリティのインポート
 
 /**
  * プレイヤーの視線が捉えているエンティティまたはブロックを3D空間にハイライト描画するクラス。
@@ -54,7 +54,7 @@ class RayCastRenderer : ClientInterface() {
         // 色の設定
         val primaryColor = InfiniteClient.theme().colors.primaryColor
         // 塗りつぶし用に透明度を調整
-        val solidColor = primaryColor.transparent(70)
+        val solidColor = primaryColor.alpha(70)
 
         // 1. 塗りつぶしボックスを描画
         val solidBoxes = listOf(RenderUtils.ColorBox(solidColor, box.deflate(0.002))) // わずかに縮小
@@ -87,7 +87,7 @@ class RayCastRenderer : ClientInterface() {
                 .deflate((1 - progress) / 2.0)
                 .move(blockPos)
         val accentColor = InfiniteClient.theme().colors.primaryColor
-        val solidColor = accentColor.transparent(90) // 塗りつぶし用に透明度を調整 (強めに)
+        val solidColor = accentColor.alpha(90) // 塗りつぶし用に透明度を調整 (強めに)
 
         // 1. 強調された塗りつぶしボックスを描画
         if (interactionManager.isDestroying) {

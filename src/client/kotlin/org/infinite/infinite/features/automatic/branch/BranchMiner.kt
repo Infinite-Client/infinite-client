@@ -950,12 +950,11 @@ class BranchMiner : ConfigurableFeature() {
         start: BlockPos,
         end: BlockPos,
         direction: Direction,
-    ): Int =
-        when (direction) {
-            Direction.NORTH, Direction.SOUTH -> abs(start.z - end.z)
-            Direction.EAST, Direction.WEST -> abs(start.x - end.x)
-            else -> 0
-        }
+    ): Int = when (direction) {
+        Direction.NORTH, Direction.SOUTH -> abs(start.z - end.z)
+        Direction.EAST, Direction.WEST -> abs(start.x - end.x)
+        else -> 0
+    }
 
     private fun collectAllItems() {
         val startPos = branchStartPosition ?: return

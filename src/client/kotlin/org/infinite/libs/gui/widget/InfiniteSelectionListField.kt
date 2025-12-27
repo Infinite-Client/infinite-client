@@ -32,7 +32,7 @@ class InfiniteSelectionListField(
             (
                 options.maxOfOrNull { textRenderer.width(it) + 8 }
                     ?: 0
-            ).coerceAtLeast(50)
+                ).coerceAtLeast(50)
 
         // Initialize cycleButton here
         cycleButton =
@@ -52,12 +52,11 @@ class InfiniteSelectionListField(
         }
     }
 
-    private fun getCurrentSettingValueAsText(): Component =
-        when (setting) {
-            is FeatureSetting.EnumSetting<*> -> Component.literal(setting.value.name)
-            is FeatureSetting.StringListSetting -> Component.literal(setting.value)
-            else -> Component.literal("N/A")
-        }
+    private fun getCurrentSettingValueAsText(): Component = when (setting) {
+        is FeatureSetting.EnumSetting<*> -> Component.literal(setting.value.name)
+        is FeatureSetting.StringListSetting -> Component.literal(setting.value)
+        else -> Component.literal("N/A")
+    }
 
     private fun cycleOption() {
         when (setting) {

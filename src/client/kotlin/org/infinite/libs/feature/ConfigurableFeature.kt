@@ -12,7 +12,7 @@ import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.world.WorldManager
 import org.infinite.settings.FeatureSetting
 import org.infinite.settings.Property
-import org.infinite.utils.toSnakeCase
+import org.infinite.utils.toLowerSnakeCase
 import org.lwjgl.glfw.GLFW
 import kotlin.collections.forEach
 
@@ -193,7 +193,7 @@ abstract class ConfigurableFeature(
             keyBindingCategory: KeyMapping.Category,
         ): ActionKeybind {
             translationKey =
-                "key.infinite-client.action.${toSnakeCase(categoryName)}.${toSnakeCase(featureName)}.${toSnakeCase(name)}"
+                "key.infinite-client.action.${categoryName.toLowerSnakeCase()}.${featureName.toLowerSnakeCase()}.${name.toLowerSnakeCase()}"
             keyBinding =
                 KeyMapping(
                     translationKey,

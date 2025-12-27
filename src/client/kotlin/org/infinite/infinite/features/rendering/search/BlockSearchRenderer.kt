@@ -10,7 +10,7 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.world.WorldManager
 import org.infinite.utils.rendering.BlockMeshGenerator
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 object BlockSearchRenderer {
     // データ構造: ブロック位置とその色 (ARGB)
@@ -28,7 +28,7 @@ object BlockSearchRenderer {
     private fun getColorForBlock(blockId: String): Int? {
         val blockSearchFeature = InfiniteClient.getFeature(BlockSearch::class.java)
         val blockSearchColors = blockSearchFeature?.getBlockSearchColors() ?: return null
-        return blockSearchColors[blockId]?.transparent(128)
+        return blockSearchColors[blockId]?.alpha(128)
     }
 
     // パケットによる即時更新ロジック

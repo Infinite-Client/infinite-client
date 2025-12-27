@@ -7,7 +7,7 @@ import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.LivingEntity
 import org.infinite.libs.graphics.Graphics2D
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 object EntityContentRenderer {
     private const val PADDING = 5
@@ -77,7 +77,7 @@ object EntityContentRenderer {
             org.infinite.InfiniteClient
                 .theme()
                 .colors.foregroundColor
-                .transparent(192),
+                .alpha(192),
             true,
         )
         currentY += font.lineHeight + PADDING

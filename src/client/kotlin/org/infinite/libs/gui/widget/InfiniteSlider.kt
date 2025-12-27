@@ -129,27 +129,26 @@ class InfiniteSlider<T : Number>(
         )
     }
 
-    private fun getProgress(): Float =
-        when (setting) {
-            is FeatureSetting.IntSetting -> {
-                val range = (setting.max - setting.min).toFloat()
-                (setting.value.toFloat() - setting.min) / range
-            }
-
-            is FeatureSetting.FloatSetting -> {
-                val range = (setting.max - setting.min)
-                (setting.value - setting.min) / range
-            }
-
-            is FeatureSetting.DoubleSetting -> {
-                val range = (setting.max - setting.min).toFloat()
-                (setting.value - setting.min).toFloat() / range
-            }
-
-            else -> {
-                throw IllegalStateException("InfiniteSlider can only be used with IntSetting or FloatSetting")
-            }
+    private fun getProgress(): Float = when (setting) {
+        is FeatureSetting.IntSetting -> {
+            val range = (setting.max - setting.min).toFloat()
+            (setting.value.toFloat() - setting.min) / range
         }
+
+        is FeatureSetting.FloatSetting -> {
+            val range = (setting.max - setting.min)
+            (setting.value - setting.min) / range
+        }
+
+        is FeatureSetting.DoubleSetting -> {
+            val range = (setting.max - setting.min).toFloat()
+            (setting.value - setting.min).toFloat() / range
+        }
+
+        else -> {
+            throw IllegalStateException("InfiniteSlider can only be used with IntSetting or FloatSetting")
+        }
+    }
 
     private fun setValueFromMouse(mouseX: Double) {
         // スライダーの有効範囲 (ノブの左端が動ける範囲)

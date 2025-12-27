@@ -56,38 +56,37 @@ object ItemEsp {
         graphics3d.renderLinedColorBoxes(renderBoxes, true)
     }
 
-    fun rarityColor(stack: ItemStack): Int =
-        when (stack.rarity) {
-            Rarity.COMMON -> {
-                org.infinite.InfiniteClient
-                    .theme()
-                    .colors.foregroundColor
-            }
-
-            Rarity.UNCOMMON -> {
-                org.infinite.InfiniteClient
-                    .theme()
-                    .colors.yellowAccentColor
-            }
-
-            Rarity.RARE -> {
-                org.infinite.InfiniteClient
-                    .theme()
-                    .colors.aquaAccentColor
-            }
-
-            Rarity.EPIC -> {
-                org.infinite.InfiniteClient
-                    .theme()
-                    .colors.magentaAccentColor
-            }
-
-            else -> {
-                org.infinite.InfiniteClient
-                    .theme()
-                    .colors.foregroundColor
-            }
+    fun rarityColor(stack: ItemStack): Int = when (stack.rarity) {
+        Rarity.COMMON -> {
+            org.infinite.InfiniteClient
+                .theme()
+                .colors.foregroundColor
         }
+
+        Rarity.UNCOMMON -> {
+            org.infinite.InfiniteClient
+                .theme()
+                .colors.yellowAccentColor
+        }
+
+        Rarity.RARE -> {
+            org.infinite.InfiniteClient
+                .theme()
+                .colors.aquaAccentColor
+        }
+
+        Rarity.EPIC -> {
+            org.infinite.InfiniteClient
+                .theme()
+                .colors.magentaAccentColor
+        }
+
+        else -> {
+            org.infinite.InfiniteClient
+                .theme()
+                .colors.foregroundColor
+        }
+    }
 
     fun rarityColor(entity: ItemEntity): Int = rarityColor(entity.item)
 

@@ -152,7 +152,7 @@ class Document(
         langCode: String,
     ) {
         // カテゴリ名で新しいディレクトリを解決 (スネークケース)
-        val categoryFolderName = toKebabCase(category.name)
+        val categoryFolderName = category.name.toLowerKebabCase()
         val categoryDir = parentDir.resolve(categoryFolderName)
 
         // 1. Docusaurus用メタファイル (_category_.json) を生成
@@ -194,7 +194,7 @@ class Document(
         langCode: String,
     ) {
         // ファイル名を決定
-        val featureFileName = toKebabCase(data.name) + ".mdx"
+        val featureFileName = data.name.toLowerKebabCase() + ".mdx"
         val featurePath = dir.resolve(featureFileName)
 
         val featureContent = StringBuilder()
@@ -463,7 +463,7 @@ class Document(
 
             // カテゴリごとのサブディレクトリを作成
             data.local.forEach { category ->
-                val categoryDir = localFeaturesDir.resolve(toKebabCase(category.name))
+                val categoryDir = localFeaturesDir.resolve(category.name.toLowerKebabCase())
                 categoryDir.createDirectories()
                 println("  - カテゴリディレクトリ作成: $categoryDir")
             }
@@ -473,7 +473,7 @@ class Document(
             globalFeaturesDir.createDirectories()
 
             data.global.forEach { category ->
-                val categoryDir = globalFeaturesDir.resolve(toKebabCase(category.name))
+                val categoryDir = globalFeaturesDir.resolve(category.name.toLowerKebabCase())
                 categoryDir.createDirectories()
                 println("  - カテゴリディレクトリ作成: $categoryDir")
             }

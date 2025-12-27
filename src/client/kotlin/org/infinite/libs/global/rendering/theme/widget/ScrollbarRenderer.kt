@@ -7,7 +7,7 @@ import net.minecraft.client.gui.components.AbstractScrollArea
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.gui.theme.ThemeColors
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 class ScrollbarRenderer(
     val widget: AbstractScrollArea,
@@ -32,7 +32,7 @@ class ScrollbarRenderer(
                 widget.y,
                 6, // width of the scrollbar background
                 widget.height,
-                colors.backgroundColor.transparent(128), // 半透明の背景色
+                colors.backgroundColor.alpha(128), // 半透明の背景色
             )
 
             // カスタムのスクロールバーサム（つまみ）の描画

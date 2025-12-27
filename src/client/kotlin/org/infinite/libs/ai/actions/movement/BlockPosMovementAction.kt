@@ -37,40 +37,38 @@ class BlockPosMovementAction(
     val pos: BlockPos
         get() = player!!.blockPosition()
 
-    fun baritoneCheck(): Boolean =
-        try {
-            Class.forName("baritone.api.BaritoneAPI")
-            true
-        } catch (_: ClassNotFoundException) {
-            false
-        }
+    fun baritoneCheck(): Boolean = try {
+        Class.forName("baritone.api.BaritoneAPI")
+        true
+    } catch (_: ClassNotFoundException) {
+        false
+    }
 
     var goal: Any? = null
 
-    override fun state(): AiActionState =
-        if (!baritoneCheck()) {
-            InfiniteClient.error("You have to import Baritone for this Feature!")
-            AiActionState.Failure
-        } else {
-            stateRegister() ?: when {
-                !registered || baritone.pathingBehavior.goal == goal -> AiActionState.Progress
+    override fun state(): AiActionState = if (!baritoneCheck()) {
+        InfiniteClient.error("You have to import Baritone for this Feature!")
+        AiActionState.Failure
+    } else {
+        stateRegister() ?: when {
+            !registered || baritone.pathingBehavior.goal == goal -> AiActionState.Progress
 
-                // 既に何かしらのアクションが行われている
-                registered && (
-                    if (radius == null) {
-                        baritone.pathingBehavior.goal != goal
-                    } else {
-                        (goal as Vec3iGoal).isInGoal(
-                            pos.x,
-                            pos.y,
-                            pos.z,
-                        )
-                    }
+            // 既に何かしらのアクションが行われている
+            registered && (
+                if (radius == null) {
+                    baritone.pathingBehavior.goal != goal
+                } else {
+                    (goal as Vec3iGoal).isInGoal(
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                    )
+                }
                 ) -> AiActionState.Success
 
-                else -> AiActionState.Failure
-            }
+            else -> AiActionState.Failure
         }
+    }
 
     private fun cancelTask() {
         if (baritoneCheck()) {

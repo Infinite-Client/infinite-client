@@ -85,20 +85,19 @@ class FeatureSearchWidget(
         scrollableContainer.updateWidgetPositions() // Update positions after changing widgets
     }
 
-    private fun createFeatureToggleWidgets(features: List<Feature<out ConfigurableFeature>>): List<AbstractWidget> =
-        features.mapIndexed { index, feature ->
-            InfiniteFeatureToggle(
-                0,
-                0,
-                scrollableContainer.width - scrollableContainer.internalPadding * 2,
-                20,
-                feature,
-                index == selectedIndex, // isSelected
-            ) {
-                // onSettings lambda
-                Minecraft.getInstance().setScreen(FeatureSettingsScreen(parentScreen, feature))
-            }
+    private fun createFeatureToggleWidgets(features: List<Feature<out ConfigurableFeature>>): List<AbstractWidget> = features.mapIndexed { index, feature ->
+        InfiniteFeatureToggle(
+            0,
+            0,
+            scrollableContainer.width - scrollableContainer.internalPadding * 2,
+            20,
+            feature,
+            index == selectedIndex, // isSelected
+        ) {
+            // onSettings lambda
+            Minecraft.getInstance().setScreen(FeatureSettingsScreen(parentScreen, feature))
         }
+    }
 
     override fun renderWidget(
         context: GuiGraphics,

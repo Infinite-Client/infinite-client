@@ -44,18 +44,17 @@ class BlockColorListItemWidget(
      * ブロックID文字列から対応するItemStackを取得します。
      * IDが無効な場合は代替となるItemStack（例：バリアブロック）を返します。
      */
-    private fun getItemStackFromId(id: String): ItemStack =
-        try {
-            val identifier = Identifier.parse(id)
-            val block = BuiltInRegistries.BLOCK.getValue(identifier)
-            if (block != Blocks.AIR) {
-                block.asItem().defaultInstance
-            } else {
-                Items.BARRIER.defaultInstance
-            }
-        } catch (_: Exception) {
+    private fun getItemStackFromId(id: String): ItemStack = try {
+        val identifier = Identifier.parse(id)
+        val block = BuiltInRegistries.BLOCK.getValue(identifier)
+        if (block != Blocks.AIR) {
+            block.asItem().defaultInstance
+        } else {
             Items.BARRIER.defaultInstance
         }
+    } catch (_: Exception) {
+        Items.BARRIER.defaultInstance
+    }
 
     override fun renderWidget(
         context: GuiGraphics,
@@ -167,11 +166,10 @@ class BlockColorListItemWidget(
     private fun isMouseOverRemoveButton(
         mouseX: Double,
         mouseY: Double,
-    ): Boolean =
-        mouseX >= removeButtonX &&
-            mouseX < removeButtonX + removeButtonWidth &&
-            mouseY >= removeButtonY &&
-            mouseY < removeButtonY + removeButtonHeight
+    ): Boolean = mouseX >= removeButtonX &&
+        mouseX < removeButtonX + removeButtonWidth &&
+        mouseY >= removeButtonY &&
+        mouseY < removeButtonY + removeButtonHeight
 
     /**
      * ★ 修正済み: Click オブジェクトを受け取る形式に再修正

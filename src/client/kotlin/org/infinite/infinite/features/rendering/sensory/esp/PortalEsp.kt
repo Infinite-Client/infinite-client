@@ -11,7 +11,7 @@ import org.infinite.infinite.features.rendering.sensory.ExtraSensory
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.world.WorldManager
 import org.infinite.utils.rendering.BlockMeshGenerator
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 object PortalEsp {
     // データ構造をListからMap<BlockPos, Int>に変更し、高速な追加/削除/ルックアップを可能にする
@@ -23,39 +23,38 @@ object PortalEsp {
             InfiniteClient
                 .theme()
                 .colors.redAccentColor
-                .transparent(64)
+                .alpha(64)
     private val END_GATEWAY_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.yellowAccentColor
-                .transparent(64)
+                .alpha(64)
     private val END_PORTAL_FRAME_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.greenAccentColor
-                .transparent(64)
+                .alpha(64)
     private val END_PORTAL_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.blueAccentColor
-                .transparent(64)
+                .alpha(64)
 
     // ティックベースのスキャン状態を管理
     private const val SCAN_RADIUS_CHUNKS = 8 // プレイヤーを中心とする8チャンクの半径 (合計17x17チャンク)
     private val TOTAL_CHUNKS = (2 * SCAN_RADIUS_CHUNKS + 1).let { it * it }
     private var currentScanIndex = 0 // 現在走査中のチャンクのインデックス (0からTOTAL_CHUNKS-1)
 
-    private fun getColorForBlock(blockId: String): Int? =
-        when (blockId) {
-            "minecraft:nether_portal" -> NETHER_PORTAL_COLOR
-            "minecraft:end_portal_frame" -> END_PORTAL_FRAME_COLOR
-            "minecraft:end_portal" -> END_PORTAL_COLOR
-            "minecraft:end_gateway" -> END_GATEWAY_COLOR
-            else -> null
-        }
+    private fun getColorForBlock(blockId: String): Int? = when (blockId) {
+        "minecraft:nether_portal" -> NETHER_PORTAL_COLOR
+        "minecraft:end_portal_frame" -> END_PORTAL_FRAME_COLOR
+        "minecraft:end_portal" -> END_PORTAL_COLOR
+        "minecraft:end_gateway" -> END_GATEWAY_COLOR
+        else -> null
+    }
 
     // パケットによる即時更新ロジック (Mapを使用するように修正)
     fun handleChunk(chunk: WorldManager.Chunk) {

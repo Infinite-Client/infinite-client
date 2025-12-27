@@ -7,7 +7,7 @@ import net.minecraft.world.level.block.ChestBlock
 import net.minecraft.world.level.block.state.properties.ChestType
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 object BlockContentRenderer {
     private const val PADDING = 5
@@ -121,7 +121,7 @@ object BlockContentRenderer {
             InfiniteClient
                 .theme()
                 .colors.foregroundColor
-                .transparent(127),
+                .alpha(127),
             true,
         )
         val correctToolId = correctTool.getId()

@@ -5,7 +5,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.ColorUtils
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 object InventoryRenderer {
     private const val PADDING = 5
@@ -171,7 +171,7 @@ object InventoryRenderer {
                     org.infinite.InfiniteClient
                         .theme()
                         .colors.backgroundColor
-                        .transparent(128),
+                        .alpha(128),
                 )
                 val fillWidth = (barLength * progress).toInt()
                 graphics2d.fill(
@@ -194,7 +194,7 @@ object InventoryRenderer {
                     org.infinite.InfiniteClient
                         .theme()
                         .colors.backgroundColor
-                        .transparent(128),
+                        .alpha(128),
                 )
                 val fillFlame = (barLength * fuelPercent).toInt()
                 graphics2d.fill(
@@ -334,7 +334,7 @@ object InventoryRenderer {
                     org.infinite.InfiniteClient
                         .theme()
                         .colors.backgroundColor
-                        .transparent(128),
+                        .alpha(128),
                 )
                 val fillHeight = (arrowHeight * progress).toInt()
                 graphics2d.fill(
@@ -359,7 +359,7 @@ object InventoryRenderer {
                     org.infinite.InfiniteClient
                         .theme()
                         .colors.backgroundColor
-                        .transparent(128),
+                        .alpha(128),
                 )
                 val fuelFillWidth = (fuelBarWidth * fuelProgress).toInt()
                 graphics2d.fill(
@@ -493,7 +493,7 @@ object InventoryRenderer {
                 org.infinite.InfiniteClient
                     .theme()
                     .colors.backgroundColor
-                    .transparent(128),
+                    .alpha(128),
             )
         }
     }

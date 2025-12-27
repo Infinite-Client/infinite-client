@@ -73,22 +73,21 @@ object CustomThemeLoader {
     private fun decodeTheme(
         sourceName: String,
         text: String,
-    ): Theme? =
-        runCatching {
-            val cfg = json.decodeFromString<ThemeConfig>(text)
-            val colors =
-                object : ThemeColors() {
-                    override val backgroundColor = cfg.backgroundColor?.let { parseColor(it) } ?: super.backgroundColor
-                    override val foregroundColor = cfg.foregroundColor?.let { parseColor(it) } ?: super.foregroundColor
-                    override val primaryColor = cfg.primaryColor?.let { parseColor(it) } ?: super.primaryColor
-                    override val secondaryColor = cfg.secondaryColor?.let { parseColor(it) } ?: super.secondaryColor
-                }
-            val icon =
-                cfg.icon?.let {
-                    runCatching { ThemeIcon(Identifier.parse(it)) }.getOrNull()
-                }
-            Theme(cfg.name, colors, icon)
-        }.onFailure { ex ->
-            logger.warn("Failed to load theme from $sourceName: ${ex.message}")
-        }.getOrNull()
+    ): Theme? = runCatching {
+        val cfg = json.decodeFromString<ThemeConfig>(text)
+        val colors =
+            object : ThemeColors() {
+                override val backgroundColor = cfg.backgroundColor?.let { parseColor(it) } ?: super.backgroundColor
+                override val foregroundColor = cfg.foregroundColor?.let { parseColor(it) } ?: super.foregroundColor
+                override val primaryColor = cfg.primaryColor?.let { parseColor(it) } ?: super.primaryColor
+                override val secondaryColor = cfg.secondaryColor?.let { parseColor(it) } ?: super.secondaryColor
+            }
+        val icon =
+            cfg.icon?.let {
+                runCatching { ThemeIcon(Identifier.parse(it)) }.getOrNull()
+            }
+        Theme(cfg.name, colors, icon)
+    }.onFailure { ex ->
+        logger.warn("Failed to load theme from $sourceName: ${ex.message}")
+    }.getOrNull()
 }

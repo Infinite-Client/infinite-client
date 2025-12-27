@@ -7,7 +7,7 @@ import org.infinite.InfiniteClient
 import org.infinite.infinite.features.rendering.ui.HyperUi
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.utils.rendering.ColorUtils
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 object DetailInfoRenderer {
     internal const val BORDER_WIDTH = 2
@@ -18,7 +18,7 @@ object DetailInfoRenderer {
             InfiniteClient
                 .theme()
                 .colors.backgroundColor
-                .transparent(192)
+                .alpha(192)
 
     fun render(
         graphics2d: Graphics2D,
@@ -129,7 +129,7 @@ object DetailInfoRenderer {
             InfiniteClient
                 .theme()
                 .colors.backgroundColor
-                .transparent(128)
+                .alpha(128)
         graphics2d.fill(barStartX, barY, barWidth, BAR_HEIGHT, barBackgroundColor)
 
         if (fillWidth > 0) {

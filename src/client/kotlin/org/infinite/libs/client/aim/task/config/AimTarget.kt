@@ -82,26 +82,25 @@ sealed class AimTarget {
      * AimTargetのワールド内位置を計算して返します。
      * RollTargetなど、位置を持たない場合は null を返します。
      */
-    fun pos(): Vec3? =
-        when (this) { // when式の対象を 'this' に変更し、スマートキャストを有効化
-            is EntityTarget -> {
-                // MinecraftClient.getInstance().renderTickCounter.getTickProgress(false) を使用
-                // Entityの位置に目線の高さを加算
-                this.entity
-                    .getPosition(Minecraft.getInstance().deltaTracker.getGameTimeDeltaPartialTick(false))
-                    .add(0.0, this.entity.getEyeHeight(this.entity.pose).toDouble(), 0.0)
-            }
-
-            is BlockTarget -> {
-                this.pos()
-            }
-
-            is WaypointTarget -> {
-                this.pos()
-            }
-
-            is RollTarget -> {
-                null
-            }
+    fun pos(): Vec3? = when (this) { // when式の対象を 'this' に変更し、スマートキャストを有効化
+        is EntityTarget -> {
+            // MinecraftClient.getInstance().renderTickCounter.getTickProgress(false) を使用
+            // Entityの位置に目線の高さを加算
+            this.entity
+                .getPosition(Minecraft.getInstance().deltaTracker.getGameTimeDeltaPartialTick(false))
+                .add(0.0, this.entity.getEyeHeight(this.entity.pose).toDouble(), 0.0)
         }
+
+        is BlockTarget -> {
+            this.pos()
+        }
+
+        is WaypointTarget -> {
+            this.pos()
+        }
+
+        is RollTarget -> {
+            null
+        }
+    }
 }

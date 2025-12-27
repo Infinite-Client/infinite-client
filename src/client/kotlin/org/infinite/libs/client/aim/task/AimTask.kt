@@ -22,12 +22,11 @@ open class AimTask(
     val onSuccess: () -> Unit = {},
     val onFailure: () -> Unit = {},
 ) {
-    private fun mouseSensitivity(): Double =
-        Minecraft
-            .getInstance()
-            .options
-            .sensitivity()
-            .get()
+    private fun mouseSensitivity(): Double = Minecraft
+        .getInstance()
+        .options
+        .sensitivity()
+        .get()
 
     companion object {
         fun calcLookAt(target: Vec3): CameraRoll {
@@ -44,8 +43,8 @@ open class AimTask(
                                 e,
                                 g,
                             ) * (180.0 / Math.PI)
-                        )
-                    ),
+                            )
+                        ),
                 )
             val yaw =
                 Mth.wrapDegrees(
@@ -54,7 +53,7 @@ open class AimTask(
                             f,
                             d,
                         ) * (180.0 / Math.PI)
-                    ) - 90.0,
+                        ) - 90.0,
                 )
             return CameraRoll(yaw, pitch)
         }

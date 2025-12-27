@@ -11,7 +11,7 @@ import org.infinite.infinite.features.rendering.sensory.ExtraSensory
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.world.WorldManager
 import org.infinite.utils.rendering.BlockMeshGenerator
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 object ContainerEsp {
     // データ構造: ブロック位置とその色 (ARGB)
@@ -23,55 +23,55 @@ object ContainerEsp {
             InfiniteClient
                 .theme()
                 .colors.orangeAccentColor
-                .transparent(128)
+                .alpha(128)
     private val CHEST_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.yellowAccentColor
-                .transparent(128)
+                .alpha(128)
     private val ENDER_CHEST_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.magentaAccentColor
-                .transparent(128)
+                .alpha(128)
     private val FURNACE_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.secondaryColor
-                .transparent(128)
+                .alpha(128)
     private val HOPPER_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.greenAccentColor
-                .transparent(128)
+                .alpha(128)
     private val BARREL_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.yellowAccentColor
-                .transparent(128)
+                .alpha(128)
     private val SHULKER_BOX_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.aquaAccentColor
-                .transparent(128)
+                .alpha(128)
     private val DISPENSER_DROPPER_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.redAccentColor
-                .transparent(128)
+                .alpha(128)
     private val BREWING_STAND_COLOR
         get() =
             InfiniteClient
                 .theme()
                 .colors.blueAccentColor
-                .transparent(128)
+                .alpha(128)
 
     // ティックベースのスキャン状態を管理 (PortalEspと同様)
     private const val SCAN_RADIUS_CHUNKS = 8 // プレイヤーを中心とする8チャンクの半径 (合計17x17チャンク)
@@ -82,29 +82,28 @@ object ContainerEsp {
      * ブロックIDに基づいて対応する色を返す。
      * シュルカーボックスは全色をサポートするため、IDのプレフィックスでチェックする。
      */
-    private fun getColorForBlock(blockId: String): Int? =
-        when {
-            blockId.endsWith("trapped_chest") -> TRAP_CHEST_COLOR
+    private fun getColorForBlock(blockId: String): Int? = when {
+        blockId.endsWith("trapped_chest") -> TRAP_CHEST_COLOR
 
-            blockId.endsWith("chest") -> CHEST_COLOR
+        blockId.endsWith("chest") -> CHEST_COLOR
 
-            blockId.endsWith("ender_chest") -> ENDER_CHEST_COLOR
+        blockId.endsWith("ender_chest") -> ENDER_CHEST_COLOR
 
-            blockId.endsWith("furnace") || blockId.endsWith("blast_furnace") || blockId.endsWith("smoker") -> FURNACE_COLOR
+        blockId.endsWith("furnace") || blockId.endsWith("blast_furnace") || blockId.endsWith("smoker") -> FURNACE_COLOR
 
-            blockId.endsWith("hopper") -> HOPPER_COLOR
+        blockId.endsWith("hopper") -> HOPPER_COLOR
 
-            blockId.endsWith("barrel") -> BARREL_COLOR
+        blockId.endsWith("barrel") -> BARREL_COLOR
 
-            blockId.contains("shulker_box") -> SHULKER_BOX_COLOR
+        blockId.contains("shulker_box") -> SHULKER_BOX_COLOR
 
-            // 全ての色のシュルカーボックスを検出
-            blockId.endsWith("dispenser") || blockId.endsWith("dropper") -> DISPENSER_DROPPER_COLOR
+        // 全ての色のシュルカーボックスを検出
+        blockId.endsWith("dispenser") || blockId.endsWith("dropper") -> DISPENSER_DROPPER_COLOR
 
-            blockId.endsWith("brewing_stand") -> BREWING_STAND_COLOR
+        blockId.endsWith("brewing_stand") -> BREWING_STAND_COLOR
 
-            else -> null
-        }
+        else -> null
+    }
 
     // パケットによる即時更新ロジック
     fun handleChunk(chunk: WorldManager.Chunk) {

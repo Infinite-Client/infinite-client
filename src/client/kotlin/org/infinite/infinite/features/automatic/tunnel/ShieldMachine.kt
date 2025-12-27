@@ -20,7 +20,7 @@ import org.infinite.libs.graphics.render.RenderUtils
 import org.infinite.settings.FeatureSetting
 import org.infinite.settings.FeatureSetting.IntSetting
 import org.infinite.utils.block.BlockUtils
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 
 class ShieldMachine : ConfigurableFeature() {
     // --- 設定 ---
@@ -683,13 +683,13 @@ class ShieldMachine : ConfigurableFeature() {
             val boxes =
                 it.pos.map { pos ->
                     val box = AABB(pos)
-                    RenderUtils.ColorBox(color.transparent(150), box)
+                    RenderUtils.ColorBox(color.alpha(150), box)
                 }
             graphics3D.renderLinedColorBoxes(boxes, true)
         }
 
         placingState?.let {
-            val placingColor = color.transparent(150)
+            val placingColor = color.alpha(150)
             val boxes =
                 it.pos.map { pos ->
                     val box = AABB(pos)
@@ -709,7 +709,7 @@ class ShieldMachine : ConfigurableFeature() {
             val maxZ = pos.z + 1.0 - offset
 
             val dynamicBox = AABB(minX, minY, minZ, maxX, maxY, maxZ).deflate(0.005)
-            val boxes = listOf(RenderUtils.ColorBox(color.transparent(200), dynamicBox))
+            val boxes = listOf(RenderUtils.ColorBox(color.alpha(200), dynamicBox))
             graphics3D.renderSolidColorBoxes(boxes, true)
         }
     }

@@ -3,7 +3,7 @@ package org.infinite.infinite.features.rendering.ui
 import net.minecraft.util.Mth
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.gui.theme.ThemeColors
-import org.infinite.utils.rendering.transparent
+import org.infinite.utils.rendering.alpha
 import kotlin.math.abs
 
 class CompassRenderer(
@@ -43,7 +43,7 @@ class CompassRenderer(
             topY,
             centerX.toDouble(),
             topY + compassHeight,
-            colors.primaryColor.transparent(255),
+            colors.primaryColor.alpha(255),
             2,
         )
 
@@ -84,7 +84,7 @@ class CompassRenderer(
                     topY + compassHeight,
                     markX.toDouble(),
                     topY + compassHeight + markLength,
-                    markDrawColor.transparent(alpha),
+                    markDrawColor.alpha(alpha),
                     2,
                 )
 
@@ -95,7 +95,7 @@ class CompassRenderer(
                         displayChar,
                         markX - textWidth / 2.0,
                         topY,
-                        markDrawColor.transparent(alpha),
+                        markDrawColor.alpha(alpha),
                         true, // shadow
                     )
                 }
