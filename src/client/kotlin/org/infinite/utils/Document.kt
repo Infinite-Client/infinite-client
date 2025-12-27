@@ -6,6 +6,7 @@ import org.infinite.InfiniteClient
 import org.infinite.settings.FeatureSetting
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import kotlin.collections.map
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories

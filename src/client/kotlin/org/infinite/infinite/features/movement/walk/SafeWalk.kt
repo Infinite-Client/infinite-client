@@ -2,7 +2,7 @@ package org.infinite.infinite.features.movement.walk
 
 import net.minecraft.client.KeyMapping
 import net.minecraft.world.phys.AABB
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class SafeWalk : ConfigurableFeature(initialEnabled = false) {

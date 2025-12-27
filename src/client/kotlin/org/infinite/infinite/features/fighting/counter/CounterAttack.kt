@@ -3,13 +3,13 @@ package org.infinite.infinite.features.fighting.counter
 import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket
 import net.minecraft.world.entity.LivingEntity
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.AimInterface
 import org.infinite.libs.client.aim.task.AimTask
 import org.infinite.libs.client.aim.task.condition.AimTaskConditionByFrame
 import org.infinite.libs.client.aim.task.config.AimCalculateMethod
 import org.infinite.libs.client.aim.task.config.AimPriority
 import org.infinite.libs.client.aim.task.config.AimTarget
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class CounterAttack : ConfigurableFeature(initialEnabled = false) {

@@ -1,4 +1,4 @@
-package org.infinite.global
+package org.infinite.libs.global
 
 open class GlobalFeatureCategory(
     val name: String,

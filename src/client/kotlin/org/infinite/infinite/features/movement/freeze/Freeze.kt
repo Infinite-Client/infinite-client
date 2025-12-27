@@ -2,8 +2,8 @@ package org.infinite.infinite.features.movement.freeze
 
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.rendering.camera.FreeCamera
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.FakePlayerEntity
 

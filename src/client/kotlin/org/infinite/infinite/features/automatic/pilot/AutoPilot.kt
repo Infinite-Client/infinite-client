@@ -19,7 +19,6 @@ import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.movement.vehicle.HoverVehicle
 import org.infinite.infinite.features.utils.backpack.BackPackManager
 import org.infinite.libs.client.aim.AimInterface
@@ -27,6 +26,7 @@ import org.infinite.libs.client.aim.camera.CameraRoll
 import org.infinite.libs.client.aim.task.condition.AimTaskConditionReturn
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.render.RenderUtils

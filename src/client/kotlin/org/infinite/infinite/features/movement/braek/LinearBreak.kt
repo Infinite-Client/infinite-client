@@ -6,7 +6,7 @@ import net.minecraft.world.InteractionHand
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.phys.AABB
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.render.RenderUtils
 import org.infinite.settings.FeatureSetting

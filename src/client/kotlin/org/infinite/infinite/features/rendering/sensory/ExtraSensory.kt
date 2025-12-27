@@ -7,12 +7,12 @@ import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.player.Player
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.rendering.sensory.esp.ContainerEsp
 import org.infinite.infinite.features.rendering.sensory.esp.ItemEsp
 import org.infinite.infinite.features.rendering.sensory.esp.MobEsp
 import org.infinite.infinite.features.rendering.sensory.esp.PlayerEsp
 import org.infinite.infinite.features.rendering.sensory.esp.PortalEsp
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.world.WorldManager
 import org.infinite.settings.FeatureSetting

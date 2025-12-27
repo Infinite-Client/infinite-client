@@ -1,4 +1,4 @@
-package org.infinite.global.rendering.theme.overlay
+package org.infinite.libs.global.rendering.theme.overlay
 
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.network.chat.Component

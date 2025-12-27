@@ -1,4 +1,4 @@
-package org.infinite.global.rendering.theme.widget
+package org.infinite.libs.global.rendering.theme.widget
 
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics

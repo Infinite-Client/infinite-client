@@ -1,4 +1,4 @@
-package org.infinite.global.rendering.theme.widget
+package org.infinite.libs.global.rendering.theme.widget
 
 import com.mojang.blaze3d.platform.cursor.CursorTypes
 import net.minecraft.client.Minecraft

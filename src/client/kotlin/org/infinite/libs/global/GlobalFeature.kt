@@ -1,4 +1,4 @@
-package org.infinite.global
+package org.infinite.libs.global
 
 import org.infinite.utils.toSnakeCase
 

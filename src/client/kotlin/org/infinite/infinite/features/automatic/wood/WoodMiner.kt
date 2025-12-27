@@ -7,12 +7,12 @@ import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.Vec3
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.ai.AiInterface
 import org.infinite.libs.ai.actions.block.MineBlockAction
 import org.infinite.libs.ai.actions.movement.BlockPosMovementAction
 import org.infinite.libs.ai.actions.movement.LinearMovementAction
 import org.infinite.libs.ai.interfaces.AiAction.AiActionState
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class WoodMiner : ConfigurableFeature() {

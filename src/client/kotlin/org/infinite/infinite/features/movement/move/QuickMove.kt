@@ -6,8 +6,8 @@ import net.minecraft.world.entity.vehicle.boat.Boat
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.server.anti.AntiCheat
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import kotlin.math.cos
 import kotlin.math.pow

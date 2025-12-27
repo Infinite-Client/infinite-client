@@ -6,7 +6,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.LevelRenderer;
 import org.infinite.InfiniteClient;
-import org.infinite.feature.ConfigurableFeature;
+import org.infinite.libs.feature.ConfigurableFeature;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;

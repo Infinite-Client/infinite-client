@@ -1,6 +1,6 @@
 package org.infinite.infinite.features
 
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 
 open class FeatureCategory(
     val name: String,

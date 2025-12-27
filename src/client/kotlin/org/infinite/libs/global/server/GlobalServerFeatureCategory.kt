@@ -1,8 +1,8 @@
-package org.infinite.global.server
+package org.infinite.libs.global.server
 
-import org.infinite.global.GlobalFeature
-import org.infinite.global.GlobalFeatureCategory
-import org.infinite.global.server.protocol.ProtocolSpoofingSetting
+import org.infinite.libs.global.GlobalFeature
+import org.infinite.libs.global.GlobalFeatureCategory
+import org.infinite.libs.global.server.protocol.ProtocolSpoofingSetting
 
 class GlobalServerFeatureCategory :
     GlobalFeatureCategory(

@@ -7,9 +7,9 @@ import net.minecraft.world.entity.vehicle.VehicleEntity
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.automatic.pilot.AutoPilot
 import org.infinite.libs.client.aim.camera.CameraRoll
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.toRadians
 import kotlin.math.cos

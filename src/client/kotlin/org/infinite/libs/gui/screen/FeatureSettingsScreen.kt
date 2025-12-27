@@ -8,8 +8,8 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.Feature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.gui.widget.InfiniteBlockColorListField
 import org.infinite.libs.gui.widget.InfiniteBlockListField
 import org.infinite.libs.gui.widget.InfiniteButton

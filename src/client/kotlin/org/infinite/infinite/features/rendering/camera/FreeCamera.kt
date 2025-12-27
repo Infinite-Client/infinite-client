@@ -4,7 +4,7 @@ import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import net.minecraft.world.level.GameType
 import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.settings.FeatureSetting
 import org.infinite.settings.Property

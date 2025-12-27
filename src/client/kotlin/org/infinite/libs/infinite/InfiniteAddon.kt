@@ -1,7 +1,7 @@
 package org.infinite.libs.infinite
 
-import org.infinite.global.GlobalFeatureCategory
 import org.infinite.infinite.features.FeatureCategory
+import org.infinite.libs.global.GlobalFeatureCategory
 import org.infinite.libs.gui.theme.Theme
 
 interface InfiniteAddon {

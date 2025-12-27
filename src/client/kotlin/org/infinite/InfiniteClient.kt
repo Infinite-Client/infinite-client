@@ -15,12 +15,6 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.util.ARGB
-import org.infinite.feature.ConfigurableFeature
-import org.infinite.global.ConfigurableGlobalFeature
-import org.infinite.global.GlobalFeatureCategory
-import org.infinite.global.rendering.GlobalRenderingFeatureCategory
-import org.infinite.global.rendering.theme.ThemeSetting
-import org.infinite.global.server.GlobalServerFeatureCategory
 import org.infinite.infinite.features.FeatureCategory
 import org.infinite.infinite.features.automatic.AutomaticFeatureCategory
 import org.infinite.infinite.features.fighting.FightingFeatureCategory
@@ -32,6 +26,12 @@ import org.infinite.libs.ai.AiInterface
 import org.infinite.libs.client.async.AsyncInterface
 import org.infinite.libs.client.control.ControllerInterface
 import org.infinite.libs.client.player.PlayerStatsManager
+import org.infinite.libs.feature.ConfigurableFeature
+import org.infinite.libs.global.ConfigurableGlobalFeature
+import org.infinite.libs.global.GlobalFeatureCategory
+import org.infinite.libs.global.rendering.GlobalRenderingFeatureCategory
+import org.infinite.libs.global.rendering.theme.ThemeSetting
+import org.infinite.libs.global.server.GlobalServerFeatureCategory
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.gui.theme.CustomThemeLoader

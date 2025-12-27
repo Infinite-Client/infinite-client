@@ -14,7 +14,6 @@ import net.minecraft.world.entity.projectile.Projectile
 import net.minecraft.world.item.Items
 import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.AimInterface
 import org.infinite.libs.client.aim.task.AimTask
 import org.infinite.libs.client.aim.task.condition.ImmediatelyAimTaskCondition
@@ -24,6 +23,7 @@ import org.infinite.libs.client.aim.task.config.AimTarget
 import org.infinite.libs.client.control.ControllerInterface
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class AutoShield : ConfigurableFeature(initialEnabled = false) {

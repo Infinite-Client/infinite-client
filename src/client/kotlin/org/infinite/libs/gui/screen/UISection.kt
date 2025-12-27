@@ -11,8 +11,8 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.Feature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.gui.widget.FeatureSearchWidget
 import org.infinite.libs.gui.widget.InfiniteButton
 import org.infinite.libs.gui.widget.InfiniteFeatureToggle

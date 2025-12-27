@@ -3,8 +3,8 @@ package org.infinite.infinite.features.movement.fly
 import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket
 import net.minecraft.world.phys.Vec3
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.camera.CameraRoll
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.toRadians
 import kotlin.math.cos

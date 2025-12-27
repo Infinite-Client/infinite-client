@@ -1,7 +1,7 @@
 package org.infinite.infinite.features.movement.water
 
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.control.ControllerInterface
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 enum class WaterHoverMethod {

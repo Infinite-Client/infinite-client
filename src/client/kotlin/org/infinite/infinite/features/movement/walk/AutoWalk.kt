@@ -2,8 +2,8 @@ package org.infinite.infinite.features.movement.walk
 
 import net.minecraft.client.KeyMapping // KeyBinding のインポートを追加
 import net.minecraft.client.Minecraft // MinecraftClient のインポートを追加
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.control.ControllerInterface
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class AutoWalk : ConfigurableFeature(initialEnabled = false) {

@@ -2,12 +2,12 @@ package org.infinite.infinite.features.fighting.berserk
 
 import net.minecraft.world.entity.LivingEntity
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.fighting.lockon.LockOn
 import org.infinite.libs.ai.AiInterface
 import org.infinite.libs.ai.actions.movement.EntityPosMovementAction
 import org.infinite.libs.ai.interfaces.AiAction
 import org.infinite.libs.client.control.ControllerInterface
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 // 状態管理用の列挙型

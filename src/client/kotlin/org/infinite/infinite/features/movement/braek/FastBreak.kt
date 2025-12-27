@@ -2,7 +2,7 @@ package org.infinite.infinite.features.movement.braek
 
 import net.minecraft.core.BlockPos
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.mixin.features.movement.fastbreak.MultiPlayerGameModeAccessor
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.block.BlockUtils

@@ -14,9 +14,9 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
 import org.infinite.ConfigManager
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
-import org.infinite.global.rendering.theme.ThemeSetting
 import org.infinite.infinite.features.Feature
+import org.infinite.libs.feature.ConfigurableFeature
+import org.infinite.libs.global.rendering.theme.ThemeSetting
 import org.infinite.settings.FeatureSetting
 
 object InfiniteCommand {

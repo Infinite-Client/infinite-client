@@ -1,6 +1,5 @@
 package org.infinite.libs.graphics
 
-import com.mojang.blaze3d.textures.GpuSampler
 import net.minecraft.CrashReport
 import net.minecraft.ReportedException
 import net.minecraft.client.DeltaTracker
@@ -9,9 +8,7 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.render.TextureSetup
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState
-import net.minecraft.locale.Language
 import net.minecraft.network.chat.Component
-import net.minecraft.network.chat.FormattedText
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import net.minecraft.util.Mth

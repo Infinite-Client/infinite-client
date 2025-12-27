@@ -7,7 +7,6 @@ import net.minecraft.world.inventory.ClickType
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.Blocks
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.utils.backpack.BackPackManager
 import org.infinite.libs.ai.AiInterface
 import org.infinite.libs.ai.actions.block.MineBlockAction
@@ -15,6 +14,7 @@ import org.infinite.libs.ai.actions.movement.BlockPosMovementAction
 import org.infinite.libs.ai.interfaces.AiAction
 import org.infinite.libs.client.inventory.ContainerManager
 import org.infinite.libs.client.inventory.InventoryManager
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import kotlin.math.abs
 

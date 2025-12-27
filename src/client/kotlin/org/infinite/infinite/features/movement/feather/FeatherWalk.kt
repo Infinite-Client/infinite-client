@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Vec3i
 import net.minecraft.core.registries.BuiltInRegistries
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 // FeatherWalk Featureの定義

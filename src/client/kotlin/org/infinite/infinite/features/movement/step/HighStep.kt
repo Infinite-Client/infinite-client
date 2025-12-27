@@ -2,7 +2,7 @@ package org.infinite.infinite.features.movement.step
 
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import net.minecraft.world.phys.Vec3
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import kotlin.math.floor
 

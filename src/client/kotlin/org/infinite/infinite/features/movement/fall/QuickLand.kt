@@ -6,7 +6,7 @@ import net.minecraft.world.level.ClipContext.Block
 import net.minecraft.world.level.ClipContext.Fluid
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class QuickLand : ConfigurableFeature(initialEnabled = false) {

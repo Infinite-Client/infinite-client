@@ -7,7 +7,7 @@ import net.minecraft.client.KeyMapping
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.gui.screen.InfiniteScreen
 import org.infinite.utils.toSnakeCase
 import org.lwjgl.glfw.GLFW

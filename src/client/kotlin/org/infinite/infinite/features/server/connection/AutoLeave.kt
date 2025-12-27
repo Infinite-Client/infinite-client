@@ -5,7 +5,7 @@ import net.minecraft.client.player.LocalPlayer
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.ServerboundInteractPacket
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class AutoLeave : ConfigurableFeature(initialEnabled = false) {

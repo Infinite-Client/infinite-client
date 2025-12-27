@@ -3,11 +3,11 @@ package org.infinite.infinite.features.fighting.totem
 import net.minecraft.world.inventory.ClickType
 import net.minecraft.world.item.Items
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.utils.backpack.BackPackManager
 import org.infinite.libs.client.async.AsyncInterface
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class AutoTotem : ConfigurableFeature(initialEnabled = false) {

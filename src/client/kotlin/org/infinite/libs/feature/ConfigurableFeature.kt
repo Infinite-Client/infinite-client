@@ -1,4 +1,4 @@
-package org.infinite.feature
+package org.infinite.libs.feature
 
 import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.brigadier.builder.LiteralArgumentBuilder

@@ -2,7 +2,7 @@ package org.infinite.infinite.features.movement.builder
 
 import net.minecraft.core.Direction
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import org.lwjgl.glfw.GLFW
 

@@ -1,6 +1,6 @@
 package org.infinite.infinite.features.rendering.search
 
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.world.WorldManager
 import org.infinite.settings.FeatureSetting

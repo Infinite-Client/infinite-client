@@ -9,9 +9,9 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
-import org.infinite.global.ConfigurableGlobalFeature
-import org.infinite.global.GlobalFeature
-import org.infinite.global.GlobalFeatureCategory
+import org.infinite.libs.global.ConfigurableGlobalFeature
+import org.infinite.libs.global.GlobalFeature
+import org.infinite.libs.global.GlobalFeatureCategory
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.gui.widget.InfiniteBlockColorListField
 import org.infinite.libs.gui.widget.InfiniteBlockListField

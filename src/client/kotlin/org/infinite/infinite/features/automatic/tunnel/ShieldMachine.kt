@@ -9,12 +9,12 @@ import net.minecraft.world.item.Item
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.movement.braek.FastBreak
 import org.infinite.infinite.features.utils.backpack.BackPackManager
 import org.infinite.libs.ai.AiInterface
 import org.infinite.libs.ai.actions.movement.LinearMovementAction
 import org.infinite.libs.client.inventory.InventoryManager
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.render.RenderUtils
 import org.infinite.settings.FeatureSetting

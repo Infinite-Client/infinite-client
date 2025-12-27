@@ -8,9 +8,9 @@ import net.minecraft.world.item.component.Consumable
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect
 import net.minecraft.world.item.consume_effects.TeleportRandomlyConsumeEffect
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.utils.backpack.BackPackManager
 import org.infinite.libs.client.inventory.InventoryManager
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class FoodManager : ConfigurableFeature() {

@@ -3,8 +3,8 @@ package org.infinite.infinite.features.fighting.killaura
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.fighting.lockon.LockOn
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import kotlin.random.Random
 

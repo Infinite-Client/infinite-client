@@ -5,13 +5,13 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.item.Items
 import net.minecraft.world.level.block.Block
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.movement.braek.LinearBreak
 import org.infinite.infinite.features.movement.braek.VeinBreak
 import org.infinite.infinite.features.rendering.detailinfo.ToolChecker
 import org.infinite.infinite.features.utils.backpack.BackPackManager
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.libs.client.inventory.InventoryManager.InventoryIndex
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 /**

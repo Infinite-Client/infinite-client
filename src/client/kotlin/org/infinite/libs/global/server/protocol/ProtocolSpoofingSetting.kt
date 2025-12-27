@@ -1,6 +1,6 @@
-package org.infinite.global.server.protocol
+package org.infinite.libs.global.server.protocol
 
-import org.infinite.global.ConfigurableGlobalFeature
+import org.infinite.libs.global.ConfigurableGlobalFeature
 import org.infinite.settings.FeatureSetting
 
 class ProtocolSpoofingSetting : ConfigurableGlobalFeature() {

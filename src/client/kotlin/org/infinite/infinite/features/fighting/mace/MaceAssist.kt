@@ -6,7 +6,6 @@ import net.minecraft.world.item.enchantment.Enchantments
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.AimInterface
 import org.infinite.libs.client.aim.task.AimTask
 import org.infinite.libs.client.aim.task.condition.AimTaskConditionInterface
@@ -16,6 +15,7 @@ import org.infinite.libs.client.aim.task.config.AimPriority
 import org.infinite.libs.client.aim.task.config.AimTarget
 import org.infinite.libs.client.inventory.InventoryManager
 import org.infinite.libs.client.player.ClientInterface
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.item.enchantLevel

@@ -8,7 +8,7 @@ import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.LeavesBlock
 import net.minecraft.world.level.levelgen.Heightmap
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.settings.FeatureSetting
 import org.infinite.utils.rendering.transparent

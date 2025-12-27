@@ -1,6 +1,6 @@
-package org.infinite.global
+package org.infinite.libs.global
 import net.minecraft.client.gui.components.AbstractWidget
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 
 abstract class ConfigurableGlobalFeature : ConfigurableFeature(true) {
     open fun onInit() {}

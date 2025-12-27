@@ -1,14 +1,14 @@
-package org.infinite.global.rendering.theme.widget
+package org.infinite.libs.global.rendering.theme.widget
 
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
-import net.minecraft.client.gui.components.LoadingDotsWidget
+import net.minecraft.client.gui.components.ItemDisplayWidget
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D // Import Graphics2D
 import org.infinite.libs.gui.theme.ThemeColors
 
-class LoadingWidgetRenderer(
-    val widget: LoadingDotsWidget,
+class ItemStackWidgetRenderer(
+    val widget: ItemDisplayWidget,
 ) {
     fun renderWidget(
         context: GuiGraphics,

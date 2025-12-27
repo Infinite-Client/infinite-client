@@ -5,7 +5,6 @@ import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
 import org.infinite.InfiniteClient
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.libs.client.aim.AimInterface
 import org.infinite.libs.client.aim.task.AimTask
 import org.infinite.libs.client.aim.task.condition.AimTaskConditionInterface
@@ -13,6 +12,7 @@ import org.infinite.libs.client.aim.task.condition.AimTaskConditionReturn
 import org.infinite.libs.client.aim.task.config.AimCalculateMethod
 import org.infinite.libs.client.aim.task.config.AimPriority
 import org.infinite.libs.client.aim.task.config.AimTarget
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 import kotlin.math.acos
 

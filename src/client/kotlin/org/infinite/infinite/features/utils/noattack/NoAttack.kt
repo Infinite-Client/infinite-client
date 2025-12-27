@@ -1,6 +1,6 @@
 package org.infinite.infinite.features.utils.noattack
 
-import org.infinite.feature.ConfigurableFeature
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class NoAttack : ConfigurableFeature(initialEnabled = false) {

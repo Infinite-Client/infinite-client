@@ -1,7 +1,7 @@
 package org.infinite.infinite.features.movement.fall
 
-import org.infinite.feature.ConfigurableFeature
 import org.infinite.infinite.features.movement.hunger.AntiHunger
+import org.infinite.libs.feature.ConfigurableFeature
 import org.infinite.settings.FeatureSetting
 
 class AntiFall : ConfigurableFeature(initialEnabled = false) {
