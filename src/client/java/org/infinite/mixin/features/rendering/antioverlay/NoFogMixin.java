@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 public class NoFogMixin {
   @WrapOperation(
       method =
-          "applyFog(Lnet/minecraft/client/render/Camera;IZLnet/minecraft/client/render/RenderTickCounter;FLnet/minecraft/client/world/ClientWorld;)Lorg/joml/Vector4f;",
+          "applyFog(Lnet/minecraft/client/render/Camera;ILnet/minecraft/client/render/RenderTickCounter;FLnet/minecraft/client/world/ClientWorld;)Lorg/joml/Vector4f;",
       at =
           @At(
               value = "INVOKE",

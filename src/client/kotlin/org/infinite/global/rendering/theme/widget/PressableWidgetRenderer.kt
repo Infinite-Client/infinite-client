@@ -63,6 +63,7 @@ class PressableWidgetRenderer(
                 is TextIconButtonWidget.IconOnly,
                 is TexturedButtonWidget,
                 -> false
+
                 else -> true
             }
 

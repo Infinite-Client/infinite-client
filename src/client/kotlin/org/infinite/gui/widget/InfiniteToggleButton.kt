@@ -3,8 +3,8 @@ package org.infinite.gui.widget
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.Click
 import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
+import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.text.Text
 import org.infinite.InfiniteClient
 import kotlin.math.sin
