@@ -38,6 +38,10 @@ abstract class AbstractCarouselWidget<T>(
         onSelected(data)
     }
 
+    override fun isMouseOver(mouseX: Double, mouseY: Double): Boolean {
+        return active && visible && mouseX >= x && mouseY >= y && mouseX < (x + width) && mouseY < (y + height)
+    }
+
     /**
      * クリック（選択）された時の追加アクション
      */

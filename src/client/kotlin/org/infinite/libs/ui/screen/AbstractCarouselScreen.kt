@@ -4,6 +4,7 @@ import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.graphics2d.RenderSystem2D
@@ -101,23 +102,36 @@ abstract class AbstractCarouselScreen<T>(title: Component) : Screen(title) {
         }
 
         val renderSystem2D = RenderSystem2D(guiGraphics)
-        val sw = minecraft!!.window.guiScaledWidth.toFloat()
-        val sh = minecraft!!.window.guiScaledHeight.toFloat()
+        val sw = minecraft.window.guiScaledWidth.toFloat()
+        val sh = minecraft.window.guiScaledHeight.toFloat()
 
-        // 描画サイズの計算（必要に応じてオーバーライド可能にする）
-        val w = (sw * 0.5f).coerceAtLeast(512f).coerceAtMost(sw * 0.9f)
-        val h = sh * 0.8f
+        // 基準となるウィジェットのサイズ
+        val baseW = (sw * 0.5f).coerceAtLeast(512f).coerceAtMost(sw * 0.9f)
+        val baseH = sh * 0.8f
 
         val bundles = categoryWidgets.map { widget ->
             val frame = calculateWidgetFrame(widget.thisIndex)
-            val g2d = WidgetGraphics2D(minecraft!!.deltaTracker, frame, sw, sh, w, h)
+
+            // --- 当たり判定の更新処理を追加 ---
+            // 3D空間の座標をスクリーン座標に変換し、ウィジェットのプロパティに適用
+            val scaledWidth = (baseW * frame.scale).toInt()
+            val scaledHeight = (baseH * frame.scale).toInt()
+
+            // Graphics2Dでのtranslate(sw/2, sh/2) + translate(frame.x, frame.y) に合わせる
+            // 中央基準から左上基準に変換
+            widget.x = (sw / 2f + frame.x - scaledWidth / 2f).toInt()
+            widget.y = (sh / 2f + frame.y - scaledHeight / 2f).toInt()
+            widget.width = scaledWidth
+            widget.height = scaledHeight
+            // ------------------------------
+
+            val g2d = WidgetGraphics2D(minecraft.deltaTracker, frame, sw, sh, baseW, baseH)
             val resultG2d = widget.renderCustom(g2d)
             frame.z to resultG2d.commands()
         }
 
-        val sortedCommands = bundles
-            .sortedByDescending { it.first }
-            .flatMap { it.second }
+        // 重なり順（Zオーダー）を考慮して描画
+        val sortedCommands = bundles.sortedByDescending { it.first }.flatMap { it.second }
 
         renderSystem2D.render(sortedCommands)
     }
@@ -129,5 +143,17 @@ abstract class AbstractCarouselScreen<T>(title: Component) : Screen(title) {
             else -> return super.keyPressed(keyEvent)
         }
         return true
+    }
+
+    override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean {
+        // Z値が手前（frame.z が小さい）のものから順にクリック判定を行う
+        val sortedWidgets = categoryWidgets.sortedBy { calculateWidgetFrame(it.thisIndex).z }
+        for (widget in sortedWidgets) {
+            if (widget.mouseClicked(mouseButtonEvent, bl)) {
+                this.focused = widget
+                return true
+            }
+        }
+        return super.mouseClicked(mouseButtonEvent, bl)
     }
 }

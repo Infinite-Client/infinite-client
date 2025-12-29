@@ -15,7 +15,6 @@ class LocalCategoryWidget(
     parent: AbstractCarouselScreen<LocalCategory>,
     index: Int,
 ) : AbstractCarouselWidget<LocalCategory>(x, y, width, height, category, parent, index, Component.translatable(category.translation())) {
-
     override fun renderCustom(graphics2D: AbstractCarouselScreen.WidgetGraphics2D): AbstractCarouselScreen.WidgetGraphics2D {
         val alpha = ((System.currentTimeMillis() - spawnTime).toFloat() / animationDuration * 0.5f).coerceIn(0f, 0.5f)
         InfiniteClient.theme.renderBackGround(0f, 0f, graphics2D.width.toFloat(), graphics2D.height.toFloat(), graphics2D, alpha)
