@@ -5,26 +5,24 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.Component
-import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.graphics2d.RenderSystem2D
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
-import org.infinite.libs.ui.widgets.LocalCategoryWidget
+import org.infinite.libs.ui.widgets.AbstractCarouselWidget
 import org.lwjgl.glfw.GLFW
 import kotlin.math.*
 
-class GameScreen : Screen(Component.literal("Infinite Client")) {
+abstract class AbstractCarouselScreen<T>(title: Component) : Screen(title) {
+
     private var _pageIndex: Int = 0
-    private val pageSize get() = InfiniteClient.localFeatures.categories.size
+    protected abstract val dataSource: List<T>
+    protected val pageSize get() = dataSource.size
 
     private var animatedIndex: Float = 0f
     private val lerpFactor = 0.5f
 
-    // 回転の設定
-    private val radius: Float
-        get() = categoryWidgets.size * 100f
-
-    private val categoryWidgets = mutableListOf<LocalCategoryWidget>()
+    protected open val radius: Float get() = categoryWidgets.size * 100f
+    protected val categoryWidgets = mutableListOf<AbstractCarouselWidget<T>>()
 
     var pageIndex: Int
         get() = _pageIndex
@@ -32,57 +30,36 @@ class GameScreen : Screen(Component.literal("Infinite Client")) {
             _pageIndex = if (pageSize == 0) 0 else (value % pageSize + pageSize) % pageSize
         }
 
+    /**
+     * 具象クラスで、DataSourceに基づいたWidgetのインスタンスを作成して返してください。
+     */
+    abstract fun createWidget(index: Int, data: T): AbstractCarouselWidget<T>
+
     override fun init() {
         super.init()
         categoryWidgets.clear()
 
-        val categories = InfiniteClient.localFeatures.categories
-        categories.entries.withIndex().forEach { (index, entry) ->
-            // ウィジェットのサイズ設定（縦長: 120x180 等）
-            val widget = LocalCategoryWidget(
-                0,
-                0,
-                120,
-                180,
-                entry.value,
-                this,
-                index,
-            )
+        dataSource.withIndex().forEach { (index, data) ->
+            val widget = createWidget(index, data)
             categoryWidgets.add(widget)
             this.addRenderableWidget(widget)
         }
     }
 
-    /**
-     * @param z 奥への距離 (大きいほど奥、小さいほど手前)
-     */
-    data class WidgetFrameData(
-        val x: Float,
-        val y: Float,
-        val z: Float,
-        val scale: Float,
-    )
+    data class WidgetFrameData(val x: Float, val y: Float, val z: Float, val scale: Float)
 
     private val focusZ = 4000f
     private fun calculateWidgetFrame(index: Int): WidgetFrameData {
         if (pageSize == 0) return WidgetFrameData(0f, 0f, 0f, 1f)
 
-        // 角度計算 (animatedIndex を引くことで回転させる)
         val angle = 2 * PI.toFloat() * (index - animatedIndex) / pageSize
         val centerZ = focusZ + radius
-
         val worldX = sin(angle) * radius
         val worldZ = centerZ - cos(angle) * radius
-
-        // パースペクティブ投影のスケール計算
-        // 視点(viewDistance)から見た相対的な大きさ
         val scale = focusZ / worldZ
-
-        // 画面上の座標 (中心からのオフセット)
         val screenX = worldX / scale
-        val screenY = 0f
 
-        return WidgetFrameData(screenX, screenY, worldZ, scale)
+        return WidgetFrameData(screenX, 0f, worldZ, scale)
     }
 
     class WidgetGraphics2D(
@@ -98,13 +75,9 @@ class GameScreen : Screen(Component.literal("Infinite Client")) {
 
         init {
             this.save()
-            // 1. 画面中央へ移動
             this.translate(screenWidth / 2f, screenHeight / 2f)
-            // 2. 投影されたX, Yへ移動
             this.translate(data.x, data.y)
-            // 3. スケール適用 (奥行きによる大きさの変化)
             this.scale(data.scale, data.scale)
-            // 4. ウィジェット自体の中心を合わせるためのオフセット
             this.translate(-widgetWidth / 2f, -widgetHeight / 2f)
         }
 
@@ -115,33 +88,33 @@ class GameScreen : Screen(Component.literal("Infinite Client")) {
     }
 
     override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+        // アニメーション更新
         val target = pageIndex.toFloat()
         var diff = target - animatedIndex
         if (diff > pageSize / 2f) diff -= pageSize
         if (diff < -pageSize / 2f) diff += pageSize
+
         if (abs(diff) < 0.001f) {
             animatedIndex = target
         } else {
             animatedIndex += diff * lerpFactor
         }
-        val renderSystem2D = RenderSystem2D(guiGraphics)
-        val sw = minecraft.window.guiScaledWidth.toFloat()
-        val sh = minecraft.window.guiScaledHeight.toFloat()
-        val width = (sw * 0.5f).coerceAtLeast(512f).coerceAtMost(sw * 0.9f)
 
-        val height = sh * 0.8f
-        // コマンドの収集
+        val renderSystem2D = RenderSystem2D(guiGraphics)
+        val sw = minecraft!!.window.guiScaledWidth.toFloat()
+        val sh = minecraft!!.window.guiScaledHeight.toFloat()
+
+        // 描画サイズの計算（必要に応じてオーバーライド可能にする）
+        val w = (sw * 0.5f).coerceAtLeast(512f).coerceAtMost(sw * 0.9f)
+        val h = sh * 0.8f
+
         val bundles = categoryWidgets.map { widget ->
             val frame = calculateWidgetFrame(widget.thisIndex)
-            val g2d = WidgetGraphics2D(minecraft.deltaTracker, frame, sw, sh, width, height)
-
-            val resultG2d = widget.render(g2d)
-            // (奥への距離 z, 描画コマンド)
+            val g2d = WidgetGraphics2D(minecraft!!.deltaTracker, frame, sw, sh, w, h)
+            val resultG2d = widget.renderCustom(g2d)
             frame.z to resultG2d.commands()
         }
 
-        // Zソート: Zが大きい（奥にある）順に並べる
-        // sortedByDescending で奥から順にリスト化し、最後に手前を描画する
         val sortedCommands = bundles
             .sortedByDescending { it.first }
             .flatMap { it.second }

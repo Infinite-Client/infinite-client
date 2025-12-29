@@ -10,6 +10,7 @@ import org.infinite.infinite.InfiniteGlobalFeatures
 import org.infinite.infinite.InfiniteLocalFeatures
 import org.infinite.infinite.theme.default.DefaultTheme
 import org.infinite.infinite.theme.infinite.InfiniteTheme
+import org.infinite.infinite.ui.screen.LocalFeatureCategoriesScreen
 import org.infinite.libs.config.ConfigManager
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.Feature
@@ -22,7 +23,6 @@ import org.infinite.libs.core.tick.WorldTicks
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
 import org.infinite.libs.translation.TranslationChecker
-import org.infinite.libs.ui.screen.GameScreen
 import org.infinite.libs.ui.theme.Theme
 import org.infinite.libs.ui.theme.ThemeManager
 import org.lwjgl.glfw.GLFW
@@ -41,7 +41,7 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
         ),
     ) {
         minecraft.execute {
-            minecraft.setScreen(GameScreen())
+            minecraft.setScreen(LocalFeatureCategoriesScreen())
         }
     }
 
