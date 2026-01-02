@@ -1,12 +1,15 @@
 package org.infinite.infinite.ui.widget
 
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.StringWidget
+import net.minecraft.client.gui.layouts.LinearLayout
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.categories.category.LocalCategory
 import org.infinite.libs.graphics.graphics2d.text.IModernFontManager
 import org.infinite.libs.graphics.text.fromFontSet
+import org.infinite.libs.ui.layout.RenderableScrollableLayout
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 import org.infinite.libs.ui.widgets.AbstractCarouselWidget
 import org.infinite.mixin.graphics.MinecraftAccessor
@@ -32,6 +35,7 @@ class LocalCategoryWidget(
 ) {
     private data class WidgetComponents(
         val titleComponent: StringWidget,
+        val container: RenderableScrollableLayout,
     )
 
     private val widgetComponents: WidgetComponents
@@ -44,20 +48,42 @@ class LocalCategoryWidget(
         val font = fromFontSet(fontSet)
         val titleText = Component.translatable(category.translation())
         val width = parent.widgetWidth.roundToInt()
-//        val height = parent.widgetHeight.roundToInt()
         val titleComponentWidth = font.width(titleText)
         val titleComponentHeight = font.lineHeight
+        val titleY = titleComponentHeight * 2
+        val widgetHeight = font.lineHeight
         val title = StringWidget(
             (width - titleComponentWidth) / 2,
-            titleComponentHeight * 2,
+            titleY,
             font.width(titleText),
-            font.lineHeight,
+            widgetHeight,
             titleText,
             font,
         )
+        val containerMargin = 10
+        val widgetWidth = width - containerMargin
+        val scrollY = titleY + font.lineHeight + containerMargin
+        val scrollHeight = widgetHeight - scrollY - containerMargin
+        val innerLayout = LinearLayout.vertical().spacing(5)
+        val container = RenderableScrollableLayout(minecraft, innerLayout, widgetWidth)
+        val containerHeight = height - scrollY - containerMargin
+        container.y = scrollY
+        container.setMaxHeight(containerHeight)
+        container.setMinWidth(widgetWidth)
+        container.x = containerMargin
+        // 内部の縦並びレイアウト
 
-        widgetComponents = WidgetComponents(title)
-        addInnerWidget(widgetComponents.titleComponent)
+        // 仮定: category.features に含まれる各機能をボタンとして追加
+        // 実際のプロパティ名に合わせて調整してください
+        category.features.forEach { (key, feature) ->
+            val c = Component.translatable(feature.translation())
+            val button = Button.builder(c) {
+                println("Feature Clicked: ${c.string}")
+            }.size(widgetWidth - 20, 20).build()
+            innerLayout.addChild(button)
+        }
+        innerLayout.arrangeElements()
+        widgetComponents = WidgetComponents(title, container)
     }
 
     private val spawnTime = System.currentTimeMillis()
@@ -66,6 +92,7 @@ class LocalCategoryWidget(
 
     init {
         addInnerWidget(widgetComponents.titleComponent)
+        addInnerWidget(widgetComponents.container)
     }
 
     override fun render(graphics2D: AbstractCarouselScreen.WidgetGraphics2D): AbstractCarouselScreen.WidgetGraphics2D {

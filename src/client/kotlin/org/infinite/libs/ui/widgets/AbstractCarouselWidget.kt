@@ -21,9 +21,8 @@ abstract class AbstractCarouselWidget<T>(
     title: Component,
 ) : AbstractContainerWidget(x, y, width, height, title) {
     var widgetFrameData: AbstractCarouselScreen.WidgetFrameData? = null
-    protected val children = mutableListOf<GuiEventListener>()
-
-    override fun children(): List<GuiEventListener> = children
+    protected val children = mutableListOf<Renderable>()
+    override fun children(): List<GuiEventListener> = children.filterIsInstance<GuiEventListener>()
 
     /**
      * 描画時の行列変換
@@ -107,9 +106,7 @@ abstract class AbstractCarouselWidget<T>(
 
         // 内部ウィジェットの描画（既に座標系がズレているので(x,y)は0,0基準で渡すのが一般的）
         for (child in children) {
-            if (child is Renderable) {
-                child.render(guiGraphics, x, y, delta)
-            }
+            child.render(guiGraphics, x, y, delta)
         }
 
         guiGraphics.pose().popMatrix()
@@ -165,7 +162,7 @@ abstract class AbstractCarouselWidget<T>(
 
     override fun contentHeight(): Int = this.height
     override fun scrollRate(): Double = 10.0
-    protected fun <R : GuiEventListener> addInnerWidget(widget: R): R {
+    protected fun <R : Renderable> addInnerWidget(widget: R): R {
         children.add(widget)
         return widget
     }
