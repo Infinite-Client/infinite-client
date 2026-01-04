@@ -32,7 +32,7 @@ class InfiniteTheme : Theme() {
             colorScheme.redColor,
             colorScheme.yellowColor,
             colorScheme.greenColor,
-            colorScheme.aquaColor,
+            colorScheme.cyanColor,
             colorScheme.blueColor,
             colorScheme.magentaColor,
         )

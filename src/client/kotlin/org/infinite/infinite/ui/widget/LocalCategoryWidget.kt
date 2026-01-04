@@ -8,7 +8,6 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.categories.category.LocalCategory
 import org.infinite.libs.graphics.graphics2d.text.IModernFontManager
 import org.infinite.libs.graphics.text.fromFontSet
-import org.infinite.libs.log.LogSystem
 import org.infinite.libs.ui.layout.IScrollableLayout
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 import org.infinite.libs.ui.widgets.AbstractCarouselWidget
@@ -106,7 +105,6 @@ class LocalCategoryWidget(
     }
 
     override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean {
-        LogSystem.log("WED")
         return super.mouseClicked(mouseButtonEvent, bl)
     }
 }

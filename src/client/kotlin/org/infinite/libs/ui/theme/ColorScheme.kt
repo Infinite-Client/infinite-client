@@ -40,7 +40,7 @@ open class ColorScheme {
     open val redColor: Int = 0xFFFF0000.toInt()
     open val yellowColor: Int = 0xFFFFFF00.toInt()
     open val greenColor: Int = 0xFF00FF00.toInt()
-    open val aquaColor: Int = 0xFF00FFFF.toInt()
+    open val cyanColor: Int = 0xFF00FFFF.toInt()
     open val blueColor: Int = 0xFF0000FF.toInt()
     open val magentaColor: Int = 0xFFFF00FF.toInt()
     open val whiteColor: Int = 0xFFFFFFFF.toInt()
@@ -59,8 +59,8 @@ open class ColorScheme {
         val baseColor = when (sector.toInt()) {
             0 -> interpolate(redColor, yellowColor, fraction)
             1 -> interpolate(yellowColor, greenColor, fraction)
-            2 -> interpolate(greenColor, aquaColor, fraction)
-            3 -> interpolate(aquaColor, blueColor, fraction)
+            2 -> interpolate(greenColor, cyanColor, fraction)
+            3 -> interpolate(cyanColor, blueColor, fraction)
             4 -> interpolate(blueColor, magentaColor, fraction)
             else -> interpolate(magentaColor, redColor, fraction)
         }

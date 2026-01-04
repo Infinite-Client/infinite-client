@@ -23,7 +23,7 @@ class HelloFeature : LocalFeature() {
     }
 
     override fun onConnected() {
-        LogSystem.log("Graphics2D Test Feature Connected!")
+        LogSystem.log("Test Feature Connected!")
     }
 
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {

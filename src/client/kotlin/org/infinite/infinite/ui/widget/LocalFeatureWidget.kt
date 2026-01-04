@@ -9,7 +9,6 @@ import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
-import org.infinite.libs.log.LogSystem
 
 class LocalFeatureWidget(
     x: Int,
@@ -117,7 +116,6 @@ class LocalFeatureWidget(
     override fun onClick(mouseButtonEvent: MouseButtonEvent, bl: Boolean) {
         widgetComponents.resetButton.onClick(mouseButtonEvent, bl)
         widgetComponents.settingButton.onClick(mouseButtonEvent, bl)
-        LogSystem.log("WED")
         super.onClick(mouseButtonEvent, bl)
     }
 

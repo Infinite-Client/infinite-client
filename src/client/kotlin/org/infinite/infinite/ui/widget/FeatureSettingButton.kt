@@ -41,8 +41,11 @@ class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Fea
         val rY = height / 2f
         val centerX = x + rX
         val centerY = y + rY
+        val rMin = 0.3f
         val rBase = 0.5f
         val rLevel = 1.5f
+        val rX0 = rMin * rX
+        val rY0 = rMin * rY
         val rX1 = rBase * rX
         val rY1 = rBase * rY
         val rX2 = rLevel * rX1
@@ -78,6 +81,20 @@ class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Fea
                 centerX + rX2 * s2,
                 centerY + rY2 * c2,
             )
+        }
+        for (ih in 0 until sep / 2) {
+            val i = 2 * ih
+            val d0 = i / sepF + t
+            val d1 = (i + 1) / sepF + t
+            val d2 = (i + 2) / sepF + t
+            val x0 = centerX + rX0 * sin(d0 * PI * 2).toFloat()
+            val y0 = centerY + rY0 * cos(d0 * PI * 2).toFloat()
+            val x1 = centerX + rX0 * sin(d1 * PI * 2).toFloat()
+            val y1 = centerY + rY0 * cos(d1 * PI * 2).toFloat()
+            val x2 = centerX + rX0 * sin(d2 * PI * 2).toFloat()
+            val y2 = centerY + rY0 * cos(d2 * PI * 2).toFloat()
+            this.fillStyle = colorScheme.cyanColor
+            this.fillQuad(centerX, centerY, x0, y0, x1, y1, x2, y2)
         }
     }
 
