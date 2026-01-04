@@ -59,8 +59,7 @@ class InfiniteScreen(
             .filterNot { category ->
                 category.name.equals("Rendering", ignoreCase = true) ||
                     category.name.equals("Accessibility", ignoreCase = true)
-            }
-            .forEach { category ->
+            }.forEach { category ->
                 dynamicSections.add(UISection(category.name.lowercase() + "-settings", this, category.features))
             }
 

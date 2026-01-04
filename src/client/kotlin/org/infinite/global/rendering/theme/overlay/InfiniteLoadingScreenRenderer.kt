@@ -142,7 +142,7 @@ object InfiniteLoadingScreenRenderer {
             )
         }
         val percentText = "${(clampedProgress * 100f).roundToInt()}%"
-        val percentTitle = Text.literal("${percentText} - Infinite")
+        val percentTitle = Text.literal("$percentText - Infinite")
         val percentAlpha = withAlpha(colors.foregroundColor, (200 * alpha).roundToInt())
 
         g2d.centeredText(
@@ -154,7 +154,10 @@ object InfiniteLoadingScreenRenderer {
         )
     }
 
-    private fun withAlpha(color: Int, alpha: Int): Int {
+    private fun withAlpha(
+        color: Int,
+        alpha: Int,
+    ): Int {
         val clampedAlpha = alpha.coerceIn(0, 255)
         return (clampedAlpha shl 24) or (color and 0x00FFFFFF)
     }

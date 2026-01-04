@@ -39,8 +39,22 @@ class TextFieldWidgetRenderer(
             if (widget.drawsBackground()) {
                 val hovered = widget.isHovered
                 val focused = widget.isFocused
-                val baseAlpha = if (focused) 210 else if (hovered) 180 else 150
-                val borderAlpha = if (focused) 255 else if (hovered) 220 else 180
+                val baseAlpha =
+                    if (focused) {
+                        210
+                    } else if (hovered) {
+                        180
+                    } else {
+                        150
+                    }
+                val borderAlpha =
+                    if (focused) {
+                        255
+                    } else if (hovered) {
+                        220
+                    } else {
+                        180
+                    }
                 graphics2D.fill(
                     widget.x,
                     widget.y,
@@ -183,7 +197,10 @@ class TextFieldWidgetRenderer(
         }
     }
 
-    private fun withAlpha(color: Int, alpha: Int): Int {
+    private fun withAlpha(
+        color: Int,
+        alpha: Int,
+    ): Int {
         val clampedAlpha = alpha.coerceIn(0, 255)
         return (clampedAlpha shl 24) or (color and 0x00FFFFFF)
     }
