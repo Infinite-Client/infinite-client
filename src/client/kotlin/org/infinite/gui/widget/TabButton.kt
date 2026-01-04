@@ -1,8 +1,10 @@
 package org.infinite.gui.widget
 
 import net.minecraft.client.MinecraftClient
+import net.minecraft.client.gui.Click
 import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.widget.ButtonWidget
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
+import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.text.Text
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
@@ -13,8 +15,8 @@ class TabButton(
     width: Int,
     height: Int,
     message: Text,
-    onPress: PressAction,
-) : ButtonWidget(x, y, width, height, message, onPress, DEFAULT_NARRATION_SUPPLIER) {
+    private val onPress: () -> Unit,
+) : ClickableWidget(x, y, width, height, message) {
     var isHighlighted: Boolean = false
 
     override fun renderWidget(
@@ -25,8 +27,8 @@ class TabButton(
     ) {
         val graphics2D = Graphics2D(context, MinecraftClient.getInstance().renderTickCounter)
         val colors = InfiniteClient.currentColors()
-        val textColor = if (isSelected || isHighlighted) colors.primaryColor else colors.foregroundColor
-        val backgroundColor = if (isSelected || isHighlighted) colors.backgroundColor else colors.secondaryColor
+        val textColor = if (isHovered || isHighlighted) colors.primaryColor else colors.foregroundColor
+        val backgroundColor = if (isHovered || isHighlighted) colors.backgroundColor else colors.secondaryColor
         graphics2D.fill(x, y, width, height, backgroundColor)
         graphics2D.drawBorder(x, y, width, height, colors.primaryColor)
         graphics2D.centeredText(
@@ -35,5 +37,19 @@ class TabButton(
             y + height / 2,
             textColor,
         )
+    }
+
+    override fun mouseClicked(
+        click: Click,
+        doubled: Boolean,
+    ): Boolean {
+        if (!isMouseOver(click.x, click.y) || !active) return false
+        playDownSound(MinecraftClient.getInstance().soundManager)
+        onPress()
+        return true
+    }
+
+    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
+        appendDefaultNarrations(builder)
     }
 }

@@ -1,8 +1,10 @@
 package org.infinite.gui.widget
 
+import net.minecraft.client.MinecraftClient
+import net.minecraft.client.gui.Click
 import net.minecraft.client.gui.DrawContext
-import net.minecraft.client.gui.widget.ButtonWidget
-import net.minecraft.client.input.AbstractInput
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder
+import net.minecraft.client.gui.widget.ClickableWidget
 import net.minecraft.text.Text
 import org.infinite.InfiniteClient
 import kotlin.math.sin
@@ -15,25 +17,9 @@ class InfiniteToggleButton(
     private var state: Boolean,
     private var isEnabled: Boolean,
     private val onToggle: (Boolean) -> Unit,
-) : ButtonWidget(
-        x,
-        y,
-        width,
-        height,
-        Text.literal(""),
-        { _ -> },
-        DEFAULT_NARRATION_SUPPLIER,
-    ) {
+) : ClickableWidget(x, y, width, height, Text.empty()) {
     private var animationStartTime: Long = -1L
-    private val animationDuration = 200L // アニメーションにかける時間（ミリ秒）
-
-    override fun onPress(input: AbstractInput?) {
-        if (isEnabled) {
-            state = !state
-            onToggle(state)
-            animationStartTime = System.currentTimeMillis() // アニメーション開始時間を記録
-        }
-    }
+    private val animationDuration = 200L
 
     override fun renderWidget(
         context: DrawContext,
@@ -41,56 +27,24 @@ class InfiniteToggleButton(
         mouseY: Int,
         delta: Float,
     ) {
-        // レインボーアニメーションのロジック
-        val interpolatedColor =
-            InfiniteClient
-                .currentColors()
-                .primaryColor
+        val colors = InfiniteClient.currentColors()
+        val interpolatedColor = colors.primaryColor
 
         val backgroundColor =
             when {
-                !isEnabled -> {
-                    InfiniteClient
-                        .currentColors()
-                        .backgroundColor
-                }
-
-                state -> {
-                    if (isHovered) {
-                        InfiniteClient
-                            .currentColors()
-                            .greenAccentColor
-                    } else {
-                        InfiniteClient
-                            .currentColors()
-                            .primaryColor // ON state
-                    }
-                }
-
-                else -> {
-                    if (isHovered) {
-                        InfiniteClient
-                            .currentColors()
-                            .secondaryColor
-                    } else {
-                        InfiniteClient
-                            .currentColors()
-                            .backgroundColor // OFF state
-                    }
-                }
+                !isEnabled -> colors.backgroundColor
+                state -> if (isHovered) colors.greenAccentColor else colors.primaryColor
+                else -> if (isHovered) colors.secondaryColor else colors.backgroundColor
             }
 
-        // ノブのサイズを基準にバーの幅を決定
         val knobSize = height - 4
         val barWidth = (knobSize * 2).toFloat()
         val barHeight = height.toFloat() / 2.5f
         val barY = y + (height - barHeight.toInt()) / 2
         val barX = x + (width - barWidth.toInt()) / 2
 
-        // 背景バーの描画
         context.fill(barX, barY, (barX + barWidth).toInt(), (barY + barHeight).toInt(), backgroundColor)
 
-        // **ノブのアニメーションロジック**
         val knobBorder = 2
         val startKnobX = if (!state) barX + barWidth.toInt() - knobSize - 2 else barX + 2
         val endKnobX = if (state) barX + barWidth.toInt() - knobSize - 2 else barX + 2
@@ -100,38 +54,19 @@ class InfiniteToggleButton(
             val currentTime = System.currentTimeMillis()
             val animProgress = (currentTime - animationStartTime).toFloat() / animationDuration.toFloat()
             if (animProgress < 1.0f) {
-                // スムーズなアニメーションのためにsin関数を使用
                 val easedProgress = sin(animProgress * Math.PI / 2).toFloat()
                 currentKnobX = startKnobX + (endKnobX - startKnobX) * easedProgress
             } else {
-                animationStartTime = -1L // アニメーション終了
+                animationStartTime = -1L
                 currentKnobX = endKnobX.toFloat()
             }
         }
         val knobY = y + 2
 
-        // ノブの縁 (有効時のみレインボーアニメーション)
-        val knobBorderColor =
-            if (isEnabled) {
-                interpolatedColor
-            } else {
-                InfiniteClient
-                    .currentColors()
-                    .backgroundColor
-            }
+        val knobBorderColor = if (isEnabled) interpolatedColor else colors.backgroundColor
         context.fill(currentKnobX.toInt(), knobY, currentKnobX.toInt() + knobSize, knobY + knobSize, knobBorderColor)
 
-        // ノブの内側
-        val knobInnerColor =
-            if (isHovered) {
-                InfiniteClient
-                    .currentColors()
-                    .primaryColor
-            } else {
-                InfiniteClient
-                    .currentColors()
-                    .foregroundColor
-            }
+        val knobInnerColor = if (isHovered) colors.primaryColor else colors.foregroundColor
         context.fill(
             currentKnobX.toInt() + knobBorder,
             knobY + knobBorder,
@@ -141,7 +76,31 @@ class InfiniteToggleButton(
         )
     }
 
+    override fun mouseClicked(
+        click: Click,
+        doubled: Boolean,
+    ): Boolean {
+        if (!isMouseOver(click.x, click.y) || !active || !isEnabled) return false
+        playDownSound(MinecraftClient.getInstance().soundManager)
+        state = !state
+        onToggle(state)
+        animationStartTime = System.currentTimeMillis()
+        return true
+    }
+
     fun setState(newState: Boolean) {
         state = newState
+    }
+
+    fun press() {
+        if (!active || !isEnabled) return
+        playDownSound(MinecraftClient.getInstance().soundManager)
+        state = !state
+        onToggle(state)
+        animationStartTime = System.currentTimeMillis()
+    }
+
+    override fun appendClickableNarrations(builder: NarrationMessageBuilder) {
+        appendDefaultNarrations(builder)
     }
 }

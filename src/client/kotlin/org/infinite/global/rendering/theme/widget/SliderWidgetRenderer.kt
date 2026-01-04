@@ -66,12 +66,10 @@ class SliderWidgetRenderer(
         // バニラの描画コード (this.drawScrollableText) の挙動を再現するため、
         // centeredText ではなく、通常は左端に少しオフセットをかけて描画します。
 
-        // 💡 テキストの描画色を決定 (バニラコードを参照)
-        // バニラコードの i = ColorHelper.withAlpha(this.alpha, this.active ? -1 : -6250336) を再現
         val textColor = if (active) colors.foregroundColor else colors.secondaryColor
-
-        // 💡 drawScrollableText の引数 (context, textRenderer, xOffset, color) に基づき、
-        // x + 2 の位置にメッセージを描画します。
-        widget.drawScrollableText(context, minecraftClient.textRenderer, 2, textColor)
+        val textRenderer = minecraftClient.textRenderer
+        val textX = x + 2
+        val textY = y + (height - textRenderer.fontHeight) / 2
+        context.drawTextWithShadow(textRenderer, widget.message, textX, textY, textColor)
     }
 }

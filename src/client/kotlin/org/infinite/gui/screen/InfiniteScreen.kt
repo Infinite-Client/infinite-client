@@ -55,9 +55,13 @@ class InfiniteScreen(
         val dynamicSections = mutableListOf<UISection>()
         dynamicSections.add(UISection("main", this))
 
-        InfiniteClient.featureCategories.forEach { category ->
-            dynamicSections.add(UISection(category.name.lowercase() + "-settings", this, category.features))
-        }
+        InfiniteClient.featureCategories
+            .filterNot { category ->
+                category.name.equals("Rendering", ignoreCase = true) ||
+                    category.name.equals("Accessibility", ignoreCase = true)
+            }.forEach { category ->
+                dynamicSections.add(UISection(category.name.lowercase() + "-settings", this, category.features))
+            }
 
         sections = dynamicSections
 
