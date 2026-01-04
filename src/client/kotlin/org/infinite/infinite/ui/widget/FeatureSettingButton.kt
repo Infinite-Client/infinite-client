@@ -7,6 +7,9 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Feature) :
     Button(
@@ -29,9 +32,63 @@ class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Fea
         graphics2DRenderer.flush()
     }
 
+    private fun Graphics2D.renderSettingIcon(x: Int, y: Int, width: Int, height: Int) =
+        this.renderSettingIcon(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat())
+
+    private fun Graphics2D.renderSettingIcon(x: Float, y: Float, width: Float, height: Float) {
+        val colorScheme = InfiniteClient.theme.colorScheme
+        val rX = width / 2f
+        val rY = height / 2f
+        val centerX = x + rX
+        val centerY = y + rY
+        val rBase = 0.5f
+        val rLevel = 1.5f
+        val rX1 = rBase * rX
+        val rY1 = rBase * rY
+        val rX2 = rLevel * rX1
+        val rY2 = rLevel * rY1
+        val sep = 6
+        val sepF = sep.toFloat()
+        val intervalMs = 10000.0
+        val t = System.currentTimeMillis() % intervalMs / intervalMs
+        for (i in 0 until sep) {
+            val d0 = i / sepF + t
+            val s0 = sin(d0 * PI * 2).toFloat()
+            val c0 = cos(d0 * PI * 2).toFloat()
+            val d1 = i / sepF + 0.5f / sepF + t
+            val s1 = sin(d1 * PI * 2).toFloat()
+            val c1 = cos(d1 * PI * 2).toFloat()
+            val d2 = (i + 1) / sepF + t
+            val s2 = sin(d2 * PI * 2).toFloat()
+            val c2 = cos(d2 * PI * 2).toFloat()
+            this.fillStyle = colorScheme.foregroundColor
+            this.fillTriangle(
+                centerX,
+                centerY,
+                centerX + rX1 * s0,
+                centerY + rY1 * c0,
+                centerX + rX1 * s1,
+                centerY + rY1 * c1,
+            )
+            this.fillTriangle(
+                centerX,
+                centerY,
+                centerX + rX2 * s1,
+                centerY + rY2 * c1,
+                centerX + rX2 * s2,
+                centerY + rY2 * c2,
+            )
+        }
+    }
+
     fun render(
         graphics2D: Graphics2D,
     ) {
-        InfiniteClient.theme.renderBackGround(this.x, this.y, this.width, this.height, graphics2D, 0.8f)
+        val theme = InfiniteClient.theme
+        val colorScheme = theme.colorScheme
+        theme.renderBackGround(this.x, this.y, this.width, this.height, graphics2D, 0.8f)
+        graphics2D.strokeStyle.width = 2f
+        graphics2D.strokeStyle.color = colorScheme.redColor
+        graphics2D.renderSettingIcon(this.x, this.y, this.width, this.height)
     }
 }

@@ -7,7 +7,8 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.categories.category.LocalCategory
 import org.infinite.libs.graphics.graphics2d.text.IModernFontManager
 import org.infinite.libs.graphics.text.fromFontSet
-import org.infinite.libs.ui.layout.RenderableScrollableLayout
+import org.infinite.libs.log.LogSystem
+import org.infinite.libs.ui.layout.IScrollableLayout
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 import org.infinite.libs.ui.widgets.AbstractCarouselWidget
 import org.infinite.mixin.graphics.MinecraftAccessor
@@ -32,7 +33,7 @@ class LocalCategoryWidget(
     Component.translatable(category.translation()),
 ) {
     private data class WidgetComponents(
-        val container: RenderableScrollableLayout,
+        val container: IScrollableLayout,
     )
 
     private val widgetComponents: WidgetComponents
@@ -56,7 +57,7 @@ class LocalCategoryWidget(
             innerLayout.addChild(LocalFeatureWidget(0, 0, widgetWidth - 2 * innerSpacing, feature = feature))
         }
         innerLayout.arrangeElements()
-        val container = RenderableScrollableLayout(minecraft, innerLayout, widgetWidth)
+        val container = IScrollableLayout(minecraft, innerLayout, widgetWidth)
         container.y = scrollY
         container.setMaxHeight(containerHeight)
         container.setMinWidth(widgetWidth)
@@ -70,6 +71,7 @@ class LocalCategoryWidget(
 
     init {
         addInnerWidget(widgetComponents.container)
+        LogSystem.log("${children().size}")
     }
 
     override fun render(graphics2D: AbstractCarouselScreen.WidgetGraphics2D): AbstractCarouselScreen.WidgetGraphics2D {

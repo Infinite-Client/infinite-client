@@ -4,10 +4,12 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.AbstractContainerWidget
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
+import org.infinite.libs.log.LogSystem
 
 class LocalFeatureWidget(
     x: Int,
@@ -34,7 +36,6 @@ class LocalFeatureWidget(
         val resetButton = FeatureResetButton(0, 0, 0, 0, feature)
         val settingButton = FeatureSettingButton(0, 0, 0, 0, feature)
         widgetComponents = WidgetComponents(resetButton, settingButton)
-
         // 現在の x, y, width, height に基づいて子要素を配置
         relocateChildren()
     }
@@ -111,6 +112,43 @@ class LocalFeatureWidget(
         widgetComponents.settingButton.render(graphics2DRenderer)
 
         graphics2DRenderer.flush()
+    }
+
+    override fun onClick(mouseButtonEvent: MouseButtonEvent, bl: Boolean) {
+        widgetComponents.resetButton.onClick(mouseButtonEvent, bl)
+        widgetComponents.settingButton.onClick(mouseButtonEvent, bl)
+        LogSystem.log("WED")
+        super.onClick(mouseButtonEvent, bl)
+    }
+
+    override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean {
+        widgetComponents.resetButton.onClick(mouseButtonEvent, bl)
+        widgetComponents.settingButton.onClick(mouseButtonEvent, bl)
+        return super.mouseClicked(mouseButtonEvent, bl)
+    }
+
+    override fun mouseDragged(mouseButtonEvent: MouseButtonEvent, d: Double, e: Double): Boolean {
+        widgetComponents.resetButton.mouseDragged(mouseButtonEvent, d, e)
+        widgetComponents.settingButton.mouseDragged(mouseButtonEvent, d, e)
+        return super.mouseDragged(mouseButtonEvent, d, e)
+    }
+
+    override fun mouseMoved(d: Double, e: Double) {
+        widgetComponents.resetButton.mouseMoved(d, e)
+        widgetComponents.settingButton.mouseMoved(d, e)
+        return super.mouseMoved(d, e)
+    }
+
+    override fun mouseScrolled(d: Double, e: Double, f: Double, g: Double): Boolean {
+        widgetComponents.resetButton.mouseScrolled(d, e, f, g)
+        widgetComponents.settingButton.mouseScrolled(d, e, f, g)
+        return super.mouseScrolled(d, e, f, g)
+    }
+
+    override fun mouseReleased(mouseButtonEvent: MouseButtonEvent): Boolean {
+        widgetComponents.resetButton.mouseReleased(mouseButtonEvent)
+        widgetComponents.settingButton.mouseReleased(mouseButtonEvent)
+        return super.mouseReleased(mouseButtonEvent)
     }
 
     override fun children(): List<GuiEventListener> =
