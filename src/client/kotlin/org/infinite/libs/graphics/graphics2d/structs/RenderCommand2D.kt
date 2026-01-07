@@ -2,6 +2,7 @@ package org.infinite.libs.graphics.graphics2d.structs
 
 import net.minecraft.world.item.ItemStack
 import org.joml.Matrix3x2f
+import org.joml.Vector3f
 
 sealed interface RenderCommand2D {
     // 矩形の塗りつぶし
@@ -65,7 +66,21 @@ sealed interface RenderCommand2D {
         val size: Float,
     ) : RenderCommand2D
 
+    object PushTransform : RenderCommand2D
+    object PopTransform : RenderCommand2D
+
+    // 行列を直接上書きするのではなく、現在の行列に対して操作を加えるコマンド群
+    data class Translate(val x: Float, val y: Float) : RenderCommand2D
+    data class Rotate(val angle: Float) : RenderCommand2D
+    data class Scale(val x: Float, val y: Float) : RenderCommand2D
+    data class Transform(
+        val vec: Vector3f,
+    ) : RenderCommand2D
+
+    // 完全にリセット、または特定の行列に置き換える場合
+    object ResetTransform : RenderCommand2D
     data class SetTransform(val matrix: Matrix3x2f) : RenderCommand2D
+
     data class EnableScissor(val x: Int, val y: Int, val width: Int, val height: Int) : RenderCommand2D
     object DisableScissor : RenderCommand2D
     data class DrawTexture(

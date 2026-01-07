@@ -89,7 +89,7 @@ abstract class AbstractCarouselScreen<T>(title: Component) : Screen(title) {
         override val height: Int = data.widgetHeight.roundToInt()
 
         init {
-            this.save()
+            this.push()
             this.translate(screenWidth / 2f, screenHeight / 2f)
             this.translate(data.x, data.y)
             this.scale(data.scale, data.scale)
@@ -97,7 +97,7 @@ abstract class AbstractCarouselScreen<T>(title: Component) : Screen(title) {
         }
 
         override fun commands(): List<RenderCommand2D> {
-            this.restore()
+            this.pop()
             return super.commands()
         }
     }

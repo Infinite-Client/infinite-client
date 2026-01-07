@@ -14,7 +14,6 @@ import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
 import org.infinite.libs.graphics.graphics2d.structs.TextStyle
 import org.infinite.libs.graphics.graphics2d.system.Path2D
 import org.infinite.libs.interfaces.MinecraftInterface
-import org.joml.Matrix3x2f
 import org.joml.Matrix4f
 import java.util.*
 
@@ -39,17 +38,57 @@ open class Graphics2D(
     // Path2Dのインスタンスを追加
     private val path2D = Path2D()
 
-    // 変換行列
-    private val transformMatrix = Matrix3x2f()
+    private val transformations: Graphics2DTransformations = Graphics2DTransformations(commandQueue)
 
-    // 変換行列を保存するためのスタック
-    private val transformStack = Stack<Matrix3x2f>()
+    fun push() {
+        transformations.push()
+    }
+
+    fun pop() {
+        transformations.pop()
+    }
+
+    fun translate(x: Float, y: Float) {
+        transformations.translate(x, y)
+    }
+
+    fun rotate(angle: Float) {
+        transformations.rotate(angle)
+    }
+
+    fun rotateDegrees(degrees: Float) {
+        rotate(Math.toRadians(degrees.toDouble()).toFloat())
+    }
+
+    fun scale(x: Float, y: Float) {
+        transformations.scale(x, y)
+    }
+
+    fun transform(x: Float, y: Float, z: Float) {
+        transformations.transform(x, y, z)
+    }
+
+    fun setTransform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
+        transformations.setTransform(m00, m10, m01, m11, m02, m12)
+    }
+
+    fun resetTransform() {
+        transformations.resetTransform()
+    }
+
+    /**
+     * 指定した座標を中心に回転させるユーティリティ
+     */
+    fun rotateAt(angle: Float, px: Float, py: Float) {
+        translate(px, py)
+        rotate(angle)
+        translate(-px, -py)
+    }
 
     // 新しい描画および変換機能のインスタンス
     private val fillOperations: Graphics2DPrimitivesFill = Graphics2DPrimitivesFill(commandQueue) { fillStyle }
     private val strokeOperations: Graphics2DPrimitivesStroke =
         Graphics2DPrimitivesStroke(commandQueue, { strokeStyle }, { enablePathGradient })
-    private val transformations: Graphics2DTransformations = Graphics2DTransformations(transformMatrix, transformStack)
     private val textureOperations: Graphics2DPrimitivesTexture =
         Graphics2DPrimitivesTexture(commandQueue) { textStyle }
 
@@ -205,31 +244,6 @@ open class Graphics2D(
         path2D.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y, style)
     }
 
-    /**
-     * 現在の変換状態をスタックに保存します。
-     */
-    fun save() {
-        transformations.save()
-    }
-
-    fun rotate(angle: Float) {
-        transformations.rotate(angle)
-        pushTransformCommand()
-    }
-
-    /**
-     * 指定した角度（度数法）で回転させます。
-     */
-    fun rotateDegrees(degrees: Float) {
-        rotate(Math.toRadians(degrees.toDouble()).toFloat())
-    }
-
-    fun rotateAt(angle: Float, px: Float, py: Float) {
-        translate(px, py)
-        rotate(angle)
-        translate(-px, -py)
-    }
-
     fun text(text: String, x: Int, y: Int) = text(text, x.toFloat(), y.toFloat())
     fun text(text: String, x: Float, y: Float) {
         val shadow = textStyle.shadow
@@ -243,44 +257,6 @@ open class Graphics2D(
         val size = textStyle.size
         val font = textStyle.font
         commandQueue.add(RenderCommand2D.TextCentered(font, text, x, y, fillStyle, shadow, size))
-    }
-
-    private fun pushTransformCommand() {
-        commandQueue.add(RenderCommand2D.SetTransform(Matrix3x2f(transformMatrix)))
-    }
-
-    // 変換メソッドをオーバーライド/修正
-    fun translate(x: Float, y: Float) {
-        transformations.translate(x, y)
-        pushTransformCommand()
-    }
-
-    fun transform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
-        transformations.transform(m00, m10, m01, m11, m02, m12)
-        pushTransformCommand()
-    }
-
-    // --- スケーリング ---
-    fun scale(x: Float, y: Float) {
-        transformations.scale(x, y) // Graphics2DTransformations側で transformMatrix.scale(x, y)
-        pushTransformCommand()
-    }
-
-    // --- 行列の直接セット（上書き） ---
-    fun setTransform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
-        transformations.setTransform(m00, m10, m01, m11, m02, m12)
-        pushTransformCommand()
-    }
-
-    // --- リセット ---
-    fun resetTransform() {
-        transformations.resetTransform() // transformMatrix.identity()
-        pushTransformCommand()
-    }
-
-    fun restore() {
-        transformations.restore()
-        pushTransformCommand() // 復元後も行列状態を同期
     }
 
     // --- クリッピング (GuiGraphics.enableScissor 準拠) ---

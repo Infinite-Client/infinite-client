@@ -12,8 +12,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 class HelloFeature : LocalFeature() {
-    override val defaultToggleKey: Int
-        get() = GLFW.GLFW_KEY_F
+    override val defaultToggleKey: Int = GLFW.GLFW_KEY_F
 
     @Suppress("Unused")
     val hello by property(IntProperty(1, 1, 100))
@@ -23,49 +22,30 @@ class HelloFeature : LocalFeature() {
     }
 
     override fun onConnected() {
-        LogSystem.log("Test Feature Connected!")
+        LogSystem.log("HelloFeature Connected!")
     }
 
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
-        graphics2D.fillStyle = 0x80FF0000.toInt() // 半透明の赤
+        // --- 1. 基本図形 ---
+        graphics2D.fillStyle = 0x80FF0000.toInt()
         graphics2D.fillRect(10f, 10f, 100f, 50f)
-
         graphics2D.strokeStyle = StrokeStyle(0xFFFFFFFF.toInt(), 2.0f)
         graphics2D.strokeRect(10f, 10f, 100f, 50f)
-        // 三角形の枠線を追加
-        // --- 2. グラデーション三角形 (TriangleRenderer) ---
+
+        // --- 2. グラデーション三角形 ---
         graphics2D.fillTriangle(
-            150f, 20f, // 頂点0 (上)
-            120f, 80f, // 頂点1 (左下)
-            180f, 80f, // 頂点2 (右下)
-            0xFFFF0000.toInt(),
-            0xFF00FF00.toInt(),
-            0xFF0000FF.toInt(),
+            150f, 20f, 120f, 80f, 180f, 80f,
+            0xFFFF0000.toInt(), 0xFF00FF00.toInt(), 0xFF0000FF.toInt(),
         )
-        graphics2D.strokeStyle = StrokeStyle(0xFF000000.toInt(), 10.0f)
+        graphics2D.strokeStyle = StrokeStyle(0xFF000000.toInt(), 1.0f)
         graphics2D.strokeTriangle(150f, 20f, 120f, 80f, 180f, 80f)
 
-        graphics2D.fillQuad(
-            200f, 20f, // 左上
-            220f, 80f, // 左下
-            300f, 90f, // 右下
-            280f, 10f, // 右上
-            0xFF00FFFF.toInt(),
-            0xFFFF00FF.toInt(),
-            0xFFFFFF00.toInt(),
-            0xFFFFFFFF.toInt(),
-        )
-        // 四角形の枠線を追加
-        graphics2D.strokeQuad(200f, 20f, 220f, 80f, 300f, 90f, 280f, 10f)
-
-        // --- 4. 動的なアニメーションテスト ---
-        // floatで計算するために f を明示
-        val time = (System.currentTimeMillis() % 10000) / 1000.0 // 精度維持のためDoubleで計算開始
+        // --- 3. 動的な回転三角形 ---
+        val time = (System.currentTimeMillis() % 10000) / 1000.0
         val centerX = 200.0
         val centerY = 150.0
         val radius = 40.0
 
-        // 回転する三角形の頂点計算（描画時にtoFloat()）
         val x0 = (centerX + radius * cos(time)).toFloat()
         val y0 = (centerY + radius * sin(time)).toFloat()
         val x1 = (centerX + radius * cos(time + 2.094)).toFloat()
@@ -73,207 +53,119 @@ class HelloFeature : LocalFeature() {
         val x2 = (centerX + radius * cos(time + 4.188)).toFloat()
         val y2 = (centerY + radius * sin(time + 4.188)).toFloat()
 
-        // 塗りつぶし
-        graphics2D.fillStyle = 0xFFFFA500.toInt() // オレンジ
+        graphics2D.fillStyle = 0xFFFFA500.toInt()
         graphics2D.fillTriangle(x0, y0, x1, y1, x2, y2)
 
-        // 枠線の追加
-        graphics2D.strokeStyle = StrokeStyle(0xFF000000.toInt(), 10.0f) // 黒い枠線
-        graphics2D.strokeTriangle(x0, y0, x1, y1, x2, y2)
-// テスト用の線幅設定
-        graphics2D.strokeStyle = StrokeStyle(0xFFFFFFFF.toInt(), 5.0f)
+        // --- 4. 座標変換のテスト (安全な save/restore) ---
 
-        // 1. グラデーション三角形の枠線
-        graphics2D.strokeTriangle(
-            50f, 150f,
-            20f, 200f,
-            80f, 200f,
-            0xFFFF0000.toInt(), // 赤
-            0xFF00FF00.toInt(), // 緑
-            0xFF0000FF.toInt(), // 青
-        )
+        // Arc テスト
+        graphics2D.push()
+        try {
+            graphics2D.translate(50f, 300f)
+            graphics2D.strokeStyle = StrokeStyle(0xFF00FF00.toInt(), 3.0f)
+            graphics2D.beginPath()
+            graphics2D.arc(0f, 0f, 30f, 0f, (Math.PI * 1.5).toFloat(), false)
+            graphics2D.strokePath()
+        } finally {
+            graphics2D.pop()
+        }
 
-        graphics2D.strokeStyle = StrokeStyle(0xFFFFFFFF.toInt(), 2.0f)
-        graphics2D.strokeRect(200f, 20f, 80f, 70f) // 塗りつぶしなしの枠のみ
+        // Bezier テスト
+        graphics2D.push()
+        try {
+            graphics2D.translate(250f, 300f)
+            graphics2D.strokeStyle = StrokeStyle(0xFFFF00FF.toInt(), 3.0f)
+            graphics2D.beginPath()
+            graphics2D.moveTo(0f, 0f)
+            graphics2D.bezierCurveTo(20f, -50f, 80f, 50f, 100f, 0f)
+            graphics2D.strokePath()
+        } finally {
+            graphics2D.pop()
+        }
 
-        // --- 3. 変形・移動させた strokeQuad ---
-        // 座標を右側にずらし(x + 150)、形をより歪ませています
-        graphics2D.strokeStyle = StrokeStyle(0xFFFFFFFF.toInt(), 25.0f)
-        graphics2D.strokeQuad(
-            350f, 20f, // 左上 (少し右へ)
-            330f, 100f, // 左下 (より下へ)
-            480f, 120f, // 右下 (大きく右下へ)
-            450f, 10f, // 右上 (鋭角に)
-            0xFF00FFFF.toInt(), // シアン
-            0xFFFF00FF.toInt(), // マゼンタ
-            0xFFFFFF00.toInt(), // イエロー
-            0xFFFFFFFF.toInt(), // 白
-        )
-        graphics2D.strokeRect(
-            200f,
-            200f,
-            80f,
-            70f,
-            0xFF000000.toInt(),
-            0xFF0000FF.toInt(),
-            0xFF00FFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-        )
+        // Transform (行列演算) テスト
+        graphics2D.push()
+        try {
+            graphics2D.translate(400f, 300f)
+            graphics2D.transform(1.2f, 0.2f, 0.1f)
+            graphics2D.fillStyle = 0x80FFFF00.toInt()
+            graphics2D.fillRect(0f, 0f, 50f, 50f)
+        } finally {
+            graphics2D.pop()
+        }
 
-        // --- 5. 新しい機能のテスト ---
-
-        // translateとarcを使った描画
-        graphics2D.save() // 現在の変換状態を保存
-        graphics2D.translate(50f, 300f) // 原点を移動
-        graphics2D.strokeStyle = StrokeStyle(0xFF00FF00.toInt(), 3.0f) // 緑色の線
-        graphics2D.beginPath()
-        graphics2D.arc(0f, 0f, 30f, 0f, (Math.PI * 1.5).toFloat(), false) // 半径30の円弧
-        graphics2D.strokePath()
-        graphics2D.restore() // 変換状態を元に戻す
-
-        // arcToを使った描画
-        graphics2D.save()
-        graphics2D.translate(150f, 300f)
-        graphics2D.strokeStyle = StrokeStyle(0xFF0000FF.toInt(), 3.0f) // 青色の線
-        graphics2D.beginPath()
-        graphics2D.moveTo(0f, 0f)
-        graphics2D.arcTo(50f, 0f, 50f, 50f, 20f) // 制御点(50,0),(50,50), 半径20の円弧
-        graphics2D.lineTo(50f, 50f)
-        graphics2D.strokePath()
-        graphics2D.restore()
-
-        // bezierCurveToを使った描画
-        graphics2D.save()
-        graphics2D.translate(250f, 300f)
-        graphics2D.strokeStyle = StrokeStyle(0xFFFF00FF.toInt(), 3.0f) // マゼンタの線
-        graphics2D.beginPath()
-        graphics2D.moveTo(0f, 0f)
-        graphics2D.bezierCurveTo(20f, -50f, 80f, 50f, 100f, 0f) // 制御点2つ、終点1つ
-        graphics2D.strokePath()
-        graphics2D.restore()
-
-        // transformを使った図形の変形
-        graphics2D.save()
-        graphics2D.translate(400f, 300f) // 平行移動
-        graphics2D.transform(1.5f, 0.2f, 0.0f, 1.0f, 0.0f, 0.0f) // スケールとスキュー
-        graphics2D.fillStyle = 0x80FFFF00.toInt() // 半透明の黄色
-        graphics2D.fillRect(0f, 0f, 50f, 50f)
-        graphics2D.restore()
-
-        // --- 6. Graphics2Dプロパティと単色fillQuad, closePathのテスト ---
-
-        // gamedelta, realdelta, width, heightの表示
-        // これらはテキスト描画機能がないため、ここでは擬似的に座標で表現する
-        // 例: gamedeltaの値をx座標に反映
-        val deltaDisplayX = 10f + graphics2D.gameDelta * 10 // gamedeltaに応じてx座標を変化
-        graphics2D.fillStyle = 0xFF00FFFF.toInt() // シアン
-        graphics2D.fillRect(deltaDisplayX, 400f, 10f, 10f) // gamedelta表示用
-
-        // realdeltaをy座標に反映
-        val realDeltaDisplayY = 400f + graphics2D.realDelta * 10 // realdeltaに応じてy座標を変化
-        graphics2D.fillStyle = 0xFFFF00FF.toInt() // マゼンタ
-        graphics2D.fillRect(20f, realDeltaDisplayY, 10f, 10f) // realdelta表示用
-
-        // widthとheightの表示 (画面の端に線を描くなど)
-        graphics2D.strokeStyle = StrokeStyle(0xFFCCCCCC.toInt(), 1.0f) // 明るいグレー
-        graphics2D.beginPath()
-        graphics2D.moveTo(0f, 0f)
-        graphics2D.lineTo(graphics2D.width.toFloat(), 0f)
-        graphics2D.lineTo(graphics2D.width.toFloat(), graphics2D.height.toFloat())
-        graphics2D.lineTo(0f, graphics2D.height.toFloat())
-        graphics2D.closePath() // 画面の端を閉じる
-        graphics2D.strokePath()
-
-        // fillQuad(単色版)の描画
-        graphics2D.fillStyle = 0x80808080.toInt() // 半透明のグレー
-        graphics2D.fillQuad(50f, 450f, 100f, 450f, 100f, 500f, 50f, 500f) // 正方形
-
-        // --- 7. グラデーションパスのテスト (Path APIの新機能) ---
-        graphics2D.enablePathGradient = true // Enable gradient for this path
-        graphics2D.beginPath()
-        graphics2D.moveTo(0f, 0f)
-
-        // 最初のセグメント: 赤、太さ2.0f
-        graphics2D.strokeStyle = StrokeStyle(0xFFFF0000.toInt(), 2.0f)
-        graphics2D.lineTo(50f, 0f)
-
-        // 2番目のセグメント: 緑、太さ5.0f
-        graphics2D.strokeStyle = StrokeStyle(0xFF00FF00.toInt(), 5.0f)
-        graphics2D.lineTo(75f, 50f)
-
-        // 3番目のセグメント: 青、太さ8.0f
-        graphics2D.strokeStyle = StrokeStyle(0xFF0000FF.toInt(), 8.0f)
-        graphics2D.lineTo(25f, 100f)
-
-        // 4番目のセグメント: 黄色、太さ3.0f
-        graphics2D.strokeStyle = StrokeStyle(0xFFFFFF00.toInt(), 3.0f)
-        graphics2D.lineTo(0f, 50f)
-
-        // パスを閉じる: マゼンタ、太さ6.0f
-        graphics2D.strokeStyle = StrokeStyle(0xFFFF00FF.toInt(), 6.0f)
-        graphics2D.closePath()
-
-        graphics2D.strokePath()
-        graphics2D.textStyle = TextStyle(false, 80f)
-        graphics2D.fillStyle = 0xFFFFFFFF.toInt()
-        graphics2D.textCentered("Hello, World", graphics2D.width / 2f, graphics2D.height / 2f)
+        // --- 5. アイテム描画テスト ---
         val player = player ?: return graphics2D
-        // メインハンドのアイテムを取得（空ならダイヤモンドをダミーで生成）
         val stack = if (!player.mainHandItem.isEmpty) {
             player.mainHandItem
         } else {
             net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND)
         }
-        // 通常サイズ (16x16相当)
-        graphics2D.item(stack, 0f, 0f)
 
-        // 拡大サイズ (32x32相当)
-        graphics2D.save()
-        graphics2D.translate(100f, 100f)
-        graphics2D.rotateAt((Math.PI / 4).toFloat(), 130f, 100f)
-        graphics2D.itemCentered(stack, 30f, 0f, 32f)
-        graphics2D.restore()
-        graphics2D.item(stack, 0f, 0f, 48f)
+        graphics2D.push()
+        try {
+            graphics2D.translate(100f, 400f)
+            graphics2D.rotateDegrees((time * 45).toFloat()) // 時間で回転
+            graphics2D.itemCentered(stack, 0f, 0f, 32f)
+        } finally {
+            graphics2D.pop()
+        }
 
-        // --- 9. 新機能: テクスチャ描画テスト (TextureRenderer) ---
-        // 例としてウィジェットのテクスチャ（ボタンなど）を描画
+        // --- 6. Scissor (クリッピング) テスト ---
+        graphics2D.push()
+        try {
+            val sX = 50
+            val sY = 150
+            val sW = 100
+            val sH = 100
+            // ガイド枠
+            graphics2D.fillStyle = 0x20FFFFFF
+            graphics2D.fillRect(sX.toFloat(), sY.toFloat(), sW.toFloat(), sH.toFloat())
 
-        // --- 10. 新機能: クリッピング (Scissor) テスト ---
-        // 指定した矩形範囲外を描画されないように制限する
-        graphics2D.save()
-        val scissorX = 50
-        val scissorY = 150
-        val scissorW = 100
-        val scissorH = 100
+            graphics2D.enableScissor(sX, sY, sW, sH)
 
-        // ガイド用の背景
-        graphics2D.fillStyle = 0x40FFFFFF
-        graphics2D.fillRect(scissorX.toFloat(), scissorY.toFloat(), scissorW.toFloat(), scissorH.toFloat())
+            // クリップ内を動く矩形
+            val moveX = sX + (time.toFloat() * 50 % 150) - 25f
+            graphics2D.fillStyle = 0xFFFF0000.toInt()
+            graphics2D.fillRect(moveX, sY + 20f, 30f, 30f)
 
-        // クリップ有効化
-        graphics2D.enableScissor(scissorX, scissorY, scissorW, scissorH)
+            graphics2D.disableScissor()
+        } finally {
+            graphics2D.pop()
+        }
 
-        // 範囲からはみ出すように大きな図形を描画
-        graphics2D.fillStyle = 0xFFFF0000.toInt() // 赤
-        graphics2D.fillRect(scissorX - 20f, scissorY + 20f, 200f, 20f)
+        // --- 7. テキスト描画 ---
+        graphics2D.textStyle = TextStyle(shadow = true, size = 20f)
+        graphics2D.fillStyle = 0xFFFFFFFF.toInt()
+        graphics2D.text("Hello World", 10f, graphics2D.height - 20f)
 
-        // クリップ内でのアニメーション
-        val circleTime = (System.currentTimeMillis() % 2000) / 2000.0 * Math.PI * 2
-        val movingX = (scissorX + scissorW / 2) + cos(circleTime).toFloat() * 60f
-        val movingY = (scissorY + scissorH / 2) + sin(circleTime).toFloat() * 60f
-        graphics2D.fillStyle = 0xFF00FF00.toInt() // 緑の円（四角）
-        graphics2D.fillRect(movingX - 10f, movingY - 10f, 20f, 20f)
-
-        graphics2D.disableScissor()
-        graphics2D.restore()
+        // --- 8. ワールド座標の投影 ---
         val pos = player.getPosition(graphics2D.gameDelta)
-        val (playerX, playerY) = graphics2D.projectWorldToScreen(pos) ?: return graphics2D
-        graphics2D.fillStyle = 0xFF888888.toInt()
-        graphics2D.textCentered("Player", playerX.toFloat(), playerY.toFloat())
+        graphics2D.projectWorldToScreen(pos)?.let { (screenX, screenY) ->
+            graphics2D.push()
+            graphics2D.fillStyle = 0xFF00FF00.toInt()
+            graphics2D.textCentered("YOU", screenX.toFloat(), screenY.toFloat() - 10f)
+            graphics2D.pop()
+        }
+        graphics2D.push()
+        try {
+            graphics2D.translate(50f, 500f)
+            graphics2D.enablePathGradient = true
+            graphics2D.beginPath()
+            graphics2D.moveTo(0f, 0f)
+            graphics2D.strokeStyle = StrokeStyle(0xFFFF0000.toInt(), 2f)
+            graphics2D.lineTo(50f, 0f)
+            graphics2D.strokeStyle = StrokeStyle(0xFF00FF00.toInt(), 5f)
+            graphics2D.lineTo(75f, 50f)
+            graphics2D.strokeStyle = StrokeStyle(0xFF0000FF.toInt(), 8f)
+            graphics2D.lineTo(25f, 100f)
+            graphics2D.closePath()
+            graphics2D.strokePath()
+        } finally {
+            graphics2D.pop()
+        }
         return graphics2D
     }
 
-    override fun onLevelRendering(graphics3D: Graphics3D): Graphics3D {
-        return graphics3D
-    }
+    override fun onLevelRendering(graphics3D: Graphics3D): Graphics3D = graphics3D
 }

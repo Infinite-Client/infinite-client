@@ -25,9 +25,36 @@ class RenderSystem2D(
 
     private fun executeCommand(command: RenderCommand2D) {
         when (command) {
-            // --- Transform & Scissor ---
+            is RenderCommand2D.PushTransform -> {
+                gui.pose().pushMatrix()
+            }
+
+            is RenderCommand2D.PopTransform -> {
+                gui.pose().popMatrix()
+            }
+
+            is RenderCommand2D.Translate -> {
+                gui.pose().translate(command.x, command.y)
+            }
+
+            is RenderCommand2D.Rotate -> {
+                // JOMLのMatrix3x2f等で扱う回転（Z軸回転）を適用
+                gui.pose().rotate(command.angle)
+            }
+
+            is RenderCommand2D.Scale -> {
+                gui.pose().scale(command.x, command.y)
+            }
+
+            is RenderCommand2D.Transform -> {
+//                gui.pose().transform(command.m00, command.m10, command.m01, command.m11, command.m02, command.m12)
+            }
+
+            is RenderCommand2D.ResetTransform -> {
+                gui.pose().identity()
+            }
+
             is RenderCommand2D.SetTransform -> {
-                gui.pose().clear()
                 gui.pose().mul(command.matrix)
             }
 

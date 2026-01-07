@@ -1,60 +1,42 @@
 package org.infinite.libs.graphics.graphics2d
 
+import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 import org.joml.Matrix3x2f
-import java.util.Stack
+import org.joml.Vector3f
+import java.util.LinkedList
 
 class Graphics2DTransformations(
-    private val transformMatrix: Matrix3x2f,
-    private val transformStack: Stack<Matrix3x2f>,
+    private val commandQueue: LinkedList<RenderCommand2D>,
 ) {
-    /**
-     * 現在の変換行列に変換を適用します。
-     */
-    fun transform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
-        transformMatrix.mul(Matrix3x2f(m00, m10, m01, m11, m02, m12))
+    fun transform(x: Float, y: Float, z: Float) {
+        commandQueue.add(RenderCommand2D.Transform(Vector3f(x, y, z)))
     }
 
-    /**
-     * 現在の変換行列に移動変換を適用します。
-     */
     fun translate(x: Float, y: Float) {
-        transformMatrix.translate(x, y)
+        commandQueue.add(RenderCommand2D.Translate(x, y))
     }
 
     fun rotate(angle: Float) {
-        // 角度はラジアンで指定 (度をラジアンにする場合は Math.toRadians(angle) を使用)
-        transformMatrix.rotate(angle)
+        commandQueue.add(RenderCommand2D.Rotate(angle))
     }
 
     fun scale(x: Float, y: Float) {
-        transformMatrix.scale(x, y)
+        commandQueue.add(RenderCommand2D.Scale(x, y))
     }
 
     fun setTransform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
-        transformMatrix.set(m00, m10, m01, m11, m02, m12)
+        commandQueue.add(RenderCommand2D.SetTransform(Matrix3x2f(m00, m10, m01, m11, m02, m12)))
     }
 
-    /**
-     * 単位行列にリセット
-     */
     fun resetTransform() {
-        transformMatrix.identity()
+        commandQueue.add(RenderCommand2D.ResetTransform)
     }
 
-    /**
-     * 現在の変換状態をスタックに保存します。
-     */
-    fun save() {
-        transformStack.push(Matrix3x2f(transformMatrix)) // 現在の行列のコピーをプッシュ
+    fun push() {
+        commandQueue.add(RenderCommand2D.PushTransform)
     }
 
-    /**
-     * スタックから変換状態を復元します。
-     * スタックが空の場合は何もしません。
-     */
-    fun restore() {
-        if (transformStack.isNotEmpty()) {
-            transformMatrix.set(transformStack.pop()) // スタックからポップして復元
-        }
+    fun pop() {
+        commandQueue.add(RenderCommand2D.PopTransform)
     }
 }

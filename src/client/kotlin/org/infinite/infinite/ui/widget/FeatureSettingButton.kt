@@ -102,10 +102,7 @@ class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Fea
         graphics2D: Graphics2D,
     ) {
         val theme = InfiniteClient.theme
-        val colorScheme = theme.colorScheme
         theme.renderBackGround(this.x, this.y, this.width, this.height, graphics2D, 0.8f)
-        graphics2D.strokeStyle.width = 2f
-        graphics2D.strokeStyle.color = colorScheme.redColor
         graphics2D.renderSettingIcon(this.x, this.y, this.width, this.height)
     }
 }
