@@ -6,7 +6,7 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
 import org.infinite.utils.toLowerSnakeCase
-import java.util.concurrent.ConcurrentHashMap
+import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -24,7 +24,19 @@ open class Feature : MinecraftInterface() {
     // --- 1. 定義とステータス ---
     enum class FeatureType { Utils, Extend, Cheat }
 
-    private val _properties: ConcurrentHashMap<String, Property<*>> = ConcurrentHashMap()
+    private val _properties: MutableMap<String, Property<*>> =
+        Collections.synchronizedMap(LinkedHashMap<String, Property<*>>())
+
+    // 外部公開用（順序が維持された Map が返る）
+    val properties: Map<String, Property<*>> get() = _properties
+
+    private fun register(name: String, property: Property<*>) {
+        // LinkedHashMap なので、最初に追加された順序が守られる
+        if (!_properties.containsKey(name)) {
+            _properties[name] = property
+        }
+    }
+
     val enabled = Property(false)
     open val name: String = this::class.simpleName ?: "UnknownFeature"
     open val featureType: FeatureType = FeatureType.Utils
@@ -55,10 +67,6 @@ open class Feature : MinecraftInterface() {
             register(prop.name, property)
             return property
         }
-    }
-
-    private fun register(name: String, property: Property<*>) {
-        _properties.putIfAbsent(name, property)
     }
 
     private fun ensureAllPropertiesRegistered() {
@@ -94,6 +102,7 @@ open class Feature : MinecraftInterface() {
         }
         disable()
     }
+
     private fun startResolver() = synchronized(listenerLock) {
         val cat = categoryClass ?: return@synchronized
 

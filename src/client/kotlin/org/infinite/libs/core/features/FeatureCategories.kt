@@ -1,7 +1,8 @@
 package org.infinite.libs.core.features
 
 import org.infinite.utils.toLowerSnakeCase
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
+import java.util.TreeMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
@@ -12,7 +13,16 @@ abstract class FeatureCategories<
     V : Category<CK, CV>,
     > {
     // 外部からは Map として公開し、内部で書き込む
-    private val _categories = ConcurrentHashMap<K, V>()
+// クラス名のアルファベット順でソートするための比較器
+    private val comparator = Comparator<K> { k1, k2 ->
+        val name1 = k1.simpleName ?: ""
+        val name2 = k2.simpleName ?: ""
+        name1.compareTo(name2)
+    }
+
+    // 内部保持用のマップ。TreeMap を使うことで追加した瞬間から常にソートされます。
+    private val _categories: MutableMap<K, V> = Collections.synchronizedMap(TreeMap<K, V>(comparator))
+
     val categories: Map<K, V> get() = _categories
 
     /**

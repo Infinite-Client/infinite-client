@@ -1,13 +1,23 @@
 package org.infinite.libs.core.features
 
 import org.infinite.utils.toLowerSnakeCase
-import java.util.concurrent.ConcurrentHashMap
+import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 abstract class Category<K : KClass<out Feature>, V : Feature> {
     // 外部からは読み取り専用、内部で PropertyDelegate から書き込み
-    private val _features = ConcurrentHashMap<K, V>()
+// クラス名のアルファベット順でソートする Comparator を定義
+    private val comparator = Comparator<K> { k1, k2 ->
+        val name1 = k1.simpleName ?: ""
+        val name2 = k2.simpleName ?: ""
+        name1.compareTo(name2)
+    }
+
+    // スレッドセーフかつソートされたMapを作成
+    // synchronizedMap でラップすることで、ConcurrentHashMapに近いスレッド安全性を確保します
+    private val _features: MutableMap<K, V> = Collections.synchronizedMap(TreeMap<K, V>(comparator))
+
     val features: Map<K, V> get() = _features
     open val name: String = this::class.simpleName ?: "UnknownCategory"
 
