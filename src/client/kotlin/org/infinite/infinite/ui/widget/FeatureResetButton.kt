@@ -9,6 +9,7 @@ import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import kotlin.math.PI
+import kotlin.math.sin
 
 class FeatureResetButton(x: Int, y: Int, width: Int, height: Int, feature: Feature) :
     Button(
@@ -16,14 +17,24 @@ class FeatureResetButton(x: Int, y: Int, width: Int, height: Int, feature: Featu
         y,
         width,
         height,
-        Component.literal("Reset"),
-        {
+        Component.empty(), // Component.literal("Reset") から empty に変更（アイコンのみのため）
+        { button ->
+            val self = button as FeatureResetButton
             val soundManager = Minecraft.getInstance().soundManager
             playButtonClickSound(soundManager)
+
+            // --- 追加: クリック時にアニメーション開始時刻を記録 ---
+            self.clickAnimStartTime = System.currentTimeMillis()
+
             feature.reset()
         },
         DEFAULT_NARRATION,
     ) {
+
+    // --- 追加: アニメーション管理用プロパティ ---
+    private var clickAnimStartTime: Long = -1L
+    private val clickAnimDuration = 500.0 // 0.5秒で1回転
+
     override fun renderContents(
         guiGraphics: GuiGraphics,
         i: Int,
@@ -35,39 +46,59 @@ class FeatureResetButton(x: Int, y: Int, width: Int, height: Int, feature: Featu
         graphics2DRenderer.flush()
     }
 
-    private fun Graphics2D.renderResetIcon(x: Int, y: Int, width: Int, height: Int) =
-        this.renderResetIcon(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat())
-
     private fun Graphics2D.renderResetIcon(x: Float, y: Float, width: Float, height: Float) {
-        // 1. 時間パラメータの取得 (0.0 ~ 1.0)
-        val duration = 2000.0 // 2秒で1サイクル
+        // 1. 通常の回転（ゆっくり）
+        val duration = 4000.0 // 4秒で1サイクル（少し遅くして追加回転を際立たせる）
         val t = (System.currentTimeMillis() % duration) / duration
+        var extraAngle = 0.0
+
+        // 2. クリック時の追加回転（素早く1回転）
+        if (clickAnimStartTime != -1L) {
+            val elapsed = System.currentTimeMillis() - clickAnimStartTime
+            val progress = (elapsed / clickAnimDuration).coerceAtMost(1.0)
+
+            // イージング（滑らかに動かしたい場合は sin 等を使用）
+            val easedProgress = sin(progress * PI / 2.0)
+            extraAngle = 2.0 * PI * easedProgress
+
+            if (progress >= 1.0) {
+                clickAnimStartTime = -1L // アニメーション終了
+            }
+        }
+
         val colorScheme = InfiniteClient.theme.colorScheme
-        val color = colorScheme.accentColor
+        val color = if (isHovered) colorScheme.accentColor else colorScheme.foregroundColor
         val centerX = x + width / 2f
         val centerY = y + height / 2f
-        val angle = 2.0 * PI * t
-        val angleF = angle.toFloat()
+
+        // 合計の回転角
+        val totalAngle = (2.0 * PI * t) + extraAngle
+
         val rX = width / 3f
         val rY = height / 3f
         val r = (rX + rY) / 2f
+
         this.push()
-        this.rotateAt(angleF, centerX, centerY)
+        this.rotateAt(totalAngle.toFloat(), centerX, centerY)
+
+        // アイコン描画
         this.fillStyle = color
-        this.fillTriangle(centerX, centerY, centerX, centerY - rY * 2, centerX + rX, centerY - rY)
+        // 三角形（矢印の頭）
+        this.fillTriangle(centerX, centerY - r - (rY / 2), centerX, centerY - r + (rY / 2), centerX + rX / 1.5f, centerY - r)
+
+        // 円弧
         this.beginPath()
-        this.strokeStyle.width = 2f
+        this.strokeStyle.width = 1.5f
         this.strokeStyle.color = color
-        this.arc(centerX, centerY, r, (PI / 2.0).toFloat(), (3.0 * PI / 2.0).toFloat())
+        this.arc(centerX, centerY, r, 0f, (PI * 1.7).toFloat()) // 少し隙間を開けるとリセットアイコンらしくなります
         this.strokePath()
+
         this.pop()
     }
 
-    fun render(
-        graphics2D: Graphics2D,
-    ) {
+    fun render(graphics2D: Graphics2D) {
         val theme = InfiniteClient.theme
         theme.renderBackGround(this.x, this.y, this.width, this.height, graphics2D, 0.8f)
-        graphics2D.renderResetIcon(this.x, this.y, this.width, this.height)
+        graphics2D.renderResetIcon(this.x.toFloat(), this.y.toFloat(), this.width.toFloat(), this.height.toFloat())
     }
 }

@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
-import org.infinite.libs.log.LogSystem
 import kotlin.math.sin
 
 abstract class ToggleButton(
@@ -23,7 +22,6 @@ abstract class ToggleButton(
     { button ->
         val tb = button as ToggleButton
         tb.value = !tb.value
-        LogSystem.log("WED")
         tb.animationStartTime = System.currentTimeMillis()
     },
     DEFAULT_NARRATION,
