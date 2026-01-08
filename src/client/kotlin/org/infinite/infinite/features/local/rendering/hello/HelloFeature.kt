@@ -25,7 +25,7 @@ class HelloFeature : LocalFeature() {
         LogSystem.log("HelloFeature Connected!")
     }
 
-    override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
+    override fun onEndUiRendering(graphics2D: Graphics2D): Graphics2D {
         // --- 1. 基本図形 ---
         graphics2D.fillStyle = 0x80FF0000.toInt()
         graphics2D.fillRect(10f, 10f, 100f, 50f)
