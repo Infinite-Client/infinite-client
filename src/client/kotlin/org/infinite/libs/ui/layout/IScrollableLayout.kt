@@ -19,9 +19,7 @@ class IScrollableLayout(
 
     override fun render(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
         visitWidgets { widget ->
-            if (widget is Renderable) {
-                widget.render(guiGraphics, i, j, f)
-            }
+            widget.render(guiGraphics, i, j, f)
         }
     }
 
