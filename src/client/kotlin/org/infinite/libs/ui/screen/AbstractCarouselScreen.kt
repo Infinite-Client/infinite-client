@@ -24,14 +24,26 @@ abstract class AbstractCarouselScreen<T>(title: Component) : Screen(title) {
         get() = minecraft.window.guiScaledWidth.toFloat()
     private val screenHeight: Float
         get() = minecraft.window.guiScaledHeight.toFloat()
-    val widgetWidth: Float
-        get() = (screenWidth * 0.5f).coerceAtLeast(512f).coerceAtMost(screenWidth * 0.9f)
     val widgetHeight: Float
         get() = screenHeight * 0.8f
     private var animatedIndex: Float = 0f
-    protected open val lerpFactor = 0.5f
+    protected open val radius: Float
+        get() {
+            if (pageSize == 0) return 100f
+            val baseRadius = screenWidth * 0.4f // 画面幅の40%を基本半径にする
+            // 要素数が多い(例えば8個以上)場合に、重なりを防ぐため少し半径を大きくする
+            val countFactor = (pageSize / 8f).coerceAtLeast(1.0f)
+            return baseRadius * countFactor
+        }
 
-    protected open val radius: Float get() = carouselWidgets.size * 100f
+    private val focusZ: Float
+        get() = screenWidth * 0.8f // 画面幅の80%程度の距離にカメラを置く
+    val widgetWidth: Float
+        get() {
+            // 画面が狭いときは画面幅の90%、広いときは最大値(例: 600f)までに制限
+            return (screenWidth * 0.9f).coerceAtMost(600f).coerceAtLeast(screenWidth * 0.4f)
+        }
+    protected open val lerpFactor = 0.35f
     protected val carouselWidgets = mutableListOf<AbstractCarouselWidget<T>>()
 
     var pageIndex: Int
@@ -65,7 +77,6 @@ abstract class AbstractCarouselScreen<T>(title: Component) : Screen(title) {
         val widgetHeight: Float,
     )
 
-    private val focusZ = 4000f
     private fun calculateWidgetFrame(index: Int): WidgetFrameData {
         if (pageSize == 0) return WidgetFrameData(0f, 0f, 0f, 1f, 0f, 0f)
 

@@ -44,3 +44,34 @@ fun Int.red(value: Int): Int = (this and 0xFF00FFFF.toInt()) or (value.coerceIn(
 fun Int.green(value: Int): Int = (this and 0xFFFF00FF.toInt()) or (value.coerceIn(0, 255) shl 8)
 fun Int.blue(value: Int): Int = (this and 0xFFFFFF00.toInt()) or value.coerceIn(0, 255)
 fun Int.alpha(value: Int): Int = (this and 0x00FFFFFF) or (value.coerceIn(0, 255) shl 24)
+
+/**
+ * 現在の色と別の色を、指定された比率で混ぜ合わせます。
+ * * @param color 混ぜる対象の色 (ARGB形式)
+ * @param ratio 混ぜる比率。0.0なら元の色のまま、1.0なら対象の色(color)のみ。
+ * @return 混合されたARGB形式のInt
+ */
+fun Int.mix(color: Int, ratio: Float): Int {
+    val r = ratio.coerceIn(0f, 1f)
+    val inverseRatio = 1f - r
+
+    // 1. 各チャンネルを抽出
+    val a1 = (this shr 24 and 0xFF)
+    val r1 = (this shr 16 and 0xFF)
+    val g1 = (this shr 8 and 0xFF)
+    val b1 = (this and 0xFF)
+
+    val a2 = (color shr 24 and 0xFF)
+    val r2 = (color shr 16 and 0xFF)
+    val g2 = (color shr 8 and 0xFF)
+    val b2 = (color and 0xFF)
+
+    // 2. 線形補間を計算 (四捨五入のために 0.5f を加算)
+    val a = (a1 * inverseRatio + a2 * r + 0.5f).toInt()
+    val rResult = (r1 * inverseRatio + r2 * r + 0.5f).toInt()
+    val g = (g1 * inverseRatio + g2 * r + 0.5f).toInt()
+    val b = (b1 * inverseRatio + b2 * r + 0.5f).toInt()
+
+    // 3. 結合して返す
+    return (a shl 24) or (rResult shl 16) or (g shl 8) or b
+}
