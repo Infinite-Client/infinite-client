@@ -1,5 +1,6 @@
 package org.infinite.libs.core.features
 
+import org.infinite.libs.ui.widgets.PropertyWidget
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 
@@ -44,7 +45,7 @@ open class Property<T>(
     protected fun notifyListeners(oldValue: T, newValue: T) {
         listeners.forEach { it(oldValue, newValue) }
     }
-//    open fun widget():PropertyWidget{
-//
-//    }
+
+    open fun widget(x: Int, y: Int, width: Int): PropertyWidget<Property<T>> =
+        PropertyWidget(x, y, width, property = this)
 }

@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
+import org.infinite.libs.log.LogSystem
 import org.infinite.libs.ui.layout.ScrollableLayoutContainer
 
 class FeatureScreen<T : Feature>(
@@ -27,8 +28,11 @@ class FeatureScreen<T : Feature>(
         // 内部レイアウトの構築
         val innerLayout = LinearLayout.vertical().spacing(8)
 
-        // TODO: Factoryを使用してプロパティウィジェットを追加
-        // feature.properties.forEach { ... }
+        feature.properties.forEach { (_, property) ->
+            val propertyWidget = property.widget(0, 0, innerWidth)
+            LogSystem.log("PROPERTY: ${property.name}")
+            innerLayout.addChild(propertyWidget)
+        }
 
         innerLayout.arrangeElements()
 
@@ -48,9 +52,11 @@ class FeatureScreen<T : Feature>(
 
         // 2. Graphics2DRenderer の初期化
         val g2d = Graphics2DRenderer(guiGraphics)
-        val colorScheme = InfiniteClient.theme.colorScheme
+        val theme = InfiniteClient.theme
+        val colorScheme = theme.colorScheme
         val centerX = width / 2f
         val size = 24f
+        theme.renderBackGround(0, 0, this.width, this.height, g2d, 0.5f)
         g2d.fillStyle = when (feature.featureType) {
             Feature.FeatureType.Cheat -> colorScheme.redColor
             Feature.FeatureType.Extend -> colorScheme.yellowColor
@@ -61,7 +67,6 @@ class FeatureScreen<T : Feature>(
         g2d.textStyle.shadow = true
         g2d.textCentered(feature.name, centerX, size)
         g2d.flush()
-        // 4. ウィジェット（スクロールコンテナ等）の描画
         super.render(guiGraphics, mouseX, mouseY, delta)
     }
 
