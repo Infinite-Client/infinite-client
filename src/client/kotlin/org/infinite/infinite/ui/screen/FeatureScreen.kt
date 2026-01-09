@@ -57,7 +57,7 @@ class FeatureScreen<T : Feature>(
             Feature.FeatureType.Utils -> colorScheme.greenColor
         }
         g2d.textStyle.size = size
-        g2d.textStyle.font = "infinite_regular"
+        g2d.textStyle.font = "infinite_bolditalic"
         g2d.textStyle.shadow = true
         g2d.textCentered(feature.name, centerX, size)
         g2d.flush()
