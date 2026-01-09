@@ -6,6 +6,7 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.Feature
+import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.libs.ui.layout.ScrollableLayoutContainer
 
 class FeatureScreen<T : Feature>(
@@ -21,24 +22,17 @@ class FeatureScreen<T : Feature>(
 
     override fun init() {
         super.init()
-
         val innerWidth = width - (margin * 2)
 
-        // 1. 内部レイアウト（LinearLayout）の構築
+        // 内部レイアウトの構築
         val innerLayout = LinearLayout.vertical().spacing(8)
 
-        // Featureが持つ全プロパティをスキャンしてウィジェット化
-        // 実際の運用では Factory クラスに切り出すのが理想的です
-//        feature.properties.forEach { (name, prop) ->
-//            val widget = createPropertyWidget(prop, innerWidth)
-//            innerLayout.addChild(widget)
-//        }
+        // TODO: Factoryを使用してプロパティウィジェットを追加
+        // feature.properties.forEach { ... }
 
-        // レイアウトの計算実行
         innerLayout.arrangeElements()
 
-        // 2. スクロールコンテナの初期化
-        // i (高さ) はコンテンツを表示できる最大範囲を指定
+        // スクロールコンテナの初期化
         container = ScrollableLayoutContainer(minecraft, innerLayout, innerWidth).apply {
             this.x = margin
             this.y = headerHeight
@@ -49,28 +43,25 @@ class FeatureScreen<T : Feature>(
     }
 
     override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        // 背景とヘッダーの描画
+        // 1. 背景の描画 (Vanilla)
         renderBackground(guiGraphics, mouseX, mouseY, delta)
 
-        val centerX = width / 2f
+        // 2. Graphics2DRenderer の初期化
+        val g2d = Graphics2DRenderer(guiGraphics)
         val colorScheme = InfiniteClient.theme.colorScheme
-
-        // タイトル
-        guiGraphics.drawCenteredString(font, title, centerX.toInt(), 15, colorScheme.foregroundColor)
-
-        // 説明文 (あれば)
-        val descKey = "${feature.translation()}.desc"
-        val desc = Component.translatable(descKey)
-        val splitDesc = font.split(desc, (width * 0.8f).toInt())
-        var currentY = 30
-        splitDesc.forEach { line ->
-            guiGraphics.drawCenteredString(font, line, centerX.toInt(), currentY, 0xAAAAAA)
-            currentY += font.lineHeight
+        val centerX = width / 2f
+        val size = 24f
+        g2d.fillStyle = when (feature.featureType) {
+            Feature.FeatureType.Cheat -> colorScheme.redColor
+            Feature.FeatureType.Extend -> colorScheme.yellowColor
+            Feature.FeatureType.Utils -> colorScheme.greenColor
         }
-
-        // 区切り線
-        guiGraphics.fill(margin, headerHeight - 2, width - margin, headerHeight - 1, 0x44FFFFFF)
-
+        g2d.textStyle.size = size
+        g2d.textStyle.font = "infinite_regular"
+        g2d.textStyle.shadow = true
+        g2d.textCentered(feature.name, centerX, size)
+        g2d.flush()
+        // 4. ウィジェット（スクロールコンテナ等）の描画
         super.render(guiGraphics, mouseX, mouseY, delta)
     }
 

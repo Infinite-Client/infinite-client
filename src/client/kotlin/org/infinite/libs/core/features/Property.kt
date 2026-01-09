@@ -44,4 +44,7 @@ open class Property<T>(
     protected fun notifyListeners(oldValue: T, newValue: T) {
         listeners.forEach { it(oldValue, newValue) }
     }
+//    open fun widget():PropertyWidget{
+//
+//    }
 }

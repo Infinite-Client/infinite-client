@@ -3,21 +3,30 @@
     {
       "type": "ttf",
       "file": "infinite:chakrapetch_mediumitalic.ttf",
-      "shift": [0.0, 0.0],
+      "shift": [
+        0.0,
+        0.0
+      ],
       "size": 8.0,
       "oversample": 8.0
     },
     {
       "type": "ttf",
       "file": "infinite:intelonemono_italic.ttf",
-      "shift": [0.0, 0.0],
+      "shift": [
+        0.0,
+        0.0
+      ],
       "size": 8.0,
       "oversample": 8.0
     },
     {
       "type": "ttf",
       "file": "infinite:notosansjp_regular.ttf",
-      "shift": [0.0, 0.0],
+      "shift": [
+        0.0,
+        0.0
+      ],
       "size": 8.0,
       "oversample": 8.0
     },
