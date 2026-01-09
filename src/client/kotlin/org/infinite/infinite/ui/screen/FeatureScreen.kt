@@ -22,7 +22,6 @@ class FeatureScreen<T : Feature>(
     private val margin = 10
 
     override fun init() {
-        super.init()
         val innerWidth = width - (margin * 2)
 
         // 内部レイアウトの構築
@@ -33,24 +32,17 @@ class FeatureScreen<T : Feature>(
             LogSystem.log("PROPERTY: ${property.name}")
             innerLayout.addChild(propertyWidget)
         }
-
         innerLayout.arrangeElements()
-
-        // スクロールコンテナの初期化
         container = ScrollableLayoutContainer(minecraft, innerLayout, innerWidth).apply {
             this.x = margin
             this.y = headerHeight
             this.setMinWidth(innerWidth)
             this.setMaxHeight(height - headerHeight - margin)
         }
-        this.addRenderableWidget(container)
+//        this.addRenderableWidget(container)
     }
 
     override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        // 1. 背景の描画 (Vanilla)
-        renderBackground(guiGraphics, mouseX, mouseY, delta)
-
-        // 2. Graphics2DRenderer の初期化
         val g2d = Graphics2DRenderer(guiGraphics)
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme
@@ -67,6 +59,7 @@ class FeatureScreen<T : Feature>(
         g2d.textStyle.shadow = true
         g2d.textCentered(feature.name, centerX, size)
         g2d.flush()
+        container.render(guiGraphics, mouseX, mouseY, delta)
         super.render(guiGraphics, mouseX, mouseY, delta)
     }
 
