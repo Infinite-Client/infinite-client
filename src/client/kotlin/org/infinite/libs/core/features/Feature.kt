@@ -10,7 +10,7 @@ import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
-import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 
 open class Feature : MinecraftInterface() {
@@ -37,7 +37,7 @@ open class Feature : MinecraftInterface() {
             property.name = name.toLowerSnakeCase()
             property.parent = this
 
-            _properties[name] = property
+            _properties[name.toLowerSnakeCase()] = property
         }
     }
 
@@ -73,13 +73,16 @@ open class Feature : MinecraftInterface() {
         }
     }
 
+    private var propertiesInitialized = false // 初期化済みフラグ
     private fun ensureAllPropertiesRegistered() {
-        this::class.declaredMemberProperties.forEach { prop ->
+        if (propertiesInitialized) return
+        propertiesInitialized = true
+        this::class.memberProperties.forEach { prop ->
             try {
                 prop.isAccessible = true
                 prop.getter.call(this)
             } catch (e: Exception) {
-                LogSystem.error("Failed to register property ${prop.name}: $e")
+                LogSystem.error("Skip property ${prop.name} in ${this.name}: ${e.message}")
             }
         }
     }
@@ -140,6 +143,15 @@ open class Feature : MinecraftInterface() {
     @Serializable
     data class FeatureData(val enabled: Boolean, val properties: Map<String, @Contextual Any?>)
 
+    /**
+     * 指定された名前のプロパティに対して、値を安全に適用を試みます。
+     * ConfigManager 等からの動的な流し込みに使用します。
+     */
+    fun tryApply(name: String, value: Any) {
+        ensureAllPropertiesRegistered()
+        _properties[name]?.tryApply(value) ?: LogSystem.warn("Property '$name' not found in '${this.name}'")
+    }
+
     fun data(): FeatureData {
         ensureAllPropertiesRegistered()
         return FeatureData(
@@ -166,7 +178,7 @@ open class Feature : MinecraftInterface() {
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> set(name: String, value: T) {
         ensureAllPropertiesRegistered()
-        val prop = _properties[name] ?: _properties.entries.find { it.key.toLowerSnakeCase() == name }?.value
+        val prop = get<T>(name) ?: return
         (prop as? Property<T>)?.value = value
     }
 

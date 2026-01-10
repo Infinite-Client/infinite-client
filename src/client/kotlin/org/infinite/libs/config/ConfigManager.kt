@@ -18,7 +18,6 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.Feature
-import org.infinite.libs.core.features.Property
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
 import org.infinite.utils.toLowerSnakeCase
@@ -49,7 +48,7 @@ object ConfigManager : MinecraftInterface() {
 
         override fun deserialize(decoder: Decoder): Map<String, Any?> {
             val root = (decoder as? JsonDecoder)?.decodeJsonElement()
-            return if (root is JsonObject) root.toMap() else throw SerializationException("Not a JsonObject")
+            return if (root is JsonObject) root.toMap() else throw SerializationException("Nota JsonObject")
         }
 
         private fun Any?.toJsonElement(): JsonElement = when (this) {
@@ -86,14 +85,11 @@ object ConfigManager : MinecraftInterface() {
         }
     }
 
-// --- Save 内の修正 ---
-
     private fun save(file: File, data: Map<String, *>) {
         try {
             if (!file.parentFile.exists()) file.parentFile.mkdirs()
-            @Suppress("UNCHECKED_CAST")
-            val plainMap = deepConvert(data) as Map<String, Any?>
-            val jsonString = json.encodeToString(GenericMapSerializer, plainMap)
+            // deepConvert を廃止し、toJsonElement ロジックを持つシリアライザーに直接渡す
+            val jsonString = json.encodeToString(GenericMapSerializer, data)
             file.writeText(jsonString)
         } catch (e: Exception) {
             LogSystem.error("Failed to save config: ${e.message}")
@@ -222,8 +218,7 @@ object ConfigManager : MinecraftInterface() {
      * プロパティの型に合わせて値を安全にキャスト・変換して適用する
      */
     private fun applyPropertySafely(feature: Feature, propName: String, value: Any) {
-        val property = feature.get<Property<*>>(propName) ?: return
-        property.tryApply(value)
+        feature.tryApply(propName, value)
     }
 
     private fun getLocalPath(): String? {

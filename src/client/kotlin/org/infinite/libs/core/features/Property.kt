@@ -1,6 +1,5 @@
 package org.infinite.libs.core.features
 
-import org.infinite.libs.log.LogSystem
 import org.infinite.libs.ui.widgets.PropertyWidget
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
@@ -48,73 +47,37 @@ open class Property<T : Any>(
     }
 
     fun tryApply(anyValue: Any?) {
-        val className = anyValue?.let { it::class.simpleName } ?: "null"
+        if (anyValue == null) return
 
-        if (anyValue == null) {
-            LogSystem.warn("[Property:$name] Received null value, skipping.")
-            return
-        }
-
-        // 1. 直接キャスト可能な場合のチェック
+        // 1. 型が一致していれば即代入
         if (valueType.isInstance(anyValue)) {
             @Suppress("UNCHECKED_CAST")
             this.value = anyValue as T
             return
         }
 
-        // 2. 型変換の試行
-        @Suppress("UNCHECKED_CAST")
+        // 2. 数値型・論理型の変換を効率化
         val converted: Any? = when (valueType) {
-            Int::class.javaObjectType, Int::class.java -> {
-                val res = (anyValue as? Number)?.toInt()
-                res
-            }
-
-            Long::class.javaObjectType, Long::class.java -> {
-                val res = (anyValue as? Number)?.toLong()
-                res
-            }
-
-            Float::class.javaObjectType, Float::class.java -> {
-                val res = (anyValue as? Number)?.toFloat()
-                res
-            }
-
-            Double::class.javaObjectType, Double::class.java -> {
-                val res = (anyValue as? Number)?.toDouble()
-                res
-            }
-
+            Int::class.javaObjectType, Int::class.java -> (anyValue as? Number)?.toInt()
+            Long::class.javaObjectType, Long::class.java -> (anyValue as? Number)?.toLong()
+            Float::class.javaObjectType, Float::class.java -> (anyValue as? Number)?.toFloat()
+            Double::class.javaObjectType, Double::class.java -> (anyValue as? Number)?.toDouble()
             Boolean::class.javaObjectType, Boolean::class.java -> {
-                val res = when (anyValue) {
+                when (anyValue) {
                     is Boolean -> anyValue
                     is Number -> anyValue.toLong() != 0L
                     is String -> anyValue.toBoolean()
                     else -> null
                 }
-                res
             }
 
-            String::class.java -> {
-                val res = anyValue.toString()
-                res
-            }
-
-            else -> {
-                LogSystem.warn("[Property:$name] No conversion rule defined for target type ${valueType.simpleName}")
-                null
-            }
+            String::class.java -> anyValue.toString()
+            else -> null
         }
 
         if (converted != null) {
-            try {
-                @Suppress("UNCHECKED_CAST")
-                this.value = converted as T
-            } catch (e: Exception) {
-                LogSystem.error("[Property:$name] Failed to cast converted value to T: ${e.message}")
-            }
-        } else {
-            LogSystem.error("[Property:$name] Conversion failed. Value '$anyValue' ($className) is incompatible with ${valueType.simpleName}")
+            @Suppress("UNCHECKED_CAST")
+            this.value = converted as T
         }
     }
 
