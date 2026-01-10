@@ -33,8 +33,7 @@ open class Feature : MinecraftInterface() {
     // Feature.kt 内の register メソッドを修正
     private fun register(name: String, property: Property<*>) {
         if (!_properties.containsKey(name)) {
-            // Property側に情報を注入
-            property.name = name.toLowerSnakeCase()
+            property.name = name
             property.parent = this
 
             _properties[name.toLowerSnakeCase()] = property

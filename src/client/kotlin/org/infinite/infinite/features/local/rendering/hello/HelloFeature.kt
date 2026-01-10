@@ -1,6 +1,7 @@
 package org.infinite.infinite.features.local.rendering.hello
 
 import org.infinite.libs.core.features.feature.LocalFeature
+import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.number.DoubleProperty
 import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
@@ -16,6 +17,9 @@ import kotlin.math.sin
 
 class HelloFeature : LocalFeature() {
     override val defaultToggleKey: Int = GLFW.GLFW_KEY_F
+
+    @Suppress("Unused")
+    val booleanProperty by property(BooleanProperty(false))
 
     @Suppress("Unused")
     val intProperty by property(IntProperty(5, 0, 10))

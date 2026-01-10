@@ -10,8 +10,7 @@ class BooleanPropertyWidget(
     width: Int,
     height: Int = DEFAULT_WIDGET_HEIGHT,
     property: BooleanProperty,
-) :
-    PropertyWidget<BooleanProperty>(x, y, width, height, property) {
+) : PropertyWidget<BooleanProperty>(x, y, width, height, property) {
     private class PropertyToggleButton(x: Int, y: Int, width: Int, height: Int, private val property: BooleanProperty) :
         ToggleButton(x, y, width, height) {
         override var value: Boolean
@@ -27,6 +26,8 @@ class BooleanPropertyWidget(
         super.relocate()
         propertyToggleButton.x = x + width - propertyToggleButton.width
         propertyToggleButton.y = y
+        propertyToggleButton.width = height * 2
+        propertyToggleButton.height = height
     }
 
     override fun renderWidget(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {

@@ -1,6 +1,7 @@
 package org.infinite.libs.core.features
 
 import org.infinite.libs.ui.widgets.PropertyWidget
+import org.infinite.utils.toLowerSnakeCase
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 
@@ -22,7 +23,7 @@ open class Property<T : Any>(
      */
     fun translationKey(): String? {
         val parentKey = parent?.translation() ?: return null
-        return "$parentKey.$name"
+        return "$parentKey.${name.toLowerSnakeCase()}"
     }
 
     var value: T
