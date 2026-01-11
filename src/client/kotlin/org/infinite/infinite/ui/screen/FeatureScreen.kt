@@ -26,6 +26,7 @@ class FeatureScreen<T : Feature>(
     private val margin = 10
 
     override fun init() {
+        feature.ensureAllPropertiesRegistered()
         val innerWidth = width - (margin * 2)
 
         // 内部レイアウトの構築

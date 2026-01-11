@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.interfaces.MinecraftInterface
-import org.infinite.libs.log.LogSystem
 import org.infinite.utils.toLowerSnakeCase
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
@@ -96,7 +95,7 @@ open class Feature : MinecraftInterface() {
     }
 
     private var propertiesInitialized = false // 初期化済みフラグ
-    private fun ensureAllPropertiesRegistered() {
+    fun ensureAllPropertiesRegistered() {
         if (propertiesInitialized) return
         propertiesInitialized = true
 
@@ -110,8 +109,7 @@ open class Feature : MinecraftInterface() {
                 @Suppress("UNCHECKED_CAST")
                 val callableProp = prop as? kotlin.reflect.KProperty1<Any, *>
                 callableProp?.get(this)
-            } catch (e: Exception) {
-                LogSystem.error("Skip property ${prop.name}: ${e.message}")
+            } catch (_: Exception) {
             }
         }
     }
