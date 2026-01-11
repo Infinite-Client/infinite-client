@@ -163,13 +163,24 @@ spotless {
 tasks.withType<JavaCompile>().configureEach {
     options.errorprone {
         isEnabled.set(true)
-        option(
-            "UnusedMethod:ExemptAnnotations",
-            "org.spongepowered.asm.mixin.injection.Inject,org.spongepowered.asm.mixin.injection.ModifyArg,org.spongepowered.asm.mixin.injection.ModifyVariable,org.spongepowered.asm.mixin.injection.Redirect",
-        )
+        // 頻出するMixinアノテーションをリストアップ
+        val mixinAnnotations = listOf(
+            "org.spongepowered.asm.mixin.injection.Inject",
+            "org.spongepowered.asm.mixin.injection.ModifyArg",
+            "org.spongepowered.asm.mixin.injection.ModifyArgs",
+            "org.spongepowered.asm.mixin.injection.ModifyConstant",
+            "org.spongepowered.asm.mixin.injection.ModifyVariable",
+            "org.spongepowered.asm.mixin.injection.Redirect",
+            "org.spongepowered.asm.mixin.injection.At",
+            "org.spongepowered.asm.mixin.Shadow",
+            "org.spongepowered.asm.mixin.Overwrite",
+            "org.spongepowered.asm.mixin.Unique",
+        ).joinToString(",")
+
+        option("UnusedMethod:ExemptAnnotations", mixinAnnotations)
+        option("UnusedVariable:ExemptAnnotations", mixinAnnotations)
     }
 }
-
 // tasks.register<JavaExec>("genDocs") {
 //    description = "Generate Document templates"
 //    group = "application"
