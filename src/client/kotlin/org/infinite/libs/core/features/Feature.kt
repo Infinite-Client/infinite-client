@@ -31,19 +31,41 @@ open class Feature : MinecraftInterface() {
     // 外部公開用（順序が維持された Map が返る）
     val properties: Map<String, Property<*>> get() = _properties
 
-    // Feature.kt 内の register メソッドを修正
-    private fun register(name: String, property: Property<*>) {
-        if (!_properties.containsKey(name)) {
-            property.name = name
-            property.parent = this
-
-            _properties[name.toLowerSnakeCase()] = property
-        }
-    }
-
     val enabled = BooleanProperty(false)
     open val name: String = this::class.simpleName ?: "UnknownFeature"
     open val featureType: FeatureType = FeatureType.Utils
+
+    private val pendingProperties = mutableMapOf<String, Any>()
+
+    fun tryApply(name: String, value: Any) {
+        val snakeName = name.toLowerSnakeCase()
+
+        // 1. 既に登録されている場合は即時適用
+        val prop = _properties[snakeName]
+        if (prop != null) {
+            prop.tryApply(value)
+            return
+        }
+
+        // 2. まだ登録されていない場合は「保留リスト」に入れる
+        pendingProperties[snakeName] = value
+    }
+
+    // プロパティが登録された直後に呼ばれる箇所（registerメソッド）を修正
+    private fun register(name: String, property: Property<*>) {
+        val snakeName = name.toLowerSnakeCase()
+        if (!_properties.containsKey(snakeName)) {
+            property.name = name
+            property.parent = this
+            _properties[snakeName] = property
+
+            // --- 追加: 保留されていた値があれば適用する ---
+            pendingProperties.remove(snakeName)?.let { pendingValue ->
+                property.tryApply(pendingValue)
+                // LogSystem.info("Applied pending property '$snakeName' to '${this.name}'")
+            }
+        }
+    }
 
     // --- 2. 依存・矛盾関係の管理 ---
     // ここも KClass を保持するように定義を明確化
@@ -77,12 +99,19 @@ open class Feature : MinecraftInterface() {
     private fun ensureAllPropertiesRegistered() {
         if (propertiesInitialized) return
         propertiesInitialized = true
+
+        // memberProperties の各要素は KProperty1<out Feature, *> 型
         this::class.memberProperties.forEach { prop ->
             try {
                 prop.isAccessible = true
-                prop.getter.call(this)
+
+                // 'out projection' による制限を回避するため、
+                // 敢えて抽象的な型 (KProperty1<Any, *>) にキャストしてから get を呼ぶ
+                @Suppress("UNCHECKED_CAST")
+                val callableProp = prop as? kotlin.reflect.KProperty1<Any, *>
+                callableProp?.get(this)
             } catch (e: Exception) {
-                LogSystem.error("Skip property ${prop.name} in ${this.name}: ${e.message}")
+                LogSystem.error("Skip property ${prop.name}: ${e.message}")
             }
         }
     }
@@ -142,16 +171,6 @@ open class Feature : MinecraftInterface() {
     // --- 6. データ管理・翻訳 (変更なし) ---
     @Serializable
     data class FeatureData(val enabled: Boolean, val properties: Map<String, @Contextual Any?>)
-
-    /**
-     * 指定された名前のプロパティに対して、値を安全に適用を試みます。
-     * ConfigManager 等からの動的な流し込みに使用します。
-     */
-    fun tryApply(name: String, value: Any) {
-        ensureAllPropertiesRegistered()
-        val snakeName = name.toLowerSnakeCase()
-        _properties[snakeName]?.tryApply(value) ?: LogSystem.warn("Property '$snakeName' not found in '${this.name}'")
-    }
 
     fun data(): FeatureData {
         ensureAllPropertiesRegistered()
