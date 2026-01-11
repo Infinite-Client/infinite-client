@@ -40,12 +40,10 @@ class InfiniteTheme : Theme() {
         val centerColor = colorScheme.blackColor.alpha(alphaInt)
 
         // 画面全体を覆うのに十分な半径
-        val r = sqrt(width.pow(2) + height.pow(2)) * (1 + 4 * alpha)
+        val r = sqrt(width.pow(2) + height.pow(2)) * (1 + 2 * alpha)
         val size = baseColors.size
 
         graphics2D.enableScissor(x.toInt(), y.toInt(), width.toInt(), height.toInt())
-
-// ... 前後の処理は同じ ...
 
         // ループを2ステップずつ進める
         for (i in 0 until size step 2) {

@@ -8,7 +8,7 @@
         0.0
       ],
       "size": 8.0,
-      "oversample": 8.0
+      "oversample": 16.0
     },
     {
       "type": "ttf",
@@ -18,7 +18,7 @@
         0.0
       ],
       "size": 8.0,
-      "oversample": 8.0
+      "oversample": 16.0
     },
     {
       "type": "ttf",
@@ -28,7 +28,7 @@
         0.0
       ],
       "size": 8.0,
-      "oversample": 8.0
+      "oversample": 16.0
     },
     {
       "type": "reference",
