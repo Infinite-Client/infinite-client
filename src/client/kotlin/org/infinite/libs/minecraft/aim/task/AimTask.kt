@@ -25,38 +25,6 @@ open class AimTask(
     private fun mouseSensitivity(): Double =
         options.sensitivity().get() / 100.0
 
-    companion object : MinecraftInterface() {
-        fun calcLookAt(target: Vec3): CameraRoll {
-            val player = player ?: return CameraRoll.Zero
-            val pos: Vec3 = player.position()
-            val d = target.x - pos.x
-            val e = target.y - pos.y
-            val f = target.z - pos.z
-            val g = sqrt(d * d + f * f)
-            val pitch =
-                Mth.wrapDegrees(
-                    (
-                        -(
-                            Mth.atan2(
-                                e,
-                                g,
-                            ) * (180.0 / Math.PI)
-                            )
-                        ),
-                )
-            val yaw =
-                Mth.wrapDegrees(
-                    (
-                        Mth.atan2(
-                            f,
-                            d,
-                        ) * (180.0 / Math.PI)
-                        ) - 90.0,
-                )
-            return CameraRoll(yaw, pitch)
-        }
-    }
-
     private var rollVelocity = CameraRoll(0.0, 0.0)
     private var duration = (1000 / 30).toLong()
     private var time = System.currentTimeMillis()
@@ -177,33 +145,6 @@ open class AimTask(
         return result.diffNormalize()
     }
 
-    /**
-     * プレイヤーの現在の視線と目標座標から必要な回転量を計算します。
-     * @return (Target Yaw, Target Pitch)
-     */
-    private fun calculateRotation(
-        player: LocalPlayer,
-        targetPos: Vec3,
-    ): CameraRoll {
-        val t = calcLookAt(targetPos)
-        val c = playerRoll(player)
-        return (t - c).diffNormalize()
-    }
-
-    private fun playerRoll(player: LocalPlayer): CameraRoll =
-        CameraRoll(player.xRot.toDouble(), player.yRot.toDouble())
-
-    /**
-     * 進行度に基づき、開始角度から目標角度へプレイヤーの視線を補間・設定します。
-     */
-    private fun setAim(
-        player: LocalPlayer,
-        roll: CameraRoll,
-    ) {
-        player.yRot = roll.yRot.toFloat()
-        player.xRot = roll.xRot.toFloat()
-    }
-
     private fun rollAim(
         player: LocalPlayer,
         roll: CameraRoll,
@@ -211,5 +152,43 @@ open class AimTask(
         val yRot = player.yRot
         val xRot = player.xRot
         setAim(player, CameraRoll(yRot + roll.yRot, xRot + roll.xRot))
+    }
+    companion object : MinecraftInterface() {
+        fun calcLookAt(target: Vec3): CameraRoll {
+            val player = player ?: return CameraRoll.Zero
+
+            // 【修正】足元ではなく目の位置(EyePos)を基準に計算する
+            val eyePos: Vec3 = player.eyePosition
+
+            val d = target.x - eyePos.x
+            val e = target.y - eyePos.y
+            val f = target.z - eyePos.z
+            val g = sqrt(d * d + f * f)
+
+            val pitch = Mth.wrapDegrees(-(Mth.atan2(e, g) * (180.0 / Math.PI)))
+            val yaw = Mth.wrapDegrees((Mth.atan2(f, d) * (180.0 / Math.PI)) - 90.0)
+
+            // CameraRoll(yaw, pitch) の順序をプロジェクトの定義に合わせる
+            return CameraRoll(yaw, pitch)
+        }
+    }
+
+// ...
+
+    private fun calculateRotation(player: LocalPlayer, targetPos: Vec3): CameraRoll {
+        val t = calcLookAt(targetPos)
+        val c = playerRoll(player)
+        // 正規化された差分を返す
+        return (t - c).diffNormalize()
+    }
+
+    private fun playerRoll(player: LocalPlayer): CameraRoll =
+        // 【修正】引数の順序を (Yaw, Pitch) に統一
+        CameraRoll(player.yRot.toDouble(), player.xRot.toDouble())
+
+    private fun setAim(player: LocalPlayer, roll: CameraRoll) {
+        // 【修正】roll.yRot が Yaw、roll.xRot が Pitch であることを確認
+        player.yRot = roll.yRot.toFloat()
+        player.xRot = roll.xRot.toFloat()
     }
 }

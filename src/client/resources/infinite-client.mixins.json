@@ -20,6 +20,7 @@
     "infinite.features.global.rendering.theme.SliderButtonMixin",
     "infinite.features.global.rendering.theme.button.PlainButtonMixin",
     "infinite.features.local.combat.attack.CriticalFeatureMixin",
+    "infinite.features.local.combat.counter.CounterFeatureMixin",
     "ui.OptionsScreenMixin"
   ],
   "injectors": {

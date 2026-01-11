@@ -25,8 +25,16 @@ sealed class AimTarget : MinecraftInterface() {
 
     open class EntityTarget(
         e: Entity,
+        val anchor: EntityAnchor = EntityAnchor.Chest, // デフォルトを胸あたりに設定
     ) : AimTarget() {
         open val entity = e
+
+        enum class EntityAnchor {
+            Eyes, // 目（頭）
+            Chest, // 胸（中心より少し上）
+            Center, // 体の中心
+            Feet, // 足元
+        }
     }
 
     // ブロックを狙う面（face）を追加し、デフォルトをCENTERに設定
@@ -85,9 +93,17 @@ sealed class AimTarget : MinecraftInterface() {
     fun pos(): Vec3? =
         when (this) { // when式の対象を 'this' に変更し、スマートキャストを有効化
             is EntityTarget -> {
-                this.entity
-                    .getPosition(minecraft.deltaTracker.gameTimeDeltaTicks)
-                    .add(0.0, this.entity.getEyeHeight(this.entity.pose).toDouble(), 0.0)
+                val basePos = this.entity.getPosition(minecraft.deltaTracker.gameTimeDeltaTicks)
+                val height = this.entity.bbHeight
+
+                val yOffset = when (this.anchor) {
+                    EntityTarget.EntityAnchor.Eyes -> this.entity.getEyeHeight(this.entity.pose).toDouble()
+                    EntityTarget.EntityAnchor.Chest -> height * 0.7 // 身長の7割（胸付近）
+                    EntityTarget.EntityAnchor.Center -> height * 0.5 // 身長の半分
+                    EntityTarget.EntityAnchor.Feet -> 0.0
+                }
+
+                basePos.add(0.0, yOffset, 0.0)
             }
 
             is BlockTarget -> {
