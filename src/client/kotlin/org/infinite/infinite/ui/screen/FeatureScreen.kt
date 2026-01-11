@@ -40,7 +40,7 @@ class FeatureScreen<T : Feature>(
             this.x = margin
             this.y = headerHeight
             this.setMinWidth(innerWidth)
-            this.setMaxHeight(height - headerHeight - margin)
+            this.setMaxHeight(parent.height - headerHeight - margin)
         }
         this.addRenderableWidget(container)
     }

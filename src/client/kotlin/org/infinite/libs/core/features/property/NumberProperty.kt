@@ -4,7 +4,7 @@ import org.infinite.libs.core.features.Property
 import org.infinite.libs.ui.widgets.NumberPropertyWidget
 import org.infinite.libs.ui.widgets.PropertyWidget
 
-open class NumberProperty<T>(
+abstract class NumberProperty<T>(
     default: T,
     val min: T,
     val max: T,

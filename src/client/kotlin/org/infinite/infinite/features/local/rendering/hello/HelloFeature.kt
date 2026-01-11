@@ -3,10 +3,12 @@ package org.infinite.infinite.features.local.rendering.hello
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.StringProperty
+import org.infinite.libs.core.features.property.list.StringListProperty
 import org.infinite.libs.core.features.property.number.DoubleProperty
 import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.number.LongProperty
+import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
@@ -36,6 +38,17 @@ class HelloFeature : LocalFeature() {
 
     @Suppress("Unused")
     val stringProperty by property(StringProperty("Hello World"))
+
+    @Suppress("Unused")
+    enum class TestEnum {
+        A, B, C, D
+    }
+
+    @Suppress("Unused")
+    val selectionProperty by property(EnumSelectionProperty<TestEnum>(TestEnum.A))
+
+    @Suppress("Unused")
+    val stringListProperty by property(StringListProperty(listOf("Hello", "World")))
 
     init {
         enable()

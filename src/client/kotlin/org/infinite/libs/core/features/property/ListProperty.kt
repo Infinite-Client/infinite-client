@@ -1,53 +1,54 @@
 package org.infinite.libs.core.features.property
 
 import org.infinite.libs.core.features.Property
+import org.infinite.libs.ui.widgets.ListPropertyWidget
+import org.infinite.libs.ui.widgets.PropertyWidget
 
 /**
  * リスト形式の設定プロパティ
  * @param T リスト内の要素の型
  * @param default デフォルトのリスト内容
  */
-open class ListProperty<T>(
+abstract class ListProperty<T : Any>(
     default: List<T>,
 ) : Property<List<T>>(default.toList()) {
 
-    // 内部的なリスト操作もスレッド安全にする
-    private val internalList = java.util.concurrent.CopyOnWriteArrayList<T>(default)
+    protected val internalList = java.util.concurrent.CopyOnWriteArrayList<T>(default)
 
-    override fun filterValue(newValue: List<T>): List<T> {
-        // リスト全体が差し替えられた場合、内部リストを同期する
-        internalList.clear()
-        internalList.addAll(newValue)
-        return internalList.toList()
+    abstract fun createInputWidget(
+        x: Int,
+        y: Int,
+        width: Int,
+        initialValue: T?,
+        onComplete: (T?) -> Unit,
+    ): net.minecraft.client.gui.components.AbstractWidget
+
+    open fun elementToString(element: T): String = element.toString()
+
+    fun add(element: T) {
+        internalList.add(element)
+        sync()
     }
 
-    /**
-     * 要素を追加し、Propertyの値を更新して通知を飛ばす
-     */
-    fun add(element: T): Boolean {
-        return if (!internalList.contains(element)) {
-            internalList.add(element)
-            sync() // 値を更新して通知
-            true
-        } else {
-            false
-        }
-    }
-
-    fun remove(element: T): Boolean {
-        return if (internalList.remove(element)) {
+    // 番号で削除
+    fun removeAt(index: Int) {
+        if (index in internalList.indices) {
+            internalList.removeAt(index)
             sync()
-            true
-        } else {
-            false
         }
     }
 
-    fun contains(element: T): Boolean = internalList.contains(element)
+    // 番号で差し替え
+    fun replaceAt(index: Int, newValue: T) {
+        if (index in internalList.indices) {
+            internalList[index] = newValue
+            sync()
+        }
+    }
 
-    /**
-     * 現在の internalList の状態を Property.value に反映させ、通知を発生させる
-     */
+    override fun widget(x: Int, y: Int, width: Int): PropertyWidget<ListProperty<T>> =
+        ListPropertyWidget(x, y, width, this)
+
     private fun sync() {
         value = internalList.toList()
     }
