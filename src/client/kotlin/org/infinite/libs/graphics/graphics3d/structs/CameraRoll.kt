@@ -8,8 +8,8 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 class CameraRoll(
-    var yaw: Double,
-    var pitch: Double,
+    var yRot: Double,
+    var xRot: Double,
 ) {
     companion object {
         val Zero = CameraRoll(0.0, 0.0)
@@ -20,8 +20,8 @@ class CameraRoll(
      * operator fun plus(other: CameraRoll): CameraRoll
      */
     operator fun plus(other: CameraRoll): CameraRoll = CameraRoll(
-        yaw = this.yaw + other.yaw,
-        pitch = this.pitch + other.pitch,
+        yRot = this.yRot + other.yRot,
+        xRot = this.xRot + other.xRot,
     )
 
     /**
@@ -29,15 +29,15 @@ class CameraRoll(
      * operator fun minus(other: CameraRoll): CameraRoll
      */
     operator fun minus(other: CameraRoll): CameraRoll = CameraRoll(
-        yaw = this.yaw - other.yaw,
-        pitch = this.pitch - other.pitch,
+        yRot = this.yRot - other.yRot,
+        xRot = this.xRot - other.xRot,
     )
 
     operator fun times(scalar: Number): CameraRoll {
         val s = scalar.toDouble()
         return CameraRoll(
-            yaw = this.yaw * s,
-            pitch = this.pitch * s,
+            yRot = this.yRot * s,
+            xRot = this.xRot * s,
         )
     }
 
@@ -45,12 +45,12 @@ class CameraRoll(
         val s = scalar.toDouble()
         if (s == 0.0) return CameraRoll(0.0, 0.0)
         return CameraRoll(
-            yaw = this.yaw / s,
-            pitch = this.pitch / s,
+            yRot = this.yRot / s,
+            xRot = this.xRot / s,
         )
     }
 
-    fun magnitude(): Double = sqrt(this.yaw * this.yaw + this.pitch * this.pitch)
+    fun magnitude(): Double = sqrt(this.yRot * this.yRot + this.xRot * this.xRot)
 
     /**
      * 最大回転速度 (maxSpeed) で移動量を制限したCameraRollを返します。
@@ -81,8 +81,8 @@ class CameraRoll(
     fun vec(): Vec3 {
         // 1. 角度をラジアンに変換 (度数で格納されていると仮定)
         // 既にラジアンで格納されている場合は、この行をコメントアウトしてください。
-        val yawRad = this.yaw * PI / 180.0
-        val pitchRad = this.pitch * PI / 180.0
+        val yawRad = this.yRot * PI / 180.0
+        val pitchRad = this.xRot * PI / 180.0
 
         // 2. 角度から方向ベクトルを計算
         // Y軸が上方向、X-Z平面が水平面、+Xが初期前方と仮定した一般的な計算式
@@ -95,5 +95,5 @@ class CameraRoll(
         return Vec3(x, y, z)
     }
 
-    fun diffNormalize(): CameraRoll = CameraRoll(Mth.wrapDegrees(yaw), Mth.wrapDegrees(pitch))
+    fun diffNormalize(): CameraRoll = CameraRoll(Mth.wrapDegrees(yRot), Mth.wrapDegrees(xRot))
 }
