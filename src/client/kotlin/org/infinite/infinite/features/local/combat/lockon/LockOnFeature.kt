@@ -37,36 +37,45 @@ class LockOnFeature : LocalFeature() {
     var lockedEntity: LivingEntity? = null
         private set
 
+    private var isAiming = false
+
     override fun onEnabled() {
         findAndLockTarget()
     }
 
     override fun onDisabled() {
         lockedEntity = null
+        isAiming = false
     }
 
     override fun onStartTick() {
         if (!isEnabled()) return
 
         val p = player ?: return
-        val target = lockedEntity
+        val currentTarget = lockedEntity
 
-        // ターゲットの有効性チェック
-        if (target == null || !target.isAlive || p.distanceTo(target) > range.value) {
-            lockedEntity = null
-            // ターゲットをロストした場合は再検索、見つからなければ無効化
-            findAndLockTarget()
-            if (lockedEntity == null) {
-                toggle() // または disable()
+        // --- 1. ターゲットの有効性・距離チェック ---
+        if (currentTarget != null) {
+            val distance = p.distanceTo(currentTarget)
+            // ターゲットが死亡している、または設定距離より「1ブロック以上」離れたら解除
+            if (!currentTarget.isAlive || distance > (range.value + 1.0)) {
+                lockedEntity = null
+                isAiming = false
+                // 自動解除された後、次のターゲットを即座に探さない（見逃し防止）
                 return
             }
         }
 
-        // AimSystemにタスクがない場合のみ追加 (継続的な追従)
-        if (AimSystem.currentTask() == null) {
-            lockedEntity?.let {
-                AimSystem.addTask(createLockOnTask(it))
-            }
+        // --- 2. ターゲットがいない場合のみ検索 ---
+        if (lockedEntity == null) {
+            findAndLockTarget()
+        }
+
+        // --- 3. エイムタスクの発行 ---
+        // ターゲットがいて、かつ現在エイム中でない場合のみタスクを投げる
+        if (lockedEntity != null && !isAiming) {
+            isAiming = true
+            AimSystem.addTask(createLockOnTask(lockedEntity!!))
         }
     }
 
@@ -96,19 +105,25 @@ class LockOnFeature : LocalFeature() {
             target = AimTarget.EntityTarget(target, anchorPoint.value),
             condition = object : AimTaskConditionInterface {
                 override fun check(): AimTaskConditionReturn {
+                    // Featureが無効、またはターゲットが変更/解除されたら中断
                     return if (isEnabled() && lockedEntity == target) {
                         AimTaskConditionReturn.Exec
                     } else {
-                        AimTaskConditionReturn.Success
+                        AimTaskConditionReturn.Failure
                     }
                 }
             },
             calcMethod = method.value,
             multiply = aimSpeed.value,
+            onSuccess = {
+                // エイム完了。フラグを落として次のTickで必要なら再エイム（追従）
+                isAiming = false
+            },
+            onFailure = {
+                isAiming = false
+            },
         )
     }
-
-    // --- 計算ユーティリティ ---
 
     private fun getAngle(p: Player, target: LivingEntity): Double {
         val playerLookVec = p.lookAngle.normalize()
@@ -127,35 +142,25 @@ class LockOnFeature : LocalFeature() {
         return (angleNormalized * 0.6) + (distNormalized * 0.4)
     }
 
-    // --- レンダリング ---
-
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
         val target = lockedEntity ?: return graphics2D
-        // 目の高さにマークを表示
         val targetPos = target.getPosition(graphics2D.gameDelta).add(0.0, target.eyeHeight.toDouble(), 0.0)
         val screenPos = graphics2D.projectWorldToScreen(targetPos) ?: return graphics2D
 
         val x = screenPos.first.toFloat()
         val y = screenPos.second.toFloat()
-        val size = 10f
+        val size = 12f
         val color = InfiniteClient.theme.colorScheme.accentColor
 
         graphics2D.beginPath()
         graphics2D.strokeStyle.color = color
         graphics2D.strokeStyle.width = 2f
 
-        // ターゲットを囲む四角形
-        graphics2D.beginPath()
-        graphics2D.arc(
-            x,
-            y,
-            size * 0.75f,
-            0f,
-            (PI * 2).toFloat(),
-        )
+        // 円形のターゲットマーク
+        graphics2D.arc(x, y, size * 0.75f, 0f, (PI * 2).toFloat())
         graphics2D.strokePath()
 
-        // 十字線
+        // X字のレティクル
         graphics2D.beginPath()
         graphics2D.moveTo(x - size, y - size)
         graphics2D.lineTo(x + size, y + size)
