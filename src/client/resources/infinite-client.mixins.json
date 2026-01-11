@@ -14,11 +14,11 @@
     "graphics.ScreenAccessor",
     "graphics.ScreenMixin",
     "graphics.UiMixin",
-    "graphics.widgets.ButtonBackgroundMixin",
-    "graphics.widgets.EditBoxMixin",
-    "graphics.widgets.ScrollWidgetMixin",
-    "graphics.widgets.SliderButtonMixin",
-    "graphics.widgets.button.PlainButtonMixin",
+    "infinite.features.global.rendering.theme.ButtonBackgroundMixin",
+    "infinite.features.global.rendering.theme.EditBoxMixin",
+    "infinite.features.global.rendering.theme.ScrollWidgetMixin",
+    "infinite.features.global.rendering.theme.SliderButtonMixin",
+    "infinite.features.global.rendering.theme.button.PlainButtonMixin",
     "ui.OptionsScreenMixin"
   ],
   "injectors": {

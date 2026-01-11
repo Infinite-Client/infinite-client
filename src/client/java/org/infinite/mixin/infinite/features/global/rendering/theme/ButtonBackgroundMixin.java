@@ -1,4 +1,4 @@
-package org.infinite.mixin.graphics.widgets;
+package org.infinite.mixin.infinite.features.global.rendering.theme;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
