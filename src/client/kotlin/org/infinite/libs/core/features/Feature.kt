@@ -178,6 +178,11 @@ open class Feature : MinecraftInterface() {
         )
     }
 
+    fun translations(): List<String> {
+        ensureAllPropertiesRegistered()
+        return listOf(translationKey) + _properties.values.mapNotNull { it.translationKey() }
+    }
+
     fun translation(): String = translationKey
     fun translation(p: String): String? {
         return if (_properties[p] == null) {

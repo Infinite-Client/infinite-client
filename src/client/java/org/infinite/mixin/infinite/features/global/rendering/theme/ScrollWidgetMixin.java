@@ -58,10 +58,7 @@ public abstract class ScrollWidgetMixin extends AbstractWidget {
       int barWidth = 4; // バニラは6pxですが、モダンにするため少し細めの4pxに調整（お好みで）
       int xCentered = x + 1; // 6px幅の中央に配置
 
-      // 1. スクロールバーの背景（レール）
-      // 背景色を非常に薄く塗るか、透明に近い黒などでガイドラインを表示
-      graphics2DRenderer.setFillStyle(ColorKt.alpha(colorScheme.getBackgroundColor(), 120));
-      graphics2DRenderer.fillRect(xCentered, this.getY(), barWidth, this.getHeight());
+      theme.renderBackGround(x, barY, barWidth, barHeight, graphics2DRenderer, 0.5f);
 
       // 2. スクロールバー本体（つまみ）
       int barColor = colorScheme.getAccentColor();

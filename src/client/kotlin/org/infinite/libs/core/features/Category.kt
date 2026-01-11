@@ -72,7 +72,7 @@ abstract class Category<K : KClass<out Feature>, V : Feature> {
      * このカテゴリに属するすべての Feature の翻訳キーをリストで取得します。
      */
     val translations: List<String>
-        get() = listOf(translationKey) + features.values.map { it.translation() }
+        get() = listOf(translationKey) + features.values.flatMap { it.translations() }
 
     private val translationKey: String by lazy {
         val modId = "infinite"

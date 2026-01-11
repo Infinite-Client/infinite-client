@@ -63,6 +63,12 @@ class FeatureScreen<T : Feature>(
         g2d.textStyle.font = "infinite_bolditalic"
         g2d.textStyle.shadow = true
         g2d.textCentered(feature.name, centerX, size)
+        g2d.textStyle.size = size / 2f
+        g2d.textStyle.font = "infinite_italic"
+        g2d.textStyle.shadow = false
+        g2d.fillStyle = colorScheme.secondaryColor
+        val description = Component.translatable(feature.translation()).string
+        g2d.textCentered(description, centerX, 2f * size)
         g2d.flush()
         container.render(guiGraphics, mouseX, mouseY, delta)
     }
