@@ -96,7 +96,7 @@ abstract class LocalCategory : Category<KClass<out LocalFeature>, LocalFeature>(
 
     fun registerAllActions(): List<LocalFeature.BindingPair> {
         val result = mutableListOf<LocalFeature.BindingPair>()
-        enabledFeatures().forEach {
+        features.values.forEach {
             result.addAll(it.registerAllActions())
         }
         return result.toList()

@@ -81,16 +81,23 @@ class CounterFeature : LocalFeature() {
         )
     }
 
-    // TickInterfaceの実装 (必要に応じて)
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
         val target = target?.getPosition(graphics2D.gameDelta) ?: return graphics2D
         val pos2d = graphics2D.projectWorldToScreen(target) ?: return graphics2D
         val pos2f = pos2d.first.toFloat() to pos2d.second.toFloat()
         graphics2D.beginPath()
-        val size = 8f
-        graphics2D.arc(pos2f.first, pos2f.second, size, 0f, (2 * PI).toFloat())
+        val size = 12f
+        graphics2D.arc(pos2f.first, pos2f.second, size * 0.75f, 0f, (2 * PI).toFloat())
         graphics2D.strokeStyle.width = 2f
         graphics2D.strokeStyle.color = InfiniteClient.theme.colorScheme.accentColor
+        graphics2D.strokePath()
+        graphics2D.beginPath()
+        graphics2D.moveTo(pos2f.first - size, pos2f.second)
+        graphics2D.lineTo(pos2f.first + size, pos2f.second)
+        graphics2D.strokePath()
+        graphics2D.beginPath()
+        graphics2D.moveTo(pos2f.first, pos2f.second - size)
+        graphics2D.lineTo(pos2f.first, pos2f.second + size)
         graphics2D.strokePath()
         return graphics2D
     }

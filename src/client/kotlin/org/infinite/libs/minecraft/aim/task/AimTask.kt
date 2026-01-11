@@ -23,8 +23,7 @@ open class AimTask(
     val onFailure: () -> Unit = {},
 ) : MinecraftInterface() {
     private fun mouseSensitivity(): Double =
-        options.sensitivity().get() / 100.0
-
+        options.sensitivity().get()
     private var rollVelocity = CameraRoll(0.0, 0.0)
     private var duration = (1000 / 30).toLong()
     private var time = System.currentTimeMillis()

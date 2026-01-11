@@ -1,10 +1,11 @@
 package org.infinite.libs.minecraft.aim
 
+import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.minecraft.aim.task.AimTask
 import org.infinite.libs.minecraft.aim.task.config.AimPriority
 import org.infinite.libs.minecraft.aim.task.config.AimProcessResult
 
-object AimSystem {
+object AimSystem : MinecraftInterface() {
     private var tasks: ArrayDeque<AimTask> = ArrayDeque(listOf())
 
     fun addTask(task: AimTask) {
@@ -33,8 +34,20 @@ object AimSystem {
     fun taskLength(): Int = tasks.size
 
     fun currentTask(): AimTask? = tasks.firstOrNull()
+    fun clear() {
+        tasks.clear()
+    }
 
     fun process() {
+        // 1. プレイヤーが存在しない、または死亡している場合は処理を中断し、キューをクリアする
+        val player = player ?: run {
+            clear()
+            return
+        }
+        if (!player.isAlive) {
+            clear()
+            return
+        }
         val currentTask = currentTask() ?: return
         when (currentTask.process()) {
             AimProcessResult.Progress -> {}

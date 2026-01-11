@@ -44,5 +44,6 @@
   "infinite.features.global.rendering.infinite_font_feature.regular_font": "Regular Font",
   "infinite.features.global.rendering.theme_feature.current_theme": "Current Theme",
   "key.infinite.features.local.rendering.hello_feature.toggle": "Toggle Hello Feature",
-  "key.infinite.game_options": "Infinite Game Options"
+  "key.infinite.game_options": "Infinite Game Options",
+  "key.infinite.features.local.combat.lock_on.toggle": "Toggle LockOn Feature"
 }
