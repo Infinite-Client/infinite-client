@@ -44,9 +44,11 @@ class ZoomSightFeature : LocalFeature() {
         if (autoReleaseOnMove.value) {
             val input = input ?: return
             val keyPresses = input.keyPresses
-            if (keyPresses.forward || keyPresses.backward || keyPresses.left || keyPresses.right || keyPresses.jump) {
-                disable()
-                return
+            if (!keyPresses.shift) {
+                if (keyPresses.forward || keyPresses.backward || keyPresses.left || keyPresses.right || keyPresses.jump) {
+                    disable()
+                    return
+                }
             }
         }
 
