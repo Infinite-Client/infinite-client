@@ -10,11 +10,12 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.graphics2d.RenderSystem2D
 import org.infinite.libs.graphics.graphics3d.RenderSystem3D
 import org.infinite.libs.graphics.system.ProjectionData
+import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.minecraft.aim.AimSystem
 import org.joml.Matrix4f
 import org.joml.Vector4f
 
-object RenderTicks {
+object RenderTicks : MinecraftInterface() {
     @Volatile
     private var _latestProjectionData: ProjectionData? = null
     val latestProjectionData: ProjectionData? get() = _latestProjectionData
@@ -27,6 +28,7 @@ object RenderTicks {
         guiGraphics: GuiGraphics,
         deltaTracker: DeltaTracker,
     ) {
+        aimSystem()
         val commands =
             runBlocking {
                 return@runBlocking InfiniteClient.localFeatures.onStartUiRendering(deltaTracker)
@@ -36,14 +38,15 @@ object RenderTicks {
     }
 
     private fun aimSystem() {
-        AimSystem.process()
+        if (!minecraft.isPaused) {
+            AimSystem.process()
+        }
     }
 
     fun onEndUiRendering(
         guiGraphics: GuiGraphics,
         deltaTracker: DeltaTracker,
     ) {
-        aimSystem()
         val commands =
             runBlocking {
                 return@runBlocking InfiniteClient.localFeatures.onEndUiRendering(deltaTracker)

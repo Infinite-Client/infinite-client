@@ -37,7 +37,9 @@ object AimSystem : MinecraftInterface() {
     fun clear() {
         tasks.clear()
     }
-
+    fun remove(task: AimTask) {
+        tasks.remove(task)
+    }
     fun process() {
         // 1. プレイヤーが存在しない、または死亡している場合は処理を中断し、キューをクリアする
         val player = player ?: run {

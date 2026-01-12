@@ -1,5 +1,6 @@
 package org.infinite.infinite.features.local.combat.lockon
 
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
 import org.infinite.InfiniteClient
@@ -15,6 +16,7 @@ import org.infinite.libs.minecraft.aim.task.condition.AimTaskConditionReturn
 import org.infinite.libs.minecraft.aim.task.config.AimCalculateMethod
 import org.infinite.libs.minecraft.aim.task.config.AimPriority
 import org.infinite.libs.minecraft.aim.task.config.AimTarget
+import org.infinite.utils.isLookingAtEntity
 import org.lwjgl.glfw.GLFW
 import kotlin.math.PI
 import kotlin.math.acos
@@ -31,51 +33,68 @@ class LockOnFeature : LocalFeature() {
     private val method by property(EnumSelectionProperty(AimCalculateMethod.Linear))
     private val priorityMode by property(EnumSelectionProperty(Priority.Both))
     private val anchorPoint by property(EnumSelectionProperty(AimTarget.EntityTarget.EntityAnchor.Center))
+    private val autoAttack by property(BooleanProperty(false))
 
     enum class Priority { Direction, Distance, Both }
 
-    var lockedEntity: LivingEntity? = null
-        private set
+    // 現在ロックしているエンティティをタスクから逆引きする（読み取り専用）
+    val lockedEntity: Entity?
+        get() = (currentTask?.target as? AimTarget.EntityTarget)?.entity
 
-    private var isAiming = false
+    private val isAiming
+        get() = lockedEntity != null
+
+    // セッターを通じて AimSystem 内のタスクを常に1つに保つ
+    private var currentTask: AimTask? = null
+        set(value) {
+            field?.let { AimSystem.remove(it) }
+            value?.let { AimSystem.addTask(it) }
+            field = value
+        }
 
     override fun onEnabled() {
         findAndLockTarget()
     }
 
     override fun onDisabled() {
-        lockedEntity = null
-        isAiming = false
+        currentTask = null // タスクを破棄してエイム停止
     }
 
     override fun onStartTick() {
         if (!isEnabled()) return
 
-        val p = player ?: return
-        val currentTarget = lockedEntity
+        val player = this@LockOnFeature.player ?: run {
+            disable()
+            return
+        }
 
-        // --- 1. ターゲットの有効性・距離チェック ---
-        if (currentTarget != null) {
-            val distance = p.distanceTo(currentTarget)
-            // ターゲットが死亡している、または設定距離より「1ブロック以上」離れたら解除
-            if (!currentTarget.isAlive || distance > (range.value + 1.0)) {
-                lockedEntity = null
-                isAiming = false
-                // 自動解除された後、次のターゲットを即座に探さない（見逃し防止）
+        // --- 1. ターゲットの有効性・自動攻撃チェック ---
+        val target = lockedEntity
+        if (target != null) {
+            val distance = player.distanceTo(target)
+
+            // 死亡、または設定射程（+余裕分）を超えたらロック解除
+            if (!target.isAlive || distance > (range.value + 1.0)) {
+                disable()
                 return
+            }
+
+            // 自動攻撃 (1.21.1+ の槍などの射程も isLookingAtEntity 内で考慮済み)
+            if (autoAttack.value) {
+                if (player.getAttackStrengthScale(0f) >= 0.9f && player.isLookingAtEntity(target)) {
+                    minecraft.gameMode?.attack(player, target)
+                    player.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
+                }
             }
         }
 
-        // --- 2. ターゲットがいない場合のみ検索 ---
-        if (lockedEntity == null) {
+        // --- 2. タスクの更新と索敵 ---
+        if (isAiming) {
+            // ターゲットが生きているならタスクを更新し続ける
+            // (セッターにより、前回のタスクは自動的に remove される)
+            currentTask = createLockOnTask(lockedEntity as LivingEntity)
+        } else {
             findAndLockTarget()
-        }
-
-        // --- 3. エイムタスクの発行 ---
-        // ターゲットがいて、かつ現在エイム中でない場合のみタスクを投げる
-        if (lockedEntity != null && !isAiming) {
-            isAiming = true
-            AimSystem.addTask(createLockOnTask(lockedEntity!!))
         }
     }
 
@@ -92,11 +111,14 @@ class LockOnFeature : LocalFeature() {
             .filter { isWithinFOV(player, it, fov.value) }
             .toList()
 
-        lockedEntity = when (priorityMode.value) {
+        val bestTarget = when (priorityMode.value) {
             Priority.Direction -> candidates.minByOrNull { getAngle(player, it) }
             Priority.Distance -> candidates.minByOrNull { player.distanceTo(it) }
             Priority.Both -> candidates.minByOrNull { calculateCombinedScore(player, it) }
         }
+
+        // ターゲットが見つかればタスクをセット。なければnull（停止）。
+        currentTask = bestTarget?.let { createLockOnTask(it) }
     }
 
     private fun createLockOnTask(target: LivingEntity): AimTask {
@@ -105,7 +127,7 @@ class LockOnFeature : LocalFeature() {
             target = AimTarget.EntityTarget(target, anchorPoint.value),
             condition = object : AimTaskConditionInterface {
                 override fun check(): AimTaskConditionReturn {
-                    // Featureが無効、またはターゲットが変更/解除されたら中断
+                    // 機能が無効化されたか、ターゲットがすり替わっていないか確認
                     return if (isEnabled() && lockedEntity == target) {
                         AimTaskConditionReturn.Exec
                     } else {
@@ -116,11 +138,15 @@ class LockOnFeature : LocalFeature() {
             calcMethod = method.value,
             multiply = aimSpeed.value,
             onSuccess = {
-                // エイム完了。フラグを落として次のTickで必要なら再エイム（追従）
-                isAiming = false
+                // Success/Failure時、このタスクを管理対象から外す
+                if (currentTask?.target == AimTarget.EntityTarget(target, anchorPoint.value)) {
+                    currentTask = null
+                }
             },
             onFailure = {
-                isAiming = false
+                if (currentTask?.target == AimTarget.EntityTarget(target, anchorPoint.value)) {
+                    currentTask = null
+                }
             },
         )
     }
