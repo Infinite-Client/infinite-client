@@ -28,8 +28,11 @@
     "infinite.features.local.level.xray.OptionsMixin",
     "infinite.features.local.rendering.brightsight.GameRendererMixin",
     "infinite.features.local.rendering.brightsight.LightTextureMixin",
-    "infinite.features.local.rendering.brightsight.LocalPlayerMixin",
+    "infinite.features.local.rendering.brightsight.LivingEntityMixin",
     "infinite.features.local.rendering.brightsight.ModelBlockRendererMixin",
+    "infinite.features.local.rendering.toughsight.GuiMixin",
+    "infinite.features.local.rendering.toughsight.LivingEntityMixin",
+    "infinite.features.local.rendering.toughsight.OptionInstanceMixin",
     "ui.OptionsScreenMixin"
   ],
   "injectors": {
