@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.Arrays;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
@@ -35,10 +36,10 @@ public class ModelBlockRendererMixin {
       VertexConsumer instance,
       PoseStack.Pose pose,
       BakedQuad bakedQuad,
-      float[] fs,
-      float r,
-      float g,
-      float b,
+      float[] fs, // 各頂点の輝度（影）係数
+      float r, // 元々の赤成分（バイオームの色を含む）
+      float g, // 元々の緑成分
+      float b, // 元々の青成分
       float alpha,
       int[] is,
       int lightmap,
@@ -53,20 +54,17 @@ public class ModelBlockRendererMixin {
         && (feature.getMethod().getValue() == BrightSightFeature.Method.GamMax
             || feature.getMethod().getValue() == BrightSightFeature.Method.UltraBright)) {
 
-      // 1. 影(Ambient Occlusion)を消し去る
-      // 通常、r,g,bは0.2〜1.0の間で影の強さに応じて変動しますが、1.0fに固定することで全画面が明るくなります。
-      float brightR = 1.0f;
-      float brightG = 1.0f;
-      float brightB = 1.0f;
-
-      // 2. 各頂点の明るさ係数も最大(1.0f)で埋める
+      // 1. 各頂点の明るさ係数(AO)を最大にする。
+      // これにより、ブロックの凹凸による影が消えます。
       Arrays.fill(fs, 1.0f);
 
-      // 3. ライトマップ(内部的な明るさ値)を最大にする
-      // 0xF000F0 は Minecraft における最大輝度（空の明るさ15 + ブロックの明るさ15）です。
-      int fullLight = 15728880; // 0xF000F0
-
-      original.call(instance, pose, bakedQuad, fs, brightR, brightG, brightB, alpha, is, fullLight);
+      // 2. ライトマップを最大輝度にする
+      int fullLight = 0x00EE00EE;
+      int noOverlay = OverlayTexture.NO_OVERLAY;
+      Arrays.fill(is, noOverlay);
+      // 3. 元の r, g, b をそのまま渡す
+      // これにより、葉っぱや草の色相が維持されます。
+      original.call(instance, pose, bakedQuad, fs, r, g, b, alpha, is, fullLight);
     } else {
       original.call(instance, pose, bakedQuad, fs, r, g, b, alpha, is, lightmap);
     }

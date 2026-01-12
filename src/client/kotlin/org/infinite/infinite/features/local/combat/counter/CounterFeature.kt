@@ -27,6 +27,20 @@ class CounterFeature : LocalFeature() {
     private val aimSpeed by property(DoubleProperty(5.0, 1.0, 10.0))
     private val anchorPoint by property(EnumSelectionProperty(AimTarget.EntityTarget.EntityAnchor.Chest))
 
+    override val featureType = FeatureType.Utils
+
+    override fun onEndTick() {
+        val player = player ?: run {
+            target = null
+            return
+        }
+        target?.distanceTo(player)?.let {
+            if (it > player.entityAttackRange().maxRange) {
+                target = null
+            }
+        }
+    }
+
     /**
      * ダメージパケット受信時の処理
      */
