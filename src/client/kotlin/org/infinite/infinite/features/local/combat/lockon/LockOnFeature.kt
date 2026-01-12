@@ -101,7 +101,7 @@ class LockOnFeature : LocalFeature() {
 
     private fun createLockOnTask(target: LivingEntity): AimTask {
         return AimTask(
-            priority = AimPriority.Preferentially,
+            priority = AimPriority.Normally,
             target = AimTarget.EntityTarget(target, anchorPoint.value),
             condition = object : AimTaskConditionInterface {
                 override fun check(): AimTaskConditionReturn {
