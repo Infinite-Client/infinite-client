@@ -35,7 +35,7 @@ class BlockRenderer(private val gui: GuiGraphics) {
                     ?: parts.first().particleIcon()
             } else {
                 model.particleIcon()
-            } ?: return
+            }
             val color = if (block == Blocks.WATER) {
                 val aqua = 210f
                 InfiniteClient.theme.colorScheme.color(aqua, 1f, 0.5f, 1f)
