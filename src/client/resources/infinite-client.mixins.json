@@ -30,6 +30,8 @@
     "infinite.features.local.rendering.brightsight.LightTextureMixin",
     "infinite.features.local.rendering.brightsight.LivingEntityMixin",
     "infinite.features.local.rendering.brightsight.ModelBlockRendererMixin",
+    "infinite.features.local.rendering.clearsight.FogRendererMixin",
+    "infinite.features.local.rendering.clearsight.GuiMixin",
     "infinite.features.local.rendering.toughsight.GuiMixin",
     "infinite.features.local.rendering.toughsight.LivingEntityMixin",
     "infinite.features.local.rendering.toughsight.OptionInstanceMixin",
