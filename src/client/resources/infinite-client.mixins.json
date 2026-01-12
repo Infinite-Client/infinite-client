@@ -21,6 +21,7 @@
     "infinite.features.global.rendering.theme.button.PlainButtonMixin",
     "infinite.features.local.combat.attack.CriticalFeatureMixin",
     "infinite.features.local.combat.counter.CounterFeatureMixin",
+    "infinite.features.local.combat.mace.MultiPlayerGameModeMixin",
     "infinite.features.local.level.xray.ItemBlockRenderTypesMixin",
     "infinite.features.local.level.xray.LightTextureMixin",
     "infinite.features.local.level.xray.LiquidBlockRendererMixin",
