@@ -6,6 +6,6 @@ import org.infinite.libs.core.features.categories.category.LocalCategory
 
 @Suppress("Unused")
 class LocalMovementCategory : LocalCategory() {
-    val superFly by feature(SuperFly())
-    val quickMove by feature(QuickMove())
+    val superFlyFeature by feature(SuperFly())
+    val quickMoveFeature by feature(QuickMove())
 }

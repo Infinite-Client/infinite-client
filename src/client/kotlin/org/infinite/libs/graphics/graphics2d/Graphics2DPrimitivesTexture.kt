@@ -25,7 +25,7 @@ class Graphics2DPrimitivesTexture(
         val scale = size / 16f
 
         // 1. アイテム本体の描画コマンドを追加
-        commandQueue.add(RenderCommand2D.DrawItem(stack, x, y, scale, alpha))
+        commandQueue.add(RenderCommand2D.RenderItem(stack, x, y, scale, alpha))
 
         // 2. 個数の描画コマンドを計算して追加
         if (stack.count > 1) {

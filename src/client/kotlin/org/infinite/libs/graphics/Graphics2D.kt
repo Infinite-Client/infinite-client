@@ -2,6 +2,7 @@ package org.infinite.libs.graphics
 
 import net.minecraft.client.DeltaTracker
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.block.Block
 import net.minecraft.world.phys.Vec3
 import org.infinite.libs.core.tick.RenderTicks
 import org.infinite.libs.graphics.graphics2d.Graphics2DPrimitivesFill
@@ -327,6 +328,15 @@ open class Graphics2D(
         val y = (1.0 - ndcY) * 0.5 * data.scaledHeight
 
         return x to y
+    }
+
+    // Graphics2D.kt 内
+    fun block(block: Block, x: Float, y: Float, size: Float = 16f) {
+        commandQueue.add(RenderCommand2D.RenderBlock(block, x, y, size))
+    }
+
+    fun blockCentered(block: Block, x: Float, y: Float, size: Float) {
+        block(block, x - size / 2f, y - size / 2f, size)
     }
 
     /**

@@ -7,7 +7,7 @@ import org.infinite.libs.core.features.categories.category.LocalCategory
 
 @Suppress("Unused")
 class LocalCombatCategory : LocalCategory() {
-    val critical by feature(CriticalFeature())
-    val counter by feature(CounterFeature())
-    val lockOn by feature(LockOnFeature())
+    val criticalFeature by feature(CriticalFeature())
+    val counterFeature by feature(CounterFeature())
+    val lockOnFeature by feature(LockOnFeature())
 }

@@ -1,6 +1,7 @@
 package org.infinite.libs.graphics.graphics2d.structs
 
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.block.Block
 import org.joml.Matrix3x2f
 import org.joml.Vector3f
 
@@ -113,11 +114,18 @@ sealed interface RenderCommand2D {
      * @param y 描画座標
      * @param scale 描画スケール（デフォルト1f）。
      */
-    data class DrawItem(
+    data class RenderItem(
         val stack: ItemStack,
         val x: Float,
         val y: Float,
         val scale: Float,
         val alpha: Float,
+    ) : RenderCommand2D
+
+    data class RenderBlock(
+        val block: Block,
+        val x: Float,
+        val y: Float,
+        val size: Float,
     ) : RenderCommand2D
 }

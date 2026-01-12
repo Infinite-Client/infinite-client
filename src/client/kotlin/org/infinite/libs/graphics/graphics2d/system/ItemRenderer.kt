@@ -10,7 +10,7 @@ class ItemRenderer(private val gui: GuiGraphics) : MinecraftInterface() {
 
 // ItemRenderer.kt
 
-    fun drawItem(cmd: RenderCommand2D.DrawItem) {
+    fun drawItem(cmd: RenderCommand2D.RenderItem) {
         val stack = cmd.stack
         if (stack.isEmpty) return
         val x = cmd.x

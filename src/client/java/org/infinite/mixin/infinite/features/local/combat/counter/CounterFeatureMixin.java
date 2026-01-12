@@ -18,7 +18,7 @@ public class CounterFeatureMixin {
     // CounterFeature インスタンスを取得
     // getLocalFeatures().getCombat().getCounter() の構造はプロジェクトの定義に合わせてください
     CounterFeature counterFeature =
-        InfiniteClient.INSTANCE.getLocalFeatures().getCombat().getCounter();
+        InfiniteClient.INSTANCE.getLocalFeatures().getCombat().getCounterFeature();
 
     // counterFeature.isEnabled() は内部でチェックしているため、そのまま呼び出しても安全です
     counterFeature.onDamageReceived(packet);

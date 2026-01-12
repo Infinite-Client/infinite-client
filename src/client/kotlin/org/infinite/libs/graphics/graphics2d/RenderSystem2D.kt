@@ -2,6 +2,7 @@ package org.infinite.libs.graphics.graphics2d
 
 import net.minecraft.client.gui.GuiGraphics
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
+import org.infinite.libs.graphics.graphics2d.system.BlockRenderer
 import org.infinite.libs.graphics.graphics2d.system.ItemRenderer
 import org.infinite.libs.graphics.graphics2d.system.QuadRenderer
 import org.infinite.libs.graphics.graphics2d.system.RectRenderer
@@ -18,7 +19,7 @@ class RenderSystem2D(
     private val textRenderer = TextRenderer(gui)
     private val textureRenderer = TextureRenderer(gui) // 追加
     private val itemRenderer = ItemRenderer(gui) // 追加
-
+    private val blockRenderer = BlockRenderer(gui)
     fun render(commands: List<RenderCommand2D>) {
         commands.forEach { executeCommand(it) }
     }
@@ -66,7 +67,7 @@ class RenderSystem2D(
 
             // --- 移譲 (Delegation) ---
             is RenderCommand2D.DrawTexture -> textureRenderer.drawTexture(command)
-            is RenderCommand2D.DrawItem -> itemRenderer.drawItem(command)
+            is RenderCommand2D.RenderItem -> itemRenderer.drawItem(command)
 
             is RenderCommand2D.FillRect -> {
                 if (allEqual(command.col0, command.col1, command.col2, command.col3)) {
@@ -143,6 +144,7 @@ class RenderSystem2D(
                     command.shadow,
                 )
             }
+
             is RenderCommand2D.TextRight -> {
                 textRenderer.textRight(
                     command.font,
@@ -153,6 +155,10 @@ class RenderSystem2D(
                     command.size,
                     command.shadow,
                 )
+            }
+
+            is RenderCommand2D.RenderBlock -> {
+                blockRenderer.block(command.block, command.x, command.y, command.size)
             }
         }
     }

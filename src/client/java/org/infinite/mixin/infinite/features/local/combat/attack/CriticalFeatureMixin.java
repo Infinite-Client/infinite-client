@@ -21,7 +21,7 @@ public class CriticalFeatureMixin {
   @Inject(method = "attack", at = @At("HEAD"))
   private void onAttackEntity(Player player, Entity target, CallbackInfo ci) {
     CriticalFeature criticalFeature =
-        InfiniteClient.INSTANCE.getLocalFeatures().getCombat().getCritical();
+        InfiniteClient.INSTANCE.getLocalFeatures().getCombat().getCriticalFeature();
 
     if (criticalFeature.isEnabled()) {
       Minecraft mc = Minecraft.getInstance();
