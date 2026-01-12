@@ -1,4 +1,4 @@
-package org.infinite.mixin.infinite.features.local.rendering.xray;
+package org.infinite.mixin.infinite.features.local.level.xray;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;

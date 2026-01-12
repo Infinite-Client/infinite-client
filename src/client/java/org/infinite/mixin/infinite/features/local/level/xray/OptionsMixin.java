@@ -1,4 +1,4 @@
-package org.infinite.mixin.infinite.features.local.rendering.xray;
+package org.infinite.mixin.infinite.features.local.level.xray;
 
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;

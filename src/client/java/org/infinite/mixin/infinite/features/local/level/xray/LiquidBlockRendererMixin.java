@@ -1,4 +1,4 @@
-package org.infinite.mixin.infinite.features.local.rendering.xray;
+package org.infinite.mixin.infinite.features.local.level.xray;
 
 import net.minecraft.client.renderer.block.LiquidBlockRenderer;
 import net.minecraft.core.Direction;
