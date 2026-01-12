@@ -215,22 +215,34 @@ class XRayFeature : LocalFeature() {
     ): Boolean {
         if (!isEnabled()) return original
         val level = level ?: return original
+
         val currentBlockId = getBlockId(blockState)
+        val isOreCurrent = targetBlocks.value.contains(currentBlockId)
+        val isThroughCurrent = whiteListBlock.value.contains(currentBlockId)
+
+        // 1. 現在判定している「面 (direction)」の隣が、描画を遮るブロック（鉱石やチェスト等）か判定
         val neighborBlockId = getNeighborBlockId(level, blockPos, direction)
-        val (oreResult, throughResult) = run {
-            val isOreCurrent = targetBlocks.value.contains(currentBlockId)
-            val isThroughCurrent = whiteListBlock.value.contains(currentBlockId)
-            val isOreNeighbor = targetBlocks.value.contains(neighborBlockId)
-            val isThroughNeighbor = whiteListBlock.value.contains(neighborBlockId)
-            val onOreResult = isOreCurrent && !isOreNeighbor
-            val onThroughResult = isThroughCurrent && !isThroughNeighbor
-            onOreResult to onThroughResult
+        val neighborIsSolidXray =
+            targetBlocks.value.contains(neighborBlockId) || whiteListBlock.value.contains(neighborBlockId)
+
+        // 隣が鉱石系なら、パフォーマンスと視認性のためにこの面は絶対に描画しない（内部の面をカット）
+        if (neighborIsSolidXray) return false
+
+        // 2. 「露出系モード」の場合、そのブロックが周囲6面のどこかで「透けるブロック」に触れているか判定
+        // neighborIsSolidXray が既に false なので、この direction 自身も露出の候補になります
+        val isExposedAnywhere = Direction.entries.any { dir ->
+            val nId = getNeighborBlockId(level, blockPos, dir)
+            !targetBlocks.value.contains(nId) && !whiteListBlock.value.contains(nId)
         }
+
         return when (method.value) {
-            Method.OnlyExposed -> (oreResult && original) || throughResult
-            Method.TransparencyExposed -> (oreResult && original) || throughResult || original
-            Method.Full -> oreResult || throughResult
-            Method.TransparencyFull -> oreResult || throughResult || original
+            // どこか1面でも露出している鉱石なら、全ての「透けるブロックに面した面」を表示する
+            Method.OnlyExposed -> isOreCurrent && isExposedAnywhere
+            Method.TransparencyExposed -> (isOreCurrent && isExposedAnywhere) || original
+
+            // 全表示：露出に関係なく、隣が鉱石でない面はすべて表示
+            Method.Full -> (isOreCurrent || isThroughCurrent)
+            Method.TransparencyFull -> (isOreCurrent || isThroughCurrent) || original
         }
     }
 
