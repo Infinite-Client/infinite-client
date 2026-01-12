@@ -21,6 +21,11 @@
     "infinite.features.global.rendering.theme.button.PlainButtonMixin",
     "infinite.features.local.combat.attack.CriticalFeatureMixin",
     "infinite.features.local.combat.counter.CounterFeatureMixin",
+    "infinite.features.local.rendering.xray.ItemBlockRenderTypesMixin",
+    "infinite.features.local.rendering.xray.LightTextureMixin",
+    "infinite.features.local.rendering.xray.LiquidBlockRendererMixin",
+    "infinite.features.local.rendering.xray.ModelBlockRendererMixin",
+    "infinite.features.local.rendering.xray.OptionsMixin",
     "ui.OptionsScreenMixin"
   ],
   "injectors": {

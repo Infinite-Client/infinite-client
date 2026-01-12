@@ -1,18 +1,29 @@
 package org.infinite.infinite.features.local.level.xray
 
+import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.level.BlockAndTintGetter
+import net.minecraft.world.level.BlockGetter
+import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.level.material.FluidState
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.list.BlockListProperty
+import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
+import org.lwjgl.glfw.GLFW
 
 class XRayFeature : LocalFeature() {
     override val featureType = FeatureType.Cheat
+    override val defaultToggleKey: Int = GLFW.GLFW_KEY_X
 
     enum class Method {
-        OnlyExposed, Full
+        OnlyExposed, Full, TransparencyExposed, TransparencyFull,
     }
 
+    val transparency by property(FloatProperty(0.5f, 0f, 1f))
     val method by property(EnumSelectionProperty(Method.Full))
-    val throughBlocks by property(
+    val whiteListBlock by property(
         BlockListProperty(
             listOf(
                 "minecraft:water",
@@ -21,7 +32,7 @@ class XRayFeature : LocalFeature() {
                 "minecraft:trapped_chest",
                 "minecraft:ender_chest",
                 "minecraft:barrel",
-                "minecraft:shulker_box", // 各種シュルカーボックスは必要に応じて追加
+                "minecraft:shulker_box",
                 "minecraft:white_shulker_box",
                 "minecraft:orange_shulker_box",
                 "minecraft:magenta_shulker_box",
@@ -39,13 +50,44 @@ class XRayFeature : LocalFeature() {
                 "minecraft:red_shulker_box",
                 "minecraft:black_shulker_box",
                 "minecraft:glass",
-                "minecraft:stained_glass", // 各種ステンドグラスは必要に応じて追加
                 "minecraft:glass_pane",
-                "minecraft:stained_glass_pane",
+                "minecraft:white_stained_glass",
+                "minecraft:orange_stained_glass",
+                "minecraft:magenta_stained_glass",
+                "minecraft:light_blue_stained_glass",
+                "minecraft:yellow_stained_glass",
+                "minecraft:lime_stained_glass",
+                "minecraft:pink_stained_glass",
+                "minecraft:gray_stained_glass",
+                "minecraft:light_gray_stained_glass",
+                "minecraft:cyan_stained_glass",
+                "minecraft:purple_stained_glass",
+                "minecraft:blue_stained_glass",
+                "minecraft:brown_stained_glass",
+                "minecraft:green_stained_glass",
+                "minecraft:red_stained_glass",
+                "minecraft:black_stained_glass",
+                // --- 全16色のステンドグラス板 ---
+                "minecraft:white_stained_glass_pane",
+                "minecraft:orange_stained_glass_pane",
+                "minecraft:magenta_stained_glass_pane",
+                "minecraft:light_blue_stained_glass_pane",
+                "minecraft:yellow_stained_glass_pane",
+                "minecraft:lime_stained_glass_pane",
+                "minecraft:pink_stained_glass_pane",
+                "minecraft:gray_stained_glass_pane",
+                "minecraft:light_gray_stained_glass_pane",
+                "minecraft:cyan_stained_glass_pane",
+                "minecraft:purple_stained_glass_pane",
+                "minecraft:blue_stained_glass_pane",
+                "minecraft:brown_stained_glass_pane",
+                "minecraft:green_stained_glass_pane",
+                "minecraft:red_stained_glass_pane",
+                "minecraft:black_stained_glass_pane",
             ),
         ),
     )
-    val oreBlocks by property(
+    val targetBlocks by property(
         BlockListProperty(
             listOf(
                 "minecraft:ancient_debris",
@@ -111,4 +153,98 @@ class XRayFeature : LocalFeature() {
             ),
         ),
     )
+
+    override fun onEnabled() {
+        reload()
+    }
+
+    override fun onDisabled() {
+        reload()
+    }
+
+    // チャンクリロード用
+    fun reload() {
+        minecraft.levelRenderer.allChanged()
+    }
+
+    fun getBlockId(state: BlockState): String {
+        return BuiltInRegistries.BLOCK.getKey(state.block).toString()
+    }
+
+    fun getNeighborBlockId(world: BlockGetter, pos: BlockPos, direction: Direction): String {
+        val neighborPos = pos.relative(direction)
+        val neighborState = world.getBlockState(neighborPos)
+        return getBlockId(neighborState)
+    }
+
+    /**
+     * 指定された FluidState から ID (例: "minecraft:water") を抽出します。
+     */
+    fun getFluidId(state: FluidState): String {
+        return BuiltInRegistries.FLUID.getKey(state.type).toString()
+    }
+
+    /**
+     * LiquidBlockRenderer 用の X-Ray 判定ロジック
+     */
+    fun atLiquid(
+        fluidState: FluidState, // 現在の流体
+        blockState: BlockState, // 現在のブロック
+        direction: Direction, // 描画しようとしている面
+        neighborFluid: FluidState, // 隣接する流体
+        original: Boolean, // バニラの描画判定結果
+    ): Boolean {
+        if (!isEnabled()) return original
+
+        // 1. IDの抽出 (FluidState から取得するのが正確)
+        val currentFluidId = getFluidId(fluidState)
+
+        // 2. リストに含まれているか判定
+        val isOre = targetBlocks.value.contains(currentFluidId)
+        val isThrough = whiteListBlock.value.contains(currentFluidId)
+        return (isOre || isThrough) && original
+    }
+
+    fun atModelBlockRenderer(
+        blockAndTintGetter: BlockAndTintGetter,
+        blockState: BlockState,
+        bl: Boolean,
+        direction: Direction,
+        blockPos: BlockPos,
+        original: Boolean,
+    ): Boolean {
+        if (!isEnabled()) return original
+        val level = level ?: return original
+        val currentBlockId = getBlockId(blockState)
+        val neighborBlockId = getNeighborBlockId(level, blockPos, direction)
+        val (oreResult, throughResult) = run {
+            val isOreCurrent = targetBlocks.value.contains(currentBlockId)
+            val isThroughCurrent = whiteListBlock.value.contains(currentBlockId)
+            val isOreNeighbor = targetBlocks.value.contains(neighborBlockId)
+            val isThroughNeighbor = whiteListBlock.value.contains(neighborBlockId)
+            val onOreResult = isOreCurrent && !isOreNeighbor
+            val onThroughResult = isThroughCurrent && !isThroughNeighbor
+            onOreResult to onThroughResult
+        }
+        return when (method.value) {
+            Method.OnlyExposed -> (oreResult && original) || throughResult
+            Method.TransparencyExposed -> (oreResult && original) || throughResult || original
+            Method.Full -> oreResult || throughResult
+            Method.TransparencyFull -> oreResult || throughResult || original
+        }
+    }
+
+    /**
+     * ItemBlockRenderTypesMixin から呼び出され、
+     * そのブロックを半透明レイヤーで描画すべきか判定します。
+     */
+    fun shouldIsolate(state: BlockState): Boolean {
+        if (!isEnabled()) return false
+
+        val id = getBlockId(state)
+
+        // targetBlocks (鉱石など) に含まれている場合は、はっきり見せたいので隔離(Isolate)しない = false
+        // それ以外のブロック（石など）は、透かしたいので隔離(Isolate)する = true
+        return !targetBlocks.value.contains(id)
+    }
 }

@@ -128,7 +128,6 @@ open class Feature : MinecraftInterface() {
         enabled.value = false
     }
 
-    fun isEnabled(): Boolean = enabled.value
     fun toggle() = if (isEnabled()) disable() else enable()
     fun reset() {
         _properties.forEach { prop ->
@@ -217,4 +216,6 @@ open class Feature : MinecraftInterface() {
             "infinite.features.general.${parts.last().toLowerSnakeCase()}"
         }
     }
+
+    fun isEnabled(): Boolean = enabled.value
 }
