@@ -20,9 +20,6 @@ public class ItemBlockRenderTypesMixin {
     if (xRay.isEnabled()) {
       if (xRay.shouldIsolate(blockState)) {
         cir.setReturnValue(ChunkSectionLayer.TRANSLUCENT);
-      } else {
-        // 鉱石などはそのまま（SOLIDなど）で描画させる
-        cir.setReturnValue(ChunkSectionLayer.SOLID);
       }
     }
   }

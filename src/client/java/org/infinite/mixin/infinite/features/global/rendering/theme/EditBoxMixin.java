@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
 import org.infinite.InfiniteClient;
 import org.infinite.infinite.features.global.rendering.theme.ThemeFeature;
@@ -14,6 +15,7 @@ import org.infinite.utils.ColorKt;
 import org.infinite.utils.WidgetRenderUtils;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -27,6 +29,8 @@ public abstract class EditBoxMixin extends net.minecraft.client.gui.components.A
   @Shadow public int highlightPos;
   @Shadow public int maxLength;
 
+  @Unique private Minecraft minecraft = Minecraft.getInstance();
+
   @Shadow
   public abstract int getInnerWidth();
 
@@ -37,15 +41,17 @@ public abstract class EditBoxMixin extends net.minecraft.client.gui.components.A
   @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
   protected void onRenderWidget(
       GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+    if (minecraft.screen instanceof ChatScreen) {
+      return; // 早期リターンしてバニラのレンダリングを行わせる
+    }
     ThemeFeature themeFeature =
         InfiniteClient.INSTANCE.getGlobalFeatures().getRendering().getThemeFeature();
     if (!themeFeature.isEnabled()) return;
 
     Theme theme = InfiniteClient.INSTANCE.getTheme();
     ColorScheme colorScheme = theme.getColorScheme();
-    Graphics2DRenderer renderer =
-        new Graphics2DRenderer(guiGraphics, Minecraft.getInstance().getDeltaTracker());
-    Font font = Minecraft.getInstance().font;
+    Graphics2DRenderer renderer = new Graphics2DRenderer(guiGraphics, minecraft.getDeltaTracker());
+    Font font = minecraft.font;
 
     WidgetRenderUtils.INSTANCE.renderCustomBackground(this, renderer);
     // 2. テキスト描画の準備

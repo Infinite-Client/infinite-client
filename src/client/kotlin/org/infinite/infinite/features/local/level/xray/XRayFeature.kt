@@ -21,8 +21,17 @@ class XRayFeature : LocalFeature() {
         OnlyExposed, Full, TransparencyExposed, TransparencyFull,
     }
 
-    val transparency by property(FloatProperty(0.5f, 0f, 1f))
     val method by property(EnumSelectionProperty(Method.Full))
+    val transparency by property(FloatProperty(0.5f, 0f, 1f))
+
+    init {
+        method.addListener { _, _ ->
+            if (isEnabled()) {
+                reload()
+            }
+        }
+    }
+
     val whiteListBlock by property(
         BlockListProperty(
             listOf(
@@ -227,22 +236,18 @@ class XRayFeature : LocalFeature() {
 
         // 隣が鉱石系なら、パフォーマンスと視認性のためにこの面は絶対に描画しない（内部の面をカット）
         if (neighborIsSolidXray) return false
-
         // 2. 「露出系モード」の場合、そのブロックが周囲6面のどこかで「透けるブロック」に触れているか判定
         // neighborIsSolidXray が既に false なので、この direction 自身も露出の候補になります
         val isExposedAnywhere = Direction.entries.any { dir ->
             val nId = getNeighborBlockId(level, blockPos, dir)
-            !targetBlocks.value.contains(nId) && !whiteListBlock.value.contains(nId)
+            nId == "minecraft:air"
         }
 
         return when (method.value) {
-            // どこか1面でも露出している鉱石なら、全ての「透けるブロックに面した面」を表示する
-            Method.OnlyExposed -> isOreCurrent && isExposedAnywhere
-            Method.TransparencyExposed -> (isOreCurrent && isExposedAnywhere) || original
-
-            // 全表示：露出に関係なく、隣が鉱石でない面はすべて表示
-            Method.Full -> (isOreCurrent || isThroughCurrent)
-            Method.TransparencyFull -> (isOreCurrent || isThroughCurrent) || original
+            Method.OnlyExposed -> isOreCurrent && isExposedAnywhere || isThroughCurrent
+            Method.TransparencyExposed -> (isOreCurrent && isExposedAnywhere) || original || isThroughCurrent
+            Method.Full -> isOreCurrent || isThroughCurrent
+            Method.TransparencyFull -> isOreCurrent || isThroughCurrent || original
         }
     }
 
