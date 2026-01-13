@@ -11,6 +11,7 @@ import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.minecraft.projectile.AbstractProjectile
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 class ThrowableFeature : LocalFeature() {
     private val throwableProjectile = ThrowableProjectile(this)
@@ -25,6 +26,7 @@ class ThrowableFeature : LocalFeature() {
         originalPacket: Packet<*>,
         listener: ChannelFutureListener?,
         flush: Boolean,
+        ci: CallbackInfo,
         sendCall: (Packet<*>, ChannelFutureListener?, Boolean) -> Unit,
     ) {
         val player = this.player ?: return sendCall(originalPacket, listener, flush)
@@ -67,6 +69,7 @@ class ThrowableFeature : LocalFeature() {
             player.horizontalCollision,
         )
         sendCall(restorePacket, null, true)
+        ci.cancel()
     }
 
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {

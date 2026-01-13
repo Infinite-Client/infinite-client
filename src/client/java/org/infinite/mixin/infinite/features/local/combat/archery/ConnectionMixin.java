@@ -48,12 +48,12 @@ public abstract class ConnectionMixin {
             packet,
             channelFutureListener,
             bl,
+            ci,
             (p, l, f) -> {
               // ここで packet (元のパケット) ではなく、p (渡されたパケット) を使う必要があります
               this.doSendPacket(p, l, f);
               return Unit.INSTANCE;
             });
-        ci.cancel();
       }
     }
   }

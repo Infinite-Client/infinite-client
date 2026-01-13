@@ -13,6 +13,7 @@ import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.minecraft.projectile.AbstractProjectile
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 class ArcheryFeature : LocalFeature() {
     private val arrowProjectile = ArrowProjectile(this)
@@ -23,6 +24,7 @@ class ArcheryFeature : LocalFeature() {
         originalPacket: Packet<*>,
         listener: ChannelFutureListener?,
         flush: Boolean,
+        ci: CallbackInfo,
         sendCall: (Packet<*>, ChannelFutureListener?, Boolean) -> Unit,
     ) {
         val player = player ?: return sendCall(originalPacket, listener, flush)
@@ -90,6 +92,7 @@ class ArcheryFeature : LocalFeature() {
             null,
             true,
         )
+        ci.cancel()
     }
 
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
