@@ -42,18 +42,21 @@ abstract class CategoryWidget<T : Category<*, out Feature>>(
         val containerMargin = 10
         val innerWidth = widgetWidth - 2 * containerMargin
         val scrollY = titleY + font.lineHeight + containerMargin
-        val containerHeight = height - scrollY - containerMargin
+        val containerHeight = this.height - containerMargin
 
         // 内部レイアウトの構築
         val innerLayout = LinearLayout.vertical().spacing(5)
         buildContent(innerLayout, innerWidth)
+
+        // レイアウトの確定
         innerLayout.arrangeElements()
 
         container = ScrollableLayoutContainer(minecraft, innerLayout, innerWidth).apply {
+            this.x = containerMargin
             this.y = scrollY
+            // maxHeightだけでなく、ウィジェット自体の高さを固定または最大まで広げる
             this.setMaxHeight(containerHeight)
             this.setMinWidth(innerWidth)
-            this.x = containerMargin
         }
 
         addInnerWidget(container)
