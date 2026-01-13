@@ -24,11 +24,9 @@ import kotlin.math.acos
 class LockOnFeature : LocalFeature() {
     override val defaultToggleKey: Int = GLFW.GLFW_KEY_K
 
-    // 現在ロックしているエンティティをタスクから逆引きする（読み取り専用）
     val lockedEntity: Entity?
         get() = (currentTask?.target as? AimTarget.EntityTarget)?.entity
 
-    // セッターを通じて AimSystem 内のタスクを常に1つに保つ
     private var currentTask: AimTask? = null
         set(value) {
             field?.let { AimSystem.remove(it) }
@@ -41,7 +39,7 @@ class LockOnFeature : LocalFeature() {
     }
 
     override fun onDisabled() {
-        currentTask = null // タスクを破棄してエイム停止
+        currentTask = null
     }
 
     private val range by property(DoubleProperty(16.0, 3.0, 256.0))
@@ -53,8 +51,6 @@ class LockOnFeature : LocalFeature() {
     private val priorityMode by property(EnumSelectionProperty(Priority.Both))
     private val anchorPoint by property(EnumSelectionProperty(AimTarget.EntityTarget.EntityAnchor.Center))
     private val autoAttack by property(BooleanProperty(false))
-
-    // 追加: 射線が通っているか確認するオプション
     private val checkLineOfSight by property(BooleanProperty(true))
 
     enum class Priority { Direction, Distance, Both }
@@ -68,28 +64,20 @@ class LockOnFeature : LocalFeature() {
         }
 
         val target = lockedEntity
-        if (target != null) {
-            val distance = player.distanceTo(target)
 
-            // ターゲットが有効かどうかの判定に射線チェックを追加
-            val isDead = !target.isAlive
-            val isOutOfRange = distance > (range.value + 1.5)
-            val isOccluded = checkLineOfSight.value && !player.hasLineOfSight(target)
-
-            if (isDead || isOutOfRange || isOccluded) {
-                disable()
-                return
-            }
-
-            // 自動攻撃
-            if (autoAttack.value) {
-                if (player.getAttackStrengthScale(0f) >= 0.9f && player.isLookingAtEntity(target)) {
-                    minecraft.gameMode?.attack(player, target)
-                    player.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
-                }
-            }
-        } else {
+        // --- 修正箇所: ロック継続判定の簡略化 ---
+        // ターゲットが見つからない、または死亡している場合のみ機能を終了する
+        if (target == null || !target.isAlive || target.isRemoved) {
             disable()
+            return
+        }
+
+        // 自動攻撃ロジック（距離に関わらず実行されますが、Minecraft自体の攻撃可能距離に依存します）
+        if (autoAttack.value) {
+            if (player.getAttackStrengthScale(0f) >= 0.9f && player.isLookingAtEntity(target)) {
+                minecraft.gameMode?.attack(player, target)
+                player.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
+            }
         }
     }
 
@@ -97,6 +85,7 @@ class LockOnFeature : LocalFeature() {
         val player = this@LockOnFeature.player ?: return
         val level = this@LockOnFeature.level ?: return
 
+        // 検索時（onEnabled直後）のみフィルタリングを行う
         val candidates = level.getEntities(player, player.boundingBox.inflate(range.value))
             .asSequence()
             .filterIsInstance<LivingEntity>()
@@ -113,7 +102,12 @@ class LockOnFeature : LocalFeature() {
             Priority.Both -> candidates.minByOrNull { calculateCombinedScore(player, it) }
         }
 
-        currentTask = bestTarget?.let { createLockOnTask(it) }
+        if (bestTarget != null) {
+            currentTask = createLockOnTask(bestTarget)
+        } else {
+            // 対象が見つからない場合は即座にオフにする
+            disable()
+        }
     }
 
     private fun createLockOnTask(target: LivingEntity): AimTask {
@@ -122,8 +116,8 @@ class LockOnFeature : LocalFeature() {
             target = AimTarget.EntityTarget(target, anchorPoint.value),
             condition = object : AimTaskConditionInterface {
                 override fun check(): AimTaskConditionReturn {
-                    // 機能が無効化されたか、ターゲットがすり替わっていないか確認
-                    return if (isEnabled() && lockedEntity == target) {
+                    // ロックオン中は条件を維持し続ける（機能がONかつターゲットが生存していれば継続）
+                    return if (isEnabled() && target.isAlive && !target.isRemoved) {
                         AimTaskConditionReturn.Exec
                     } else {
                         AimTaskConditionReturn.Failure
@@ -132,20 +126,18 @@ class LockOnFeature : LocalFeature() {
             },
             calcMethod = method.value,
             multiply = aimSpeed.value,
-            onSuccess = {
-                // Success/Failure時、このタスクを管理対象から外す
-                if (currentTask?.target == AimTarget.EntityTarget(target, anchorPoint.value)) {
-                    currentTask = null
-                }
-            },
-            onFailure = {
-                if (currentTask?.target == AimTarget.EntityTarget(target, anchorPoint.value)) {
-                    currentTask = null
-                }
-            },
+            onSuccess = { cleanupTask(target) },
+            onFailure = { cleanupTask(target) },
         )
     }
 
+    private fun cleanupTask(target: LivingEntity) {
+        if (lockedEntity == target) {
+            currentTask = null
+        }
+    }
+
+    // 角度計算などのユーティリティはそのまま維持
     private fun getAngle(p: Player, target: LivingEntity): Double {
         val playerLookVec = p.lookAngle.normalize()
         val targetVec = target.boundingBox.center.subtract(p.eyePosition).normalize()
@@ -163,8 +155,9 @@ class LockOnFeature : LocalFeature() {
         return (angleNormalized * 0.6) + (distNormalized * 0.4)
     }
 
-    override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
+    override fun onEndUiRendering(graphics2D: Graphics2D): Graphics2D {
         val target = lockedEntity ?: return graphics2D
+        // 描画ロジック（そのまま）
         val targetPos = target.getPosition(graphics2D.gameDelta).add(0.0, target.eyeHeight.toDouble(), 0.0)
         val screenPos = graphics2D.projectWorldToScreen(targetPos) ?: return graphics2D
 
@@ -176,12 +169,9 @@ class LockOnFeature : LocalFeature() {
         graphics2D.beginPath()
         graphics2D.strokeStyle.color = color
         graphics2D.strokeStyle.width = 2f
-
-        // 円形のターゲットマーク
         graphics2D.arc(x, y, size * 0.75f, 0f, (PI * 2).toFloat())
         graphics2D.strokePath()
 
-        // X字のレティクル
         graphics2D.beginPath()
         graphics2D.moveTo(x - size, y - size)
         graphics2D.lineTo(x + size, y + size)

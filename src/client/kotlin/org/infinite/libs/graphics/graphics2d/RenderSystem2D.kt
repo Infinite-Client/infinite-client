@@ -56,7 +56,7 @@ class RenderSystem2D(
             }
 
             is RenderCommand2D.SetTransform -> {
-                gui.pose().mul(command.matrix)
+                gui.pose().set(command.matrix)
             }
 
             is RenderCommand2D.EnableScissor -> {

@@ -5,6 +5,7 @@ import org.infinite.infinite.features.local.combat.attack.CriticalFeature
 import org.infinite.infinite.features.local.combat.counter.CounterFeature
 import org.infinite.infinite.features.local.combat.lockon.LockOnFeature
 import org.infinite.infinite.features.local.combat.mace.MaceBoostFeature
+import org.infinite.infinite.features.local.combat.throwable.ThrowableFeature
 import org.infinite.libs.core.features.categories.category.LocalCategory
 
 @Suppress("Unused")
@@ -14,4 +15,5 @@ class LocalCombatCategory : LocalCategory() {
     val counterFeature by feature(CounterFeature())
     val lockOnFeature by feature(LockOnFeature())
     val maceBoostFeature by feature(MaceBoostFeature())
+    val throwableFeature by feature(ThrowableFeature())
 }

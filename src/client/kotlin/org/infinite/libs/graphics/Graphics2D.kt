@@ -22,6 +22,7 @@ import java.util.*
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
  * zIndex を排除し、呼び出し順（画家のアルゴリズム）に従って描画コマンドを保持します。
  */
+@Suppress("Unused")
 open class Graphics2D(
     deltaTracker: DeltaTracker,
 ) : MinecraftInterface() {
@@ -33,7 +34,15 @@ open class Graphics2D(
     var fillStyle: Int = 0xFFFFFFFF.toInt()
     var textStyle: TextStyle = TextStyle()
     var enablePathGradient: Boolean = false // New property for gradient control
-
+    val fovFactor: Float
+        get() {
+            val gameRenderer = minecraft.gameRenderer
+            val camera = gameRenderer.mainCamera
+            val shouldAnimate = true
+            val fov = gameRenderer.getFov(camera, realDelta, shouldAnimate)
+            val base = options.fov().get().toFloat()
+            return fov / base
+        }
     private val commandQueue = LinkedList<RenderCommand2D>()
 
     // Path2Dのインスタンスを追加
@@ -315,8 +324,7 @@ open class Graphics2D(
         // ViewProjection行列の合成
         val viewProjectionMatrix = Matrix4f(data.projectionMatrix).mul(data.modelViewMatrix)
         targetVector.mul(viewProjectionMatrix)
-
-        val w = targetVector.w
+        val w = targetVector.w * fovFactor
         if (w <= 0.05f) return null
 
         val ndcX = targetVector.x / w
