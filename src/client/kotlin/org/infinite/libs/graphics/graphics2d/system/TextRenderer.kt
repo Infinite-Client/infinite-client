@@ -5,19 +5,11 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.render.state.GuiTextRenderState
 import net.minecraft.locale.Language
 import net.minecraft.network.chat.FormattedText
-import org.infinite.libs.graphics.graphics2d.text.IModernFontManager
-import org.infinite.libs.graphics.text.fromFontSet
 import org.infinite.libs.interfaces.MinecraftInterface
-import org.infinite.mixin.graphics.MinecraftAccessor
 import org.joml.Matrix3x2f
 
 class TextRenderer(private val guiGraphics: GuiGraphics) : MinecraftInterface() {
-    private fun font(name: String): Font {
-        val client = minecraft as MinecraftAccessor
-        val fontManager = client.fontManager as IModernFontManager
-        val fontSet = fontManager.`infinite$fontSetFromIdentifier`(name)
-        return fromFontSet(fontSet)
-    }
+    private fun font(name: String): Font = org.infinite.utils.Font(name)
 
     fun text(font: String, text: String, x: Float, y: Float, color: Int, size: Float = 8.0f, shadow: Boolean = false) {
         val poseStack = guiGraphics.pose()

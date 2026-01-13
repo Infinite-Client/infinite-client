@@ -30,7 +30,7 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
     EspFeature espFeature = InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getEspFeature();
 
     if (espFeature.isEnabled()) {
-      return espFeature.handleEntityColor(entity, renderState);
+      return EspFeature.Companion.handleEntityColor(entity);
     }
 
     return original.call(instance);
