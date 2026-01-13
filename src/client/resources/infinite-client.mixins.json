@@ -47,6 +47,7 @@
     "defaultRequire": 1
   },
   "mixins": [
+    "infinite.features.local.combat.archery.ConnectionMixin",
     "infinite.features.local.level.esp.EntityMixin"
   ]
 }

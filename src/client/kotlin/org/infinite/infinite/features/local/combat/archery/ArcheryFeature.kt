@@ -1,87 +1,60 @@
 package org.infinite.infinite.features.local.combat.archery
 
-import net.minecraft.client.player.LocalPlayer
-import net.minecraft.world.item.BowItem
+import io.netty.channel.ChannelFutureListener
+import net.minecraft.network.protocol.Packet
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
+import org.infinite.infinite.features.local.combat.archery.projectile.ArrowProjectile
 import org.infinite.libs.core.features.feature.LocalFeature
-import org.infinite.libs.graphics.Graphics2D
+import org.infinite.libs.core.features.property.number.IntProperty
+import org.infinite.libs.log.LogSystem
 
 class ArcheryFeature : LocalFeature() {
-    override val featureType = FeatureType.Utils
-
-    // 設定値
-    private var maxSimulationTicks = 100
-    private val gravity = 0.05
-    private val airResistance = 0.99
-
-    override fun onEndTick() {
-        val player = minecraft.player ?: return
-        val stack = player.useItem
-
-        // 弓を使用中かチェック
-        if (stack.item is BowItem) {
-            val ticksUsed = player.ticksUsingItem
-            val power = BowItem.getPowerForTime(ticksUsed)
-
-            if (power > 0.1) {
-                // 1. ターゲット（注視点）の取得
-                val hitResult = player.pick(100.0, 0f, false)
-                val targetPos = hitResult.location
-            }
-        }
-    }
-
-    override fun onEndUiRendering(graphics2D: Graphics2D): Graphics2D {
-        val player = minecraft.player ?: return graphics2D
-        val stack = player.useItem
-
-        if (stack.item is BowItem) {
-            val power = BowItem.getPowerForTime(player.ticksUsingItem) * 3.0 // 初速
-            drawTrajectory(graphics2D, player, power)
-        }
-        return graphics2D
-    }
+    private val arrowProjectile = ArrowProjectile()
+    override val featureType = FeatureType.Extend
 
     /**
-     * 弾道を計算して画面上に投影・描画する
+     * 発射パケットをラップし、パケットレベルでの視点偽装を行う
      */
-    private fun drawTrajectory(g: Graphics2D, player: LocalPlayer, velocity: Double) {
-        var pos = player.getEyePosition(g.gameDelta)
-        // プレイヤーの視線方向から初速度ベクトルを計算
-        var motion = player.lookAngle.scale(velocity)
+    fun handleWrappedLaunch(
+        originalPacket: Packet<*>,
+        listener: ChannelFutureListener?,
+        flush: Boolean,
+        sendCall: (Packet<*>, ChannelFutureListener?, Boolean) -> Unit,
+    ) {
+        val player = this@ArcheryFeature.player ?: return sendCall(originalPacket, listener, flush)
+        val analysis = arrowProjectile.analyze() ?: return sendCall(originalPacket, listener, flush)
+        val diffX = player.xRot - analysis.xRot
+        val diffY = player.yRot - analysis.yRot
+        LogSystem.log("HOOKED!: ${"%.1f".format(diffX)}, ${"%.1f".format(diffY)}")
+        if (analysis.status != ArrowProjectile.PathStatus.Obstructed) {
+            // 1. サーバー側の向きを計算した角度に上書き
+            val aimPacket = ServerboundMovePlayerPacket.Rot(
+                analysis.yRot.toFloat(),
+                analysis.xRot.toFloat(),
+                player.onGround(),
+                player.horizontalCollision,
+            )
+            sendCall(aimPacket, null, false) // まだ flush しない
 
-        g.strokeStyle.color = 0xFF00FF00.toInt() // 緑色の予測線
-        g.beginPath()
+            // 2. 本来の発射パケットを送信
+            sendCall(originalPacket, listener, false)
 
-        var prevScreenPos: Pair<Double, Double>? = null
+            // 3. サーバー側の向きを即座に元のクライアント視点に戻す
+            val restorePacket = ServerboundMovePlayerPacket.Rot(
+                player.yRot,
+                player.xRot,
+                player.onGround(),
+                player.horizontalCollision,
+            )
+            sendCall(restorePacket, null, flush) // ここでまとめて送信
 
-        for (i in 0 until maxSimulationTicks) {
-            // 世界座標を画面座標に変換
-            val screenPos = g.projectWorldToScreen(pos)
-
-            if (screenPos != null) {
-                if (prevScreenPos == null) {
-                    g.moveTo(screenPos.first.toFloat(), screenPos.second.toFloat())
-                } else {
-                    g.lineTo(screenPos.first.toFloat(), screenPos.second.toFloat())
-                }
-            }
-            prevScreenPos = screenPos
-
-            // 物理シミュレーション (1 tick 分)
-            pos = pos.add(motion)
-            motion = motion.scale(airResistance)
-            motion = motion.add(0.0, -gravity, 0.0)
-
-            // ブロック衝突判定（簡易版）
-            if (minecraft.level?.getBlockState(net.minecraft.core.BlockPos.containing(pos))?.isAir == false) {
-                // 着弾点に円を描画
-                if (screenPos != null) {
-                    g.fillStyle = 0xFFFF0000.toInt() // 赤
-                    g.fillRect(screenPos.first.toFloat() - 2, screenPos.second.toFloat() - 2, 4f, 4f)
-                }
-                break
-            }
+            LogSystem.log("Silent sequence completed.")
+        } else {
+            sendCall(originalPacket, listener, flush)
         }
-        g.strokePath()
     }
+
+    val simulationMaxSteps by property(IntProperty(100, 20, 200))
+    val simulationPrecision by property(IntProperty(20, 10, 64))
+    val maxReach by property(IntProperty(128, 16, 256))
 }

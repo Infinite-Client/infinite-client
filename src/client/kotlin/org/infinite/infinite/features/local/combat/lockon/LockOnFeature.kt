@@ -41,9 +41,6 @@ class LockOnFeature : LocalFeature() {
     val lockedEntity: Entity?
         get() = (currentTask?.target as? AimTarget.EntityTarget)?.entity
 
-    private val isAiming
-        get() = lockedEntity != null
-
     // セッターを通じて AimSystem 内のタスクを常に1つに保つ
     private var currentTask: AimTask? = null
         set(value) {
@@ -68,33 +65,26 @@ class LockOnFeature : LocalFeature() {
             return
         }
 
-        // --- 1. ターゲットの有効性・自動攻撃チェック ---
+        // --- 1. ターゲットの有効性チェック ---
         val target = lockedEntity
         if (target != null) {
             val distance = player.distanceTo(target)
 
-            // 死亡、または設定射程（+余裕分）を超えたらロック解除
-            if (!target.isAlive || distance > (range.value + 1.0)) {
+            // 死亡、または射程外（+余裕分）ならロック解除
+            if (!target.isAlive || distance > (range.value + 1.5)) {
                 disable()
                 return
             }
 
-            // 自動攻撃 (1.21.1+ の槍などの射程も isLookingAtEntity 内で考慮済み)
+            // 自動攻撃
             if (autoAttack.value) {
                 if (player.getAttackStrengthScale(0f) >= 0.9f && player.isLookingAtEntity(target)) {
                     minecraft.gameMode?.attack(player, target)
                     player.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
                 }
             }
-        }
-
-        // --- 2. タスクの更新と索敵 ---
-        if (isAiming) {
-            // ターゲットが生きているならタスクを更新し続ける
-            // (セッターにより、前回のタスクは自動的に remove される)
-            currentTask = createLockOnTask(lockedEntity as LivingEntity)
         } else {
-            findAndLockTarget()
+            disable()
         }
     }
 

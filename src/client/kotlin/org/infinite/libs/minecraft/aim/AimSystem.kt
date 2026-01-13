@@ -6,62 +6,58 @@ import org.infinite.libs.minecraft.aim.task.config.AimPriority
 import org.infinite.libs.minecraft.aim.task.config.AimProcessResult
 
 object AimSystem : MinecraftInterface() {
-    private var tasks: ArrayDeque<AimTask> = ArrayDeque(listOf())
+    // 初期化を標準的な空のデキューに変更
+    private val tasks = ArrayDeque<AimTask>()
 
     fun addTask(task: AimTask) {
-        when (task.priority) {
-            AimPriority.Normally -> {
-                tasks.addLast(task)
-            }
+        // 同じタスクが既に存在する場合は追加しない（二重登録防止）
+        if (tasks.contains(task)) return
 
-            // 一番後ろに追加 (通常のタスク)
+        when (task.priority) {
             AimPriority.Immediately -> {
+                // 最優先：先頭に追加
                 tasks.addFirst(task)
             }
 
-            // 一番前に追加 (即時実行タスク)
             AimPriority.Preferentially -> {
+                // 優先：最初の Normally タスクの前に挿入
                 val insertionIndex = tasks.indexOfFirst { it.priority == AimPriority.Normally }
-                if (insertionIndex != -1) {
+                if (insertionIndex >= 0) {
                     tasks.add(insertionIndex, task)
                 } else {
+                    // Normally がなければ最後に追加
                     tasks.addLast(task)
                 }
             }
+
+            AimPriority.Normally -> {
+                // 通常：最後に追加
+                tasks.addLast(task)
+            }
         }
     }
 
+    // --- 他のメソッドはそのまま ---
     fun taskLength(): Int = tasks.size
-
     fun currentTask(): AimTask? = tasks.firstOrNull()
-    fun clear() {
-        tasks.clear()
-    }
-    fun remove(task: AimTask) {
-        tasks.remove(task)
-    }
+    fun clear() = tasks.clear()
+    fun remove(task: AimTask) = tasks.remove(task)
+
     fun process() {
-        // 1. プレイヤーが存在しない、または死亡している場合は処理を中断し、キューをクリアする
-        val player = player ?: run {
-            clear()
-            return
-        }
-        if (!player.isAlive) {
-            clear()
-            return
-        }
-        val currentTask = currentTask() ?: return
+        val p = player ?: return run { clear() }
+        if (!p.isAlive) return run { clear() }
+
+        val currentTask = tasks.firstOrNull() ?: return
+
         when (currentTask.process()) {
             AimProcessResult.Progress -> {}
-
             AimProcessResult.Failure -> {
                 currentTask.atFailure()
-                tasks.removeFirst()
+                tasks.removeFirstOrNull()
             }
-
             AimProcessResult.Success -> {
                 currentTask.atSuccess()
-                tasks.removeFirst()
+                tasks.removeFirstOrNull()
             }
         }
     }
