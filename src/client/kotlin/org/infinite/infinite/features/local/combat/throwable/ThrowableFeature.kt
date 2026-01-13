@@ -84,7 +84,7 @@ class ThrowableFeature : LocalFeature() {
                 player.horizontalCollision,
             ),
             null,
-            true, // ここでフラッシュしてまとめて送信
+            flush, // ここでフラッシュしてまとめて送信
         )
 
         ci.cancel()
