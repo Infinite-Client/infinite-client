@@ -20,6 +20,7 @@ class RenderSystem2D(
     private val textureRenderer = TextureRenderer(gui) // 追加
     private val itemRenderer = ItemRenderer(gui) // 追加
     private val blockRenderer = BlockRenderer(gui)
+
     fun render(commands: List<RenderCommand2D>) {
         commands.forEach { executeCommand(it) }
     }

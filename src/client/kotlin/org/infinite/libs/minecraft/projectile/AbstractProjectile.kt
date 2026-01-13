@@ -9,6 +9,7 @@ import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
 import org.infinite.utils.alpha
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.pow
@@ -31,12 +32,6 @@ abstract class AbstractProjectile : MinecraftInterface() {
     abstract val precision: Int
     abstract val maxStep: Int
 
-    /**
-     * エンティティを対象とした偏差・遮蔽物考慮の計算
-     */
-    /**
-     * エンティティを対象とした偏差・遮蔽物考慮の計算
-     */
     fun analysisAdvanced(
         basePower: Double,
         playerVel: Vec3,
@@ -44,9 +39,21 @@ abstract class AbstractProjectile : MinecraftInterface() {
         startPos: Vec3,
         iterations: Int = 3,
     ): TrajectoryAnalysis {
-        // 1. ターゲットの「現在の実座標（中心）」を基準にする
-        val currentTargetPos =
-            target.getPosition(minecraft.deltaTracker.gameTimeDeltaTicks).add(0.0, target.eyeHeight.toDouble(), 0.0)
+        // --- 修正箇所: 狙点（Height Offset）の動的決定 ---
+
+        // 1. ターゲットのベース座標（足元）を取得
+        val targetBasePos = target.getPosition(minecraft.deltaTracker.gameTimeDeltaTicks)
+        val eyeHeight = target.eyeHeight.toDouble()
+        val distToTarget = targetBasePos.distanceTo(startPos)
+
+        // 2. 狙う高さの係数 (0.0 = 足元, 1.0 = 頭部) を計算
+        // 距離が遠いほど (例えば 30m以上)、または射角が急になるほど 0.0 に近づける
+        // ここでは暫定的に「距離による減衰」を導入
+        val distanceFactor = (1.0 - (distToTarget / 60.0)).coerceIn(0.2, 1.0)
+
+        // 暫定的な狙点。最初は eyeHeight * distanceFactor で計算
+        val currentTargetPos = targetBasePos.add(0.0, eyeHeight * distanceFactor, 0.0)
+
         var predictedPos = currentTargetPos
         var lastAnalysis = TrajectoryAnalysis(0.0, 0.0, PathStatus.Uncertain, predictedPos, 0)
 
@@ -56,23 +63,29 @@ abstract class AbstractProjectile : MinecraftInterface() {
             val horizontalDist = sqrt(dx * dx + dz * dz)
             val yRot = if (horizontalDist < 0.0001) player?.yRot?.toDouble() ?: 0.0 else (atan2(-dx, dz) * (180.0 / PI))
 
-            // 弾道計算（現在の予測位置に対して最適な角度を求める）
+            // 弾道計算
             val result = solveOptimalAngle(basePower, playerVel, predictedPos, startPos, yRot)
             lastAnalysis = result
 
-            // 2. 偏差（移動予測）の計算
+            // --- 修正箇所: 射角による狙点の更なる調整 ---
+            // 射角 (Pitch) が急（下向きが強い、あるいは山なりの頂点から落ちてくる）な場合、
+            // さらに狙点を下げる (射角が 20度を超えたら徐々に足元へ)
+            val pitchInfluence = (1.0 - (abs(result.xRot) / 45.0)).coerceIn(0.0, 1.0)
+            val finalHeightOffset = eyeHeight * (distanceFactor * pitchInfluence).coerceIn(0.1, 1.0)
+
+            // 予測位置の更新
             val targetVel = target.deltaMovement
             val predictedVelY = if (target.onGround()) 0.0 else targetVel.y
 
-            // 3. 予測位置の更新: 「現在の実座標」から「移動分」だけをオフセットする
-            predictedPos = currentTargetPos.add(
+            // 基本の足元位置 ＋ 偏差 ＋ 動的に決めた高さ
+            predictedPos = targetBasePos.add(
                 targetVel.x * result.travelTicks,
-                predictedVelY * result.travelTicks,
+                (predictedVelY * result.travelTicks) + finalHeightOffset,
                 targetVel.z * result.travelTicks,
             )
         }
+
         if (predictedPos.y == 0.0) LogSystem.log("SAME")
-        // 最終的な着弾予測位置を、計算された角度に基づいて更新（UI表示用）
         return lastAnalysis.copy(hitPos = predictedPos)
     }
 
@@ -245,8 +258,14 @@ abstract class AbstractProjectile : MinecraftInterface() {
         graphics2D.textStyle.font = "infinite_regular"
 
         graphics2D.fillStyle = foregroundColor
-
-        graphics2D.textCentered(distText, x, y + errorRadius + 10f)
+        val textDiff = errorRadius + graphics2D.textStyle.size
+        if (y + textDiff >= graphics2D.height * 3 / 4f) {
+            graphics2D.textCentered(distText, x, y - textDiff)
+        } else if (y - textDiff <= graphics2D.height * 2 / 3f) {
+            graphics2D.textCentered(distText, x, y + textDiff)
+        } else {
+            graphics2D.textCentered(distText, x, graphics2D.height / 3f)
+        }
         return graphics2D
     }
 }

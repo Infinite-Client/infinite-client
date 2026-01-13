@@ -4,6 +4,12 @@ import io.netty.channel.ChannelFutureListener
 import net.minecraft.network.protocol.Packet
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket
+import net.minecraft.world.item.EggItem
+import net.minecraft.world.item.EnderpearlItem
+import net.minecraft.world.item.ExperienceBottleItem
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.SnowballItem
+import net.minecraft.world.item.ThrowablePotionItem
 import org.infinite.InfiniteClient
 import org.infinite.infinite.features.local.combat.throwable.projectile.ThrowableProjectile
 import org.infinite.libs.core.features.feature.LocalFeature
@@ -19,9 +25,6 @@ class ThrowableFeature : LocalFeature() {
 
     private var analysis: AbstractProjectile.TrajectoryAnalysis? = null
 
-    /**
-     * ThrowableProjectileからの情報を元に、パケットをサイレントエイム化する
-     */
     fun handleWrappedLaunch(
         originalPacket: Packet<*>,
         listener: ChannelFutureListener?,
@@ -29,26 +32,37 @@ class ThrowableFeature : LocalFeature() {
         ci: CallbackInfo,
         sendCall: (Packet<*>, ChannelFutureListener?, Boolean) -> Unit,
     ) {
-        val player = this.player ?: return sendCall(originalPacket, listener, flush)
+        val player = this.player ?: return
 
-        // 解析結果がない場合は通常通り送信
-        val currentAnalysis = analysis ?: return sendCall(originalPacket, listener, flush)
+        // 1. 現在使用しようとしているアイテムを確認 (オフハンド対応)
+        val hand = if (originalPacket is ServerboundUseItemPacket) originalPacket.hand else player.usedItemHand
+        val itemStack = player.getItemInHand(hand)
 
-        // 条件チェック: ロックオン時のみや地形無視設定など（必要に応じて追加）
+        // 投擲アイテムでなければ何もしない
+        if (!isThrowable(itemStack)) return sendCall(originalPacket, listener, flush)
+
+        // 2. 最新の解析結果を取得 (鮮度を優先)
+        val currentAnalysis = throwableProjectile.analyze() ?: return sendCall(originalPacket, listener, flush)
+
+        // ロックオン時のみの制限チェック
         if (onlyWhenLockOn.value && !InfiniteClient.localFeatures.combat.lockOnFeature.isEnabled()) {
             return sendCall(originalPacket, listener, flush)
         }
 
-        // 1. エイム（サーバーの同期）
-        val aimPacket = ServerboundMovePlayerPacket.Rot(
-            currentAnalysis.yRot.toFloat(),
-            currentAnalysis.xRot.toFloat(),
-            player.onGround(),
-            player.horizontalCollision,
+        // 3. サイレントエイム・パケットシーケンス
+        // A. サーバー側の向きを補正
+        sendCall(
+            ServerboundMovePlayerPacket.Rot(
+                currentAnalysis.yRot.toFloat(),
+                currentAnalysis.xRot.toFloat(),
+                player.onGround(),
+                player.horizontalCollision,
+            ),
+            null,
+            false,
         )
-        sendCall(aimPacket, null, false)
 
-        // 2. 発射パケット (UseItemPacket内の角度を上書き)
+        // B. 発射パケット (角度情報を上書き)
         val finalPacket = if (originalPacket is ServerboundUseItemPacket) {
             ServerboundUseItemPacket(
                 originalPacket.hand,
@@ -61,20 +75,24 @@ class ThrowableFeature : LocalFeature() {
         }
         sendCall(finalPacket, listener, false)
 
-        // 3. 復元
-        val restorePacket = ServerboundMovePlayerPacket.Rot(
-            player.yRot,
-            player.xRot,
-            player.onGround(),
-            player.horizontalCollision,
+        // C. 元の向きに復元 (クライアント側のガクつき防止)
+        sendCall(
+            ServerboundMovePlayerPacket.Rot(
+                player.yRot,
+                player.xRot,
+                player.onGround(),
+                player.horizontalCollision,
+            ),
+            null,
+            true, // ここでフラッシュしてまとめて送信
         )
-        sendCall(restorePacket, null, true)
+
         ci.cancel()
     }
 
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
         val analysisResult = throwableProjectile.analyze() ?: return graphics2D
-        this.analysis = analysisResult // パケット送信時用に保持
+        this.analysis = analysisResult
 
         return throwableProjectile.renderTrajectoryUI(
             graphics2D,
@@ -82,6 +100,12 @@ class ThrowableFeature : LocalFeature() {
             InfiniteClient.theme.colorScheme.accentColor,
             InfiniteClient.theme.colorScheme.foregroundColor,
         )
+    }
+
+    private fun isThrowable(stack: ItemStack): Boolean {
+        val item = stack.item
+        return item is SnowballItem || item is EggItem || item is EnderpearlItem ||
+            item is ThrowablePotionItem || item is ExperienceBottleItem
     }
 
     val simulationMaxSteps by property(IntProperty(100, 20, 200))

@@ -28,35 +28,35 @@ class ArcheryFeature : LocalFeature() {
         sendCall: (Packet<*>, ChannelFutureListener?, Boolean) -> Unit,
     ) {
         val player = player ?: return sendCall(originalPacket, listener, flush)
-        val item = player.mainHandItem
 
-        // アイテム・チャージチェック
-        if (item.item == Items.CROSSBOW && !CrossbowItem.isCharged(item)) {
-            return sendCall(
-                originalPacket,
-                listener,
-                flush,
-            )
+        // 現在発射しようとしているアイテムを取得 (パケットがUseItemPacketの場合)
+        val hand = if (originalPacket is ServerboundUseItemPacket) originalPacket.hand else player.usedItemHand
+        val itemStack = player.getItemInHand(hand)
+
+        // 1. アイテムチェック (弓またはクロスボウ)
+        val isBow = itemStack.`is`(Items.BOW)
+        val isCrossbow = itemStack.`is`(Items.CROSSBOW)
+
+        if (!isBow && !isCrossbow) {
+            return sendCall(originalPacket, listener, flush)
         }
+
+        // 2. クロスボウの場合、装填済みかチェック
+        if (isCrossbow && !CrossbowItem.isCharged(itemStack)) {
+            return sendCall(originalPacket, listener, flush)
+        }
+
         val currentAnalysis = analysis ?: return sendCall(originalPacket, listener, flush)
 
-        // 条件チェック
+        // --- 条件チェック (LockOnや地形遮蔽) ---
         if (onlyWhenLockOn.value && !InfiniteClient.localFeatures.combat.lockOnFeature.isEnabled()) {
-            return sendCall(
-                originalPacket,
-                listener,
-                flush,
-            )
+            return sendCall(originalPacket, listener, flush)
         }
         if (!ignoreTerrain.value && currentAnalysis.status == AbstractProjectile.PathStatus.Obstructed) {
-            return sendCall(
-                originalPacket,
-                listener,
-                flush,
-            )
+            return sendCall(originalPacket, listener, flush)
         }
 
-        // 1. エイムパケット
+        // 3. エイムパケットの送信 (サーバー側に「今この方向を向いた」と思わせる)
         sendCall(
             ServerboundMovePlayerPacket.Rot(
                 currentAnalysis.yRot.toFloat(),
@@ -68,10 +68,11 @@ class ArcheryFeature : LocalFeature() {
             false,
         )
 
-        // 2. 発射パケット (UseItemのみ上書き)
+        // 4. 発射パケットの構築
+        // 重要: originalPacketのhandをそのまま使い、角度だけ計算後のものに差し替える
         val finalPacket = if (originalPacket is ServerboundUseItemPacket) {
             ServerboundUseItemPacket(
-                originalPacket.hand,
+                originalPacket.hand, // 元のパケットが指定した方の手を使う
                 originalPacket.sequence,
                 currentAnalysis.yRot.toFloat(),
                 currentAnalysis.xRot.toFloat(),
@@ -79,9 +80,10 @@ class ArcheryFeature : LocalFeature() {
         } else {
             originalPacket
         }
+
         sendCall(finalPacket, listener, false)
 
-        // 3. 復元
+        // 5. 視線の復元 (クライアント側の見た目がガクガクしないようにする)
         sendCall(
             ServerboundMovePlayerPacket.Rot(
                 player.yRot,
@@ -92,9 +94,9 @@ class ArcheryFeature : LocalFeature() {
             null,
             true,
         )
-        ci.cancel()
-    }
 
+        ci.cancel() // 元のパケット送信をキャンセル
+    }
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
         val result = arrowProjectile.analyze() ?: return graphics2D
         this.analysis = result
