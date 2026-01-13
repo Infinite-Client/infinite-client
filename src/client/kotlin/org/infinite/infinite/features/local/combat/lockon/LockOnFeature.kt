@@ -89,8 +89,7 @@ class LockOnFeature : LocalFeature() {
                 }
             }
         } else {
-            // 索敵を継続
-            findAndLockTarget()
+            disable()
         }
     }
 
@@ -105,7 +104,6 @@ class LockOnFeature : LocalFeature() {
             .filter { (players.value && it is Player) || (mobs.value && it !is Player) }
             .filter { player.distanceTo(it) <= range.value }
             .filter { isWithinFOV(player, it, fov.value) }
-            // 射線チェックオプションを適用
             .filter { !checkLineOfSight.value || player.hasLineOfSight(it) }
             .toList()
 
