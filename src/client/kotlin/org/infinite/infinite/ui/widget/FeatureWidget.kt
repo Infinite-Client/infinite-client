@@ -101,11 +101,6 @@ abstract class FeatureWidget<T : Feature>(
     override fun renderWidget(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
         val theme = InfiniteClient.theme
         val graphics2DRenderer = Graphics2DRenderer(guiGraphics)
-
-        // 背景描画
-        theme.renderBackGround(this.x, this.y, this.width, this.height, graphics2DRenderer, 0.8f)
-
-        // テキスト描画 (名称の描画)
         val colorScheme = theme.colorScheme
         graphics2DRenderer.textStyle.apply {
             font = "infinite_regular"

@@ -97,8 +97,6 @@ class FeatureResetButton(x: Int, y: Int, width: Int, height: Int, feature: Featu
     }
 
     fun render(graphics2D: Graphics2D) {
-        val theme = InfiniteClient.theme
-        theme.renderBackGround(this.x, this.y, this.width, this.height, graphics2D, 0.8f)
         graphics2D.renderResetIcon(this.x.toFloat(), this.y.toFloat(), this.width.toFloat(), this.height.toFloat())
     }
 }

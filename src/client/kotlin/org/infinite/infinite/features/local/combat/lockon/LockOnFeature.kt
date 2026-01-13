@@ -24,19 +24,6 @@ import kotlin.math.acos
 class LockOnFeature : LocalFeature() {
     override val defaultToggleKey: Int = GLFW.GLFW_KEY_K
 
-    // --- プロパティ定義 ---
-    private val range by property(DoubleProperty(16.0, 3.0, 64.0))
-    private val players by property(BooleanProperty(true))
-    private val mobs by property(BooleanProperty(true))
-    private val fov by property(DoubleProperty(90.0, 10.0, 360.0))
-    private val aimSpeed by property(DoubleProperty(1.0, 0.5, 10.0))
-    private val method by property(EnumSelectionProperty(AimCalculateMethod.Linear))
-    private val priorityMode by property(EnumSelectionProperty(Priority.Both))
-    private val anchorPoint by property(EnumSelectionProperty(AimTarget.EntityTarget.EntityAnchor.Center))
-    private val autoAttack by property(BooleanProperty(false))
-
-    enum class Priority { Direction, Distance, Both }
-
     // 現在ロックしているエンティティをタスクから逆引きする（読み取り専用）
     val lockedEntity: Entity?
         get() = (currentTask?.target as? AimTarget.EntityTarget)?.entity
@@ -57,6 +44,21 @@ class LockOnFeature : LocalFeature() {
         currentTask = null // タスクを破棄してエイム停止
     }
 
+    private val range by property(DoubleProperty(16.0, 3.0, 256.0))
+    private val players by property(BooleanProperty(true))
+    private val mobs by property(BooleanProperty(true))
+    private val fov by property(DoubleProperty(90.0, 10.0, 360.0))
+    private val aimSpeed by property(DoubleProperty(1.0, 0.5, 10.0))
+    private val method by property(EnumSelectionProperty(AimCalculateMethod.Linear))
+    private val priorityMode by property(EnumSelectionProperty(Priority.Both))
+    private val anchorPoint by property(EnumSelectionProperty(AimTarget.EntityTarget.EntityAnchor.Center))
+    private val autoAttack by property(BooleanProperty(false))
+
+    // 追加: 射線が通っているか確認するオプション
+    private val checkLineOfSight by property(BooleanProperty(true))
+
+    enum class Priority { Direction, Distance, Both }
+
     override fun onStartTick() {
         if (!isEnabled()) return
 
@@ -65,13 +67,16 @@ class LockOnFeature : LocalFeature() {
             return
         }
 
-        // --- 1. ターゲットの有効性チェック ---
         val target = lockedEntity
         if (target != null) {
             val distance = player.distanceTo(target)
 
-            // 死亡、または射程外（+余裕分）ならロック解除
-            if (!target.isAlive || distance > (range.value + 1.5)) {
+            // ターゲットが有効かどうかの判定に射線チェックを追加
+            val isDead = !target.isAlive
+            val isOutOfRange = distance > (range.value + 1.5)
+            val isOccluded = checkLineOfSight.value && !player.hasLineOfSight(target)
+
+            if (isDead || isOutOfRange || isOccluded) {
                 disable()
                 return
             }
@@ -84,7 +89,8 @@ class LockOnFeature : LocalFeature() {
                 }
             }
         } else {
-            disable()
+            // 索敵を継続
+            findAndLockTarget()
         }
     }
 
@@ -99,6 +105,8 @@ class LockOnFeature : LocalFeature() {
             .filter { (players.value && it is Player) || (mobs.value && it !is Player) }
             .filter { player.distanceTo(it) <= range.value }
             .filter { isWithinFOV(player, it, fov.value) }
+            // 射線チェックオプションを適用
+            .filter { !checkLineOfSight.value || player.hasLineOfSight(it) }
             .toList()
 
         val bestTarget = when (priorityMode.value) {
@@ -107,7 +115,6 @@ class LockOnFeature : LocalFeature() {
             Priority.Both -> candidates.minByOrNull { calculateCombinedScore(player, it) }
         }
 
-        // ターゲットが見つかればタスクをセット。なければnull（停止）。
         currentTask = bestTarget?.let { createLockOnTask(it) }
     }
 
