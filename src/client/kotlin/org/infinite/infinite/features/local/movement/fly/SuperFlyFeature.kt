@@ -10,7 +10,7 @@ import java.lang.Math.toRadians
 import kotlin.math.cos
 import kotlin.math.sin
 
-class SuperFly : LocalFeature() {
+class SuperFlyFeature : LocalFeature() {
     enum class FlyMethod {
         Acceleration, Rocket, CreativeFlight,
     }

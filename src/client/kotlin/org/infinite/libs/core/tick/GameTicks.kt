@@ -3,11 +3,13 @@ package org.infinite.libs.core.tick
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import org.infinite.libs.core.TickInterface
 import org.infinite.libs.core.features.categories.LocalFeatureCategories
+import org.infinite.libs.minecraft.input.InputSystem
 
-class WorldTicks(
+class GameTicks(
     private val localFeatureCategories: LocalFeatureCategories,
 ) : TickInterface {
     override fun onStartTick() {
+        InputSystem.tick()
         localFeatureCategories.onStartTick()
     }
 

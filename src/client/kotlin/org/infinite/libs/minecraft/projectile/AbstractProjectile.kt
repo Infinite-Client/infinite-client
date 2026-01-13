@@ -6,9 +6,9 @@ import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.interfaces.MinecraftInterface
+import org.infinite.libs.log.LogSystem
 import org.infinite.utils.alpha
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.pow
@@ -45,7 +45,8 @@ abstract class AbstractProjectile : MinecraftInterface() {
         iterations: Int = 3,
     ): TrajectoryAnalysis {
         // 1. ターゲットの「現在の実座標（中心）」を基準にする
-        val currentTargetPos = target.position().add(0.0, target.bbHeight * 0.5, 0.0)
+        val currentTargetPos =
+            target.getPosition(minecraft.deltaTracker.gameTimeDeltaTicks).add(0.0, target.eyeHeight.toDouble(), 0.0)
         var predictedPos = currentTargetPos
         var lastAnalysis = TrajectoryAnalysis(0.0, 0.0, PathStatus.Uncertain, predictedPos, 0)
 
@@ -61,11 +62,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
 
             // 2. 偏差（移動予測）の計算
             val targetVel = target.deltaMovement
-
-            // 地面にいる場合は垂直移動を完全に無視する
-            // 垂直速度が非常に小さい場合（静止時の重力残差）も無視する
-            val isEffectivelyStaticY = target.onGround() || abs(targetVel.y) < 0.005
-            val predictedVelY = if (isEffectivelyStaticY) 0.0 else targetVel.y
+            val predictedVelY = if (target.onGround()) 0.0 else targetVel.y
 
             // 3. 予測位置の更新: 「現在の実座標」から「移動分」だけをオフセットする
             predictedPos = currentTargetPos.add(
@@ -74,7 +71,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
                 targetVel.z * result.travelTicks,
             )
         }
-
+        if (predictedPos.y == 0.0) LogSystem.log("SAME")
         // 最終的な着弾予測位置を、計算された角度に基づいて更新（UI表示用）
         return lastAnalysis.copy(hitPos = predictedPos)
     }
@@ -223,7 +220,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
 
         val distance = player.eyePosition.distanceTo(analysis.hitPos)
 
-        val errorRadius = (distance.toFloat() * 0.4f / graphics2D.fovFactor).coerceIn(4f, 400f)
+        val errorRadius = (distance.toFloat() * 0.2f / graphics2D.fovFactor).coerceIn(4f, 400f)
 
         graphics2D.beginPath()
 

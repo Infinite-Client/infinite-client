@@ -15,7 +15,7 @@ import kotlin.math.sqrt
 
 class ArrowProjectile(private val feature: ArcheryFeature) : AbstractProjectile() {
 
-    override val gravity: Double = 0.04
+    override val gravity: Double = 0.05
     override val drag: Double = 0.99
     override val precision: Int get() = feature.simulationPrecision.value
     override val maxStep: Int get() = feature.simulationMaxSteps.value

@@ -19,8 +19,8 @@ import org.infinite.libs.core.features.categories.category.GlobalCategory
 import org.infinite.libs.core.features.categories.category.LocalCategory
 import org.infinite.libs.core.features.feature.GlobalFeature
 import org.infinite.libs.core.features.feature.LocalFeature
+import org.infinite.libs.core.tick.GameTicks
 import org.infinite.libs.core.tick.SystemTicks
-import org.infinite.libs.core.tick.WorldTicks
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
 import org.infinite.libs.translation.TranslationChecker
@@ -77,7 +77,7 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
         }
     }
 
-    val worldTicks = WorldTicks(localFeatures)
+    val worldTicks = GameTicks(localFeatures)
     val themeManager: ThemeManager = ThemeManager(DefaultTheme())
     val theme: Theme
         get() {

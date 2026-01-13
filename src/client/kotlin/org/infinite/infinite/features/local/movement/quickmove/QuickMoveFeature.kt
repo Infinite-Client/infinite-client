@@ -14,7 +14,7 @@ import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-class QuickMove : LocalFeature() {
+class QuickMoveFeature : LocalFeature() {
     override val featureType: FeatureType = FeatureType.Cheat
     override val categoryClass = LocalMovementCategory::class
 
