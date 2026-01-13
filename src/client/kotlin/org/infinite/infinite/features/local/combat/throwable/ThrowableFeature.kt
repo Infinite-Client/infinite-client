@@ -39,14 +39,14 @@ class ThrowableFeature : LocalFeature() {
         val itemStack = player.getItemInHand(hand)
 
         // 投擲アイテムでなければ何もしない
-        if (!isThrowable(itemStack)) return sendCall(originalPacket, listener, flush)
+        if (!isThrowable(itemStack)) return
 
         // 2. 最新の解析結果を取得 (鮮度を優先)
-        val currentAnalysis = throwableProjectile.analyze() ?: return sendCall(originalPacket, listener, flush)
+        val currentAnalysis = throwableProjectile.analyze() ?: return
 
         // ロックオン時のみの制限チェック
         if (onlyWhenLockOn.value && !InfiniteClient.localFeatures.combat.lockOnFeature.isEnabled()) {
-            return sendCall(originalPacket, listener, flush)
+            return
         }
 
         // 3. サイレントエイム・パケットシーケンス
