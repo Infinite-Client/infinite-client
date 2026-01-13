@@ -44,8 +44,8 @@
   "infinite.features.global.rendering.infinite_font_feature.regular_font": "標準フォント",
   "infinite.features.global.rendering.theme_feature.current_theme": "現在のテーマ",
   "key.infinite.features.local.rendering.hello_feature.toggle": "Toggle Hello Feature",
-  "key.infinite.features.local.combat.lock_on.toggle": "Toggle LockOn Feature",
   "key.infinite.game_options": "Infinite Game Options",
+  "key.infinite.features.local.combat.lock_on.toggle": "Toggle LockOn Feature",
   "infinite.features.local.combat.archery_feature": "Archery Feature",
   "infinite.features.local.combat.archery_feature.ignore_terrain": "地形を無視",
   "infinite.features.local.combat.archery_feature.max_reach": "最大射程",
@@ -150,5 +150,17 @@
   "key.infinite.features.local.rendering.tough_sight_feature.toggle": "Toggle Tough Sight Feature",
   "key.infinite.features.local.rendering.zoom_sight_feature.zoom_in": "Zoom In",
   "key.infinite.features.local.rendering.zoom_sight_feature.zoom_out": "Zoom Out",
-  "key.infinite.features.local.rendering.zoom_sight_feature.toggle": "Toggle Zoom Sight Feature"
+  "key.infinite.features.local.rendering.zoom_sight_feature.toggle": "Toggle Zoom Sight Feature",
+  "infinite.features.local.combat.quick_shot_feature": "Quick Shot Feature",
+  "infinite.features.local.level.ultra_tag_feature": "Ultra Tag Feature",
+  "infinite.features.local.level.ultra_tag_feature.fade_end": "フェードアウトが終了する距離",
+  "infinite.features.local.level.ultra_tag_feature.fade_start": "フェードアウトが始まる距離",
+  "infinite.features.local.level.ultra_tag_feature.item_hide_angle": "アイテムを隠す角度",
+  "infinite.features.local.level.ultra_tag_feature.range": "表示範囲",
+  "infinite.features.local.level.ultra_tag_feature.show_equipments": "装備を表示する",
+  "infinite.features.local.level.ultra_tag_feature.show_items": "アイテムを表示する",
+  "infinite.features.local.level.ultra_tag_feature.show_mobs": "モブを表示する",
+  "infinite.features.local.level.ultra_tag_feature.show_players": "プレイヤーを表示する",
+  "key.infinite.features.local.combat.quick_shot_feature.toggle": "Toggle Quick Shot Feature",
+  "key.infinite.features.local.level.ultra_tag_feature.toggle": "Toggle Ultra Tag Feature"
 }

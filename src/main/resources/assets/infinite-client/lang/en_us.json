@@ -150,5 +150,17 @@
   "key.infinite.features.local.rendering.tough_sight_feature.toggle": "Toggle Tough Sight Feature",
   "key.infinite.features.local.rendering.zoom_sight_feature.zoom_in": "Zoom In",
   "key.infinite.features.local.rendering.zoom_sight_feature.zoom_out": "Zoom Out",
-  "key.infinite.features.local.rendering.zoom_sight_feature.toggle": "Toggle Zoom Sight Feature"
+  "key.infinite.features.local.rendering.zoom_sight_feature.toggle": "Toggle Zoom Sight Feature",
+  "infinite.features.local.combat.quick_shot_feature": "Quick Shot Feature",
+  "infinite.features.local.level.ultra_tag_feature": "Ultra Tag Feature",
+  "infinite.features.local.level.ultra_tag_feature.fade_end": "Fade out end point",
+  "infinite.features.local.level.ultra_tag_feature.fade_start": "Fade out start point",
+  "infinite.features.local.level.ultra_tag_feature.item_hide_angle": "Item hide angle",
+  "infinite.features.local.level.ultra_tag_feature.range": "Display Range",
+  "infinite.features.local.level.ultra_tag_feature.show_equipments": "is Show equipments",
+  "infinite.features.local.level.ultra_tag_feature.show_items": "is show items",
+  "infinite.features.local.level.ultra_tag_feature.show_mobs": "is show mobs",
+  "infinite.features.local.level.ultra_tag_feature.show_players": "is show players",
+  "key.infinite.features.local.combat.quick_shot_feature.toggle": "Toggle Quick Shot Feature",
+  "key.infinite.features.local.level.ultra_tag_feature.toggle": "Toggle Ultra Tag Feature"
 }
