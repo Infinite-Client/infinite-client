@@ -56,7 +56,8 @@ abstract class AbstractProjectile : MinecraftInterface() {
             val (maxDist, _) = simulateForDistance(basePower, maxRangePitch, 0.0, predictedPos.y - startPos.y)
 
             if (horizontalDist > maxDist) {
-                lastAnalysis = TrajectoryAnalysis(maxRangePitch, yRot, PathStatus.Unreachable, predictedPos, maxStep, false)
+                lastAnalysis =
+                    TrajectoryAnalysis(maxRangePitch, yRot, PathStatus.Unreachable, predictedPos, maxStep, false)
             } else {
                 val highPitch = solvePitchStrict(basePower, 0.0, predictedPos, startPos, limitUpper, maxRangePitch)
                 val lowPitch = solvePitchStrict(basePower, 0.0, predictedPos, startPos, maxRangePitch, currentPitch)
@@ -82,8 +83,10 @@ abstract class AbstractProjectile : MinecraftInterface() {
                 lastAnalysis = when {
                     lowRes.status == PathStatus.Clear ->
                         TrajectoryAnalysis(lowPitch, yRot, PathStatus.Clear, finalTarget, lowRes.ticks, false)
+
                     highRes.status == PathStatus.Clear ->
                         TrajectoryAnalysis(highPitch, yRot, PathStatus.Clear, finalTarget, highRes.ticks, true)
+
                     else ->
                         TrajectoryAnalysis(highPitch, yRot, PathStatus.Obstructed, finalTarget, highRes.ticks, true)
                 }
@@ -131,14 +134,50 @@ abstract class AbstractProjectile : MinecraftInterface() {
         return when {
             lowRes.status == PathStatus.Clear ->
                 TrajectoryAnalysis(lowPitch, yRot, PathStatus.Clear, targetPos, lowRes.ticks, false)
+
             highRes.status == PathStatus.Clear ->
                 TrajectoryAnalysis(highPitch, yRot, PathStatus.Clear, targetPos, highRes.ticks, true)
+
             else ->
                 TrajectoryAnalysis(highPitch, yRot, PathStatus.Obstructed, targetPos, highRes.ticks, true)
         }
     }
 
-    // --- 内部計算メソッド (playerVelを削除) ---
+    protected fun simulateFast(v: Double, pitchDeg: Double, vY0: Double, targetX: Double): Pair<Double, Int> {
+        val rad = pitchDeg * (PI / 180.0)
+        var pX = 0.0
+        var pY = 0.0
+
+        // --- 符号の修正ポイント ---
+        // 1. velX: pitchが ±90° に近づくほど水平速度は 0 になるべきなので cos(rad) で正しい
+        var velX = v * cos(rad)
+        // 2. velY: Minecraftではマイナスが上なので、-sin(rad) とすることで
+        //    上向き(-90°)の時に正の速度 (+1.0) が得られるようにする
+        var velY = (-sin(rad) * v) + vY0
+
+        var tick = 0
+        while (tick < maxStep) {
+            val distToTarget = targetX - pX
+            val stepSize = when {
+                distToTarget > 60.0 -> 5
+                distToTarget > 20.0 -> 2
+                else -> 1
+            }.coerceAtMost(maxStep - tick)
+
+            repeat(stepSize) {
+                pX += velX
+                pY += velY
+                velX *= drag
+                velY = (velY * drag) - gravity
+            }
+
+            tick += stepSize
+            if (pX >= targetX) return Pair(pY, tick)
+            // 下に落ちすぎた場合の早期終了
+            if (velY < 0 && pY < -100.0) break
+        }
+        return Pair(pY, tick)
+    }
 
     protected fun findMaxRangeAngle(v: Double, vY0: Double, minP: Double, maxP: Double): Double {
         var low = minP
@@ -172,55 +211,57 @@ abstract class AbstractProjectile : MinecraftInterface() {
         return Pair(pX, maxStep)
     }
 
-    protected fun simulateForYAtDistance(v: Double, pitchDeg: Double, vY0: Double, targetX: Double): Pair<Double, Int> {
-        val rad = pitchDeg * PI / 180.0
-        var pX = 0.0
-        var pY = 0.0
-        var velX = v * cos(rad)
-        var velY = (-sin(rad) * v) + vY0
-
-        for (tick in 1..maxStep) {
-            pX += velX
-            pY += velY
-            velX *= drag
-            velY = (velY * drag) - gravity
-            if (pX >= targetX) return Pair(pY, tick)
-        }
-        return Pair(pY, maxStep)
-    }
-
     protected fun solvePitchStrict(v: Double, vY0: Double, target: Vec3, start: Vec3, minA: Double, maxA: Double): Double {
         val horizontalDist = sqrt((target.x - start.x).pow(2) + (target.z - start.z).pow(2))
         val targetDY = target.y - start.y
         var low = minA
         var high = maxA
+
         repeat(precision) {
-            val mid = (low + high) / 2.0
-            val (resY, _) = simulateForYAtDistance(v, mid, vY0, horizontalDist)
+            val mid = (low + high) * 0.5
+            val (resY, _) = simulateFast(v, mid, vY0, horizontalDist)
             if (resY < targetDY) high = mid else low = mid
         }
-        return (low + high) / 2.0
+        return (low + high) * 0.5
     }
 
     protected fun verifyPath(v: Double, xRot: Double, yRot: Double, target: Vec3, startPos: Vec3): PathResult {
         val level = level ?: return PathResult(PathStatus.Obstructed, 0)
         val player = player ?: return PathResult(PathStatus.Obstructed, 0)
 
-        var currentPos = startPos
-        val f = -sin(yRot * (PI / 180.0)) * cos(xRot * (PI / 180.0))
-        val g = -sin(xRot * (PI / 180.0))
-        val h = cos(yRot * (PI / 180.0)) * cos(xRot * (PI / 180.0))
-        var velVec = Vec3(f, g, h).scale(v) // playerVelを除外
+        val radY = yRot * (PI / 180.0)
+        val radX = xRot * (PI / 180.0)
+        val cosX = cos(radX)
 
+        // --- ベクトル生成の修正 ---
+        // g (Y成分): -sin(radX) とすることで、xRot=-90(上)のとき g=+1.0 となる
+        val f = -sin(radY) * cosX
+        val g = -sin(radX)
+        val h = cos(radY) * cosX
+
+        var velVec = Vec3(f, g, h).scale(v)
+
+        var currentPos = startPos
         for (tick in 1..maxStep) {
             val nextPos = currentPos.add(velVec)
-            val result = level.clip(ClipContext(currentPos, nextPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player))
 
-            if (result.type != HitResult.Type.MISS) {
-                return if (result.location.distanceToSqr(target) < 4.0) {
-                    PathResult(PathStatus.Clear, tick)
-                } else {
-                    PathResult(PathStatus.Obstructed, tick)
+            // 2ティックに1回だけクリップ判定を行う（大幅な負荷軽減、ただし細い鉄格子などは抜ける可能性あり）
+            if (tick % 2 == 0 || currentPos.distanceToSqr(target) < 10.0) {
+                val result = level.clip(
+                    ClipContext(
+                        currentPos,
+                        nextPos,
+                        ClipContext.Block.COLLIDER,
+                        ClipContext.Fluid.NONE,
+                        player,
+                    ),
+                )
+                if (result.type != HitResult.Type.MISS) {
+                    return if (result.location.distanceToSqr(target) < 4.0) {
+                        PathResult(PathStatus.Clear, tick)
+                    } else {
+                        PathResult(PathStatus.Obstructed, tick)
+                    }
                 }
             }
 
@@ -232,7 +273,12 @@ abstract class AbstractProjectile : MinecraftInterface() {
     }
 
     // --- UI描画ロジック ---
-    fun renderTrajectoryUI(graphics2D: Graphics2D, analysis: TrajectoryAnalysis, accentColor: Int, foregroundColor: Int): Graphics2D {
+    fun renderTrajectoryUI(
+        graphics2D: Graphics2D,
+        analysis: TrajectoryAnalysis,
+        accentColor: Int,
+        foregroundColor: Int,
+    ): Graphics2D {
         val player = player ?: return graphics2D
         val screenPos = graphics2D.projectWorldToScreen(analysis.hitPos) ?: return graphics2D
         val colorScheme = InfiniteClient.theme.colorScheme
