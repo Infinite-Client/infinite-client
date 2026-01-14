@@ -6,12 +6,10 @@ import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.Feature
-import org.infinite.libs.graphics.graphics2d.text.IModernFontManager
-import org.infinite.libs.graphics.text.fromFontSet
 import org.infinite.libs.ui.layout.ScrollableLayoutContainer
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 import org.infinite.libs.ui.widgets.AbstractCarouselWidget
-import org.infinite.mixin.graphics.MinecraftAccessor
+import org.infinite.utils.Font
 import kotlin.math.roundToInt
 
 abstract class CategoryWidget<T : Category<*, out Feature>>(
@@ -29,20 +27,17 @@ abstract class CategoryWidget<T : Category<*, out Feature>>(
     private val spawnTime = System.currentTimeMillis()
     private val animationDuration = 500L
     private val thisPageProgress = thisIndex.toFloat() / parent.pageSize
+    private val minecraft = Minecraft.getInstance()
 
     init {
-        val minecraft = Minecraft.getInstance()
-        val minecraftAccessor = minecraft as MinecraftAccessor
-        val fontManager = minecraftAccessor.fontManager as IModernFontManager
-        val fontSet = fontManager.`infinite$fontSetFromIdentifier`("infinite_regular")
-        val font = fromFontSet(fontSet)
+        val font = Font("infinite_regular")
 
         val widgetWidth = parent.widgetWidth.roundToInt()
         val titleY = font.lineHeight * 2
         val containerMargin = 10
         val innerWidth = widgetWidth - 2 * containerMargin
         val scrollY = titleY + font.lineHeight + containerMargin
-        val containerHeight = this.height - containerMargin
+        val containerHeight = height - containerMargin - titleY
 
         // 内部レイアウトの構築
         val innerLayout = LinearLayout.vertical().spacing(5)
@@ -51,7 +46,7 @@ abstract class CategoryWidget<T : Category<*, out Feature>>(
         // レイアウトの確定
         innerLayout.arrangeElements()
 
-        container = ScrollableLayoutContainer(minecraft, innerLayout, innerWidth).apply {
+        container = ScrollableLayoutContainer(innerLayout, innerWidth).apply {
             this.x = containerMargin
             this.y = scrollY
             // maxHeightだけでなく、ウィジェット自体の高さを固定または最大まで広げる

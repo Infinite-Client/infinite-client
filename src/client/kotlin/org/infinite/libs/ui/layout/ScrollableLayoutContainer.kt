@@ -14,16 +14,15 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 
 class ScrollableLayoutContainer(
-    minecraft: Minecraft,
     layout: Layout,
     i: Int,
-) : ScrollableLayout(minecraft, layout, i), Renderable, GuiEventListener, NarratableEntry {
-
+) : ScrollableLayout(Minecraft.getInstance(), layout, i), Renderable, GuiEventListener, NarratableEntry {
     override fun render(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
         visitWidgets { widget ->
             widget.render(guiGraphics, i, j, f)
         }
     }
+
     private var focused = false
     override fun getRectangle(): ScreenRectangle {
         return ScreenRectangle(x, y, width, height)

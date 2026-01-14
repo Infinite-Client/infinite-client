@@ -37,7 +37,7 @@ class FeatureScreen<T : Feature>(
             innerLayout.addChild(propertyWidget)
         }
         innerLayout.arrangeElements()
-        container = ScrollableLayoutContainer(minecraft, innerLayout, innerWidth).apply {
+        container = ScrollableLayoutContainer(innerLayout, innerWidth).apply {
             this.x = margin
             this.y = headerHeight
             this.setMinWidth(innerWidth)
