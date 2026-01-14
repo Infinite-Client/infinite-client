@@ -20,9 +20,7 @@ import org.infinite.libs.minecraft.projectile.AbstractProjectile
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 class ThrowableFeature : LocalFeature() {
-    private val throwableProjectile = ThrowableProjectile(this)
     override val featureType = FeatureType.Extend
-
     private var analysis: AbstractProjectile.TrajectoryAnalysis? = null
 
     fun handleWrappedLaunch(
@@ -42,7 +40,7 @@ class ThrowableFeature : LocalFeature() {
         if (!isThrowable(itemStack)) return
 
         // 2. 最新の解析結果を取得 (鮮度を優先)
-        val currentAnalysis = throwableProjectile.analyze() ?: return
+        val currentAnalysis = ThrowableProjectile.analyze() ?: return
 
         // ロックオン時のみの制限チェック
         if (onlyWhenLockOn.value && !InfiniteClient.localFeatures.combat.lockOnFeature.isEnabled()) {
@@ -91,10 +89,10 @@ class ThrowableFeature : LocalFeature() {
     }
 
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
-        val analysisResult = throwableProjectile.analyze() ?: return graphics2D
+        val analysisResult = ThrowableProjectile.analyze() ?: return graphics2D
         this.analysis = analysisResult
 
-        return throwableProjectile.renderTrajectoryUI(
+        return ThrowableProjectile.renderTrajectoryUI(
             graphics2D,
             analysisResult,
             InfiniteClient.theme.colorScheme.accentColor,

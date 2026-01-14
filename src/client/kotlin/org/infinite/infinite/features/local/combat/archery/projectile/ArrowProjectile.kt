@@ -11,8 +11,8 @@ import org.infinite.InfiniteClient
 import org.infinite.infinite.features.local.combat.archery.ArcheryFeature
 import org.infinite.libs.minecraft.projectile.AbstractProjectile
 
-class ArrowProjectile(private val feature: ArcheryFeature) : AbstractProjectile() {
-
+object ArrowProjectile : AbstractProjectile() {
+    private val feature: ArcheryFeature = InfiniteClient.localFeatures.combat.archeryFeature
     override val gravity: Double = 0.05
     override val drag: Double = 0.99
     override val precision: Int get() = feature.simulationPrecision.value
@@ -29,11 +29,13 @@ class ArrowProjectile(private val feature: ArcheryFeature) : AbstractProjectile(
                 if (player.useItemRemainingTicks <= 0 && player.ticksUsingItem == 0) return null
                 BowItem.getPowerForTime(player.ticksUsingItem).toDouble() * 3.0
             }
+
             Items.CROSSBOW -> {
                 // クロスボウは溜めに関わらず一定 (3.15)
                 if (!CrossbowItem.isCharged(item)) return null
                 3.15
             }
+
             else -> return null
         }
 

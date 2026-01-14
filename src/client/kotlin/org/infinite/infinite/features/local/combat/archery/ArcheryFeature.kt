@@ -4,10 +4,10 @@ import io.netty.channel.ChannelFutureListener
 import net.minecraft.network.protocol.Packet
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket
-import net.minecraft.world.item.CrossbowItem
 import net.minecraft.world.item.Items
 import org.infinite.InfiniteClient
 import org.infinite.infinite.features.local.combat.archery.projectile.ArrowProjectile
+import org.infinite.infinite.features.local.combat.throwable.projectile.ThrowableProjectile
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.number.IntProperty
@@ -16,7 +16,6 @@ import org.infinite.libs.minecraft.projectile.AbstractProjectile
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 class ArcheryFeature : LocalFeature() {
-    private val arrowProjectile = ArrowProjectile(this)
     override val featureType = FeatureType.Extend
     private var analysis: AbstractProjectile.TrajectoryAnalysis? = null
 
@@ -29,26 +28,24 @@ class ArcheryFeature : LocalFeature() {
     ) {
         val player = player ?: return sendCall(originalPacket, listener, flush)
 
-        // 現在発射しようとしているアイテムを取得 (パケットがUseItemPacketの場合)
         val hand = if (originalPacket is ServerboundUseItemPacket) originalPacket.hand else player.usedItemHand
         val itemStack = player.getItemInHand(hand)
 
-        // 1. アイテムチェック (弓またはクロスボウ)
+        // 対象アイテムの拡張
         val isBow = itemStack.`is`(Items.BOW)
         val isCrossbow = itemStack.`is`(Items.CROSSBOW)
-
-        if (!isBow && !isCrossbow) {
+        val isTrident = itemStack.`is`(Items.TRIDENT) // 追加
+        if (!isBow && !isCrossbow && !isTrident) {
             return sendCall(originalPacket, listener, flush)
         }
 
-        // 2. クロスボウの場合、装填済みかチェック
-        if (isCrossbow && !CrossbowItem.isCharged(itemStack)) {
-            return sendCall(originalPacket, listener, flush)
-        }
+        // アイテムに応じた解析結果の取得
+        val currentAnalysis = if (isTrident) {
+            ThrowableProjectile.analyze()
+        } else {
+            ArrowProjectile.analyze()
+        } ?: return sendCall(originalPacket, listener, flush)
 
-        val currentAnalysis = analysis ?: return sendCall(originalPacket, listener, flush)
-
-        // --- 条件チェック (LockOnや地形遮蔽) ---
         if (onlyWhenLockOn.value && !InfiniteClient.localFeatures.combat.lockOnFeature.isEnabled()) {
             return sendCall(originalPacket, listener, flush)
         }
@@ -98,10 +95,10 @@ class ArcheryFeature : LocalFeature() {
         ci.cancel() // 元のパケット送信をキャンセル
     }
     override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
-        val result = arrowProjectile.analyze() ?: return graphics2D
+        val result = ArrowProjectile.analyze() ?: return graphics2D
         this.analysis = result
 
-        return arrowProjectile.renderTrajectoryUI(
+        return ArrowProjectile.renderTrajectoryUI(
             graphics2D,
             result,
             InfiniteClient.theme.colorScheme.accentColor,
