@@ -218,4 +218,5 @@ open class Feature : MinecraftInterface() {
     }
 
     fun isEnabled(): Boolean = enabled.value
+    fun <X> map(action: (Property<*>) -> X): List<X> = _properties.values.map(action)
 }

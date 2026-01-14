@@ -185,5 +185,14 @@
   "key.infinite.features.local.combat.swap_shot_feature.toggle": "Toggle Swap Shot",
   "key.infinite.features.local.inventory.restock_feature.toggle": "Toggle Restock",
   "infinite.features.local.combat.lock_on_feature.aim_bias": "Aim Bias (Distance <-> Angle)",
-  "infinite.features.global.rendering.infinite_loading_feature": "Infinite Loading Feature"
+  "infinite.features.global.rendering.infinite_loading_feature": "Infinite Loading Feature",
+  "doc.infinite.properties_section_title": "Properties",
+  "doc.infinite.property_info_title": "Details",
+  "doc.infinite.property_type": "Type",
+  "doc.infinite.property_default": "Default",
+  "doc.infinite.property_min": "Minimum",
+  "doc.infinite.property_max": "Maximum",
+  "doc.infinite.property_options": "Options",
+  "doc.infinite.property_list_count": "Default Size",
+  "doc.infinite.property_list_type": "List Type"
 }

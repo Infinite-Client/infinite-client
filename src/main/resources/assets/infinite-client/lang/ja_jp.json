@@ -185,5 +185,14 @@
   "key.infinite.features.local.combat.swap_shot_feature.toggle": "Toggle Swap Shot",
   "key.infinite.features.local.inventory.restock_feature.toggle": "Toggle Restock",
   "infinite.features.local.combat.lock_on_feature.aim_bias": "エイム優先度 (距離 <-> 角度)",
-  "infinite.features.global.rendering.infinite_loading_feature": "Infinite Loading Feature"
+  "infinite.features.global.rendering.infinite_loading_feature": "Infinite Loading Feature",
+  "doc.infinite.properties_section_title": "設定項目",
+  "doc.infinite.property_info_title": "詳細情報",
+  "doc.infinite.property_type": "タイプ",
+  "doc.infinite.property_default": "デフォルト値",
+  "doc.infinite.property_min": "最小値",
+  "doc.infinite.property_max": "最大値",
+  "doc.infinite.property_options": "選択肢",
+  "doc.infinite.property_list_count": "デフォルト要素数",
+  "doc.infinite.property_list_type": "リスト形式"
 }

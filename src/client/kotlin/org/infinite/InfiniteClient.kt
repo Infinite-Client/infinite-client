@@ -32,17 +32,19 @@ import kotlin.reflect.KClass
 object InfiniteClient : MinecraftInterface(), ClientModInitializer {
     val globalFeatures = InfiniteGlobalFeatures()
     val localFeatures = InfiniteLocalFeatures()
-    val gameScreenBindingPair = LocalFeature.BindingPair(
-        KeyBindingHelper.registerKeyBinding(
-            KeyMapping(
-                "key.infinite.game_options",
-                GLFW.GLFW_KEY_RIGHT_SHIFT,
-                KeyMapping.Category.GAMEPLAY,
+    val gameScreenBindingPair: LocalFeature.BindingPair by lazy {
+        LocalFeature.BindingPair(
+            KeyBindingHelper.registerKeyBinding(
+                KeyMapping(
+                    "key.infinite.game_options",
+                    GLFW.GLFW_KEY_RIGHT_SHIFT,
+                    KeyMapping.Category.GAMEPLAY,
+                ),
             ),
-        ),
-    ) {
-        minecraft.execute {
-            minecraft.setScreen(LocalFeatureCategoriesScreen())
+        ) {
+            minecraft.execute {
+                minecraft.setScreen(LocalFeatureCategoriesScreen())
+            }
         }
     }
 

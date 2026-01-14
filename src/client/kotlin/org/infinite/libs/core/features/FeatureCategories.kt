@@ -18,6 +18,7 @@ abstract class FeatureCategories<
         val name2 = k2.simpleName ?: ""
         name1.compareTo(name2)
     }
+    val size: Int get() = _categories.size
 
     // 内部保持用のマップ。TreeMap を使うことで追加した瞬間から常にソートされます。
     private val _categories: MutableMap<K, V> = Collections.synchronizedMap(TreeMap<K, V>(comparator))
@@ -90,5 +91,10 @@ abstract class FeatureCategories<
 
     fun reset() {
         _categories.values.forEach { it.reset() }
+    }
+
+    // 修正後
+    fun <X> map(action: (V) -> X): List<X> {
+        return _categories.values.map { action(it) }
     }
 }

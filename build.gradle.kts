@@ -1,5 +1,5 @@
+
 import net.ltgt.gradle.errorprone.errorprone
-import org.gradle.kotlin.dsl.invoke
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -183,10 +183,10 @@ tasks.withType<JavaCompile>().configureEach {
         option("UnusedVariable:ExemptAnnotations", mixinAnnotations)
     }
 }
-// tasks.register<JavaExec>("genDocs") {
-//    description = "Generate Document templates"
-//    group = "application"
-//    classpath = sourceSets["client"].runtimeClasspath
-//    mainClass.set("org.infinite.utils.Document")
-//    args(project.rootDir.absolutePath)
-// }
+tasks.register<JavaExec>("docs") {
+    description = "Generate Documents"
+    group = "application"
+    classpath = sourceSets["client"].runtimeClasspath
+    mainClass.set("org.infinite.docs.Main")
+    args(project.rootDir.absolutePath)
+}

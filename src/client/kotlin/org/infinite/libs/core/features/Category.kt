@@ -92,7 +92,10 @@ abstract class Category<K : KClass<out Feature>, V : Feature> {
             throw IllegalArgumentException("Package hierarchy is too shallow: $fullName")
         }
     }
+
     fun reset() {
         _features.values.forEach { it.reset() }
     }
+
+    fun <X> map(action: (V) -> X): List<X> = _features.values.map(action)
 }
