@@ -1,6 +1,5 @@
 package org.infinite.infinite.features.local.combat.throwable.projectile
 
-import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.projectile.ProjectileUtil
 import net.minecraft.world.item.EggItem
 import net.minecraft.world.item.EnderpearlItem
@@ -76,7 +75,7 @@ object ThrowableProjectile : AbstractProjectile() {
 
         // 2. 基本情報のセットアップ
         val startPos = player.getEyePosition(0f)
-        val lockOnTarget = InfiniteClient.localFeatures.combat.lockOnFeature.lockedEntity as? LivingEntity
+        val lockOnTarget = InfiniteClient.localFeatures.combat.lockOnFeature.selectedEntity
 
         return if (lockOnTarget != null) {
             // --- エンティティを狙う場合 ---

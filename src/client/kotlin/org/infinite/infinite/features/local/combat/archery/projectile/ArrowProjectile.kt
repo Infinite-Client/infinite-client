@@ -1,6 +1,5 @@
 package org.infinite.infinite.features.local.combat.archery.projectile
 
-import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.projectile.ProjectileUtil
 import net.minecraft.world.item.BowItem
 import net.minecraft.world.item.CrossbowItem
@@ -48,7 +47,7 @@ object ArrowProjectile : AbstractProjectile() {
         player.deltaMovement
 
         // 3. ターゲットの特定と解析
-        val lockOnTarget = InfiniteClient.localFeatures.combat.lockOnFeature.lockedEntity as? LivingEntity
+        val lockOnTarget = InfiniteClient.localFeatures.combat.lockOnFeature.selectedEntity
 
         return if (lockOnTarget != null) {
             // --- エンティティを狙う場合 ---

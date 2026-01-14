@@ -1,8 +1,7 @@
 package org.infinite.libs.core.features
 
 import org.infinite.utils.toLowerSnakeCase
-import java.util.Collections
-import java.util.TreeMap
+import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
@@ -87,5 +86,9 @@ abstract class FeatureCategories<
         } else {
             "$modId.$translationCategory"
         }
+    }
+
+    fun reset() {
+        _categories.values.forEach { it.reset() }
     }
 }

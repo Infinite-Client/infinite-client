@@ -91,8 +91,18 @@ abstract class AbstractProjectile : MinecraftInterface() {
             }
             currentPredictedPos = nextPredictedPos
         }
+        var result = finalAnalysis
+        if (result.status == PathStatus.Obstructed || result.status == PathStatus.Unreachable) {
+            val lookAtPos = getLookTargetPos()
+            val lookAnalysis = analysisStaticPos(basePower, lookAtPos, startPos)
 
-        return finalAnalysis
+            // 視線の先なら当てられる可能性がある場合、結果を上書きする
+            if (lookAnalysis.status == PathStatus.Clear) {
+                result = lookAnalysis
+            }
+        }
+
+        return result
     }
 
     fun analysisStaticPos(
@@ -123,14 +133,25 @@ abstract class AbstractProjectile : MinecraftInterface() {
         val lowRes = verifyPath(basePower, lowPitch, yRot, targetPos, startPos)
 
         return when {
-            lowRes.status == PathStatus.Clear ->
-                TrajectoryAnalysis(lowPitch, yRot, PathStatus.Clear, targetPos, lowRes.ticks, false)
+            lowRes.status == PathStatus.Clear -> TrajectoryAnalysis(
+                lowPitch,
+                yRot,
+                PathStatus.Clear,
+                targetPos,
+                lowRes.ticks,
+                false,
+            )
 
-            highRes.status == PathStatus.Clear ->
-                TrajectoryAnalysis(highPitch, yRot, PathStatus.Clear, targetPos, highRes.ticks, true)
+            highRes.status == PathStatus.Clear -> TrajectoryAnalysis(
+                highPitch,
+                yRot,
+                PathStatus.Clear,
+                targetPos,
+                highRes.ticks,
+                true,
+            )
 
-            else ->
-                TrajectoryAnalysis(highPitch, yRot, PathStatus.Obstructed, targetPos, highRes.ticks, true)
+            else -> TrajectoryAnalysis(highPitch, yRot, PathStatus.Obstructed, targetPos, highRes.ticks, true)
         }
     }
 
@@ -334,6 +355,24 @@ abstract class AbstractProjectile : MinecraftInterface() {
         graphics2D.textCentered(statusText, centerX, infoY + 11f)
 
         return graphics2D
+    }
+
+    private fun getLookTargetPos(range: Double = 200.0): Vec3 {
+        val player = player ?: return Vec3.ZERO
+        val eyePos = player.eyePosition
+        val lookVec = player.lookAngle.scale(range)
+        val traceEnd = eyePos.add(lookVec)
+
+        val result = level?.clip(
+            ClipContext(
+                eyePos,
+                traceEnd,
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                player,
+            ),
+        )
+        return result?.location ?: traceEnd
     }
 
     data class PathResult(val status: PathStatus, val ticks: Int)

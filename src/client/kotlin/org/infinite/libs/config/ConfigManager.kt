@@ -175,6 +175,7 @@ object ConfigManager : MinecraftInterface() {
 
     fun loadLocal() {
         ensureLocal()
+        InfiniteClient.localFeatures.reset()
         getLocalPath()?.let { path ->
             val file = File(baseDir, "local/$path/local.json")
             if (file.exists()) applyData(InfiniteClient.localFeatures, load(file))
