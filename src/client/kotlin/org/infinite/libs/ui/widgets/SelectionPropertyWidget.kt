@@ -67,7 +67,7 @@ class SelectionPropertyWidget<T : Any>(
             g2d.fillStyle = if (active) colorScheme.foregroundColor else colorScheme.secondaryColor
 
             // 中央揃え
-            g2d.textCentered(displayText, x + width / 2f, y + height / 2f - 4f)
+            g2d.textCentered(displayText, x + width / 2f, y + height / 2f)
             g2d.flush()
         }
 
