@@ -31,10 +31,9 @@ class ArcheryFeature : LocalFeature() {
         val hand = if (originalPacket is ServerboundUseItemPacket) originalPacket.hand else player.usedItemHand
         val itemStack = player.getItemInHand(hand)
 
-        // 対象アイテムの拡張
-        val isBow = itemStack.`is`(Items.BOW)
-        val isCrossbow = itemStack.`is`(Items.CROSSBOW)
-        val isTrident = itemStack.`is`(Items.TRIDENT) // 追加
+        val isBow = itemStack.item == Items.BOW
+        val isCrossbow = itemStack.item == Items.CROSSBOW
+        val isTrident = itemStack.item == Items.TRIDENT
         if (!isBow && !isCrossbow && !isTrident) {
             return sendCall(originalPacket, listener, flush)
         }
@@ -94,6 +93,7 @@ class ArcheryFeature : LocalFeature() {
 
         ci.cancel() // 元のパケット送信をキャンセル
     }
+
     override fun onStartUiRendering(graphics2D: Graphics2D) {
         val result = ArrowProjectile.analyze() ?: return
         this.analysis = result

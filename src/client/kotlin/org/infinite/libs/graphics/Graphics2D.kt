@@ -187,12 +187,12 @@ open class Graphics2D(
         iy2: Float,
         ix3: Float,
         iy3: Float,
-        icol0: Int,
-        icol1: Int,
-        icol2: Int,
-        icol3: Int,
+        color0: Int,
+        color1: Int,
+        color2: Int,
+        color3: Int,
     ) {
-        strokeOperations.strokeQuad(ix0, iy0, ix1, iy1, ix2, iy2, ix3, iy3, icol0, icol1, icol2, icol3)
+        strokeOperations.strokeQuad(ix0, iy0, ix1, iy1, ix2, iy2, ix3, iy3, color0, color1, color2, color3)
     }
 
     // --- strokeTriangle ---
@@ -324,7 +324,7 @@ open class Graphics2D(
         // ViewProjection行列の合成
         val viewProjectionMatrix = Matrix4f(data.projectionMatrix).mul(data.modelViewMatrix)
         targetVector.mul(viewProjectionMatrix)
-        val w = targetVector.w * fovFactor
+        val w = targetVector.w
         if (w <= 0.05f) return null
 
         val ndcX = targetVector.x / w

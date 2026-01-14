@@ -36,83 +36,63 @@ abstract class AbstractProjectile : MinecraftInterface() {
         target: Entity,
         startPos: Vec3,
         iterations: Int = 3,
-        overrideTargetPos: Vec3? = null, // ポーション等で足元を狙いたい場合に使用
+        overrideTargetPos: Vec3? = null,
     ): TrajectoryAnalysis {
         val targetVel = target.deltaMovement
-        // 初期予測位置。overrideTargetPosがあればそれを優先
-        var predictedPos = overrideTargetPos ?: target.getPosition(minecraft.deltaTracker.gameTimeDeltaTicks)
-        var lastAnalysis = TrajectoryAnalysis(0.0, 0.0, PathStatus.Uncertain, predictedPos, 0, false)
+        val gameTimeDelta = minecraft.deltaTracker.gameTimeDeltaTicks
+
+        // 初期ターゲット位置
+        var currentPredictedPos = overrideTargetPos ?: target.getPosition(gameTimeDelta)
+        var lastTicks = 0
+        var finalAnalysis = TrajectoryAnalysis(0.0, 0.0, PathStatus.Uncertain, currentPredictedPos, 0, false)
 
         repeat(iterations) {
-            val dx = predictedPos.x - startPos.x
-            val dz = predictedPos.z - startPos.z
-            val horizontalDist = sqrt(dx * dx + dz * dz)
-            val player = player ?: return@repeat
-
-            val yRot = if (horizontalDist < 0.0001) player.yRot.toDouble() else (atan2(-dx, dz) * (180.0 / PI))
-            val currentPitch = player.xRot.toDouble()
-            val limitUpper = currentPitch - 90.0
-
-            // 最大射程の計算 (ドラッグを考慮したシミュレーションに修正)
-            val maxRangePitch = findMaxRangeAngle(basePower, 0.0, limitUpper, currentPitch)
-            val (maxDist, _) = simulateForDistance(basePower, maxRangePitch, 0.0, predictedPos.y - startPos.y)
-
-            if (horizontalDist > maxDist) {
-                lastAnalysis =
-                    TrajectoryAnalysis(maxRangePitch, yRot, PathStatus.Unreachable, predictedPos, maxStep, false)
+            // --- ターゲット位置の動的調整 (狙い目の決定) ---
+            val finalTarget = if (overrideTargetPos != null) {
+                overrideTargetPos
             } else {
-                // ドラッグを考慮したピッチ解決
-                val highPitch =
-                    solvePitchStrict(basePower, 0.0, predictedPos, startPos, limitUpper, maxRangePitch)
-                val lowPitch =
-                    solvePitchStrict(basePower, 0.0, predictedPos, startPos, maxRangePitch, currentPitch)
-
-                // --- ターゲット位置の動的調整 (アイテム特性別) ---
-                val finalTarget = if (overrideTargetPos != null) {
-                    // ポーション等の地点指定がある場合
-                    overrideTargetPos
-                } else {
-                    val isCloseRange = kotlin.math.abs(lowPitch - currentPitch) < 5.0
-                    val targetOffset = if (isCloseRange) {
-                        // 近距離: 目線を狙う
-                        Vec3(0.0, target.eyeHeight.toDouble(), 0.0)
-                    } else {
-                        // 遠距離: 足元の少し手前を狙う (釣り竿の場合は少し上にする等の調整も可)
-                        val toPlayer = startPos.subtract(predictedPos).normalize().scale(0.2)
-                        Vec3(toPlayer.x, target.eyeHeight * 0.1, toPlayer.z)
-                    }
-                    predictedPos.add(targetOffset)
+                // 前回ループの ticks に基づいてオフセットを計算
+                // 20t以内: 目 (eyeHeight)
+                // 40t以内: 胴体 (eyeHeight * 0.5)
+                // それ以上: 足元 (0.0)
+                val heightOffset = when {
+                    lastTicks <= 20 -> target.eyeHeight.toDouble()
+                    lastTicks <= 40 -> target.eyeHeight.toDouble() * 0.5
+                    else -> 0.0
                 }
 
-                // 地形チェック (verifyPathもdrag対応が必要)
-                val highRes = verifyPath(basePower, highPitch, yRot, finalTarget, startPos)
-                val lowRes = verifyPath(basePower, lowPitch, yRot, finalTarget, startPos)
-
-                lastAnalysis = when {
-                    lowRes.status == PathStatus.Clear ->
-                        TrajectoryAnalysis(lowPitch, yRot, PathStatus.Clear, finalTarget, lowRes.ticks, false)
-
-                    highRes.status == PathStatus.Clear ->
-                        TrajectoryAnalysis(highPitch, yRot, PathStatus.Clear, finalTarget, highRes.ticks, true)
-
-                    else ->
-                        TrajectoryAnalysis(highPitch, yRot, PathStatus.Obstructed, finalTarget, highRes.ticks, true)
-                }
+                // 元の予測位置（足元）に高さを加える
+                currentPredictedPos.add(0.0, heightOffset, 0.0)
             }
 
-            // 偏差予測の更新
-            val ticks = lastAnalysis.travelTicks
-            val vY = if (target.onGround()) 0.0 else targetVel.y
+            // 1. 現在の予測位置に対して解析を実行
+            val currentAnalysis = analysisStaticPos(basePower, finalTarget, startPos)
+            finalAnalysis = currentAnalysis
+            lastTicks = currentAnalysis.travelTicks
 
-            // 次のイテレーション用の予測位置更新
-            val nextBasePos = overrideTargetPos ?: target.getPosition(minecraft.deltaTracker.gameTimeDeltaTicks)
-            predictedPos = nextBasePos.add(
-                targetVel.x * ticks,
-                vY * ticks,
-                targetVel.z * ticks,
+            // 2. 射程外なら中断
+            if (currentAnalysis.status == PathStatus.Unreachable) {
+                return@repeat
+            }
+
+            // 3. 偏差予測（移動先）の更新
+            val vY = if (target.onGround()) 0.0 else targetVel.y
+            val basePos = overrideTargetPos ?: target.getPosition(gameTimeDelta)
+
+            val nextPredictedPos = basePos.add(
+                targetVel.x * lastTicks,
+                vY * lastTicks,
+                targetVel.z * lastTicks,
             )
+
+            // 収束チェック
+            if (nextPredictedPos.distanceToSqr(currentPredictedPos) < 0.01) {
+                return@repeat
+            }
+            currentPredictedPos = nextPredictedPos
         }
-        return lastAnalysis
+
+        return finalAnalysis
     }
 
     fun analysisStaticPos(
@@ -129,15 +109,15 @@ abstract class AbstractProjectile : MinecraftInterface() {
         val currentPitch = player.xRot.toDouble()
         val limitUpper = currentPitch - 90.0
 
-        val maxRangePitch = findMaxRangeAngle(basePower, 0.0, limitUpper, currentPitch)
-        val (maxDist, _) = simulateForDistance(basePower, maxRangePitch, 0.0, targetPos.y - startPos.y)
+        val maxRangePitch = findMaxRangeAngle(basePower, limitUpper, currentPitch)
+        val (maxDist, _) = simulateForDistance(basePower, maxRangePitch, targetPos.y - startPos.y)
 
         if (horizontalDist > maxDist) {
             return TrajectoryAnalysis(maxRangePitch, yRot, PathStatus.Unreachable, targetPos, maxStep, false)
         }
 
-        val highPitch = solvePitchStrict(basePower, 0.0, targetPos, startPos, limitUpper, maxRangePitch)
-        val lowPitch = solvePitchStrict(basePower, 0.0, targetPos, startPos, maxRangePitch, currentPitch)
+        val highPitch = solvePitchStrict(basePower, targetPos, startPos, limitUpper, maxRangePitch)
+        val lowPitch = solvePitchStrict(basePower, targetPos, startPos, maxRangePitch, currentPitch)
 
         val highRes = verifyPath(basePower, highPitch, yRot, targetPos, startPos)
         val lowRes = verifyPath(basePower, lowPitch, yRot, targetPos, startPos)
@@ -154,7 +134,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
         }
     }
 
-    protected fun simulateFast(v: Double, pitchDeg: Double, vY0: Double, targetX: Double): Pair<Double, Int> {
+    protected fun simulateFast(v: Double, pitchDeg: Double, targetX: Double): Pair<Double, Int> {
         val rad = pitchDeg * (PI / 180.0)
         var pX = 0.0
         var pY = 0.0
@@ -164,7 +144,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
         var velX = v * cos(rad)
         // 2. velY: Minecraftではマイナスが上なので、-sin(rad) とすることで
         //    上向き(-90°)の時に正の速度 (+1.0) が得られるようにする
-        var velY = (-sin(rad) * v) + vY0
+        var velY = (-sin(rad) * v)
 
         var tick = 0
         while (tick < maxStep) {
@@ -190,13 +170,13 @@ abstract class AbstractProjectile : MinecraftInterface() {
         return Pair(pY, tick)
     }
 
-    protected fun findMaxRangeAngle(v: Double, vY0: Double, minP: Double, maxP: Double): Double {
+    protected fun findMaxRangeAngle(v: Double, minP: Double, maxP: Double): Double {
         var low = minP
         var high = maxP
         repeat(10) {
             val m1 = low + (high - low) / 3
             val m2 = high - (high - low) / 3
-            if (simulateForDistance(v, m1, vY0, 0.0).first > simulateForDistance(v, m2, vY0, 0.0).first) {
+            if (simulateForDistance(v, m1, 0.0).first > simulateForDistance(v, m2, 0.0).first) {
                 high = m2
             } else {
                 low = m1
@@ -205,12 +185,12 @@ abstract class AbstractProjectile : MinecraftInterface() {
         return (low + high) / 2.0
     }
 
-    protected fun simulateForDistance(v: Double, pitchDeg: Double, vY0: Double, targetDY: Double): Pair<Double, Int> {
+    protected fun simulateForDistance(v: Double, pitchDeg: Double, targetDY: Double): Pair<Double, Int> {
         val rad = pitchDeg * PI / 180.0
         var pX = 0.0
         var pY = 0.0
         var velX = v * cos(rad)
-        var velY = (-sin(rad) * v) + vY0
+        var velY = (-sin(rad) * v)
 
         for (tick in 1..maxStep) {
             pX += velX
@@ -224,7 +204,6 @@ abstract class AbstractProjectile : MinecraftInterface() {
 
     protected fun solvePitchStrict(
         v: Double,
-        vY0: Double,
         target: Vec3,
         start: Vec3,
         minA: Double,
@@ -237,7 +216,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
 
         repeat(precision) {
             val mid = (low + high) * 0.5
-            val (resY, _) = simulateFast(v, mid, vY0, horizontalDist)
+            val (resY, _) = simulateFast(v, mid, horizontalDist)
             if (resY < targetDY) high = mid else low = mid
         }
         return (low + high) * 0.5
@@ -247,18 +226,17 @@ abstract class AbstractProjectile : MinecraftInterface() {
         val level = level ?: return PathResult(PathStatus.Obstructed, 0)
         val player = player ?: return PathResult(PathStatus.Obstructed, 0)
 
-        val radY = yRot * (PI / 180.0)
-        val radX = xRot * (PI / 180.0)
-        val cosX = cos(radX)
+        // Minecraftの角度(degrees)からラジアンへ
+        val f = Math.toRadians(yRot)
+        val g = Math.toRadians(xRot)
 
-        // --- ベクトル生成の修正 ---
-        // g (Y成分): -sin(radX) とすることで、xRot=-90(上)のとき g=+1.0 となる
-        val f = -sin(radY) * cosX
-        val g = -sin(radX)
-        val h = cos(radY) * cosX
+        // 方向ベクトルの算出 (Minecraft標準の数式)
+        val hz = cos(g)
+        val vx = -sin(f) * hz
+        val vy = -sin(g)
+        val vz = cos(f) * hz
 
-        var velVec = Vec3(f, g, h).scale(v)
-
+        var velVec = Vec3(vx, vy, vz).normalize().scale(v)
         var currentPos = startPos
         for (tick in 1..maxStep) {
             val nextPos = currentPos.add(velVec)

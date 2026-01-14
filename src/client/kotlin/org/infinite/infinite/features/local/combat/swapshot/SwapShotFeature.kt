@@ -1,6 +1,7 @@
 package org.infinite.infinite.features.local.combat.swapshot
 
 import net.minecraft.core.component.DataComponents
+import net.minecraft.world.InteractionHand
 import net.minecraft.world.item.CrossbowItem
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -22,10 +23,9 @@ class SwapShotFeature : LocalFeature() {
     private var mode = Mode.Reload
     val shotInterval by property(IntProperty(4, 1, 20, "ticks"))
     val offhandFireworks by property(BooleanProperty(true))
+    val autoFire by property(BooleanProperty(true))
 
     private var tickDelay = 0
-
-    // 1ティック内の多重実行を防止するフラグ
     private var actionPerformedThisTick = false
 
     init {
@@ -38,22 +38,27 @@ class SwapShotFeature : LocalFeature() {
     override fun onStartTick() {
         if (minecraft.screen != null || player == null) return
         val inv = InventorySystem
-        actionPerformedThisTick = false // フラグリセット
+        actionPerformedThisTick = false
 
-        if (offhandFireworks.value) handleOffhandFirework()
-
-        // 1. インターバル中なら何もしない
+        // 1. インターバル管理
         if (tickDelay > 0) {
             tickDelay--
             return
         }
 
+        if (offhandFireworks.value) handleOffhandFirework()
+
         val mainHandStack = inv.getItem(InventoryIndex.MainHand)
 
-        // 2. メインハンドの操作（最優先）
+        // 2. メインハンドの処理
         processMainHand(inv, mainHandStack)
 
-        // 3. メインハンドで何も操作しなかった場合のみ、ホットバーの整理を行う
+        // 3. 自動連射処理 (Shotモードで右クリック長押し中)
+        if (mode == Mode.Shot && autoFire.value && minecraft.options.keyUse.isDown) {
+            handleAutoFire()
+        }
+
+        // 4. ホットバーの整理（何もスワップしていない場合のみ）
         if (!actionPerformedThisTick) {
             cleanupHotbar(inv)
         }
@@ -65,30 +70,45 @@ class SwapShotFeature : LocalFeature() {
                 if (!isCharged(mainHandStack)) {
                     val nextLoaded = findCrossbowByState(loadRequired = true)
                     if (nextLoaded != null) {
+                        // 次の弾があるなら即座にスワップ
                         performSwap(inv, InventoryIndex.MainHand, nextLoaded)
                         tickDelay = shotInterval.value
                     } else if (mainHandStack.item is CrossbowItem) {
+                        // 在庫切れなら手を空にする
                         switchToEmptyHand(inv)
+                        tickDelay = 2
                     }
                 }
             }
+
             Mode.Reload -> {
                 if (mainHandStack.item !is CrossbowItem || isCharged(mainHandStack)) {
                     val nextUnloaded = findCrossbowByState(loadRequired = false)
                     if (nextUnloaded != null) {
                         performSwap(inv, InventoryIndex.MainHand, nextUnloaded)
-                        tickDelay = 1 // リロードのスワップは速すぎると同期ミスが起きやすいため少し待機
+                        tickDelay = 1
                     } else if (mainHandStack.item is CrossbowItem) {
                         switchToEmptyHand(inv)
+                        tickDelay = 2
                     }
                 }
             }
         }
     }
 
-    /**
-     * 安全にスワップを実行し、フラグを立てる
-     */
+    private fun handleAutoFire() {
+        val player = player ?: return
+        val stack = player.mainHandItem
+
+        // 装填済みのクロスボウを持っているなら、右クリックを1回シミュレート
+        if (isCharged(stack)) {
+            minecraft.gameMode?.useItem(player, InteractionHand.MAIN_HAND)
+            player.swing(InteractionHand.MAIN_HAND)
+            // 発射直後にディレイを再設定（スワップが早すぎて不発するのを防ぐ）
+            tickDelay = shotInterval.value
+        }
+    }
+
     private fun performSwap(inv: InventorySystem, from: InventoryIndex, to: InventoryIndex) {
         if (actionPerformedThisTick) return
         inv.swapItems(from, to)
@@ -97,7 +117,6 @@ class SwapShotFeature : LocalFeature() {
 
     private fun cleanupHotbar(inv: InventorySystem) {
         val mainSlot = InventoryIndex.MainHand.toContainerSlot()
-
         for (i in 0..8) {
             val hotbarIdx = InventoryIndex.Hotbar(i)
             if (hotbarIdx.toContainerSlot() == mainSlot) continue
@@ -107,15 +126,16 @@ class SwapShotFeature : LocalFeature() {
                 val emptyBackpack = findRealEmptyBackpack(inv)
                 if (emptyBackpack != null) {
                     performSwap(inv, hotbarIdx, emptyBackpack)
-                    return // 1ティックにつき1つだけ移動
+                    return
                 }
             }
         }
     }
 
     private fun switchToEmptyHand(inv: InventorySystem) {
+        if (actionPerformedThisTick) return
         val emptySlot = findRealEmptyBackpack(inv) ?: findEmptyHotbarSlot(inv)
-        if (emptySlot != null && inv.getItem(emptySlot).isEmpty) {
+        if (emptySlot != null && !inv.getItem(InventoryIndex.MainHand).isEmpty) {
             performSwap(inv, InventoryIndex.MainHand, emptySlot)
         }
     }
@@ -146,6 +166,7 @@ class SwapShotFeature : LocalFeature() {
     private fun findCrossbowByState(loadRequired: Boolean): InventoryIndex? {
         val inv = InventorySystem
         val mainSlot = InventoryIndex.MainHand.toContainerSlot()
+        // バックパックを優先して検索
         val targets = (0..26).map { InventoryIndex.Backpack(it) } + (0..8).map { InventoryIndex.Hotbar(it) }
 
         for (idx in targets) {
@@ -168,23 +189,29 @@ class SwapShotFeature : LocalFeature() {
         graphics2D.push()
         val cx = graphics2D.width / 2f
         val cy = graphics2D.height / 2f
-        val crosshairRadius = 12f
+        val crosshairRadius = 16f
 
-        // 背景
-        graphics2D.strokeStyle.color = colorScheme.foregroundColor.alpha(100)
+        graphics2D.strokeStyle.color = (if (mode == Mode.Shot) colorScheme.foregroundColor else colorScheme.accentColor).alpha(100)
         graphics2D.strokeStyle.width = 1.0f
         graphics2D.beginPath()
         graphics2D.arc(cx, cy, crosshairRadius, 0f, (PI * 2).toFloat(), false)
         graphics2D.strokePath()
-
-        // 装填済み割合
-        graphics2D.strokeStyle.color = colorScheme.accentColor
-        graphics2D.strokeStyle.width = 2.5f
-        graphics2D.beginPath()
-        graphics2D.arc(cx, cy, crosshairRadius, -PI.toFloat() / 2, (loadedPercentage * 2 * PI.toFloat()) - PI.toFloat() / 2, false)
-        graphics2D.strokePath()
-
-        graphics2D.textStyle.size = 8f
+        if (loaded > 0) {
+            graphics2D.strokeStyle.color = colorScheme.accentColor
+            graphics2D.strokeStyle.width = 2.5f
+            graphics2D.beginPath()
+            graphics2D.arc(
+                cx,
+                cy,
+                crosshairRadius,
+                -PI.toFloat() / 2,
+                (loadedPercentage * 2 * PI.toFloat()) - PI.toFloat() / 2,
+                false,
+            )
+            graphics2D.strokePath()
+        }
+        graphics2D.textStyle.size = 10f
+        graphics2D.textStyle.font = "infinite_regular"
         graphics2D.fillStyle = if (mode == Mode.Shot) colorScheme.accentColor else colorScheme.foregroundColor
         graphics2D.textCentered(mode.name.uppercase(), cx, cy + crosshairRadius + 10f)
         graphics2D.pop()

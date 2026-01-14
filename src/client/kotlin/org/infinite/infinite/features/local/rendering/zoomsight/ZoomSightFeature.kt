@@ -84,6 +84,7 @@ class ZoomSightFeature : LocalFeature() {
         val zoomText = String.format("%.1fx", currentZoom)
         graphics2D.textStyle.size = 12f
         graphics2D.textStyle.font = "infinite_regular"
+        graphics2D.textStyle.shadow = true
         graphics2D.fillStyle = InfiniteClient.theme.colorScheme.foregroundColor
         graphics2D.textCentered(zoomText, centerX, centerY + offset + 20f)
     }

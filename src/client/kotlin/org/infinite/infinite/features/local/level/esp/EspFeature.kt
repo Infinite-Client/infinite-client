@@ -2,6 +2,7 @@ package org.infinite.infinite.features.local.level.esp
 
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.ExperienceOrb
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.Animal
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.monster.Enemy
@@ -23,7 +24,8 @@ class EspFeature : LocalFeature() {
         return when (entity) {
             is Player -> playerEsp.value
             is ItemEntity, is ExperienceOrb -> itemEsp.value
-            else -> mobEsp.value
+            is LivingEntity -> mobEsp.value
+            else -> false
         }
     }
 
