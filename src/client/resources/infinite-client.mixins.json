@@ -14,6 +14,7 @@
     "graphics.ScreenAccessor",
     "graphics.ScreenMixin",
     "graphics.UiMixin",
+    "infinite.features.global.rendering.loading.LoadingOverlayMixin",
     "infinite.features.global.rendering.theme.ButtonBackgroundMixin",
     "infinite.features.global.rendering.theme.EditBoxMixin",
     "infinite.features.global.rendering.theme.ScrollWidgetMixin",

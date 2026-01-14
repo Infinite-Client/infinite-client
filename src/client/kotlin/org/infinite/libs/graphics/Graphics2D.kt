@@ -312,6 +312,14 @@ open class Graphics2D(
         )
     }
 
+    fun imageCentered(
+        image: Image,
+        x: Float,
+        y: Float,
+        width: Float = image.width.toFloat(),
+        height: Float = image.height.toFloat(),
+    ) = image(image, x - width / 2f, y - height / 2f, width, height)
+
     fun projectWorldToScreen(worldPos: Vec3): Pair<Double, Double>? {
         val data = RenderTicks.latestProjectionData ?: return null
 

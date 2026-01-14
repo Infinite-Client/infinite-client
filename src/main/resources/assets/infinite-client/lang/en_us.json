@@ -184,5 +184,6 @@
   "key.infinite.features.local.combat.swap_shot_feature.switch_mode": "Switch Swap Mode",
   "key.infinite.features.local.combat.swap_shot_feature.toggle": "Toggle Swap Shot",
   "key.infinite.features.local.inventory.restock_feature.toggle": "Toggle Restock",
-  "infinite.features.local.combat.lock_on_feature.aim_bias": "Aim Bias (Distance <-> Angle)"
+  "infinite.features.local.combat.lock_on_feature.aim_bias": "Aim Bias (Distance <-> Angle)",
+  "infinite.features.global.rendering.infinite_loading_feature": "Infinite Loading Feature"
 }

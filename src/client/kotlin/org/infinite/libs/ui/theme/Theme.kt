@@ -22,7 +22,7 @@ abstract class Theme {
         y: Int,
         width: Int,
         height: Int,
-        graphics2DRenderer: Graphics2D,
+        graphics2D: Graphics2D,
         alpha: Float = 1.0f,
-    ) = renderBackGround(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat(), graphics2DRenderer, alpha)
+    ) = renderBackGround(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat(), graphics2D, alpha)
 }
