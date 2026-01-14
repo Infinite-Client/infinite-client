@@ -45,7 +45,7 @@ open class ColorScheme {
     open val magentaColor: Int = 0xFFFF00FF.toInt()
     open val whiteColor: Int = 0xFFFFFFFF.toInt()
     open val blackColor: Int = 0xFF000000.toInt()
-    fun color(hue: Float, saturation: Float, lightness: Float, alpha: Float): Int {
+    fun color(hue: Float, saturation: Float, lightness: Float, alpha: Float = 1f): Int {
         if (saturation <= 0.001f) {
             return interpolate(blackColor, whiteColor, lightness, alpha)
         }

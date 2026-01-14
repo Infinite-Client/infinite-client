@@ -34,54 +34,87 @@ class ThrowableProjectile(private val feature: ThrowableFeature) : AbstractProje
         }
         val itemStack = player.getItemInHand(hand)
 
+        // アイテムごとの物理定数設定
         val velocity = when (itemStack.item) {
             is EnderpearlItem, is EggItem, is SnowballItem -> {
-                gravity = 0.03
+                gravity = 0.03 // 雪玉、卵、パール
                 1.5
             }
+
             is ExperienceBottleItem -> {
-                gravity = 0.07
+                gravity = 0.07 // エンチャントの瓶は重い
                 0.7
             }
+
             is ThrowablePotionItem -> {
-                gravity = 0.05
+                gravity = 0.05 // スプラッシュポーション
                 0.5
             }
+
             else -> return null
         }
 
         val startPos = player.getEyePosition(0f)
         val playerVel = player.deltaMovement
+        val currentPitch = player.xRot.toDouble()
         val lockOnTarget = InfiniteClient.localFeatures.combat.lockOnFeature.lockedEntity as? LivingEntity
 
         return if (lockOnTarget != null) {
-            // 【修正点】analysisAdvanced に heightBias を渡す
-            val analysis = analysisAdvanced(
+            // --- エンティティロックオン時 ---
+            analysisAdvanced(
                 basePower = velocity,
-                playerVel = playerVel,
                 target = lockOnTarget,
                 startPos = startPos,
                 iterations = 3,
-            )
-
-            // Ping補正を最終予測位置（hitPos）にのみ適用
-            val latencyTicks = (minecraft.connection?.getPlayerInfo(player.uuid)?.latency ?: 0) / 50.0
-            val latencyOffset = lockOnTarget.deltaMovement.scale(latencyTicks)
-
-            analysis.copy(hitPos = analysis.hitPos.add(latencyOffset))
+            ).let { analysis ->
+                // Ping補正を最終予測位置に適用
+                val latencyTicks = (minecraft.connection?.getPlayerInfo(player.uuid)?.latency ?: 0) / 50.0
+                val latencyOffset = lockOnTarget.deltaMovement.scale(latencyTicks)
+                analysis.copy(hitPos = analysis.hitPos.add(latencyOffset))
+            }
         } else {
-            // --- ターゲットがいない場合: クロスヘア方向への射角計算 ---
+            // --- ターゲット座標指定時 (クロスヘア方向) ---
             val lookTarget = getTargetPos(feature.maxReach.value.toDouble()) ?: return null
             val dx = lookTarget.x - startPos.x
             val dz = lookTarget.z - startPos.z
             val horizontalDist = sqrt(dx * dx + dz * dz)
             val yRot = if (horizontalDist < 0.0001) player.yRot.toDouble() else (atan2(-dx, dz) * (180.0 / PI))
 
-            solveOptimalAngle(velocity, playerVel, lookTarget, startPos, yRot)
+            // 最大射程の境界を特定
+            val limitUpper = currentPitch - 90.0
+            val maxRangePitch = findMaxRangeAngle(velocity, playerVel.y, limitUpper, currentPitch)
+            val (maxDist, _) = simulateForDistance(velocity, maxRangePitch, playerVel.y, lookTarget.y - startPos.y)
+
+            if (horizontalDist > maxDist) {
+                // 射程外
+                TrajectoryAnalysis(maxRangePitch, yRot, PathStatus.Obstructed, lookTarget, maxStep, false)
+            } else {
+                // 射程内: 高射角と低射角を計算
+                val highPitch = solvePitchStrict(velocity, playerVel.y, lookTarget, startPos, limitUpper, maxRangePitch)
+                val lowPitch =
+                    solvePitchStrict(velocity, playerVel.y, lookTarget, startPos, maxRangePitch, currentPitch)
+
+                // 地形チェック
+                val highRes = verifyPath(velocity, highPitch, yRot, lookTarget, startPos)
+                val lowRes = verifyPath(velocity, lowPitch, yRot, lookTarget, startPos)
+
+                when {
+                    lowRes.status == PathStatus.Clear ->
+                        TrajectoryAnalysis(lowPitch, yRot, PathStatus.Clear, lookTarget, lowRes.ticks, false)
+
+                    highRes.status == PathStatus.Clear ->
+                        TrajectoryAnalysis(highPitch, yRot, PathStatus.Clear, lookTarget, highRes.ticks, true)
+
+                    else ->
+                        TrajectoryAnalysis(highPitch, yRot, PathStatus.Obstructed, lookTarget, highRes.ticks, true)
+                }
+            }
         }
     }
 
-    private fun isThrowableItem(stack: ItemStack): Boolean = stack.item is SnowballItem || stack.item is EggItem || stack.item is EnderpearlItem || stack.item is ThrowablePotionItem || stack.item is ExperienceBottleItem
+    private fun isThrowableItem(stack: ItemStack): Boolean =
+        stack.item is SnowballItem || stack.item is EggItem || stack.item is EnderpearlItem ||
+            stack.item is ThrowablePotionItem || stack.item is ExperienceBottleItem
 
     private fun getTargetPos(reach: Double): Vec3? {
         val p = player ?: return null

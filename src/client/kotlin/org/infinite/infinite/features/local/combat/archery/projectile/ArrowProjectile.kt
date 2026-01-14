@@ -10,8 +10,6 @@ import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.infinite.features.local.combat.archery.ArcheryFeature
 import org.infinite.libs.minecraft.projectile.AbstractProjectile
-import kotlin.math.atan2
-import kotlin.math.sqrt
 
 class ArrowProjectile(private val feature: ArcheryFeature) : AbstractProjectile() {
 
@@ -24,67 +22,73 @@ class ArrowProjectile(private val feature: ArcheryFeature) : AbstractProjectile(
         val player = this.player ?: return null
         val item = player.mainHandItem
 
-        // 1. 発射パワーの決定
+        // 1. 発射パワー（初速）の決定
         val basePower = when (item.item) {
             Items.BOW -> {
+                // 溜め時間に応じたパワー計算 (最大3.0)
                 if (player.useItemRemainingTicks <= 0 && player.ticksUsingItem == 0) return null
                 BowItem.getPowerForTime(player.ticksUsingItem).toDouble() * 3.0
             }
-
             Items.CROSSBOW -> {
+                // クロスボウは溜めに関わらず一定 (3.15)
                 if (!CrossbowItem.isCharged(item)) return null
                 3.15
             }
-
             else -> return null
         }
+
+        // 最低限のパワーがない場合は計算しない
         if (basePower < 0.1) return null
 
         // 2. 基本情報のセットアップ
+        // 矢の発射位は視線よりわずかに下
         val startPos = player.getEyePosition(0f).subtract(0.0, 0.1, 0.0)
-        // プレイヤーの移動速度（慣性）。地上にいるときは水平方向のみ考慮されることが多い
-        val playerVel = player.deltaMovement
+        player.deltaMovement
 
-        // 3. ターゲットの特定と計算
+        // 3. ターゲットの特定と解析
         val lockOnTarget = InfiniteClient.localFeatures.combat.lockOnFeature.lockedEntity as? LivingEntity
 
         return if (lockOnTarget != null) {
-            // ロックオン中の場合：高度な反復予測（偏差撃ち + 山なり回避）を実行
-            // 基底クラスの analysisAdvanced を呼び出す
+            // --- エンティティを狙う場合 ---
+            // 偏差予測を行い、高射角/低射角を自動選択。ターゲットの上下シフト（オフセット）あり。
             analysisAdvanced(
                 basePower = basePower,
-                playerVel = playerVel,
                 target = lockOnTarget,
                 startPos = startPos,
-                iterations = 3, // 3回反復して精度を確保
+                iterations = 3,
             ).let { result ->
-                // Ping補正を結果の hitPos に反映（UI表示用）
+                // UI表示用にPing（通信遅延）を考慮した位置補正を加える
                 val latencyTicks = (minecraft.connection?.getPlayerInfo(player.uuid)?.latency ?: 0) / 50.0
                 val latencyOffset = lockOnTarget.deltaMovement.scale(latencyTicks)
                 result.copy(hitPos = result.hitPos.add(latencyOffset))
             }
         } else {
-            // ロックオンしていない場合：レティクルの先を狙う（従来の計算）
-            val targetPos = getTargetPos() ?: return null
-            val dx = targetPos.x - startPos.x
-            val dz = targetPos.z - startPos.z
-            val horizontalDist = sqrt(dx * dx + dz * dz)
-            val yRot =
-                if (horizontalDist < 0.0001) player.yRot.toDouble() else (atan2(-dx, dz) * (180.0 / Math.PI))
+            // --- 地形を狙う場合（ロックオンなし） ---
+            // レイキャストの着弾点を基準点とし、上下シフトなしでピンポイントに狙う。
+            val lookTarget = getTargetPos() ?: return null
 
-            // solveOptimalAngle を使って、遮蔽物がある場合に山なり弾道を選択
-            solveOptimalAngle(basePower, playerVel, targetPos, startPos, yRot)
+            analysisStaticPos(
+                basePower = basePower,
+                targetPos = lookTarget,
+                startPos = startPos,
+            )
         }
     }
 
+    /**
+     * 現在の視線方向にある着弾点を取得（地形優先）
+     */
     private fun getTargetPos(): Vec3? {
         val p = player ?: return null
         val reach = feature.maxReach.value.toDouble()
+
+        // レイキャストを実行してブロックまたはエンティティを探す
         val hitResult = ProjectileUtil.getHitResultOnViewVector(p, { !it.isSpectator && it.isPickable }, reach)
 
         return if (hitResult.type != HitResult.Type.MISS) {
             hitResult.location
         } else {
+            // 何もヒットしなかった場合は射程限界の空中の座標を返す
             p.getEyePosition(1.0f).add(p.lookAngle.normalize().scale(reach))
         }
     }
