@@ -52,12 +52,12 @@ abstract class AbstractProjectile : MinecraftInterface() {
                 overrideTargetPos
             } else {
                 // 前回ループの ticks に基づいてオフセットを計算
-                // 20t以内: 目 (eyeHeight)
-                // 40t以内: 胴体 (eyeHeight * 0.5)
+                // 10t以内: 目 (eyeHeight)
+                // 20t以内: 胴体 (eyeHeight * 0.5)
                 // それ以上: 足元 (0.0)
                 val heightOffset = when {
-                    lastTicks <= 20 -> target.eyeHeight.toDouble()
-                    lastTicks <= 40 -> target.eyeHeight.toDouble() * 0.5
+                    lastTicks <= 10 -> target.eyeHeight.toDouble()
+                    lastTicks <= 20 -> target.eyeHeight.toDouble() * 0.5
                     else -> 0.0
                 }
 

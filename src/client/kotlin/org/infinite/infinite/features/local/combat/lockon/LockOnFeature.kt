@@ -52,6 +52,7 @@ class LockOnFeature : LocalFeature() {
     private val autoNextTarget by property(BooleanProperty(true)) // 次の標的を自動で探すか
     private val autoReselect by property(BooleanProperty(true))
     private val method by property(EnumSelectionProperty(AimCalculateMethod.Linear))
+    private val aimBias by property(DoubleProperty(0.7, 0.0, 1.0, "Angle Bias"))
 
     init {
         // L: 新しいターゲットを追加
@@ -209,6 +210,7 @@ class LockOnFeature : LocalFeature() {
             updateAimTask()
         }
     }
+
     private fun updateAimTask() {
         val target = lockedEntity ?: run {
             currentTask = null
@@ -245,11 +247,21 @@ class LockOnFeature : LocalFeature() {
     private fun calculateCombinedScore(p: Player, target: LivingEntity): Double {
         val playerLookVec = p.lookAngle.normalize()
         val targetVec = target.boundingBox.center.subtract(p.eyePosition).normalize()
+
+        // 視線方向とターゲット方向の角度差 (0° ~ 180°)
         val angle = Math.toDegrees(acos(playerLookVec.dot(targetVec).coerceIn(-1.0, 1.0)))
 
+        // 各値を 0.0 ~ 1.0 に正規化
         val distNormalized = (p.distanceTo(target) / range.value).coerceIn(0.0, 1.0)
-        val angleNormalized = (angle / 90.0).coerceIn(0.0, 1.0)
-        return (angleNormalized * 0.7) + (distNormalized * 0.3)
+        val angleNormalized = (angle / 180.0).coerceIn(0.0, 1.0) // 90度以上も考慮し180で割るのが安全
+
+        // biasProperty を使った重み付け
+        // bias = 1.0 のとき angleNormalized * 1.0 (角度のみ)
+        // bias = 0.0 のとき distNormalized * 1.0 (距離のみ)
+        val angleWeight = aimBias.value
+        val distWeight = 1.0 - angleWeight
+
+        return (angleNormalized * angleWeight) + (distNormalized * distWeight)
     }
 
     override fun onEndUiRendering(graphics2D: Graphics2D) {
