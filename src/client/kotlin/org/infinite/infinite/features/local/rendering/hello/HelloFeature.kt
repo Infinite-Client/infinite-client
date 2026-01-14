@@ -58,7 +58,7 @@ class HelloFeature : LocalFeature() {
         LogSystem.log("HelloFeature Connected!")
     }
 
-    override fun onEndUiRendering(graphics2D: Graphics2D): Graphics2D {
+    override fun onEndUiRendering(graphics2D: Graphics2D) {
         // --- 1. 基本図形 ---
         graphics2D.fillStyle = 0x80FF0000.toInt()
         graphics2D.fillRect(10f, 10f, 100f, 50f)
@@ -128,7 +128,7 @@ class HelloFeature : LocalFeature() {
         }
 
         // --- 5. アイテム描画テスト ---
-        val player = player ?: return graphics2D
+        val player = player ?: return
         val stack = if (!player.mainHandItem.isEmpty) {
             player.mainHandItem
         } else {
@@ -197,7 +197,6 @@ class HelloFeature : LocalFeature() {
         } finally {
             graphics2D.pop()
         }
-        return graphics2D
     }
 
     override fun onLevelRendering(graphics3D: Graphics3D): Graphics3D = graphics3D

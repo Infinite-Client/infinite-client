@@ -15,7 +15,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 class QuickMoveFeature : LocalFeature() {
-    override val featureType: FeatureType = FeatureType.Cheat
+    override val featureType: FeatureLevel = FeatureLevel.Cheat
     override val categoryClass = LocalMovementCategory::class
 
     // 基準となる各環境の移動速度（ブロック/秒）を定義

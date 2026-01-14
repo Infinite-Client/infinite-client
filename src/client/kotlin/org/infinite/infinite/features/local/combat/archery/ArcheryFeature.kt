@@ -16,7 +16,7 @@ import org.infinite.libs.minecraft.projectile.AbstractProjectile
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 class ArcheryFeature : LocalFeature() {
-    override val featureType = FeatureType.Extend
+    override val featureType = FeatureLevel.Extend
     private var analysis: AbstractProjectile.TrajectoryAnalysis? = null
 
     fun handleWrappedLaunch(
@@ -94,11 +94,10 @@ class ArcheryFeature : LocalFeature() {
 
         ci.cancel() // 元のパケット送信をキャンセル
     }
-    override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
-        val result = ArrowProjectile.analyze() ?: return graphics2D
+    override fun onStartUiRendering(graphics2D: Graphics2D) {
+        val result = ArrowProjectile.analyze() ?: return
         this.analysis = result
-
-        return ArrowProjectile.renderTrajectoryUI(
+        ArrowProjectile.renderTrajectoryUI(
             graphics2D,
             result,
             InfiniteClient.theme.colorScheme.accentColor,

@@ -1,6 +1,11 @@
 package org.infinite.libs.core.features.categories.category
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import net.minecraft.client.DeltaTracker
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.feature.LocalFeature
@@ -74,9 +79,9 @@ abstract class LocalCategory : Category<KClass<out LocalFeature>, LocalFeature>(
             async(Dispatchers.Default) {
                 val graphics2D = Graphics2D(deltaTracker)
                 val priority = block(feature, graphics2D)
-                val cmds = graphics2D.commands()
-                if (cmds.isNotEmpty()) {
-                    tempQueue.add(InternalCommandWrapper(priority, cmds.toList()))
+                val cmd = graphics2D.commands()
+                if (cmd.isNotEmpty()) {
+                    tempQueue.add(InternalCommandWrapper(priority, cmd.toList()))
                 }
             }
         }.awaitAll()

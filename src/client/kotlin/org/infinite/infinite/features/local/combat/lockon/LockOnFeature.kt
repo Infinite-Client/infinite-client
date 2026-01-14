@@ -155,12 +155,11 @@ class LockOnFeature : LocalFeature() {
         return (angleNormalized * 0.6) + (distNormalized * 0.4)
     }
 
-    override fun onEndUiRendering(graphics2D: Graphics2D): Graphics2D {
-        val target = lockedEntity ?: return graphics2D
+    override fun onEndUiRendering(graphics2D: Graphics2D) {
+        val target = lockedEntity ?: return
         // 描画ロジック（そのまま）
         val targetPos = target.getPosition(graphics2D.gameDelta).add(0.0, target.eyeHeight.toDouble(), 0.0)
-        val screenPos = graphics2D.projectWorldToScreen(targetPos) ?: return graphics2D
-
+        val screenPos = graphics2D.projectWorldToScreen(targetPos) ?: return
         val x = screenPos.first.toFloat()
         val y = screenPos.second.toFloat()
         val size = 12f
@@ -180,7 +179,5 @@ class LockOnFeature : LocalFeature() {
         graphics2D.moveTo(x + size, y - size)
         graphics2D.lineTo(x - size, y + size)
         graphics2D.strokePath()
-
-        return graphics2D
     }
 }

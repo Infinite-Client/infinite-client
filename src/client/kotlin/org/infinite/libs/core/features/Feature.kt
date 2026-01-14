@@ -22,7 +22,7 @@ open class Feature : MinecraftInterface() {
     open val categoryClass: KClass<out Category<*, *>>? = null
 
     // --- 1. 定義とステータス ---
-    enum class FeatureType { Utils, Extend, Cheat }
+    enum class FeatureLevel { Utils, Extend, Cheat }
 
     private val _properties: MutableMap<String, Property<*>> =
         Collections.synchronizedMap(LinkedHashMap<String, Property<*>>())
@@ -32,7 +32,7 @@ open class Feature : MinecraftInterface() {
 
     val enabled = BooleanProperty(false)
     open val name: String = this::class.simpleName ?: "UnknownFeature"
-    open val featureType: FeatureType = FeatureType.Utils
+    open val featureType: FeatureLevel = FeatureLevel.Utils
 
     private val pendingProperties = mutableMapOf<String, Any>()
 

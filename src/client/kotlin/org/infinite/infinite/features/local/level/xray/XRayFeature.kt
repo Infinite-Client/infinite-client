@@ -14,7 +14,7 @@ import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.lwjgl.glfw.GLFW
 
 class XRayFeature : LocalFeature() {
-    override val featureType = FeatureType.Cheat
+    override val featureType = FeatureLevel.Cheat
     override val defaultToggleKey: Int = GLFW.GLFW_KEY_X
 
     enum class Method {

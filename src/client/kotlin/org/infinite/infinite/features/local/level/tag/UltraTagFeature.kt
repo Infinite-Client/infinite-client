@@ -16,7 +16,7 @@ import org.infinite.utils.alpha
 import kotlin.math.acos
 
 class UltraTagFeature : LocalFeature() {
-    override val featureType = FeatureType.Utils
+    override val featureType = FeatureLevel.Utils
 
     private val range by property(IntProperty(64, 16, 256))
     private val showMobs by property(BooleanProperty(true))
@@ -29,9 +29,9 @@ class UltraTagFeature : LocalFeature() {
 
     private val itemHideAngle by property(IntProperty(20, 0, 90))
 
-    override fun onEndUiRendering(graphics2D: Graphics2D): Graphics2D {
-        val p = player ?: return graphics2D
-        val world = level ?: return graphics2D
+    override fun onEndUiRendering(graphics2D: Graphics2D) {
+        val p = player ?: return
+        val world = level ?: return
 
         val boundingBox = p.boundingBox.inflate(range.value.toDouble())
         val candidates = world.getEntities(p, boundingBox) { entity ->
@@ -78,8 +78,6 @@ class UltraTagFeature : LocalFeature() {
 
             graphics2D.pop()
         }
-
-        return graphics2D
     }
 
     private fun renderTag(graphics2D: Graphics2D, entity: Entity, alpha: Float) {
@@ -89,7 +87,6 @@ class UltraTagFeature : LocalFeature() {
 
         val name = if (entity is Player) entity.name.string else ""
         val hasName = name.isNotEmpty()
-        // ItemEntityなどは明示的に除外
         val canHaveHealth = entity is LivingEntity
 
         val padding = 4f
@@ -151,10 +148,20 @@ class UltraTagFeature : LocalFeature() {
             val offHand = entity.getItemBySlot(EquipmentSlot.OFFHAND)
 
             if (!mainHand.isEmpty) {
-                graphics2D.item(mainHand, (tagWidth / 2f) + itemPadding, y + (tagHeight / 2f) - (itemSize / 2f), itemSize)
+                graphics2D.item(
+                    mainHand,
+                    (tagWidth / 2f) + itemPadding,
+                    y + (tagHeight / 2f) - (itemSize / 2f),
+                    itemSize,
+                )
             }
             if (!offHand.isEmpty) {
-                graphics2D.item(offHand, (-tagWidth / 2f) - itemSize - itemPadding, y + (tagHeight / 2f) - (itemSize / 2f), itemSize)
+                graphics2D.item(
+                    offHand,
+                    (-tagWidth / 2f) - itemSize - itemPadding,
+                    y + (tagHeight / 2f) - (itemSize / 2f),
+                    itemSize,
+                )
             }
 
             // 防具 (タグの上側に変更)

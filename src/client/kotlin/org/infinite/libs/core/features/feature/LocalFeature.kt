@@ -79,7 +79,7 @@ open class LocalFeature : Feature(), TickInterface {
     data class RenderPriority(var start: Int, var end: Int)
 
     val renderPriority = RenderPriority(0, 0)
-    open fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D = graphics2D
-    open fun onEndUiRendering(graphics2D: Graphics2D): Graphics2D = graphics2D
+    open fun onStartUiRendering(graphics2D: Graphics2D): Unit = Unit
+    open fun onEndUiRendering(graphics2D: Graphics2D): Unit = Unit
     open fun onLevelRendering(graphics3D: Graphics3D): Graphics3D = graphics3D
 }

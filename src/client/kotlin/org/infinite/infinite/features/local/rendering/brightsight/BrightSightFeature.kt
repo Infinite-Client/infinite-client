@@ -4,7 +4,7 @@ import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 
 class BrightSightFeature : LocalFeature() {
-    override val featureType = FeatureType.Extend
+    override val featureType = FeatureLevel.Extend
 
     enum class Method {
         GamMax, NightSight, UltraBright,

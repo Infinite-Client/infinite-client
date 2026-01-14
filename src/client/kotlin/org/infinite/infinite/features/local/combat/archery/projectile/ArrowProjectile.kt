@@ -14,7 +14,7 @@ import org.infinite.libs.minecraft.projectile.AbstractProjectile
 object ArrowProjectile : AbstractProjectile() {
     private val feature: ArcheryFeature = InfiniteClient.localFeatures.combat.archeryFeature
     override val gravity: Double = 0.05
-    override val drag: Double = 0.99
+    override var drag: Double = 0.99
     override val precision: Int get() = feature.simulationPrecision.value
     override val maxStep: Int get() = feature.simulationMaxSteps.value
 

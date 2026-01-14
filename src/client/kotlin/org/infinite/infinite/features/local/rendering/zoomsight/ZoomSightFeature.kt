@@ -10,7 +10,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 class ZoomSightFeature : LocalFeature() {
-    override val featureType = FeatureType.Extend
+    override val featureType = FeatureLevel.Extend
     override val defaultToggleKey = GLFW.GLFW_KEY_V
 
     val smoothZoom by property(BooleanProperty(true))
@@ -58,7 +58,7 @@ class ZoomSightFeature : LocalFeature() {
         }
     }
 
-    override fun onEndUiRendering(graphics2D: Graphics2D): Graphics2D {
+    override fun onEndUiRendering(graphics2D: Graphics2D) {
         val centerX = graphics2D.width / 2f
         val centerY = graphics2D.height / 2f
 
@@ -86,8 +86,6 @@ class ZoomSightFeature : LocalFeature() {
         graphics2D.textStyle.font = "infinite_regular"
         graphics2D.fillStyle = InfiniteClient.theme.colorScheme.foregroundColor
         graphics2D.textCentered(zoomText, centerX, centerY + offset + 20f)
-
-        return graphics2D
     }
 
     /**

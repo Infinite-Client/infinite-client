@@ -7,7 +7,7 @@ import net.minecraft.world.item.Items
 import org.infinite.libs.core.features.feature.LocalFeature
 
 class QuickShotFeature : LocalFeature() {
-    override val featureType = FeatureType.Utils
+    override val featureType = FeatureLevel.Utils
     override fun onStartTick() {
         val player = player ?: return
 

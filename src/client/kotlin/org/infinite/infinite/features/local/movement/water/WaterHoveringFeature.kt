@@ -10,8 +10,8 @@ class WaterHoveringFeature : LocalFeature() {
     }
 
     private val method by property(EnumSelectionProperty(Method.Jump))
-    override val featureType: FeatureType
-        get() = if (method.value == Method.Jump) FeatureType.Utils else FeatureType.Extend
+    override val featureType: FeatureLevel
+        get() = if (method.value == Method.Jump) FeatureLevel.Utils else FeatureLevel.Extend
 
     override fun onStartTick() {
         val player = player ?: return

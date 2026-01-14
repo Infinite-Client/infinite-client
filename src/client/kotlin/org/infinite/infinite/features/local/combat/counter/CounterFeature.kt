@@ -27,7 +27,7 @@ class CounterFeature : LocalFeature() {
     private val aimSpeed by property(DoubleProperty(5.0, 1.0, 10.0))
     private val anchorPoint by property(EnumSelectionProperty(AimTarget.EntityTarget.EntityAnchor.Chest))
 
-    override val featureType = FeatureType.Utils
+    override val featureType = FeatureLevel.Utils
 
     override fun onEndTick() {
         val player = player ?: run {
@@ -95,9 +95,9 @@ class CounterFeature : LocalFeature() {
         )
     }
 
-    override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
-        val target = target?.getPosition(graphics2D.gameDelta) ?: return graphics2D
-        val pos2d = graphics2D.projectWorldToScreen(target) ?: return graphics2D
+    override fun onStartUiRendering(graphics2D: Graphics2D) {
+        val target = target?.getPosition(graphics2D.gameDelta) ?: return
+        val pos2d = graphics2D.projectWorldToScreen(target) ?: return
         val pos2f = pos2d.first.toFloat() to pos2d.second.toFloat()
         graphics2D.beginPath()
         val size = 12f
@@ -113,6 +113,5 @@ class CounterFeature : LocalFeature() {
         graphics2D.moveTo(pos2f.first, pos2f.second - size)
         graphics2D.lineTo(pos2f.first, pos2f.second + size)
         graphics2D.strokePath()
-        return graphics2D
     }
 }

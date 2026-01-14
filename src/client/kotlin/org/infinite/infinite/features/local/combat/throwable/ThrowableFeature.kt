@@ -20,7 +20,7 @@ import org.infinite.libs.minecraft.projectile.AbstractProjectile
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 class ThrowableFeature : LocalFeature() {
-    override val featureType = FeatureType.Extend
+    override val featureType = FeatureLevel.Extend
     private var analysis: AbstractProjectile.TrajectoryAnalysis? = null
 
     fun handleWrappedLaunch(
@@ -88,11 +88,11 @@ class ThrowableFeature : LocalFeature() {
         ci.cancel()
     }
 
-    override fun onStartUiRendering(graphics2D: Graphics2D): Graphics2D {
-        val analysisResult = ThrowableProjectile.analyze() ?: return graphics2D
+    override fun onStartUiRendering(graphics2D: Graphics2D) {
+        val analysisResult = ThrowableProjectile.analyze() ?: return
         this.analysis = analysisResult
 
-        return ThrowableProjectile.renderTrajectoryUI(
+        ThrowableProjectile.renderTrajectoryUI(
             graphics2D,
             analysisResult,
             InfiniteClient.theme.colorScheme.accentColor,

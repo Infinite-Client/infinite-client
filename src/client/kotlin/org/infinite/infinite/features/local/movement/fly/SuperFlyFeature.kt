@@ -15,7 +15,7 @@ class SuperFlyFeature : LocalFeature() {
         Acceleration, Rocket, CreativeFlight,
     }
 
-    override val featureType: FeatureType = FeatureType.Cheat
+    override val featureType: FeatureLevel = FeatureLevel.Cheat
     override val categoryClass = org.infinite.infinite.features.local.movement.LocalMovementCategory::class
 
     private val method by property(

@@ -10,7 +10,7 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 class MaceBoostFeature : LocalFeature() {
-    override val featureType = FeatureType.Cheat
+    override val featureType = FeatureLevel.Cheat
 
     enum class BoostMode {
         InstantKill,

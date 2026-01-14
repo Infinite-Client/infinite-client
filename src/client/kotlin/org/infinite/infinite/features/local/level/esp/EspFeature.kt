@@ -13,7 +13,7 @@ import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 
 class EspFeature : LocalFeature() {
-    override val featureType = FeatureType.Cheat
+    override val featureType = FeatureLevel.Cheat
 
     private val playerEsp by property(BooleanProperty(true))
     private val mobEsp by property(BooleanProperty(true))

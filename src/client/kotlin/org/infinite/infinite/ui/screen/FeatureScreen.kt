@@ -55,9 +55,9 @@ class FeatureScreen<T : Feature>(
         val size = 24f
         theme.renderBackGround(0, 0, this.width, this.height, g2d, 0.5f)
         g2d.fillStyle = when (feature.featureType) {
-            Feature.FeatureType.Cheat -> colorScheme.redColor
-            Feature.FeatureType.Extend -> colorScheme.yellowColor
-            Feature.FeatureType.Utils -> colorScheme.greenColor
+            Feature.FeatureLevel.Cheat -> colorScheme.redColor
+            Feature.FeatureLevel.Extend -> colorScheme.yellowColor
+            Feature.FeatureLevel.Utils -> colorScheme.greenColor
         }
         g2d.textStyle.size = size
         g2d.textStyle.font = "infinite_bolditalic"

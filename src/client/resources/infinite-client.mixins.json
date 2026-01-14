@@ -41,14 +41,13 @@
     "infinite.features.local.rendering.zoomsight.AbstractClientPlayerMixin",
     "infinite.features.local.rendering.zoomsight.GameRendererMixin",
     "infinite.features.local.rendering.zoomsight.MouseHandlerMixin",
-    "ui.OptionsScreenMixin"
-  ],
-  "injectors": {
-    "defaultRequire": 1
-  },
-  "mixins": [
+    "infinite.features.local.rendering.zoomsight.OptionsMixin",
+    "ui.OptionsScreenMixin",
     "infinite.features.local.combat.archery.ConnectionMixin",
     "infinite.features.local.combat.throwable.ConnectionMixin",
     "infinite.features.local.level.esp.EntityMixin"
-  ]
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }
