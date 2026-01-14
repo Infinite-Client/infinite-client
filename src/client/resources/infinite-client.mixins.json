@@ -19,9 +19,12 @@
     "infinite.features.global.rendering.theme.ScrollWidgetMixin",
     "infinite.features.global.rendering.theme.SliderButtonMixin",
     "infinite.features.global.rendering.theme.button.PlainButtonMixin",
+    "infinite.features.local.combat.archery.ConnectionMixin",
     "infinite.features.local.combat.attack.CriticalFeatureMixin",
     "infinite.features.local.combat.counter.CounterFeatureMixin",
     "infinite.features.local.combat.mace.MultiPlayerGameModeMixin",
+    "infinite.features.local.combat.throwable.ConnectionMixin",
+    "infinite.features.local.level.esp.EntityMixin",
     "infinite.features.local.level.esp.EntityRendererMixin",
     "infinite.features.local.level.xray.ItemBlockRenderTypesMixin",
     "infinite.features.local.level.xray.LightTextureMixin",
@@ -42,12 +45,12 @@
     "infinite.features.local.rendering.zoomsight.GameRendererMixin",
     "infinite.features.local.rendering.zoomsight.MouseHandlerMixin",
     "infinite.features.local.rendering.zoomsight.OptionsMixin",
-    "ui.OptionsScreenMixin",
-    "infinite.features.local.combat.archery.ConnectionMixin",
-    "infinite.features.local.combat.throwable.ConnectionMixin",
-    "infinite.features.local.level.esp.EntityMixin"
+    "ui.OptionsScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "mixins": [
+    "infinite.features.local.combat.swapshot.ConnectionMixin"
+  ]
 }
