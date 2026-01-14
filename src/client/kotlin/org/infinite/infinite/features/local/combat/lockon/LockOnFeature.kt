@@ -6,6 +6,7 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.number.DoubleProperty
+import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.minecraft.aim.AimSystem
 import org.infinite.libs.minecraft.aim.task.AimTask
@@ -49,12 +50,14 @@ class LockOnFeature : LocalFeature() {
     private val checkLineOfSight by property(BooleanProperty(true))
     private val pauseOnKill by property(BooleanProperty(false)) // 倒した時に一時停止するか
     private val autoNextTarget by property(BooleanProperty(true)) // 次の標的を自動で探すか
+    private val autoReselect by property(BooleanProperty(true))
+    private val method by property(EnumSelectionProperty(AimCalculateMethod.Linear))
 
     init {
         // L: 新しいターゲットを追加
         defineAction("add_target", GLFW.GLFW_KEY_K) {
-            addNewTarget()
             isPaused = false
+            addNewTarget()
         }
 
         // I: ロックオンの一時停止/再開
@@ -112,39 +115,50 @@ class LockOnFeature : LocalFeature() {
         if (!isEnabled()) return
         val player = this@LockOnFeature.player ?: return
 
-        val iterator = targetList.iterator()
-        var targetWasRemoved = false
         val currentFocus = selectedEntity
+        var focusWasRemoved = false
 
+        // 1. 無効なターゲットを削除
+        val iterator = targetList.iterator()
         while (iterator.hasNext()) {
             val t = iterator.next()
             if (!t.isAlive || t.isRemoved || player.distanceTo(t) > range.value) {
-                if (t == currentFocus) targetWasRemoved = true
+                if (t == currentFocus) focusWasRemoved = true
                 iterator.remove()
             }
         }
 
-        if (targetWasRemoved) {
-            // 1. 倒した瞬間のエイム挙動を決定
+        // 2. ターゲットが消えた（死んだ・離れた）場合の処理
+        if (focusWasRemoved) {
+            // 倒した時に一時停止する設定ならフラグを立てる
             if (pauseOnKill.value) {
                 isPaused = true
-                currentTask = null
             }
 
-            // 2. 次のターゲットへの移行
             if (targetList.isNotEmpty()) {
-                currentIndex = currentIndex.coerceIn(0, targetList.size - 1)
-                // 継続モードなら即座にタスクを更新
-                if (!isPaused) updateAimTask()
+                // リストにまだ敵がいる場合、インデックスを範囲内に収める
+                // (autoReselectが有効なら優先度順にソート)
+                if (autoReselect.value) {
+                    targetList.sortBy { calculateCombinedScore(player, it) }
+                }
+                currentIndex = 0
+                updateAimTask()
             } else if (autoNextTarget.value) {
-                // リストが空なら周囲を索敵
+                // リストが空なら周囲を検索
                 val found = autoSearchNextTarget()
-                // 索敵に成功しても、一時停止設定ならタスクは作らない
-                if (found && isPaused) currentTask = null
+                // 見つからなかった場合は明示的にリセット
+                if (!found) {
+                    currentIndex = -1
+                    currentTask = null
+                }
             } else {
+                // リストが空で索敵もオフの場合
                 currentIndex = -1
                 currentTask = null
             }
+        } else if (currentIndex != -1) {
+            currentIndex = targetList.indexOf(currentFocus).coerceAtLeast(-1)
+            if (currentIndex == -1) currentTask = null
         }
     }
 
@@ -178,7 +192,6 @@ class LockOnFeature : LocalFeature() {
         val player = player ?: return
         val level = level ?: return
 
-        // 視界に入っている最も「良い」ターゲットを探す（未登録のものに限定）
         val newTarget = level.getEntities(player, player.boundingBox.inflate(range.value))
             .asSequence()
             .filterIsInstance<LivingEntity>()
@@ -190,10 +203,12 @@ class LockOnFeature : LocalFeature() {
         if (newTarget != null) {
             targetList.add(newTarget)
             currentIndex = targetList.size - 1
+
+            // 追加：ターゲットを新しく追加したときは一時停止を解除する
+            isPaused = false
             updateAimTask()
         }
     }
-
     private fun updateAimTask() {
         val target = lockedEntity ?: run {
             currentTask = null
@@ -212,7 +227,7 @@ class LockOnFeature : LocalFeature() {
                     }
                 }
             },
-            calcMethod = AimCalculateMethod.Linear,
+            calcMethod = method.value,
             multiply = aimSpeed.value,
         )
     }

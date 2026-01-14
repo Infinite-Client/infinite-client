@@ -16,7 +16,8 @@ class QuickShotFeature : LocalFeature() {
 
         // 2. 使用中のアイテムが「弓」であることを確認
         val itemStack = player.useItem
-        if (itemStack.`is`(Items.BOW)) {
+        val shootableItems = listOf(Items.BOW, Items.TRIDENT)
+        if (shootableItems.contains(itemStack.item)) {
             // 3. チャージ時間を取得 (弓の最大チャージは通常20 ticks)
             val useDuration = player.ticksUsingItem
 
