@@ -47,3 +47,14 @@ projectJDK: "25" #(Applied in CI/CD pipeline)
 #Qodana supports other languages, for example, Python, JavaScript, TypeScript, Go, C#, PHP
 #For all supported languages see https://www.jetbrains.com/help/qodana/linters.html
 linter: jetbrains/qodana-jvm-community:2025.2
+
+exclude:
+  # "Condition is always false" (LocalPlayerへのinstanceof等) を抑制
+  - name: ConstantValue
+    paths:
+      - src/client/java/org/infinite/mixin/
+
+  # "Casting ... will produce ClassCastException" を抑制
+  - name: ConstantConditions
+    paths:
+      - src/client/java/org/infinite/mixin/
