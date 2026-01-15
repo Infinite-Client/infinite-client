@@ -148,9 +148,7 @@ tasks {
             from(sourceSets["client"].output)
         }
 
-        from("LICENSE") {
-            rename { fileName -> "${fileName}_$archiveName" }
-        }
+        from("LICENSE")
     }
     publishing {
         publications {
