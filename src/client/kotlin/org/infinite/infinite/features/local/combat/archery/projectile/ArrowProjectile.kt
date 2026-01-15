@@ -1,11 +1,8 @@
 package org.infinite.infinite.features.local.combat.archery.projectile
 
-import net.minecraft.world.entity.projectile.ProjectileUtil
 import net.minecraft.world.item.BowItem
 import net.minecraft.world.item.CrossbowItem
 import net.minecraft.world.item.Items
-import net.minecraft.world.phys.HitResult
-import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.infinite.features.local.combat.archery.ArcheryFeature
 import org.infinite.libs.minecraft.projectile.AbstractProjectile
@@ -64,33 +61,14 @@ object ArrowProjectile : AbstractProjectile() {
                 result.copy(hitPos = result.hitPos.add(latencyOffset))
             }
         } else {
-            // --- 地形を狙う場合（ロックオンなし） ---
-            // レイキャストの着弾点を基準点とし、上下シフトなしでピンポイントに狙う。
-            val lookTarget = getTargetPos() ?: return null
+            val reach = feature.maxReach.value.toDouble()
+            val lookTarget = getTargetPos(reach) ?: return null
 
             analysisStaticPos(
                 basePower = basePower,
                 targetPos = lookTarget,
                 startPos = startPos,
             )
-        }
-    }
-
-    /**
-     * 現在の視線方向にある着弾点を取得（地形優先）
-     */
-    private fun getTargetPos(): Vec3? {
-        val p = player ?: return null
-        val reach = feature.maxReach.value.toDouble()
-
-        // レイキャストを実行してブロックまたはエンティティを探す
-        val hitResult = ProjectileUtil.getHitResultOnViewVector(p, { !it.isSpectator && it.isPickable }, reach)
-
-        return if (hitResult.type != HitResult.Type.MISS) {
-            hitResult.location
-        } else {
-            // 何もヒットしなかった場合は射程限界の空中の座標を返す
-            p.getEyePosition(1.0f).add(p.lookAngle.normalize().scale(reach))
         }
     }
 }

@@ -1,6 +1,7 @@
 package org.infinite.libs.minecraft.projectile
 
 import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.projectile.ProjectileUtil
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
@@ -225,6 +226,15 @@ abstract class AbstractProjectile : MinecraftInterface() {
 
         return graphics2D
     }
-
+    protected fun getTargetPos(reach: Double): Vec3? {
+        val p = player ?: return null
+        // エンティティを含めたレイキャスト。MISSなら射程限界の空中をターゲットにする
+        val hitResult = ProjectileUtil.getHitResultOnViewVector(p, { !it.isSpectator && it.isPickable }, reach)
+        return if (hitResult.type != HitResult.Type.MISS) {
+            hitResult.location
+        } else {
+            p.getEyePosition(1.0f).add(p.lookAngle.normalize().scale(reach))
+        }
+    }
     data class PathResult(val status: PathStatus, val ticks: Int)
 }
