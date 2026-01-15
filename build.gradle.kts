@@ -1,7 +1,6 @@
 
 import net.ltgt.gradle.errorprone.errorprone
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.util.Locale
 
 plugins {
     kotlin("jvm")
@@ -66,18 +65,8 @@ dependencies {
 val buildRust = tasks.register<Exec>("buildRust") {
     group = "build"
     workingDir = file("src/main/rust")
-
-    val osName = System.getProperty("os.name").lowercase(Locale.ENGLISH)
-
-    // Linux環境であれば --target x86_64-unknown-linux-gnu を明示的に付けても良いですが、
-    // 単体ビルド（ホスト向け）を優先するため標準のビルドを行います。
     commandLine("cargo", "build", "--release")
-
-    // 自分のOS以外で実行しようとした場合にエラーで止めないための保険
     isIgnoreExitValue = true
-
-    // 現在のOSがLinuxでない場合に実行をスキップしたい場合は以下を有効化
-    // onlyIf { osName.contains("nux") }
 }
 
 tasks {
@@ -87,10 +76,17 @@ tasks {
 
     processResources {
         dependsOn(buildRust)
-        // 成果物の場所を cargo のデフォルト（target/release）に合わせる
+        val osName = System.getProperty("os.name").lowercase()
+        // 成果物をOSごとのディレクトリに整理して封入
         from("src/main/rust/target/release") {
             include("*.so", "*.dll", "*.dylib")
-            into("natives/linux-x64") // フォルダを分けておくとロード時に便利です
+            into(
+                when {
+                    osName.contains("win") -> "natives/windows-x64"
+                    osName.contains("mac") -> "natives/macos-universal"
+                    else -> "natives/linux-x64"
+                },
+            )
         }
 
         inputs.property("version", project.version)
@@ -100,6 +96,14 @@ tasks {
         }
     }
     loom {
+        runs {
+            configureEach {
+                // Panama (FFM API) を使用するための必須フラグ
+                vmArg("--enable-native-access=ALL-UNNAMED")
+                // 必要に応じてプレビュー機能を有効化（Java 25の正式な仕様範囲なら不要）
+                // vmArg("--enable-preview")
+            }
+        }
         splitEnvironmentSourceSets()
         accessWidenerPath = file("src/main/resources/infinite.accesswidener")
     }
@@ -114,9 +118,11 @@ tasks {
         // if it is present.
         // If you remove this line, sources will not be generated.
         withSourcesJar()
-
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(25))
+        }
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
     }
 
     jar {
@@ -154,12 +160,12 @@ tasks {
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
         compilerOptions {
-            jvmTarget = JvmTarget.JVM_21
+            jvmTarget = JvmTarget.JVM_25
         }
     }
     compileKotlin {
         compilerOptions {
-            jvmTarget = JvmTarget.JVM_21
+            jvmTarget = JvmTarget.JVM_25
         }
     }
 }

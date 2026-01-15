@@ -1,7 +1,8 @@
-// src/main/rust/Cargo.toml
-// [lib]
-// crate-type = ["cdylib"]
-// name = "infinite_client" (ハイフンはアンダースコアに変換されます)
+pub mod projectile;
+
+// プロジェクトのルートに関数を公開するための正しい方法
+// 以前の空の関数定義を削除し、projectile.rs の関数を直接エクスポートします。
+pub use crate::projectile::rust_solve_pitch;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn calculate_distance(x: f32, y: f32, z: f32) -> f32 {

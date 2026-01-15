@@ -7,6 +7,7 @@ import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.interfaces.MinecraftInterface
+import org.infinite.libs.rust.projectile.ProjectileEmulator
 import org.infinite.utils.alpha
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -155,41 +156,41 @@ abstract class AbstractProjectile : MinecraftInterface() {
         }
     }
 
-    protected fun simulateFast(v: Double, pitchDeg: Double, targetX: Double): Pair<Double, Int> {
-        val rad = pitchDeg * (PI / 180.0)
-        var pX = 0.0
-        var pY = 0.0
-
-        // --- 符号の修正ポイント ---
-        // 1. velX: pitchが ±90° に近づくほど水平速度は 0 になるべきなので cos(rad) で正しい
-        var velX = v * cos(rad)
-        // 2. velY: Minecraftではマイナスが上なので、-sin(rad) とすることで
-        //    上向き(-90°)の時に正の速度 (+1.0) が得られるようにする
-        var velY = (-sin(rad) * v)
-
-        var tick = 0
-        while (tick < maxStep) {
-            val distToTarget = targetX - pX
-            val stepSize = when {
-                distToTarget > 60.0 -> 5
-                distToTarget > 20.0 -> 2
-                else -> 1
-            }.coerceAtMost(maxStep - tick)
-
-            repeat(stepSize) {
-                pX += velX
-                pY += velY
-                velX *= drag
-                velY = (velY * drag) - gravity
-            }
-
-            tick += stepSize
-            if (pX >= targetX) return Pair(pY, tick)
-            // 下に落ちすぎた場合の早期終了
-            if (velY < 0 && pY < -100.0) break
-        }
-        return Pair(pY, tick)
-    }
+//    protected fun simulateFast(v: Double, pitchDeg: Double, targetX: Double): Pair<Double, Int> {
+//        val rad = pitchDeg * (PI / 180.0)
+//        var pX = 0.0
+//        var pY = 0.0
+//
+//        // --- 符号の修正ポイント ---
+//        // 1. velX: pitchが ±90° に近づくほど水平速度は 0 になるべきなので cos(rad) で正しい
+//        var velX = v * cos(rad)
+//        // 2. velY: Minecraftではマイナスが上なので、-sin(rad) とすることで
+//        //    上向き(-90°)の時に正の速度 (+1.0) が得られるようにする
+//        var velY = (-sin(rad) * v)
+//
+//        var tick = 0
+//        while (tick < maxStep) {
+//            val distToTarget = targetX - pX
+//            val stepSize = when {
+//                distToTarget > 60.0 -> 5
+//                distToTarget > 20.0 -> 2
+//                else -> 1
+//            }.coerceAtMost(maxStep - tick)
+//
+//            repeat(stepSize) {
+//                pX += velX
+//                pY += velY
+//                velX *= drag
+//                velY = (velY * drag) - gravity
+//            }
+//
+//            tick += stepSize
+//            if (pX >= targetX) return Pair(pY, tick)
+//            // 下に落ちすぎた場合の早期終了
+//            if (velY < 0 && pY < -100.0) break
+//        }
+//        return Pair(pY, tick)
+//    }
 
     protected fun findMaxRangeAngle(v: Double, minP: Double, maxP: Double): Double {
         var low = minP
@@ -223,24 +224,16 @@ abstract class AbstractProjectile : MinecraftInterface() {
         return Pair(pX, maxStep)
     }
 
-    protected fun solvePitchStrict(
-        v: Double,
-        target: Vec3,
-        start: Vec3,
-        minA: Double,
-        maxA: Double,
-    ): Double {
+    protected fun solvePitchStrict(v: Double, target: Vec3, start: Vec3, minA: Double, maxA: Double): Double {
         val horizontalDist = sqrt((target.x - start.x).pow(2) + (target.z - start.z).pow(2))
         val targetDY = target.y - start.y
-        var low = minA
-        var high = maxA
 
-        repeat(precision) {
-            val mid = (low + high) * 0.5
-            val (resY, _) = simulateFast(v, mid, horizontalDist)
-            if (resY < targetDY) high = mid else low = mid
-        }
-        return (low + high) * 0.5
+        val result = ProjectileEmulator.solve(
+            v.toFloat(), horizontalDist.toFloat(), targetDY.toFloat(),
+            minA.toFloat(), maxA.toFloat(), precision, maxStep,
+            drag.toFloat(), gravity.toFloat(),
+        )
+        return result.pitch.toDouble()
     }
 
     protected fun verifyPath(v: Double, xRot: Double, yRot: Double, target: Vec3, startPos: Vec3): PathResult {

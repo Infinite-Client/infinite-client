@@ -10,7 +10,6 @@ object LibInfiniteClient {
     private val calculateDistanceHandle: MethodHandle
 
     init {
-        // 1. OSに応じたライブラリのロード
         loadNativeLibrary()
 
         // 2. Project Panama で関数をルックアップ
@@ -30,8 +29,10 @@ object LibInfiniteClient {
 
         calculateDistanceHandle = linker.downcallHandle(symbol, descriptor)
     }
-
-    private fun loadNativeLibrary() {
+    private var hasLoaded: Boolean = false
+    fun loadNativeLibrary() {
+        if (hasLoaded) return
+        hasLoaded = true
         val os = System.getProperty("os.name").lowercase(Locale.ENGLISH)
         val arch = System.getProperty("os.arch").lowercase(Locale.ENGLISH)
 

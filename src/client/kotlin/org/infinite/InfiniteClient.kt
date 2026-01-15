@@ -23,6 +23,7 @@ import org.infinite.libs.core.tick.GameTicks
 import org.infinite.libs.core.tick.SystemTicks
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
+import org.infinite.libs.rust.LibInfiniteClient
 import org.infinite.libs.translation.TranslationChecker
 import org.infinite.libs.ui.theme.Theme
 import org.infinite.libs.ui.theme.ThemeManager
@@ -89,6 +90,7 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
 
     override fun onInitializeClient() {
         LogSystem.init()
+        LibInfiniteClient.loadNativeLibrary()
         themeManager.register(InfiniteTheme())
         // 1. グローバル設定のロード
         ConfigManager.loadGlobal()
