@@ -10,8 +10,7 @@ import kotlin.reflect.KClass
 
 abstract class FeatureCategoriesScreen<K : KClass<out Feature>, V : Feature, T : Category<K, V>, W : CategoryWidget<T>>(
     parent: Screen? = null,
-) :
-    AbstractCarouselScreen<T>(Component.literal("Infinite Client"), parent) {
+) : AbstractCarouselScreen<T>(Component.literal("Infinite Client"), parent) {
 
     abstract override val dataSource: List<T>
 

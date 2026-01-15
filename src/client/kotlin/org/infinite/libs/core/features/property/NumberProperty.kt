@@ -12,12 +12,10 @@ abstract class NumberProperty<T>(
 ) : Property<T>(default) where T : Number, T : Comparable<T> {
 
     // value を書く必要がない（書けない）
-    override fun filterValue(newValue: T): T {
-        return when {
-            newValue < min -> min
-            newValue > max -> max
-            else -> newValue
-        }
+    override fun filterValue(newValue: T): T = when {
+        newValue < min -> min
+        newValue > max -> max
+        else -> newValue
     }
 
     override fun tryApply(anyValue: Any?) {
@@ -47,7 +45,5 @@ abstract class NumberProperty<T>(
     }
 
     open fun display(): String = "${value}$suffix"
-    override fun widget(x: Int, y: Int, width: Int): PropertyWidget<NumberProperty<T>> {
-        return NumberPropertyWidget<T>(x, y, width, this)
-    }
+    override fun widget(x: Int, y: Int, width: Int): PropertyWidget<NumberProperty<T>> = NumberPropertyWidget<T>(x, y, width, this)
 }

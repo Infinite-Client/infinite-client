@@ -31,10 +31,12 @@ class QuickShotFeature : LocalFeature() {
                 val target = 20 + intervalShift.value
                 currentDuration >= target
             }
+
             Items.TRIDENT -> {
                 val target = 10 + intervalShift.value
                 currentDuration >= target
             }
+
             else -> false
         }
 

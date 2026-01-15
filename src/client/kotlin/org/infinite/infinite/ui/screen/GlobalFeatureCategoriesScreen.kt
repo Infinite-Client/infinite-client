@@ -12,7 +12,7 @@ class GlobalFeatureCategoriesScreen(parent: Screen? = null) :
         KClass<out GlobalFeature>,
         GlobalFeature,
         GlobalCategory,
-        GlobalCategoryWidget, // Global専用のWidget
+        GlobalCategoryWidget,
         >(parent) {
 
     // Globalのカテゴリデータソースを取得
@@ -23,7 +23,5 @@ class GlobalFeatureCategoriesScreen(parent: Screen? = null) :
     override fun createWidget(
         index: Int,
         data: GlobalCategory,
-    ): GlobalCategoryWidget {
-        return GlobalCategoryWidget(0, 0, 120, 180, data, this, index)
-    }
+    ): GlobalCategoryWidget = GlobalCategoryWidget(0, 0, 120, 180, data, this, index)
 }

@@ -16,8 +16,8 @@ open class PropertyWidget<T : Property<*>>(
     width: Int,
     height: Int = DEFAULT_WIDGET_HEIGHT,
     protected val property: T,
-) :
-    AbstractContainerWidget(x, y, width, height, Component.literal("")), Renderable {
+) : AbstractContainerWidget(x, y, width, height, Component.literal("")),
+    Renderable {
     companion object {
         protected const val DEFAULT_WIDGET_HEIGHT = 20
     }
@@ -26,8 +26,7 @@ open class PropertyWidget<T : Property<*>>(
 
     override fun scrollRate(): Double = 10.0
 
-    override fun children(): List<GuiEventListener> =
-        listOf()
+    override fun children(): List<GuiEventListener> = listOf()
 
     override fun setWidth(i: Int) {
         super.setWidth(i)

@@ -94,7 +94,5 @@ abstract class FeatureCategories<
     }
 
     // 修正後
-    fun <X> map(action: (V) -> X): List<X> {
-        return _categories.values.map { action(it) }
-    }
+    fun <X> map(action: (V) -> X): List<X> = _categories.values.map { action(it) }
 }

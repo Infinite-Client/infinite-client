@@ -40,7 +40,10 @@ class HelloFeature : LocalFeature() {
 
     @Suppress("Unused")
     enum class TestEnum {
-        A, B, C, D
+        A,
+        B,
+        C,
+        D,
     }
 
     @Suppress("Unused")

@@ -45,9 +45,7 @@ open class SelectionProperty<T : Any>(
         return if (options.contains(newValue)) newValue else value
     }
 
-    open fun propertyString(value: T): String {
-        return value.toString()
-    }
+    open fun propertyString(value: T): String = value.toString()
 
     open fun previous() {
         val currentIndex = options.indexOf(value)
@@ -71,6 +69,5 @@ open class SelectionProperty<T : Any>(
         }
     }
 
-    override fun widget(x: Int, y: Int, width: Int): PropertyWidget<SelectionProperty<T>> =
-        SelectionPropertyWidget(x, y, width, this)
+    override fun widget(x: Int, y: Int, width: Int): PropertyWidget<SelectionProperty<T>> = SelectionPropertyWidget(x, y, width, this)
 }

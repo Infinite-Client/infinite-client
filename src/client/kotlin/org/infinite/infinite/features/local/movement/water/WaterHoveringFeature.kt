@@ -6,7 +6,8 @@ import org.infinite.libs.minecraft.input.InputSystem
 
 class WaterHoveringFeature : LocalFeature() {
     enum class Method {
-        Jump, DeltaMovement
+        Jump,
+        DeltaMovement,
     }
 
     private val method by property(EnumSelectionProperty(Method.Jump))

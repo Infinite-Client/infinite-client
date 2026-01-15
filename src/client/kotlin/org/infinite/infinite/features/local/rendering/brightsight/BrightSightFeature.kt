@@ -7,7 +7,9 @@ class BrightSightFeature : LocalFeature() {
     override val featureType = FeatureLevel.Extend
 
     enum class Method {
-        GamMax, NightSight, UltraBright,
+        GamMax,
+        NightSight,
+        UltraBright,
     }
 
     val method by property(EnumSelectionProperty(Method.GamMax))

@@ -256,9 +256,12 @@ class Graphics2DPrimitivesStroke(
                 val nextIdx = if (j == polylineVerticesWithStyles.size - 1) 1 else j + 1
                 val hw = (polylineVerticesWithStyles[prevIdx].third.width + currStyle.width) / 4f
                 miter = PointPair.calculateForMiter(
-                    currX, currY,
-                    polylineVerticesWithStyles[prevIdx].first, polylineVerticesWithStyles[prevIdx].second,
-                    polylineVerticesWithStyles[nextIdx].first, polylineVerticesWithStyles[nextIdx].second,
+                    currX,
+                    currY,
+                    polylineVerticesWithStyles[prevIdx].first,
+                    polylineVerticesWithStyles[prevIdx].second,
+                    polylineVerticesWithStyles[nextIdx].first,
+                    polylineVerticesWithStyles[nextIdx].second,
                     hw,
                 )
             } else {
@@ -290,9 +293,12 @@ class Graphics2DPrimitivesStroke(
                         val nextV = polylineVerticesWithStyles[j + 1]
                         val hw = (polylineVerticesWithStyles[j - 1].third.width + currStyle.width) / 4f
                         miter = PointPair.calculateForMiter(
-                            currX, currY,
-                            prevV.first, prevV.second,
-                            nextV.first, nextV.second,
+                            currX,
+                            currY,
+                            prevV.first,
+                            prevV.second,
+                            nextV.first,
+                            nextV.second,
                             hw,
                         )
                     }

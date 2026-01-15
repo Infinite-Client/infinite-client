@@ -48,6 +48,5 @@ abstract class Property<T : Any>(
 
     abstract fun tryApply(anyValue: Any?)
 
-    open fun widget(x: Int, y: Int, width: Int): PropertyWidget<out Property<T>> =
-        PropertyWidget(x, y, width, property = this)
+    open fun widget(x: Int, y: Int, width: Int): PropertyWidget<out Property<T>> = PropertyWidget(x, y, width, property = this)
 }

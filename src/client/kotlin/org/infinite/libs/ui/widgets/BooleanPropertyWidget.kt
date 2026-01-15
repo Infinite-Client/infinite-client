@@ -16,8 +16,7 @@ class BooleanPropertyWidget(
     DEFAULT_WIDGET_HEIGHT * 2,
     property,
 ) {
-    private class PropertyToggleButton(x: Int, y: Int, width: Int, height: Int, private val property: BooleanProperty) :
-        ToggleButton(x, y, width, height) {
+    private class PropertyToggleButton(x: Int, y: Int, width: Int, height: Int, private val property: BooleanProperty) : ToggleButton(x, y, width, height) {
         override var value: Boolean
             get() = property.value
             set(value) {

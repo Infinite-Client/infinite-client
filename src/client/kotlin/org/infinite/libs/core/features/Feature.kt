@@ -183,12 +183,10 @@ open class Feature : MinecraftInterface() {
     }
 
     fun translation(): String = translationKey
-    fun translation(p: String): String? {
-        return if (_properties[p] == null) {
-            null
-        } else {
-            translationKey + "." + p.toLowerSnakeCase()
-        }
+    fun translation(p: String): String? = if (_properties[p] == null) {
+        null
+    } else {
+        translationKey + "." + p.toLowerSnakeCase()
     }
 
     @Suppress("UNCHECKED_CAST")

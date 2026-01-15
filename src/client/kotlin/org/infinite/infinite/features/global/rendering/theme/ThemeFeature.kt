@@ -9,10 +9,11 @@ class ThemeFeature : GlobalFeature() {
     /**
      * ThemeManager から動的に選択肢を取得する専用プロパティ
      */
-    class ThemeSelectionProperty : SelectionProperty<String>(
-        "DefaultTheme",
-        emptyList(),
-    ) {
+    class ThemeSelectionProperty :
+        SelectionProperty<String>(
+            "DefaultTheme",
+            emptyList(),
+        ) {
         override val options: List<String>
             get() = InfiniteClient.themeManager.getRegisteredThemeNames()
     }

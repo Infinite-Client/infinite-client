@@ -96,7 +96,6 @@ object ThrowableProjectile : AbstractProjectile() {
         }
     }
 
-    private fun isThrowableItem(stack: ItemStack): Boolean =
-        stack.item is SnowballItem || stack.item is EggItem || stack.item is EnderpearlItem ||
-            stack.item is ThrowablePotionItem || stack.item is ExperienceBottleItem || stack.item is TridentItem
+    private fun isThrowableItem(stack: ItemStack): Boolean = stack.item is SnowballItem || stack.item is EggItem || stack.item is EnderpearlItem ||
+        stack.item is ThrowablePotionItem || stack.item is ExperienceBottleItem || stack.item is TridentItem
 }

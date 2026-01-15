@@ -27,6 +27,7 @@ abstract class ListProperty<T : Any>(
                 @Suppress("UNCHECKED_CAST")
                 anyValue.mapNotNull { it?.let { element -> convertElement(element) } }
             }
+
             // 2. 文字列（カンマ区切りなど）からリスト化する場合（必要に応じて）
             is String -> {
                 anyValue.split(",")
@@ -88,8 +89,7 @@ abstract class ListProperty<T : Any>(
         }
     }
 
-    override fun widget(x: Int, y: Int, width: Int): PropertyWidget<ListProperty<T>> =
-        ListPropertyWidget(x, y, width, this)
+    override fun widget(x: Int, y: Int, width: Int): PropertyWidget<ListProperty<T>> = ListPropertyWidget(x, y, width, this)
 
     private fun sync() {
         value = internalList.toList()

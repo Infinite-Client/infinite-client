@@ -93,7 +93,13 @@ abstract class SliderWidget<T>(
 
         // --- ノブの描画 ---
         val knobBorder = knobSize * 0.15f
-        val mixFactor = if (isDragging) 1f else if (isHovered) 0.5f else 0f
+        val mixFactor = if (isDragging) {
+            1f
+        } else if (isHovered) {
+            0.5f
+        } else {
+            0f
+        }
         val currentKnobColor = colorScheme.foregroundColor.mix(colorScheme.accentColor, mixFactor)
         val currentStrokeColor = colorScheme.secondaryColor.mix(colorScheme.accentColor, mixFactor)
 

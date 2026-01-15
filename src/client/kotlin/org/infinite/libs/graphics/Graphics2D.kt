@@ -103,8 +103,7 @@ open class Graphics2D(
         Graphics2DPrimitivesTexture(commandQueue) { textStyle }
 
     // --- fillRect ---
-    fun fillRect(x: Int, y: Int, width: Int, height: Int) =
-        fillRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat())
+    fun fillRect(x: Int, y: Int, width: Int, height: Int) = fillRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat())
 
     fun fillRect(x: Float, y: Float, width: Float, height: Float) {
         fillOperations.fillRect(x, y, width, height)
@@ -153,8 +152,7 @@ open class Graphics2D(
         fillOperations.fillTriangle(x0, y0, x1, y1, x2, y2, col0, col1, col2)
     }
 
-    fun strokeRect(x: Int, y: Int, width: Int, height: Int) =
-        strokeRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat())
+    fun strokeRect(x: Int, y: Int, width: Int, height: Int) = strokeRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat())
 
     fun strokeRect(x: Float, y: Float, width: Float, height: Float) {
         strokeOperations.strokeRect(x, y, width, height)

@@ -73,25 +73,17 @@ class FeatureScreen<T : Feature>(
         container.render(guiGraphics, mouseX, mouseY, delta)
     }
 
-    override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean {
-        return container.mouseClicked(mouseButtonEvent, bl)
-    }
+    override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean = container.mouseClicked(mouseButtonEvent, bl)
 
-    override fun mouseDragged(mouseButtonEvent: MouseButtonEvent, d: Double, e: Double): Boolean {
-        return container.mouseDragged(mouseButtonEvent, d, e)
-    }
+    override fun mouseDragged(mouseButtonEvent: MouseButtonEvent, d: Double, e: Double): Boolean = container.mouseDragged(mouseButtonEvent, d, e)
 
     override fun mouseMoved(d: Double, e: Double) {
         container.mouseMoved(d, e)
     }
 
-    override fun mouseReleased(mouseButtonEvent: MouseButtonEvent): Boolean {
-        return container.mouseReleased(mouseButtonEvent)
-    }
+    override fun mouseReleased(mouseButtonEvent: MouseButtonEvent): Boolean = container.mouseReleased(mouseButtonEvent)
 
-    override fun mouseScrolled(d: Double, e: Double, f: Double, g: Double): Boolean {
-        return container.mouseScrolled(d, e, f, g)
-    }
+    override fun mouseScrolled(d: Double, e: Double, f: Double, g: Double): Boolean = container.mouseScrolled(d, e, f, g)
 
     override fun keyPressed(keyEvent: KeyEvent): Boolean {
         if (keyEvent.key == GLFW.GLFW_KEY_ESCAPE) {
@@ -101,9 +93,7 @@ class FeatureScreen<T : Feature>(
         return container.keyPressed(keyEvent)
     }
 
-    override fun charTyped(characterEvent: CharacterEvent): Boolean {
-        return container.charTyped(characterEvent)
-    }
+    override fun charTyped(characterEvent: CharacterEvent): Boolean = container.charTyped(characterEvent)
 
     override fun children(): List<GuiEventListener> = listOf(container)
 

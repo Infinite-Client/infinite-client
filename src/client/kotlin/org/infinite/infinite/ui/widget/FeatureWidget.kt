@@ -132,8 +132,7 @@ abstract class FeatureWidget<T : Feature>(
      */
     protected open fun getDisplayName(): String = feature.name
 
-    override fun children(): List<GuiEventListener> =
-        listOf(widgetComponents.resetButton, widgetComponents.settingButton, widgetComponents.toggleButton)
+    override fun children(): List<GuiEventListener> = listOf(widgetComponents.resetButton, widgetComponents.settingButton, widgetComponents.toggleButton)
 
     override fun contentHeight(): Int = height
     override fun scrollRate(): Double = 10.0

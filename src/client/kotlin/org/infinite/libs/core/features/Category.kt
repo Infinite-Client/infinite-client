@@ -40,12 +40,10 @@ abstract class Category<K : KClass<out Feature>, V : Feature> {
     @Suppress("UNCHECKED_CAST")
     fun <T : V> getFeature(feature: KClass<out T>): T? = _features[feature as K] as? T
 
-    fun data(): Map<String, Feature.FeatureData> {
-        return _features.values.associate { feature ->
-            val featureId = feature::class.simpleName?.toLowerSnakeCase()
-                ?: throw IllegalStateException("Name not found")
-            featureId to feature.data()
-        }
+    fun data(): Map<String, Feature.FeatureData> = _features.values.associate { feature ->
+        val featureId = feature::class.simpleName?.toLowerSnakeCase()
+            ?: throw IllegalStateException("Name not found")
+        featureId to feature.data()
     }
 
     /**

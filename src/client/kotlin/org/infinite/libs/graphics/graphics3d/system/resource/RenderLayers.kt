@@ -50,11 +50,7 @@ object RenderLayers {
             .sortOnUpload().useLightmap().createRenderSetup(),
     )
 
-    fun quads(depthTest: Boolean): RenderType {
-        return if (depthTest) quads else espQuads
-    }
+    fun quads(depthTest: Boolean): RenderType = if (depthTest) quads else espQuads
 
-    fun lines(depthTest: Boolean): RenderType {
-        return if (depthTest) lines else espLines
-    }
+    fun lines(depthTest: Boolean): RenderType = if (depthTest) lines else espLines
 }

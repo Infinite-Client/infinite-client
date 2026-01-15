@@ -8,7 +8,9 @@ import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.lwjgl.glfw.GLFW
 
-open class LocalFeature : Feature(), TickInterface {
+open class LocalFeature :
+    Feature(),
+    TickInterface {
     open val defaultToggleKey: Int = GLFW.GLFW_KEY_UNKNOWN
 
     data class KeyAction(

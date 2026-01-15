@@ -56,28 +56,26 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
      * @throws IllegalArgumentException カテゴリが登録されていない場合
      */
     @Suppress("UNCHECKED_CAST")
-    fun <C : Category<*, *>, F : Feature> feature(category: KClass<C>, feature: KClass<out F>): F? {
-        return when {
-            GlobalCategory::class.java.isAssignableFrom(category.java) -> {
-                val globalCategory = globalFeatures.getCategory(category as KClass<out GlobalCategory>)
-                if (GlobalFeature::class.java.isAssignableFrom(feature.java)) {
-                    globalCategory?.getFeature(feature as KClass<out GlobalFeature>) as? F
-                } else {
-                    null
-                }
+    fun <C : Category<*, *>, F : Feature> feature(category: KClass<C>, feature: KClass<out F>): F? = when {
+        GlobalCategory::class.java.isAssignableFrom(category.java) -> {
+            val globalCategory = globalFeatures.getCategory(category as KClass<out GlobalCategory>)
+            if (GlobalFeature::class.java.isAssignableFrom(feature.java)) {
+                globalCategory?.getFeature(feature as KClass<out GlobalFeature>) as? F
+            } else {
+                null
             }
-
-            LocalCategory::class.java.isAssignableFrom(category.java) -> {
-                val localCategory = localFeatures.getCategory(category as KClass<out LocalCategory>)
-                if (LocalFeature::class.java.isAssignableFrom(feature.java)) {
-                    localCategory?.getFeature(feature as KClass<out LocalFeature>) as? F
-                } else {
-                    null
-                }
-            }
-
-            else -> null
         }
+
+        LocalCategory::class.java.isAssignableFrom(category.java) -> {
+            val localCategory = localFeatures.getCategory(category as KClass<out LocalCategory>)
+            if (LocalFeature::class.java.isAssignableFrom(feature.java)) {
+                localCategory?.getFeature(feature as KClass<out LocalFeature>) as? F
+            } else {
+                null
+            }
+        }
+
+        else -> null
     }
 
     val worldTicks = GameTicks(localFeatures)

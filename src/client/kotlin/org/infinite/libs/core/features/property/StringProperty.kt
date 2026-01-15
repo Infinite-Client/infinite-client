@@ -27,7 +27,5 @@ class StringProperty(
         }
     }
 
-    override fun widget(x: Int, y: Int, width: Int): PropertyWidget<out Property<String>> {
-        return StringPropertyWidget(x, y, width, this)
-    }
+    override fun widget(x: Int, y: Int, width: Int): PropertyWidget<out Property<String>> = StringPropertyWidget(x, y, width, this)
 }

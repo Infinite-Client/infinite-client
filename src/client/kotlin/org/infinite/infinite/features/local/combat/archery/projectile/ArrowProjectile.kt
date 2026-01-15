@@ -27,10 +27,12 @@ object ArrowProjectile : AbstractProjectile() {
                 // 弓のパワー(0.0~1.0) * 標準最大速度(3.0)
                 BowItem.getPowerForTime(useTicks).toDouble() * 3.0
             }
+
             Items.CROSSBOW -> {
                 if (!CrossbowItem.isCharged(item)) return null
                 3.15 // クロスボウの標準初速
             }
+
             else -> return null
         }
 
