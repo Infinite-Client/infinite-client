@@ -22,7 +22,7 @@ import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
-class Main(
+class Infinite(
     val projectDir: Path,
 ) {
     data class AllFeaturesDocumentData(
@@ -54,7 +54,7 @@ class Main(
             // ここにプログラムの実行時に行いたい処理を記述します。
             println("Documentクラスのmain関数が実行されました。")
             val rootPath = args[0]
-            val document = Main(Path(rootPath))
+            val document = Infinite(Path(rootPath))
             println("Documentのインスタンスを作成しました: $document")
             document.generateData()
             document.getTranslations()

@@ -1,7 +1,5 @@
-
 import net.ltgt.gradle.errorprone.errorprone
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     kotlin("jvm")
     id("fabric-loom")
@@ -52,7 +50,7 @@ dependencies {
 //    implementation("org.lwjgl:lwjgl-stb:${property("lwjgl_version")}")
     implementation("com.squareup.okhttp3:okhttp:${property("ok_http_version")}")
     implementation("org.apache.maven:maven-artifact:${property("maven_artifact_version")}")
-
+    implementation("io.github.classgraph:classgraph:4.8.184")
     // テスト依存関係
     testImplementation(kotlin("test"))
     testImplementation("io.mockk:mockk:1.12.0") // Mockkの最新安定版
@@ -64,13 +62,13 @@ dependencies {
 // Rustビルドタスクの定義
 val buildRust = tasks.register<Exec>("buildRust") {
     group = "build"
-    workingDir = file("src/main/rust")
+    workingDir = file("rust/infinite-client")
     commandLine("cargo", "build", "--release")
     isIgnoreExitValue = true
 }
 val fmtRust = tasks.register<Exec>("fmtRust") {
     group = "formatting"
-    workingDir = file("src/main/rust")
+    workingDir = file("rust/infinite-client")
     commandLine("cargo", "fmt")
 }
 
@@ -87,7 +85,7 @@ tasks {
         val osName = System.getProperty("os.name").lowercase()
         val arch = System.getProperty("os.arch").lowercase()
 
-        from("src/main/rust/target/release") {
+        from("rust/infinite-client/target/release") {
             include("*.so", "*.dll", "*.dylib")
             into(
                 when {
@@ -235,6 +233,14 @@ tasks.register<JavaExec>("docs") {
     description = "Generate Documents"
     group = "application"
     classpath = sourceSets["client"].runtimeClasspath
-    mainClass.set("org.infinite.docs.Main")
+    mainClass.set("org.infinite.docs.Infinite")
+    args(project.rootDir.absolutePath)
+}
+
+tasks.register<JavaExec>("impls") {
+    description = "Generate Implementations"
+    group = "application"
+    classpath = sourceSets["client"].runtimeClasspath
+    mainClass.set("org.infinite.docs.Minecraft")
     args(project.rootDir.absolutePath)
 }
