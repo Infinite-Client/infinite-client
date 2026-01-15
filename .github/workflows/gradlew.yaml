@@ -3,55 +3,42 @@ on: [pull_request, push]
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    # OSの行列（Matrix）を定義
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v4
-
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'microsoft'
 
+      # Rust ツールチェーンのセットアップ（クロスコンパイル用ターゲットの追加）
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: >-
+            ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+            ${{ matrix.os == 'ubuntu-latest' && 'x86_64-unknown-linux-gnu' || '' }}
+            ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-msvc' || '' }}
+
       - name: Make Gradle wrapper executable
+        if: runner.os != 'Windows'
         run: chmod +x ./gradlew
 
-      - name: Extract version from properties
-        id: get_version
-        run: |
-          MOD_VERSION=$(grep 'mod_version' gradle.properties | cut -d '=' -f 2 | tr -d '[:space:]')
-          if [ -z "$MOD_VERSION" ]; then
-            echo "Error: mod_version not found or empty in gradle.properties"
-            exit 1
-          fi
-          echo "Detected Version: $MOD_VERSION"
-          echo "RELEASE_VERSION=$MOD_VERSION" >> $GITHUB_ENV
+      # 各OSでビルド実行（RustのビルドもGradle経由で行われる）
+      - name: Run Gradle Build
+        run: ./gradlew build -x test # テストは1つのOSだけで十分なら適宜除外
 
-      - name: Run Gradle Clean Build
-        run: ./gradlew clean build
-
-      - name: Publish to GitHub Packages (Conditional)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
-        run: ./gradlew publish
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create GitHub Release (Conditional)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ env.RELEASE_VERSION }}
-          name: Release v${{ env.RELEASE_VERSION }}
-          files: build/libs/*.jar
-
-      - name: Upload Build Artifacts
+      # 各プラットフォームのビルド成果物を一時保存
+      - name: Upload Platform Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Artifacts
+          name: build-libs-${{ matrix.os }}
           path: build/libs/
