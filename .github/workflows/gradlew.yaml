@@ -59,10 +59,21 @@ jobs:
       - name: Prepare Artifacts (Rename)
         shell: bash
         run: |
-          VERSION=$(./gradlew properties | grep "version:" | awk '{print $2}')
-          mkdir -p dist
-          cp build/libs/*.jar dist/infinite-${{ matrix.platform }}_${{ matrix.arch }}-${VERSION}.jar
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+              # 厳密に "version:" 行のみを抽出し、プロジェクト名などが混ざらないようにする
+              VERSION=$(./gradlew properties --no-daemon | grep "^version:" | awk '{print $2}')
+              
+              # バージョンが取得できなかった場合のフォールバック（デバッグ用）
+              if [ -z "$VERSION" ]; then VERSION="unknown"; fi
+              
+              mkdir -p dist
+              
+              # ワイルドカードで元ファイルを探し、安全にコピーする
+              # build/libs 内にある jar ファイル（-plainなどは除く）を対象にする例
+              find build/libs/ -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" ! -name "*-sources.jar" | while read -r file; do
+                cp "$file" "dist/infinite-${{ matrix.platform }}_${{ matrix.arch }}-${VERSION}.jar"
+              done
+              
+              echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
