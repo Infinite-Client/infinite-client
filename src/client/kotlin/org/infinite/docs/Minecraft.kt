@@ -33,7 +33,7 @@ class Minecraft(projectDir: Path) {
         val isStatic: Boolean,
     )
 
-    private val outputDir: Path = projectDir.resolve("build/mappings/net/minecraft")
+    private val outputDir: Path = projectDir.resolve("build/mappings/")
 
     // Rust側で扱いやすいよう、整形されたJSONを出力する設定
     private val jsonConfig = Json {
