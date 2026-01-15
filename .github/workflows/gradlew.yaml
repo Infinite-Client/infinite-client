@@ -1,44 +1,98 @@
-name: Gradle Build
-on: [pull_request, push]
+name: Gradle Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
-    # OSの行列（Matrix）を定義
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          # Linux
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            platform: linux
+            arch: aarch64
+            target: aarch64-unknown-linux-gnu
+          # Windows
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            target: x86_64-pc-windows-msvc
+          # macOS (Universal/Multi-target)
+          - os: macos-latest
+            platform: macos
+            arch: universal
+            target: aarch64-apple-darwin,x86_64-apple-darwin
+
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           java-version: '25'
           distribution: 'microsoft'
+          cache: 'gradle'
 
-      # Rust ツールチェーンのセットアップ（クロスコンパイル用ターゲットの追加）
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: >-
-            ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-            ${{ matrix.os == 'ubuntu-latest' && 'x86_64-unknown-linux-gnu' || '' }}
-            ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-msvc' || '' }}
+          targets: ${{ matrix.target }}
 
-      - name: Make Gradle wrapper executable
-        if: runner.os != 'Windows'
-        run: chmod +x ./gradlew
+      - name: Build with Gradle
+        run: |
+          [[ "${{ runner.os }}" != "Windows" ]] && chmod +x ./gradlew
+          ./gradlew build -x test
+        shell: bash
 
-      # 各OSでビルド実行（RustのビルドもGradle経由で行われる）
-      - name: Run Gradle Build
-        run: ./gradlew build -x test # テストは1つのOSだけで十分なら適宜除外
+      - name: Prepare Artifacts (Rename)
+        shell: bash
+        run: |
+          VERSION=$(./gradlew properties | grep "version:" | awk '{print $2}')
+          mkdir -p dist
+          # build/libs 内のメインJARをリネームしてコピー
+          # ※プロジェクト構成に合わせて '*.jar' の検索条件を適宜調整してください
+          cp build/libs/*-all.jar dist/infinite-${{ matrix.platform }}_${{ matrix.arch }}-${VERSION}.jar || \
+          cp build/libs/*.jar dist/infinite-${{ matrix.platform }}_${{ matrix.arch }}-${VERSION}.jar
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      # 各プラットフォームのビルド成果物を一時保存
-      - name: Upload Platform Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-libs-${{ matrix.os }}
-          path: build/libs/
+          name: build-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: all-artifacts/*.jar
+          generate_release_notes: true
+          draft: false
+          prerelease: false
