@@ -2,18 +2,18 @@ name: Gradle Build and Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'dev/*' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
 
 jobs:
   build:
+    # (前回のマトリックス設定と同じため省略)
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Linux
           - os: ubuntu-latest
             platform: linux
             arch: x64
@@ -22,19 +22,16 @@ jobs:
             platform: linux
             arch: aarch64
             target: aarch64-unknown-linux-gnu
-          # Windows
           - os: windows-latest
             platform: windows
             arch: x64
             target: x86_64-pc-windows-msvc
-          # macOS (Universal/Multi-target)
           - os: macos-latest
             platform: macos
             arch: universal
             target: aarch64-apple-darwin,x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -64,9 +61,6 @@ jobs:
         run: |
           VERSION=$(./gradlew properties | grep "version:" | awk '{print $2}')
           mkdir -p dist
-          # build/libs 内のメインJARをリネームしてコピー
-          # ※プロジェクト構成に合わせて '*.jar' の検索条件を適宜調整してください
-          cp build/libs/*-all.jar dist/infinite-${{ matrix.platform }}_${{ matrix.arch }}-${VERSION}.jar || \
           cp build/libs/*.jar dist/infinite-${{ matrix.platform }}_${{ matrix.arch }}-${VERSION}.jar
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
@@ -78,6 +72,7 @@ jobs:
 
   release:
     needs: build
+    # タグが打たれた時のみ実行
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -89,10 +84,22 @@ jobs:
           path: all-artifacts
           merge-multiple: true
 
+      - name: Determine Release Type
+        id: check_release
+        shell: bash
+        run: |
+          # タグ名に 'dev', 'alpha', 'beta', 'rc' が含まれる場合はプレリリースとする
+          if [[ "${{ github.ref_name }}" =~ (dev|alpha|beta|rc) ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: all-artifacts/*.jar
           generate_release_notes: true
+          # 上記ステップの判定結果を反映
+          prerelease: ${{ steps.check_release.outputs.is_prerelease == 'true' }}
           draft: false
-          prerelease: false
