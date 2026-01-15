@@ -68,7 +68,15 @@ val buildRust = tasks.register<Exec>("buildRust") {
     commandLine("cargo", "build", "--release")
     isIgnoreExitValue = true
 }
+val fmtRust = tasks.register<Exec>("fmtRust") {
+    group = "formatting"
+    workingDir = file("src/main/rust")
+    commandLine("cargo", "fmt")
+}
 
+tasks.named("buildRust") {
+    dependsOn(fmtRust) // ビルド前に必ず整形する
+}
 tasks {
     test {
         useJUnitPlatform()
@@ -77,24 +85,27 @@ tasks {
     processResources {
         dependsOn(buildRust)
         val osName = System.getProperty("os.name").lowercase()
-        // 成果物をOSごとのディレクトリに整理して封入
+        val arch = System.getProperty("os.arch").lowercase()
+
         from("src/main/rust/target/release") {
             include("*.so", "*.dll", "*.dylib")
             into(
                 when {
                     osName.contains("win") -> "natives/windows-x64"
-                    osName.contains("mac") -> "natives/macos-universal"
+                    osName.contains("mac") -> {
+                        // アーキテクチャを見てディレクトリを分ける
+                        if (arch.contains("aarch64") || arch.contains("arm")) {
+                            "natives/macos-arm64"
+                        } else {
+                            "natives/macos-x64"
+                        }
+                    }
                     else -> "natives/linux-x64"
                 },
             )
         }
-
-        inputs.property("version", project.version)
-        filesMatching("fabric.mod.json") {
-            expand(getProperties())
-            // 重複を避けるため expand は1回にまとめるのが安全
-        }
     }
+
     loom {
         runs {
             configureEach {

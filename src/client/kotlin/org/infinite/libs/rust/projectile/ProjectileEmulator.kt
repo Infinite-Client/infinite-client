@@ -1,52 +1,70 @@
 package org.infinite.libs.rust.projectile
 
-import org.infinite.libs.rust.LibInfiniteClient
+import net.minecraft.world.phys.Vec3
 import java.lang.foreign.*
 import java.lang.invoke.MethodHandle
 
 object ProjectileEmulator {
-    private val solvePitchHandle: MethodHandle
+    private val advancedHandle: MethodHandle
 
-    private val RESULT_LAYOUT = MemoryLayout.structLayout(
-        ValueLayout.JAVA_FLOAT.withName("pitch"),
+    private val ADVANCED_LAYOUT = MemoryLayout.structLayout(
+        ValueLayout.JAVA_FLOAT.withName("low_pitch"),
+        ValueLayout.JAVA_FLOAT.withName("high_pitch"),
+        ValueLayout.JAVA_FLOAT.withName("yaw"),
         ValueLayout.JAVA_INT.withName("travel_ticks"),
-        ValueLayout.JAVA_FLOAT.withName("hit_y"),
-        ValueLayout.JAVA_FLOAT.withName("hit_x"),
-        ValueLayout.JAVA_INT.withName("success"),
+        ValueLayout.JAVA_FLOAT.withName("target_pos_x"),
+        ValueLayout.JAVA_FLOAT.withName("target_pos_y"),
+        ValueLayout.JAVA_FLOAT.withName("target_pos_z"),
+        ValueLayout.JAVA_FLOAT.withName("max_range_dist"),
     ).withByteAlignment(4)
 
     init {
-        LibInfiniteClient.loadNativeLibrary()
         val linker = Linker.nativeLinker()
-        val lookup = SymbolLookup.loaderLookup()
-        val symbol = lookup.find("rust_solve_pitch").orElseThrow()
+        val symbol = SymbolLookup.loaderLookup().find("rust_analyze_advanced").orElseThrow()
 
-        // Java 25 の Downcall 規約: 構造体リターンの場合
-        // descriptor には「戻り値の型」を含めますが、
-        // 実際の MethodHandle は、第1引数に SegmentAllocator を要求します。
-        val descriptor = FunctionDescriptor.of(
-            RESULT_LAYOUT,
-            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT,
-            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_INT,
-            ValueLayout.JAVA_INT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT,
+        val desc = FunctionDescriptor.of(
+            ADVANCED_LAYOUT,
+            ValueLayout.JAVA_FLOAT, // power
+            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // start xyz
+            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // target xyz
+            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // vel xyz
+            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // drag, grav, target_grav
+            ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, // prec, steps, iter
         )
-
-        solvePitchHandle = linker.downcallHandle(symbol, descriptor)
+        advancedHandle = linker.downcallHandle(symbol, desc)
     }
 
-    fun solve(p: Float, dx: Float, dy: Float, minP: Float, maxP: Float, prec: Int, steps: Int, drag: Float, grav: Float): TrajectoryData {
+    fun analyzeAdvanced(
+        power: Float,
+        start: Vec3,
+        target: Vec3,
+        vel: Vec3,
+        drag: Float,
+        grav: Float,
+        targetGrav: Float,
+        prec: Int,
+        steps: Int,
+        iter: Int,
+    ): AdvancedResult {
         Arena.ofConfined().use { arena ->
-            // Java 25 規約: invoke の第1引数に arena (SegmentAllocator) を渡す
-            // これにより、Rust側から返される構造体データが格納されるメモリが安全に確保されます
-            val seg = solvePitchHandle.invoke(arena, p, dx, dy, minP, maxP, prec, steps, drag, grav) as MemorySegment
+            val seg = advancedHandle.invoke(
+                arena, power,
+                start.x.toFloat(), start.y.toFloat(), start.z.toFloat(),
+                target.x.toFloat(), target.y.toFloat(), target.z.toFloat(),
+                vel.x.toFloat(), vel.y.toFloat(), vel.z.toFloat(),
+                drag, grav, targetGrav, prec, steps, iter,
+            ) as MemorySegment
 
-            return TrajectoryData(
-                pitch = seg.get(ValueLayout.JAVA_FLOAT, 0),
-                ticks = seg.get(ValueLayout.JAVA_INT, 4),
-                success = seg.get(ValueLayout.JAVA_INT, 16) == 1,
+            return AdvancedResult(
+                seg.get(ValueLayout.JAVA_FLOAT, 0),
+                seg.get(ValueLayout.JAVA_FLOAT, 4),
+                seg.get(ValueLayout.JAVA_FLOAT, 8),
+                seg.get(ValueLayout.JAVA_INT, 12),
+                Vec3(seg.get(ValueLayout.JAVA_FLOAT, 16).toDouble(), seg.get(ValueLayout.JAVA_FLOAT, 20).toDouble(), seg.get(ValueLayout.JAVA_FLOAT, 24).toDouble()),
+                seg.get(ValueLayout.JAVA_FLOAT, 28),
             )
         }
     }
 
-    data class TrajectoryData(val pitch: Float, val ticks: Int, val success: Boolean)
+    data class AdvancedResult(val lowP: Float, val highP: Float, val yaw: Float, val ticks: Int, val predictedPos: Vec3, val maxDist: Float)
 }

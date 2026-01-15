@@ -1,84 +1,80 @@
 package org.infinite.libs.rust
 
-import java.lang.foreign.*
-import java.lang.invoke.MethodHandle
+import org.infinite.libs.log.LogSystem
+import java.io.InputStream
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import java.util.*
+import kotlin.io.path.exists
 
 object LibInfiniteClient {
-    private val calculateDistanceHandle: MethodHandle
-
     init {
         loadNativeLibrary()
-
-        // 2. Project Panama で関数をルックアップ
-        val linker = Linker.nativeLinker()
-        // System.loadでロードしたライブラリは loaderLookup で検索可能
-        val lookup = SymbolLookup.loaderLookup()
-
-        val symbol = lookup.find("calculate_distance")
-            .orElseThrow { RuntimeException("Failed to find symbol: calculate_distance") }
-
-        val descriptor = FunctionDescriptor.of(
-            ValueLayout.JAVA_FLOAT, // 戻り値
-            ValueLayout.JAVA_FLOAT, // 引数 x
-            ValueLayout.JAVA_FLOAT, // 引数 y
-            ValueLayout.JAVA_FLOAT, // 引数 z
-        )
-
-        calculateDistanceHandle = linker.downcallHandle(symbol, descriptor)
     }
+
     private var hasLoaded: Boolean = false
+
     fun loadNativeLibrary() {
         if (hasLoaded) return
-        hasLoaded = true
+
         val os = System.getProperty("os.name").lowercase(Locale.ENGLISH)
         val arch = System.getProperty("os.arch").lowercase(Locale.ENGLISH)
 
-        // build.gradle.kts の into("natives/$folder") と一致させる
         val platformDir = when {
             os.contains("win") -> "windows-x64"
             os.contains("nix") || os.contains("nux") -> "linux-x64"
-            os.contains("mac") -> {
-                if (arch.contains("aarch64") || arch.contains("arm")) {
-                    "macos-arm64"
-                } else {
-                    "macos-x64"
-                }
-            }
+            os.contains("mac") -> if (arch.contains("aarch64") || arch.contains("arm")) "macos-arm64" else "macos-x64"
             else -> throw RuntimeException("Unsupported OS: $os")
         }
 
-        // Cargo.toml の [lib] name = "infinite_client" に基づく
         val libName = System.mapLibraryName("infinite_client")
         val resourcePath = "/natives/$platformDir/$libName"
 
+        // 保存先ディレクトリ: .minecraft/infinite/lib/
+        val destDir = Path.of("infinite", "lib")
+        val destPath = destDir.resolve(libName)
+
         val resourceStream = LibInfiniteClient::class.java.getResourceAsStream(resourcePath)
-            ?: throw RuntimeException("Native library not found at $resourcePath")
+            ?: throw RuntimeException("Native library not found in JAR: $resourcePath")
 
-        // 一時ファイルの作成 (Windows用に拡張子を適切に設定)
-        val suffix = when {
-            os.contains("win") -> ".dll"
-            os.contains("mac") -> ".dylib"
-            else -> ".so"
+        // コピーが必要かチェック
+        if (shouldUpdate(resourceStream, destPath)) {
+            Files.createDirectories(destDir)
+            // resourceStreamは一回読み込むと消費されるため、再度取得
+            LibInfiniteClient::class.java.getResourceAsStream(resourcePath)!!.use { input ->
+                Files.copy(input, destPath, StandardCopyOption.REPLACE_EXISTING)
+            }
         }
 
-        val tempFile = Files.createTempFile("infinite_client_", suffix)
-        tempFile.toFile().deleteOnExit()
-
-        resourceStream.use { input ->
-            Files.copy(input, tempFile, StandardCopyOption.REPLACE_EXISTING)
-        }
-
-        System.load(tempFile.toAbsolutePath().toString())
+        System.load(destPath.toAbsolutePath().toString())
+        hasLoaded = true
     }
 
-    fun calculateDistance(x: Float, y: Float, z: Float): Float {
+    /**
+     * ファイルが存在しない、またはハッシュが一致しない場合にtrueを返す
+     */
+    private fun shouldUpdate(resourceStream: InputStream, destPath: Path): Boolean {
+        if (!destPath.exists()) return true
+
         return try {
-            calculateDistanceHandle.invokeExact(x, y, z) as Float
-        } catch (e: Throwable) {
-            throw RuntimeException("Error calling native function calculate_distance", e)
+            val resHash = calculateHash(resourceStream)
+            val fileHash = Files.newInputStream(destPath).use { calculateHash(it) }
+            !resHash.contentEquals(fileHash)
+        } catch (e: Exception) {
+            LogSystem.error("Error while loading library: $e")
+            true // エラー時は安全のために再コピー
         }
+    }
+
+    private fun calculateHash(input: InputStream): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(8192)
+        var read: Int
+        while (input.read(buffer).also { read = it } != -1) {
+            digest.update(buffer, 0, read)
+        }
+        return digest.digest()
     }
 }
