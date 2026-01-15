@@ -1,0 +1,10 @@
+[package]
+name = "infinite-client"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+# 共有ライブラリとしてビルド
+crate-type = ["cdylib"]
+
+[dependencies]

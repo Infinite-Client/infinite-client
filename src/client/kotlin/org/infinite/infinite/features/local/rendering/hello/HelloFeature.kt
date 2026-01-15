@@ -14,6 +14,7 @@ import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
 import org.infinite.libs.graphics.graphics2d.structs.TextStyle
 import org.infinite.libs.log.LogSystem
+import org.infinite.libs.rust.LibInfiniteClient
 import org.lwjgl.glfw.GLFW
 import kotlin.math.cos
 import kotlin.math.sin
@@ -199,5 +200,8 @@ class HelloFeature : LocalFeature() {
         }
     }
 
-    override fun onLevelRendering(graphics3D: Graphics3D): Graphics3D = graphics3D
+    override fun onLevelRendering(graphics3D: Graphics3D) {
+        val result = LibInfiniteClient.calculateDistance(1f, 2f, 3f)
+        LogSystem.log("result: $result")
+    }
 }

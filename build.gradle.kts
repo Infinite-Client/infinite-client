@@ -1,6 +1,7 @@
 
 import net.ltgt.gradle.errorprone.errorprone
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Locale
 
 plugins {
     kotlin("jvm")
@@ -60,19 +61,44 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1") // JUnit Jupiter Engine
     errorprone("com.google.errorprone:error_prone_core:2.45.0")
 }
+
+// Rustビルドタスクの定義
+val buildRust = tasks.register<Exec>("buildRust") {
+    group = "build"
+    workingDir = file("src/main/rust")
+
+    val osName = System.getProperty("os.name").lowercase(Locale.ENGLISH)
+
+    // Linux環境であれば --target x86_64-unknown-linux-gnu を明示的に付けても良いですが、
+    // 単体ビルド（ホスト向け）を優先するため標準のビルドを行います。
+    commandLine("cargo", "build", "--release")
+
+    // 自分のOS以外で実行しようとした場合にエラーで止めないための保険
+    isIgnoreExitValue = true
+
+    // 現在のOSがLinuxでない場合に実行をスキップしたい場合は以下を有効化
+    // onlyIf { osName.contains("nux") }
+}
+
 tasks {
     test {
         useJUnitPlatform()
     }
 
     processResources {
+        dependsOn(buildRust)
+        // 成果物の場所を cargo のデフォルト（target/release）に合わせる
+        from("src/main/rust/target/release") {
+            include("*.so", "*.dll", "*.dylib")
+            into("natives/linux-x64") // フォルダを分けておくとロード時に便利です
+        }
+
         inputs.property("version", project.version)
         filesMatching("fabric.mod.json") {
             expand(getProperties())
-            expand(mutableMapOf("version" to project.version))
+            // 重複を避けるため expand は1回にまとめるのが安全
         }
     }
-
     loom {
         splitEnvironmentSourceSets()
         accessWidenerPath = file("src/main/resources/infinite.accesswidener")
@@ -94,14 +120,21 @@ tasks {
     }
 
     jar {
+        // 重複エラーの解決策
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
         val archiveName = project.base.archivesName
         inputs.property("archivesName", archiveName)
-        from(sourceSets["client"].output)
+
+        // clientソースセットが存在する場合のみ含める
+        if (project.sourceSets.findByName("client") != null) {
+            from(sourceSets["client"].output)
+        }
+
         from("LICENSE") {
             rename { fileName -> "${fileName}_$archiveName" }
         }
     }
-
     publishing {
         publications {
             create<MavenPublication>("mavenJava") {
