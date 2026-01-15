@@ -7,7 +7,8 @@ import java.lang.invoke.MethodHandle
 object ProjectileEmulator {
     private val advancedHandle: MethodHandle
 
-    private val ADVANCED_LAYOUT = MemoryLayout.structLayout(
+    // 構造体のレイアウト定義 (RustのAdvancedResultPtrと完全一致させる)
+    private val LAYOUT = MemoryLayout.structLayout(
         ValueLayout.JAVA_FLOAT.withName("low_pitch"),
         ValueLayout.JAVA_FLOAT.withName("high_pitch"),
         ValueLayout.JAVA_FLOAT.withName("yaw"),
@@ -16,20 +17,26 @@ object ProjectileEmulator {
         ValueLayout.JAVA_FLOAT.withName("target_pos_y"),
         ValueLayout.JAVA_FLOAT.withName("target_pos_z"),
         ValueLayout.JAVA_FLOAT.withName("max_range_dist"),
-    ).withByteAlignment(4)
+    )
+
+    // スレッドごとに計算用バッファを保持（アロケーションをゼロに）
+    private val threadArena = ThreadLocal.withInitial { Arena.ofAuto() }
+    private val threadBuffer = ThreadLocal.withInitial {
+        threadArena.get().allocate(LAYOUT)
+    }
 
     init {
         val linker = Linker.nativeLinker()
         val symbol = SymbolLookup.loaderLookup().find("rust_analyze_advanced").orElseThrow()
 
-        val desc = FunctionDescriptor.of(
-            ADVANCED_LAYOUT,
+        val desc = FunctionDescriptor.ofVoid(
             ValueLayout.JAVA_FLOAT, // power
-            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // start xyz
-            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // target xyz
-            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // vel xyz
+            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // start
+            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // target
+            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // vel
             ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // drag, grav, target_grav
             ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, // prec, steps, iter
+            ValueLayout.ADDRESS, // out_ptr (結果書き込み用のアドレス)
         )
         advancedHandle = linker.downcallHandle(symbol, desc)
     }
@@ -46,24 +53,33 @@ object ProjectileEmulator {
         steps: Int,
         iter: Int,
     ): AdvancedResult {
-        Arena.ofConfined().use { arena ->
-            val seg = advancedHandle.invoke(
-                arena, power,
-                start.x.toFloat(), start.y.toFloat(), start.z.toFloat(),
-                target.x.toFloat(), target.y.toFloat(), target.z.toFloat(),
-                vel.x.toFloat(), vel.y.toFloat(), vel.z.toFloat(),
-                drag, grav, targetGrav, prec, steps, iter,
-            ) as MemorySegment
+        val buffer = threadBuffer.get()
 
-            return AdvancedResult(
-                seg.get(ValueLayout.JAVA_FLOAT, 0),
-                seg.get(ValueLayout.JAVA_FLOAT, 4),
-                seg.get(ValueLayout.JAVA_FLOAT, 8),
-                seg.get(ValueLayout.JAVA_INT, 12),
-                Vec3(seg.get(ValueLayout.JAVA_FLOAT, 16).toDouble(), seg.get(ValueLayout.JAVA_FLOAT, 20).toDouble(), seg.get(ValueLayout.JAVA_FLOAT, 24).toDouble()),
-                seg.get(ValueLayout.JAVA_FLOAT, 28),
-            )
-        }
+        // Rustを呼び出し（bufferのアドレスを直接渡す）
+        advancedHandle.invoke(
+            power,
+            start.x.toFloat(), start.y.toFloat(), start.z.toFloat(),
+            target.x.toFloat(), target.y.toFloat(), target.z.toFloat(),
+            vel.x.toFloat(), vel.y.toFloat(), vel.z.toFloat(),
+            drag, grav, targetGrav,
+            prec, steps, iter,
+            buffer,
+        )
+
+        // 書き込まれたデータを読み取ってデータクラスに変換
+        // (ここでのコピーをさらに削るなら、AdvancedResult自体を排除して直接bufferから値を参照する)
+        return AdvancedResult(
+            buffer.get(ValueLayout.JAVA_FLOAT, 0),
+            buffer.get(ValueLayout.JAVA_FLOAT, 4),
+            buffer.get(ValueLayout.JAVA_FLOAT, 8),
+            buffer.get(ValueLayout.JAVA_INT, 12),
+            Vec3(
+                buffer.get(ValueLayout.JAVA_FLOAT, 16).toDouble(),
+                buffer.get(ValueLayout.JAVA_FLOAT, 20).toDouble(),
+                buffer.get(ValueLayout.JAVA_FLOAT, 24).toDouble(),
+            ),
+            buffer.get(ValueLayout.JAVA_FLOAT, 28),
+        )
     }
 
     data class AdvancedResult(val lowP: Float, val highP: Float, val yaw: Float, val ticks: Int, val predictedPos: Vec3, val maxDist: Float)

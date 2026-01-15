@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 #[repr(C)]
-pub struct AdvancedAnalysisResult {
+pub struct AdvancedResultPtr {
     pub low_pitch: f32,
     pub high_pitch: f32,
     pub yaw: f32,
@@ -12,184 +12,136 @@ pub struct AdvancedAnalysisResult {
     pub max_range_dist: f32,
 }
 
-// 基礎的な1ステップのシミュレーション
-fn simulate_step(v: &mut f32, vy: &mut f32, drag: f32, grav: f32, px: &mut f32, py: &mut f32) {
-    *px += *v;
+#[inline(always)]
+fn simulate_step(vx: &mut f32, vy: &mut f32, drag: f32, grav: f32, px: &mut f32, py: &mut f32) {
+    *px += *vx;
     *py += *vy;
-    *v *= drag;
+    *vx *= drag;
     *vy = (*vy * drag) - grav;
 }
 
-// 指定したピッチでの到達距離と時間を計算
-fn simulate_for_dist(
-    v: f32,
-    pitch: f32,
-    dy: f32,
-    max_step: i32,
-    drag: f32,
-    grav: f32,
-) -> (f32, i32) {
+// 特定の角度で水平距離 dx に達した時の y 座標と時間を返す
+fn simulate_to_x(v: f32, pitch: f32, dx: f32, max_step: i32, drag: f32, grav: f32) -> (f32, i32) {
+    let rad = pitch * (PI / 180.0);
+    let (mut px, mut py) = (0.0, 0.0);
+    let (mut vx, mut vy) = (v * rad.cos(), -rad.sin() * v); // Minecraft: 上が負なので -sin
+
+    for t in 1..=max_step {
+        simulate_step(&mut vx, &mut vy, drag, grav, &mut px, &mut py);
+        if px >= dx {
+            return (py, t);
+        }
+    }
+    (py, max_step)
+}
+
+// 最大射程距離を計算するためのシミュレーション
+fn simulate_max_dist(v: f32, pitch: f32, dy: f32, max_step: i32, drag: f32, grav: f32) -> f32 {
     let rad = pitch * (PI / 180.0);
     let (mut px, mut py) = (0.0, 0.0);
     let (mut vx, mut vy) = (v * rad.cos(), -rad.sin() * v);
-    for t in 1..=max_step {
+    for _ in 1..=max_step {
         simulate_step(&mut vx, &mut vy, drag, grav, &mut px, &mut py);
         if vy < 0.0 && py <= dy {
-            return (px, t);
+            return px;
         }
     }
-    (px, max_step)
+    px
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_analyze_advanced(
+pub unsafe extern "C" fn rust_analyze_advanced(
     power: f32,
-    start_x: f32,
-    start_y: f32,
-    start_z: f32,
-    target_x: f32,
-    target_y: f32,
-    target_z: f32,
+    s_x: f32,
+    s_y: f32,
+    s_z: f32,
+    t_x: f32,
+    t_y: f32,
+    t_z: f32,
     v_x: f32,
     v_y: f32,
     v_z: f32,
     drag: f32,
     grav: f32,
-    target_grav: f32,
-    precision: i32,
-    max_step: i32,
-    iterations: i32,
-) -> AdvancedAnalysisResult {
-    let mut predicted_x = target_x;
-    let mut predicted_y = target_y;
-    let mut predicted_z = target_z;
-    let mut last_ticks = 10;
+    t_grav: f32,
+    prec: i32,
+    max_s: i32,
+    iter: i32,
+    out_ptr: *mut AdvancedResultPtr,
+) {
+    let (mut p_x, mut p_y, mut p_z) = (t_x, t_y, t_z);
+    let (mut l_p, mut h_p, mut m_d, mut l_t) = (0.0, 0.0, 0.0, 10);
 
-    let mut low_p = 0.0;
-    let mut high_p = 0.0;
-    let mut max_d = 0.0;
+    for _ in 0..iter {
+        let t = l_t as f32;
+        p_x = t_x + v_x * t;
+        p_y = t_y + (v_y * t) - (0.5 * t_grav * t * t);
+        p_z = t_z + v_z * t;
 
-    // 初期 Yaw の計算（静止ターゲット対応）
-    let mut final_yaw = (-(target_x - start_x)).atan2(target_z - start_z) * (180.0 / PI);
+        let dx = (p_x - s_x).hypot(p_z - s_z);
+        let dy = p_y - s_y;
 
-    for _ in 0..iterations {
-        let t = last_ticks as f32;
-        predicted_x = target_x + v_x * t;
-        predicted_y = target_y + (v_y * t) - (0.5 * target_grav * t * t);
-        predicted_z = target_z + v_z * t;
-
-        let dx = predicted_x - start_x;
-        let dy = predicted_y - start_y;
-        let dz = predicted_z - start_z;
-        let h_dist = (dx * dx + dz * dz).sqrt();
-
-        final_yaw = (-dx).atan2(dz) * (180.0 / PI);
-        // 最大射程の確認 (三分割探索)
-        let mut l = -90.0;
-        let mut r = 45.0;
-        for _ in 0..8 {
-            let m1 = l + (r - l) / 3.0;
-            let m2 = r - (r - l) / 3.0;
-            if simulate_for_dist(power, m1, dy, max_step, drag, grav).0
-                > simulate_for_dist(power, m2, dy, max_step, drag, grav).0
+        // 1. 最大射程となるピッチを三分割探索 (通常 -45度付近)
+        let mut low_limit = -90.0;
+        let mut high_limit = 90.0;
+        for _ in 0..10 {
+            let m1 = low_limit + (high_limit - low_limit) / 3.0;
+            let m2 = high_limit - (high_limit - low_limit) / 3.0;
+            if simulate_max_dist(power, m1, dy, max_s, drag, grav)
+                > simulate_max_dist(power, m2, dy, max_s, drag, grav)
             {
-                r = m2;
+                high_limit = m2;
             } else {
-                l = m1;
+                low_limit = m1;
             }
         }
-        let max_range_p = (l + r) * 0.5;
-        max_d = simulate_for_dist(power, max_range_p, dy, max_step, drag, grav).0;
+        let max_p = (low_limit + high_limit) * 0.5;
+        m_d = simulate_max_dist(power, max_p, dy, max_s, drag, grav);
 
-        // 低角と高角を解く
-        let (lp, lt) = solve_single_pitch(
-            power,
-            h_dist,
-            dy,
-            max_range_p,
-            45.0,
-            precision,
-            max_step,
-            drag,
-            grav,
-        );
-        let (hp, _ht) = solve_single_pitch(
-            power,
-            h_dist,
-            dy,
-            -90.0,
-            max_range_p,
-            precision,
-            max_step,
-            drag,
-            grav,
-        );
+        // 2. Low Arc (max_p から 90度[下向き] の間で探索)
+        let mut lp = max_p;
+        let mut hp = 90.0;
+        let mut last_lt = max_s;
+        for _ in 0..prec {
+            let mid = (lp + hp) * 0.5;
+            let (y, t) = simulate_to_x(power, mid, dx, max_s, drag, grav);
+            if y < dy {
+                hp = mid;
+            } else {
+                lp = mid;
+            }
+            last_lt = t;
+        }
+        l_p = (lp + hp) * 0.5;
+        l_t = last_lt;
 
-        low_p = lp;
-        high_p = hp;
+        // 3. High Arc (-90度[真上] から max_p の間で探索)
+        let mut la = -90.0;
+        let mut ha = max_p;
+        for _ in 0..prec {
+            let mid = (la + ha) * 0.5;
+            let (y, _) = simulate_to_x(power, mid, dx, max_s, drag, grav);
+            // High Arc側では角度を下げると（max_pに近づけると）着弾点は高くなる
+            if y > dy {
+                la = mid;
+            } else {
+                ha = mid;
+            }
+        }
+        h_p = (la + ha) * 0.5;
 
-        // 収束判定のためのticks更新 (低角を基準にするのが一般的)
-        if (last_ticks - lt).abs() < 1 {
-            last_ticks = lt;
+        if (l_t - last_lt).abs() < 1 {
             break;
         }
-        last_ticks = lt;
     }
 
-    AdvancedAnalysisResult {
-        low_pitch: low_p,
-        high_pitch: high_p,
-        yaw: final_yaw,
-        travel_ticks: last_ticks,
-        target_pos_x: predicted_x,
-        target_pos_y: predicted_y,
-        target_pos_z: predicted_z,
-        max_range_dist: max_d,
-    }
-}
-
-// 内部用ピッチ解法 (前回のものを流用)
-fn solve_single_pitch(
-    power: f32,
-    dx: f32,
-    dy: f32,
-    mut low: f32,
-    mut high: f32,
-    precision: i32,
-    max_step: i32,
-    drag: f32,
-    grav: f32,
-) -> (f32, i32) {
-    let mut last_t = 0;
-    for _ in 0..precision {
-        let mid = (low + high) * 0.5;
-        let (y, t) = simulate_core(power, mid, dx, max_step, drag, grav);
-        last_t = t;
-        if y < dy {
-            high = mid;
-        } else {
-            low = mid;
-        }
-    }
-    ((low + high) * 0.5, last_t)
-}
-
-fn simulate_core(
-    v: f32,
-    pitch: f32,
-    target_x: f32,
-    max_step: i32,
-    drag: f32,
-    grav: f32,
-) -> (f32, i32) {
-    let rad = pitch * (PI / 180.0);
-    let (mut px, mut py) = (0.0, 0.0);
-    let (mut vx, mut vy) = (v * rad.cos(), -rad.sin() * v);
-    for t in 1..=max_step {
-        simulate_step(&mut vx, &mut vy, drag, grav, &mut px, &mut py);
-        if px >= target_x {
-            return (py, t);
-        }
-    }
-    (py, max_step)
+    let res = unsafe { &mut *out_ptr };
+    res.low_pitch = l_p;
+    res.high_pitch = h_p;
+    res.yaw = (-(p_x - s_x)).atan2(p_z - s_z) * (180.0 / PI);
+    res.travel_ticks = l_t;
+    res.target_pos_x = p_x;
+    res.target_pos_y = p_y;
+    res.target_pos_z = p_z;
+    res.max_range_dist = m_d;
 }

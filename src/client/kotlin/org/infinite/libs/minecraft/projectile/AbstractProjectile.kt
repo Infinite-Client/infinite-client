@@ -37,9 +37,9 @@ abstract class AbstractProjectile : MinecraftInterface() {
     ): TrajectoryAnalysis {
         val vel = target.deltaMovement
         val targetPos = overrideTargetPos ?: target.position()
-        val targetGrav = if (target.isNoGravity) 0f else 0.08f // Minecraftの標準的な落下加速度
+        val targetGrav = if (target.isNoGravity) 0f else 0.08f
 
-        // 1. Rustで偏差予測込みの計算を一括実行
+        // 1. 本来のターゲット（ロックオン対象等）に対する高度な解析
         val res = ProjectileEmulator.analyzeAdvanced(
             basePower.toFloat(), startPos, targetPos, vel,
             drag.toFloat(), gravity.toFloat(), targetGrav,
@@ -50,26 +50,39 @@ abstract class AbstractProjectile : MinecraftInterface() {
         val dz = res.predictedPos.z - startPos.z
         val horizontalDist = sqrt(dx * dx + dz * dz)
 
-        // 2. 射程距離チェック
-        if (horizontalDist > res.maxDist) {
-            return TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Unreachable, res.predictedPos, res.ticks, false)
+        // 射程内かつ障害物がないかチェック
+        var finalAnalysis: TrajectoryAnalysis? = null
+
+        if (horizontalDist <= res.maxDist) {
+            // 低角の検証
+            val lowRes = verifyPath(basePower, res.lowP.toDouble(), res.yaw.toDouble(), res.predictedPos, startPos)
+            if (lowRes.status == PathStatus.Clear) {
+                finalAnalysis = TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Clear, res.predictedPos, res.ticks, false)
+            } else {
+                // 高角の検証
+                val highRes = verifyPath(basePower, res.highP.toDouble(), res.yaw.toDouble(), res.predictedPos, startPos)
+                if (highRes.status == PathStatus.Clear) {
+                    finalAnalysis = TrajectoryAnalysis(res.highP.toDouble(), res.yaw.toDouble(), PathStatus.Clear, res.predictedPos, res.ticks, true)
+                }
+            }
         }
 
-        // 3. 障害物判定 (verifyPath)
-        val lowRes = verifyPath(basePower, res.lowP.toDouble(), res.yaw.toDouble(), res.predictedPos, startPos)
-        if (lowRes.status == PathStatus.Clear) {
-            return TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Clear, res.predictedPos, res.ticks, false)
+        // 2. どちらもダメ（射程外 or 障害物あり）な場合、目の前の対象にターゲットを変更
+        if (finalAnalysis == null) {
+            // LockOn中の機能等から reach を取得するか、デフォルト値（例: 100m）を使用
+            val reach = 100.0
+            val fallbackTarget = getTargetPos(reach)
+
+            return if (fallbackTarget != null) {
+                // 目の前の位置（静止座標）をターゲットとして再計算
+                analysisStaticPos(basePower, fallbackTarget, startPos)
+            } else {
+                // フォールバック先すら見つからない場合は、仕方なく元の「Obstructed」な結果を返す
+                TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Obstructed, res.predictedPos, res.ticks, false)
+            }
         }
 
-        val highRes = verifyPath(basePower, res.highP.toDouble(), res.yaw.toDouble(), res.predictedPos, startPos)
-        return TrajectoryAnalysis(
-            res.highP.toDouble(),
-            res.yaw.toDouble(),
-            if (highRes.status == PathStatus.Clear) PathStatus.Clear else PathStatus.Obstructed,
-            res.predictedPos,
-            res.ticks,
-            true,
-        )
+        return finalAnalysis
     }
 
     /**
