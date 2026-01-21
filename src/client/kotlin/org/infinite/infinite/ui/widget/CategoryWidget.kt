@@ -109,12 +109,12 @@ abstract class CategoryWidget<T : Category<*, out Feature>>(
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme
         val maxAlpha = 0.75f
-        val alpha = ((System.currentTimeMillis() - spawnTime).toFloat() / animationDuration * maxAlpha).coerceIn(0f, maxAlpha)
+        val alpha =
+            ((System.currentTimeMillis() - spawnTime).toFloat() / animationDuration * maxAlpha).coerceIn(0f, maxAlpha)
         val w = graphics2D.width.toFloat()
         val h = graphics2D.height.toFloat()
 
-        theme.renderBackGround(0f, 0f, w, h, graphics2D, alpha)
-
+        theme.renderBackgroundWithRatio(0f, 0f, w, h, graphics2D, alpha, 0.4f)
         graphics2D.strokeStyle.width = 2f
         val startColor = colorScheme.color(360 * thisPageProgress, 1f, 0.5f, alpha)
         val endColor = colorScheme.color(360 * (thisPageProgress + 0.5f / parent.pageSize), 1f, 0.5f, alpha)
