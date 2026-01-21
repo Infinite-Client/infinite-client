@@ -49,8 +49,8 @@ jobs:
             x86_64-apple-darwin,
             aarch64-apple-darwin
 
-      # 2. Rust の依存関係とビルドキャッシュ
-      - name: Cache Cargo
+      # 2. Rust/Cargo 関連の統合キャッシュ (バイナリとビルド成果物)
+      - name: Cache Cargo and Rust targets
         uses: actions/cache@v4
         with:
           path: |
@@ -59,25 +59,26 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/infinite-client/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          # Cargo.lock の変更、またはOSが変わった時に再生成
+          key: ${{ runner.os }}-cargo-full-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-full-
 
-      - name: Install cargo-zigbuild
+      - name: Install Build Tools (Cached)
         run: |
+          # インストール済みかチェックして時間を節約
           if ! command -v cargo-zigbuild &> /dev/null; then
-            pip install cargo-zigbuild
+            cargo install cargo-zigbuild
           fi
-      - name: Install cbindgen
-        run: |
           if ! command -v cbindgen &> /dev/null; then
-            pip install cbindgen
+            cargo install cbindgen
           fi
+
       - name: Build with Gradle
         run: |
           chmod +x ./gradlew
-          # build/jextract-25 がキャッシュにある場合、gradleタスク側で再ダウンロードがスキップされます
-          ./gradlew build -x test --parallel
+          # キャッシュを最大限活用してビルド
+          ./gradlew build -x test --parallel --build-cache
         shell: bash
 
       - name: Prepare Artifacts
