@@ -9,6 +9,7 @@ import net.minecraft.client.KeyMapping
 import org.infinite.InfiniteClient.feature
 import org.infinite.infinite.InfiniteGlobalFeatures
 import org.infinite.infinite.InfiniteLocalFeatures
+import org.infinite.infinite.command.InfiniteCommand
 import org.infinite.infinite.theme.default.DefaultTheme
 import org.infinite.infinite.theme.infinite.InfiniteTheme
 import org.infinite.infinite.ui.screen.LocalFeatureCategoriesScreen
@@ -89,6 +90,7 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
     override fun onInitializeClient() {
         LogSystem.init()
         LibInfiniteClient.loadNativeLibrary()
+        InfiniteCommand.register()
         themeManager.register(InfiniteTheme())
         // 1. グローバル設定のロード
         ConfigManager.loadGlobal()

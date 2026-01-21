@@ -1,44 +1,17 @@
 package org.infinite.libs.rust.projectile
 
 import net.minecraft.world.phys.Vec3
-import java.lang.foreign.*
-import java.lang.invoke.MethodHandle
+import org.infinite.nativebind.AdvancedResultPtr
+import org.infinite.nativebind.infinite_client_h
+import java.lang.foreign.Arena
 
 object ProjectileEmulator {
-    private val advancedHandle: MethodHandle
 
-    // 構造体のレイアウト定義 (RustのAdvancedResultPtrと完全一致させる)
-    private val LAYOUT = MemoryLayout.structLayout(
-        ValueLayout.JAVA_FLOAT.withName("low_pitch"),
-        ValueLayout.JAVA_FLOAT.withName("high_pitch"),
-        ValueLayout.JAVA_FLOAT.withName("yaw"),
-        ValueLayout.JAVA_INT.withName("travel_ticks"),
-        ValueLayout.JAVA_FLOAT.withName("target_pos_x"),
-        ValueLayout.JAVA_FLOAT.withName("target_pos_y"),
-        ValueLayout.JAVA_FLOAT.withName("target_pos_z"),
-        ValueLayout.JAVA_FLOAT.withName("max_range_dist"),
-    )
-
-    // スレッドごとに計算用バッファを保持（アロケーションをゼロに）
+    // スレッドごとに計算用バッファを保持（ゼロ・アロケーション維持）
+    // jextractが生成したレイアウト(AdvancedResultPtr.layout())を使用
     private val threadArena = ThreadLocal.withInitial { Arena.ofAuto() }
     private val threadBuffer = ThreadLocal.withInitial {
-        threadArena.get().allocate(LAYOUT)
-    }
-
-    init {
-        val linker = Linker.nativeLinker()
-        val symbol = SymbolLookup.loaderLookup().find("rust_analyze_advanced").orElseThrow()
-
-        val desc = FunctionDescriptor.ofVoid(
-            ValueLayout.JAVA_FLOAT, // power
-            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // start
-            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // target
-            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // vel
-            ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_FLOAT, // drag, grav, target_grav
-            ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, // prec, steps, iter
-            ValueLayout.ADDRESS, // out_ptr (結果書き込み用のアドレス)
-        )
-        advancedHandle = linker.downcallHandle(symbol, desc)
+        AdvancedResultPtr.allocate(threadArena.get())
     }
 
     fun analyzeAdvanced(
@@ -55,32 +28,40 @@ object ProjectileEmulator {
     ): AdvancedResult {
         val buffer = threadBuffer.get()
 
-        // Rustを呼び出し（bufferのアドレスを直接渡す）
-        advancedHandle.invoke(
+        // jextractが生成した静的メソッドを直接呼び出し
+        // 型安全であり、内部でMethodHandleが最適化されているため高速です
+        infinite_client_h.rust_analyze_advanced(
             power,
             start.x.toFloat(), start.y.toFloat(), start.z.toFloat(),
             target.x.toFloat(), target.y.toFloat(), target.z.toFloat(),
             vel.x.toFloat(), vel.y.toFloat(), vel.z.toFloat(),
             drag, grav, targetGrav,
             prec, steps, iter,
-            buffer,
+            buffer, // MemorySegment (Address) として渡される
         )
 
-        // 書き込まれたデータを読み取ってデータクラスに変換
-        // (ここでのコピーをさらに削るなら、AdvancedResult自体を排除して直接bufferから値を参照する)
+        // 書き込まれたデータを読み取る
+        // オフセット計算(0, 4, 8...)をjextract生成のゲッターに任せることで安全性を確保
         return AdvancedResult(
-            buffer.get(ValueLayout.JAVA_FLOAT, 0),
-            buffer.get(ValueLayout.JAVA_FLOAT, 4),
-            buffer.get(ValueLayout.JAVA_FLOAT, 8),
-            buffer.get(ValueLayout.JAVA_INT, 12),
+            AdvancedResultPtr.low_pitch(buffer),
+            AdvancedResultPtr.high_pitch(buffer),
+            AdvancedResultPtr.yaw(buffer),
+            AdvancedResultPtr.travel_ticks(buffer),
             Vec3(
-                buffer.get(ValueLayout.JAVA_FLOAT, 16).toDouble(),
-                buffer.get(ValueLayout.JAVA_FLOAT, 20).toDouble(),
-                buffer.get(ValueLayout.JAVA_FLOAT, 24).toDouble(),
+                AdvancedResultPtr.target_pos_x(buffer).toDouble(),
+                AdvancedResultPtr.target_pos_y(buffer).toDouble(),
+                AdvancedResultPtr.target_pos_z(buffer).toDouble(),
             ),
-            buffer.get(ValueLayout.JAVA_FLOAT, 28),
+            AdvancedResultPtr.max_range_dist(buffer),
         )
     }
 
-    data class AdvancedResult(val lowP: Float, val highP: Float, val yaw: Float, val ticks: Int, val predictedPos: Vec3, val maxDist: Float)
+    data class AdvancedResult(
+        val lowP: Float,
+        val highP: Float,
+        val yaw: Float,
+        val ticks: Int,
+        val predictedPos: Vec3,
+        val maxDist: Float,
+    )
 }

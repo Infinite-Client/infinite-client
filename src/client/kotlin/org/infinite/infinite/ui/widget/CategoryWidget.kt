@@ -108,8 +108,8 @@ abstract class CategoryWidget<T : Category<*, out Feature>>(
     override fun render(graphics2D: AbstractCarouselScreen.WidgetGraphics2D): AbstractCarouselScreen.WidgetGraphics2D {
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme
-
-        val alpha = ((System.currentTimeMillis() - spawnTime).toFloat() / animationDuration * 0.5f).coerceIn(0f, 0.5f)
+        val maxAlpha = 0.75f
+        val alpha = ((System.currentTimeMillis() - spawnTime).toFloat() / animationDuration * maxAlpha).coerceIn(0f, maxAlpha)
         val w = graphics2D.width.toFloat()
         val h = graphics2D.height.toFloat()
 

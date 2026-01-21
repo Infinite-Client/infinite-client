@@ -1,4 +1,4 @@
-name: Gradle Build and Release
+name: Gradle Build and Release (Cross-platform)
 
 on:
   push:
@@ -9,108 +9,105 @@ on:
 
 jobs:
   build:
-    # (前回のマトリックス設定と同じため省略)
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
-            platform: linux
-            arch: aarch64
-            target: aarch64-unknown-linux-gnu
-          - os: windows-latest
-            platform: windows
-            arch: x64
-            target: x86_64-pc-windows-msvc
-          - os: macos-latest
-            platform: macos
-            arch: universal
-            target: aarch64-apple-darwin,x86_64-apple-darwin
-
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup JDK
+      - name: Setup JDK 25
         uses: actions/setup-java@v4
         with:
           java-version: '25'
           distribution: 'microsoft'
           cache: 'gradle'
 
+      # 1. jextract のキャッシュ
+      - name: Cache jextract
+        id: cache-jextract
+        uses: actions/cache@v4
+        with:
+          path: build/jextract-25
+          key: ${{ runner.os }}-jextract-25
+          restore-keys: |
+            ${{ runner.os }}-jextract-
+
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: >-
+            x86_64-unknown-linux-gnu,
+            aarch64-unknown-linux-gnu,
+            x86_64-pc-windows-gnu,
+            aarch64-pc-windows-gnullvm,
+            x86_64-apple-darwin,
+            aarch64-apple-darwin
+
+      # 2. Rust の依存関係とビルドキャッシュ
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/infinite-client/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install cargo-zigbuild
+        run: |
+          if ! command -v cargo-zigbuild &> /dev/null; then
+            pip install cargo-zigbuild
+          fi
 
       - name: Build with Gradle
         run: |
-          [[ "${{ runner.os }}" != "Windows" ]] && chmod +x ./gradlew
-          ./gradlew build -x test
+          chmod +x ./gradlew
+          # build/jextract-25 がキャッシュにある場合、gradleタスク側で再ダウンロードがスキップされます
+          ./gradlew build -x test --parallel
         shell: bash
 
-      - name: Prepare Artifacts (Rename)
+      - name: Prepare Artifacts
         shell: bash
         run: |
-              # 厳密に "version:" 行のみを抽出し、プロジェクト名などが混ざらないようにする
-              VERSION=$(./gradlew properties --no-daemon | grep "^version:" | awk '{print $2}')
-              
-              # バージョンが取得できなかった場合のフォールバック（デバッグ用）
-              if [ -z "$VERSION" ]; then VERSION="unknown"; fi
-              
-              mkdir -p dist
-              
-              # ワイルドカードで元ファイルを探し、安全にコピーする
-              # build/libs 内にある jar ファイル（-plainなどは除く）を対象にする例
-              find build/libs/ -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" ! -name "*-sources.jar" | while read -r file; do
-                cp "$file" "dist/infinite-${{ matrix.platform }}_${{ matrix.arch }}-${VERSION}.jar"
-              done
-              
-              echo "VERSION=$VERSION" >> $GITHUB_ENV
+          VERSION=$(./gradlew properties --no-daemon | grep "^version:" | awk '{print $2}')
+          if [ -z "$VERSION" ]; then VERSION="unknown"; fi
+          mkdir -p dist
+          find build/libs/ -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" ! -name "*-sources.jar" -exec cp {} dist/ \;
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.platform }}-${{ matrix.arch }}
+          name: all-in-one-jar
           path: dist/
 
   release:
     needs: build
-    # タグが打たれた時のみ実行
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: all-artifacts
-          merge-multiple: true
-
-      - name: Determine Release Type
-        id: check_release
-        shell: bash
-        run: |
-          # タグ名に 'dev', 'alpha', 'beta', 'rc' が含まれる場合はプレリリースとする
-          if [[ "${{ github.ref_name }}" =~ (dev|alpha|beta|rc) ]]; then
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_prerelease=false" >> $GITHUB_OUTPUT
-          fi
+          name: all-in-one-jar
+          path: dist
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: all-artifacts/*.jar
+          files: dist/*.jar
           generate_release_notes: true
-          # 上記ステップの判定結果を反映
-          prerelease: ${{ steps.check_release.outputs.is_prerelease == 'true' }}
+          prerelease: ${{ contains(github.ref_name, 'dev') || contains(github.ref_name, 'alpha') }}
           draft: false

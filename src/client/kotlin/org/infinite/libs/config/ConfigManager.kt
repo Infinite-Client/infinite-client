@@ -100,6 +100,7 @@ object ConfigManager : MinecraftInterface() {
         getLocalPath()?.let { path ->
             save(File(baseDir, "local/$path/local.json"), data)
         }
+        InfiniteClient.localFeatures.reset()
     }
 
     private fun save(file: File, data: Map<String, *>) {
@@ -175,8 +176,8 @@ object ConfigManager : MinecraftInterface() {
     }
 
     fun loadLocal() {
-        ensureLocal()
         InfiniteClient.localFeatures.reset()
+        ensureLocal()
         getLocalPath()?.let { path ->
             val file = File(baseDir, "local/$path/local.json")
             if (file.exists()) applyData(InfiniteClient.localFeatures, load(file))
