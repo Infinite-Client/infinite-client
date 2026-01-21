@@ -10,6 +10,7 @@ import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
+import org.infinite.libs.config.ConfigManager
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.core.features.property.ListProperty
 import org.infinite.utils.toLowerSnakeCase
@@ -24,8 +25,62 @@ object InfiniteCommand {
 
     private fun registerInternal(dispatcher: CommandDispatcher<CommandSourceStack>) {
         val rootNode = Commands.literal("infinite")
-            .then(createConfigNode("local", InfiniteClient.localFeatures))
-            .then(createConfigNode("global", InfiniteClient.globalFeatures))
+            // --- Global Save/Load (Root) ---
+            .then(
+                Commands.literal("save").executes {
+                    ConfigManager.saveGlobal()
+                    ConfigManager.saveLocal()
+                    it.source.sendSuccess({ Component.literal("§a[Infinite] §fSaved all configs.") }, false)
+                    1
+                },
+            )
+            .then(
+                Commands.literal("load").executes {
+                    ConfigManager.loadGlobal()
+                    ConfigManager.loadLocal()
+                    it.source.sendSuccess({ Component.literal("§a[Infinite] §fLoaded all configs.") }, false)
+                    1
+                },
+            )
+            // --- Scoped Configs ---
+            .then(
+                createConfigNode("local", InfiniteClient.localFeatures) {
+                    // local 固有の追加コマンド
+                    this.then(
+                        Commands.literal("save").executes {
+                            ConfigManager.saveLocal()
+                            it.source.sendSuccess({ Component.literal("§a[Infinite] §fSaved local config.") }, false)
+                            1
+                        },
+                    )
+                        .then(
+                            Commands.literal("load").executes {
+                                ConfigManager.loadLocal()
+                                it.source.sendSuccess({ Component.literal("§a[Infinite] §fLoaded local config.") }, false)
+                                1
+                            },
+                        )
+                },
+            )
+            .then(
+                createConfigNode("global", InfiniteClient.globalFeatures) {
+                    // global 固有の追加コマンド
+                    this.then(
+                        Commands.literal("save").executes {
+                            ConfigManager.saveGlobal()
+                            it.source.sendSuccess({ Component.literal("§a[Infinite] §fSaved global config.") }, false)
+                            1
+                        },
+                    )
+                        .then(
+                            Commands.literal("load").executes {
+                                ConfigManager.loadGlobal()
+                                it.source.sendSuccess({ Component.literal("§a[Infinite] §fLoaded global config.") }, false)
+                                1
+                            },
+                        )
+                },
+            )
             .then(
                 Commands.literal("clear").executes {
                     InfiniteClient.localFeatures.reset()
@@ -41,6 +96,7 @@ object InfiniteCommand {
     private fun createConfigNode(
         scopeName: String,
         categoriesObj: org.infinite.libs.core.features.FeatureCategories<*, *, *, *>,
+        extraBuilder: com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack>.() -> Unit = {},
     ) = Commands.literal(scopeName)
         .then(
             Commands.literal("clear").executes {
@@ -50,6 +106,9 @@ object InfiniteCommand {
             },
         )
         .apply {
+            // save/load などの追加ノードを適用
+            extraBuilder()
+
             categoriesObj.categories.values.forEach { category ->
                 val catId = category::class.qualifiedName?.split(".")?.let {
                     if (it.size >= 2) it[it.size - 2].toLowerSnakeCase() else "unknown"
@@ -68,7 +127,7 @@ object InfiniteCommand {
                     val featId = feature::class.simpleName?.toLowerSnakeCase() ?: "unknown"
                     val featureNode = Commands.literal(featId)
 
-                    // 基本操作
+                    // 基本操作 (enable, disable, toggle, clear)
                     featureNode.then(
                         Commands.literal("enable").executes {
                             feature.enable()
@@ -98,15 +157,12 @@ object InfiniteCommand {
                         },
                     )
 
-                    // プロパティ操作
                     setupPropertyCommands(featureNode, feature)
-
                     categoryNode.then(featureNode)
                 }
                 this.then(categoryNode)
             }
         }
-
     private fun setupPropertyCommands(
         featureNode: com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack>,
         feature: Feature,

@@ -72,7 +72,7 @@ object ConfigManager : MinecraftInterface() {
     }
 
     // --- Save ---
-    private fun ensureGlobal() {
+    fun ensureGlobal() {
         InfiniteClient.globalFeatures.categories.values.forEach { category ->
             category.features.values.forEach { feature ->
                 feature.ensureAllPropertiesRegistered()
@@ -80,7 +80,7 @@ object ConfigManager : MinecraftInterface() {
         }
     }
 
-    private fun ensureLocal() {
+    fun ensureLocal() {
         InfiniteClient.localFeatures.categories.values.forEach { category ->
             category.features.values.forEach { feature ->
                 feature.ensureAllPropertiesRegistered()
@@ -100,7 +100,6 @@ object ConfigManager : MinecraftInterface() {
         getLocalPath()?.let { path ->
             save(File(baseDir, "local/$path/local.json"), data)
         }
-        InfiniteClient.localFeatures.reset()
     }
 
     private fun save(file: File, data: Map<String, *>) {
@@ -182,6 +181,7 @@ object ConfigManager : MinecraftInterface() {
             val file = File(baseDir, "local/$path/local.json")
             if (file.exists()) applyData(InfiniteClient.localFeatures, load(file))
         }
+        saveLocal()
     }
 
     private fun load(file: File): Map<String, Any?> = try {

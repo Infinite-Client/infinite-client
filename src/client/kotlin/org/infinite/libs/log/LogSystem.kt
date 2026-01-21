@@ -6,33 +6,31 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.network.chat.Style
 import net.minecraft.network.chat.TextColor
+import org.infinite.InfiniteClient
 import org.infinite.libs.interfaces.MinecraftInterface
+import org.infinite.libs.ui.theme.ColorScheme
+import org.infinite.libs.ui.theme.Theme
 import java.util.concurrent.ConcurrentLinkedQueue
 
 object LogSystem : MinecraftInterface() {
     private val messageQueue = ConcurrentLinkedQueue<Component>()
     private const val MESSAGES_PER_TICK = 5
-
-    // テーマ設定（仮置き。環境に合わせて theme() クラスを定義してください）
-    // 本来は外部の Theme クラスから取得することを推奨します
-    private object DefaultTheme {
-        const val FOREGROUND_COLOR = 0xFFFFFF
-        const val INFO_COLOR = 0x00FFFF
-        const val WARN_COLOR = 0xFFFF00
-        const val ERROR_COLOR = 0xFF0000
-    }
+    private val theme: Theme
+        get() = InfiniteClient.theme
+    private val colorScheme: ColorScheme
+        get() = theme.colorScheme
 
     // ログメソッド
-    fun log(text: String) = enqueue(text, "", DefaultTheme.FOREGROUND_COLOR)
+    fun log(text: String) = enqueue(text, "", colorScheme.foregroundColor)
 
-    fun info(text: String) = enqueue(text, " - Info ", DefaultTheme.INFO_COLOR)
+    fun info(text: String) = enqueue(text, " - Info ", colorScheme.cyanColor)
 
-    fun warn(text: String) = enqueue(text, " - Warn ", DefaultTheme.WARN_COLOR)
+    fun warn(text: String) = enqueue(text, " - Warn ", colorScheme.yellowColor)
 
-    fun error(text: String) = enqueue(text, " - Error", DefaultTheme.ERROR_COLOR)
-
+    fun error(text: String) = enqueue(text, " - Error", colorScheme.redColor)
+    fun debug(text: String) = enqueue(text, " - Debug", colorScheme.greenColor)
     fun log(text: Component) {
-        val message = createPrefixedMessage("", DefaultTheme.FOREGROUND_COLOR).append(text)
+        val message = createPrefixedMessage("", colorScheme.foregroundColor).append(text)
         processLog(message)
     }
 
@@ -93,8 +91,10 @@ object LogSystem : MinecraftInterface() {
             val endColor = if (colorIndex < colors.size - 1) colors[colorIndex + 1] else colors[colorIndex]
             val segmentProgress = (progress * (colors.size - 1)) - colorIndex
 
-            val r = (((startColor shr 16 and 0xFF) * (1 - segmentProgress)) + ((endColor shr 16 and 0xFF) * segmentProgress)).toInt()
-            val g = (((startColor shr 8 and 0xFF) * (1 - segmentProgress)) + ((endColor shr 8 and 0xFF) * segmentProgress)).toInt()
+            val r =
+                (((startColor shr 16 and 0xFF) * (1 - segmentProgress)) + ((endColor shr 16 and 0xFF) * segmentProgress)).toInt()
+            val g =
+                (((startColor shr 8 and 0xFF) * (1 - segmentProgress)) + ((endColor shr 8 and 0xFF) * segmentProgress)).toInt()
             val b = (((startColor and 0xFF) * (1 - segmentProgress)) + ((endColor and 0xFF) * segmentProgress)).toInt()
 
             val interpolatedColor = (r shl 16) or (g shl 8) or b

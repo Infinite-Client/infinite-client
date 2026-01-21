@@ -174,8 +174,6 @@ val runJextract = tasks.register<Exec>("runJextract") {
             generatedJavaDir,
             "--target-package",
             "org.infinite.nativebind",
-            "-l",
-            "infinite_client",
             headerFile.absolutePath,
         )
     }
