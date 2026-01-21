@@ -68,7 +68,11 @@ jobs:
           if ! command -v cargo-zigbuild &> /dev/null; then
             pip install cargo-zigbuild
           fi
-
+      - name: Install cbindgen
+        run: |
+          if ! command -v cbindgen &> /dev/null; then
+            pip install cbindgen
+          fi
       - name: Build with Gradle
         run: |
           chmod +x ./gradlew
