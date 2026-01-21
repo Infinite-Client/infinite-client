@@ -32,9 +32,9 @@ abstract class SliderWidget<T>(
 
     private val progress: Double
         get() = (
-                (value.toDoubleValue() - minValue.toDoubleValue()) /
-                        (maxValue.toDoubleValue() - minValue.toDoubleValue())
-                ).coerceIn(0.0, 1.0)
+            (value.toDoubleValue() - minValue.toDoubleValue()) /
+                (maxValue.toDoubleValue() - minValue.toDoubleValue())
+            ).coerceIn(0.0, 1.0)
 
     override fun onClick(mouseButtonEvent: MouseButtonEvent, bl: Boolean) {
         isDragging = true

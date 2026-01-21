@@ -46,12 +46,10 @@
     "infinite.features.local.rendering.zoomsight.GameRendererMixin",
     "infinite.features.local.rendering.zoomsight.MouseHandlerMixin",
     "infinite.features.local.rendering.zoomsight.OptionsMixin",
-    "ui.OptionsScreenMixin"
+    "ui.OptionsScreenMixin",
+    "infinite.features.local.combat.swapshot.ConnectionMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-  },
-  "mixins": [
-    "infinite.features.local.combat.swapshot.ConnectionMixin"
-  ]
+  }
 }
