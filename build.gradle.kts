@@ -95,7 +95,6 @@ val setupJextract: Provider<Task> = tasks.register("setupJextract") {
     val isMac = os.contains("mac")
     val isLinux = os.contains("nix") || os.contains("nux")
     val isArm64 = arch.contains("aarch64") || arch.contains("arm64")
-
     // 見つけていただいたURLに基づき、プラットフォーム名を決定
     val platformTag = when {
         isWindows -> if (isArm64) "windows-aarch64" else "windows-x64"
@@ -111,12 +110,22 @@ val setupJextract: Provider<Task> = tasks.register("setupJextract") {
 
     val archiveFile = layout.buildDirectory.file("jextract-archive." + (if (isWindows) "zip" else "tar.gz"))
 
+    // 入出力の定義を明確にすることで、GradleのUP-TO-DATEチェックを機能させる
+    outputs.dir(jextractInstallDir)
+
+    onlyIf {
+        // 既に実行ファイルが存在する場合は実行しない
+        !jextractBin.get().asFile.exists()
+    }
     outputs.file(jextractBin)
 
     doLast {
         if (!jextractBin.get().asFile.exists()) {
             println("Downloading jextract 25 EA from $downloadUrl...")
-
+            // 既存の古いディレクトリがあれば一度消去（権限エラー対策）
+            if (jextractInstallDir.get().asFile.exists()) {
+                jextractInstallDir.get().asFile.deleteRecursively()
+            }
             URI(downloadUrl).toURL().openStream().use { input ->
                 archiveFile.get().asFile.outputStream().use { output ->
                     input.copyTo(output)

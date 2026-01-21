@@ -23,15 +23,15 @@ jobs:
           distribution: 'microsoft'
           cache: 'gradle'
 
-      # 1. jextract のキャッシュ
       - name: Cache jextract
         id: cache-jextract
         uses: actions/cache@v4
         with:
           path: build/jextract-25
-          key: ${{ runner.os }}-jextract-25
+          # 権限エラーを避けるため、プロジェクト構造が変わった際に確実に更新されるようキーを調整
+          key: ${{ runner.os }}-jextract-25-${{ hashFiles('build.gradle.kts') }}
           restore-keys: |
-            ${{ runner.os }}-jextract-
+            ${{ runner.os }}-jextract-25-
 
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
@@ -77,10 +77,10 @@ jobs:
       - name: Build with Gradle
         run: |
           chmod +x ./gradlew
-          # キャッシュを最大限活用してビルド
+          # 権限エラーを防ぐため、念のため実行前に build/jextract-25 の権限を付与する
+          if [ -d "build/jextract-25" ]; then chmod -R +rw build/jextract-25; fi
           ./gradlew build -x test --parallel --build-cache
         shell: bash
-
       - name: Prepare Artifacts
         shell: bash
         run: |
