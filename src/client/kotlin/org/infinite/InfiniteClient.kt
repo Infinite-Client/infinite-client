@@ -7,9 +7,9 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.client.KeyMapping
 import org.infinite.InfiniteClient.feature
-import org.infinite.infinite.InfiniteGlobalFeatures
-import org.infinite.infinite.InfiniteLocalFeatures
 import org.infinite.infinite.command.InfiniteCommand
+import org.infinite.infinite.features.global.InfiniteGlobalFeatures
+import org.infinite.infinite.features.local.InfiniteLocalFeatures
 import org.infinite.infinite.theme.default.DefaultTheme
 import org.infinite.infinite.theme.infinite.InfiniteTheme
 import org.infinite.infinite.ui.screen.LocalFeatureCategoriesScreen

@@ -1,4 +1,4 @@
-package org.infinite.infinite
+package org.infinite.infinite.features.local
 
 import org.infinite.infinite.features.local.combat.LocalCombatCategory
 import org.infinite.infinite.features.local.inventory.LocalInventoryCategory

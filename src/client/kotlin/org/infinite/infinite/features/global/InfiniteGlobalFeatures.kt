@@ -1,4 +1,4 @@
-package org.infinite.infinite
+package org.infinite.infinite.features.global
 
 import org.infinite.infinite.features.global.control.GlobalControlCategory
 import org.infinite.infinite.features.global.rendering.GlobalRenderingCategory
