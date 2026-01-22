@@ -14,6 +14,7 @@
     "graphics.ScreenAccessor",
     "graphics.ScreenMixin",
     "graphics.UiMixin",
+    "infinite.features.global.control.ime.KeyboardHandlerMixin",
     "infinite.features.global.rendering.loading.LoadingOverlayMixin",
     "infinite.features.global.rendering.theme.ButtonBackgroundMixin",
     "infinite.features.global.rendering.theme.EditBoxMixin",
@@ -24,6 +25,7 @@
     "infinite.features.local.combat.attack.CriticalFeatureMixin",
     "infinite.features.local.combat.counter.CounterFeatureMixin",
     "infinite.features.local.combat.mace.MultiPlayerGameModeMixin",
+    "infinite.features.local.combat.swapshot.ConnectionMixin",
     "infinite.features.local.combat.throwable.ConnectionMixin",
     "infinite.features.local.level.esp.EntityMixin",
     "infinite.features.local.level.esp.EntityRendererMixin",
@@ -46,8 +48,7 @@
     "infinite.features.local.rendering.zoomsight.GameRendererMixin",
     "infinite.features.local.rendering.zoomsight.MouseHandlerMixin",
     "infinite.features.local.rendering.zoomsight.OptionsMixin",
-    "ui.OptionsScreenMixin",
-    "infinite.features.local.combat.swapshot.ConnectionMixin"
+    "ui.OptionsScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

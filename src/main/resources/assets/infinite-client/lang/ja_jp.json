@@ -194,5 +194,15 @@
   "doc.infinite.property_max": "最大値",
   "doc.infinite.property_options": "選択肢",
   "doc.infinite.property_list_count": "デフォルト要素数",
-  "doc.infinite.property_list_type": "リスト形式"
+  "doc.infinite.property_list_type": "リスト形式",
+  "infinite.features.local.combat.quick_shot_feature.interval_shift": "Quick Shot Interval Shift",
+  "infinite.features.local.movement.better_sneak_feature": "Better Sneak",
+  "infinite.features.local.movement.better_sneak_feature.edge_distance": "Edge Distance",
+  "infinite.features.local.movement.better_sneak_feature.safe_walk": "Safe Walk",
+  "infinite.features.local.movement.fast_descent_feature": "Fast Descent",
+  "infinite.features.local.movement.fast_descent_feature.descent_factor": "Descent Factor",
+  "infinite.features.global.control": "Global Control",
+  "infinite.features.global.control.ime_input_feature": "IME Input Support",
+  "key.infinite.features.local.movement.better_sneak_feature.toggle": "Toggle Better Sneak",
+  "key.infinite.features.local.movement.fast_descent_feature.toggle": "Toggle Fast Descent"
 }

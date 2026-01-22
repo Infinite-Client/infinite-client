@@ -194,5 +194,15 @@
   "doc.infinite.property_max": "Maximum",
   "doc.infinite.property_options": "Options",
   "doc.infinite.property_list_count": "Default Size",
-  "doc.infinite.property_list_type": "List Type"
+  "doc.infinite.property_list_type": "List Type",
+  "infinite.features.local.combat.quick_shot_feature.interval_shift": "Quick Shot Interval Shift",
+  "infinite.features.local.movement.better_sneak_feature": "Better Sneak",
+  "infinite.features.local.movement.better_sneak_feature.edge_distance": "Edge Distance",
+  "infinite.features.local.movement.better_sneak_feature.safe_walk": "Safe Walk",
+  "infinite.features.local.movement.fast_descent_feature": "Fast Descent",
+  "infinite.features.local.movement.fast_descent_feature.descent_factor": "Descent Factor",
+  "infinite.features.global.control": "Global Control",
+  "infinite.features.global.control.ime_input_feature": "IME Input Support",
+  "key.infinite.features.local.movement.better_sneak_feature.toggle": "Toggle Better Sneak",
+  "key.infinite.features.local.movement.fast_descent_feature.toggle": "Toggle Fast Descent"
 }
