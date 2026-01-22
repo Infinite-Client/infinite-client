@@ -45,66 +45,70 @@ class UltraUiFeature : LocalFeature() {
         fun Graphics2D.renderUltraBar(
             x: Float,
             y: Float,
-            width: Float,
-            height: Float,
-            progress: Float,
+            baseWidth: Float, // 形状の基準となる幅
+            baseHeight: Float, // 形状の基準となる高さ
+            progress: Float, // 横方向の進捗 (0.0~1.0)
+            heightProgress: Float, // 縦方向の表示割合 (0.0~1.0)
             color: Int,
+            isRightToLeft: Boolean = false,
+            isUpsideDown: Boolean = false,
         ) {
-            if (width.absoluteValue < 1 || height < 2) return
+            if (baseWidth.absoluteValue < 1 || baseHeight.absoluteValue < 2) return
 
-            // 実際に描画する幅（進捗率を反映）
-            val currentWidth = width * progress.coerceIn(0f, 1f)
-            if (currentWidth.absoluteValue <= 0f) return
-            val isRightToLeft = currentWidth < 0
-            val width = width.absoluteValue
-            // シザー領域の設定
-            // 右から左の場合、開始X座標を (基点x - currentWidth) に調整
-            val scissorX = if (isRightToLeft) floor(x - currentWidth).toInt() else floor(x).toInt()
-            this.enableScissor(
-                scissorX,
-                floor(y).toInt(),
-                ceil(currentWidth).toInt(),
-                ceil(height).toInt(),
-            )
+            // 1. 実際に描画するサイズを計算
+            val drawWidth = baseWidth * progress.coerceIn(0f, 1f)
+            val drawHeight = baseHeight * heightProgress.coerceIn(0f, 1f)
+            if (drawWidth <= 0f || drawHeight <= 0f) return
 
+            // 2. シザー設定 (表示領域の切り抜き)
+            // 左右反転時は x から左へ、上下反転時は y から上へ領域を確保
+            val sx = if (isRightToLeft) floor(x - drawWidth).toInt() else floor(x).toInt()
+            val sy = if (isUpsideDown) floor(y - drawHeight).toInt() else floor(y).toInt()
+
+            this.enableScissor(sx, sy, ceil(drawWidth).toInt(), ceil(drawHeight).toInt())
+
+            // 3. 座標計算関数
+            fun getX(offset: Float): Float = if (isRightToLeft) x - offset else x + offset
+            fun getY(offset: Float): Float = if (isUpsideDown) y - offset else y + offset
+
+            // 4. 頂点定義 (常に baseWidth / baseHeight を使って計算することで傾斜を固定)
             this.fillStyle = color
 
-            // 座標計算用の関数：isRightToLeftがtrueならX軸方向を反転させる
-            fun getX(offset: Float): Float = if (isRightToLeft) x - offset else x + offset
+            // Y座標の各ライン (0.0, 0.5, 1.0 の位置)
+            val yTop = getY(0f)
+            val yMid = getY(baseHeight * 0.5f)
+            val yBot = getY(baseHeight)
 
-            // 各頂点の定義 (0.0f 〜 width の相対座標で計算)
-            // 左端基準か右端基準かで offset の符号を変える
-            val p1 = getX(0f) to y
-            val p2 = getX(width * 0.45f) to y
-            val p3 = getX(width * 0.55f) to y + height * 0.5f
-            val p4 = getX(width * 0.9f) to y + height * 0.5f
-            val p5 = getX(width) to y + height
-            val p0 = getX(0f) to y + height
+            // X座標の各ポイント (baseWidthを基準に固定)
+            val x0 = getX(0f)
+            val x1 = getX(baseWidth * 0.45f)
+            val x2 = getX(baseWidth * 0.55f)
+            val x3 = getX(baseWidth * 0.9f)
+            val x4 = getX(baseWidth)
 
-            // クアッド描画
-            // getXを通しているため、isRightToLeft時には自動的に左右が入れ替わる
+            // クアッド描画 (基準サイズで形を作り、シザーで削る)
             this.fillQuad(
-                p0.first,
-                p0.second,
-                p1.first,
-                p1.second,
-                p2.first,
-                p2.second,
-                p3.first,
-                p3.second,
+                x0,
+                yBot, // p0 (Bottom-Left相当)
+                x0,
+                yTop, // p1 (Top-Left相当)
+                x1,
+                yTop, // p2
+                x2,
+                yMid, // p3
             )
             this.fillQuad(
-                p0.first,
-                p0.second,
-                p3.first,
-                p3.second,
-                p4.first,
-                p4.second,
-                p5.first,
-                p5.second,
+                x0,
+                yBot, // p0
+                x2,
+                yMid, // p3
+                x3,
+                yMid, // p4
+                x4,
+                yBot, // p5
             )
 
-            this.disableScissor() // シザーの解除を忘れずに
+            this.disableScissor()
         }
     }
 
