@@ -2,6 +2,12 @@ import net.ltgt.gradle.errorprone.errorprone
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
 
+buildscript {
+    dependencies {
+        classpath("com.guardsquare:proguard-gradle:${property("proguard_version")}")
+    }
+}
+
 plugins {
     kotlin("jvm")
     id("fabric-loom")
@@ -10,7 +16,9 @@ plugins {
     java
     id("com.diffplug.spotless")
     id("net.ltgt.errorprone") version "4.3.0"
+    id("com.gradleup.shadow") version "9.3.1"
 }
+
 group = property("maven_group")!!
 version = property("mod_version")!!
 
@@ -226,7 +234,6 @@ tasks {
     test {
         useJUnitPlatform()
     }
-
     processResources {
         dependsOn(buildRustAll)
         // 各プラットフォームのバイナリを適切なディレクトリに配置
@@ -242,6 +249,9 @@ tasks {
         runs {
             configureEach {
                 vmArg("--enable-native-access=ALL-UNNAMED")
+                vmArg("-Dforeign.restricted=permit")
+                vmArg("-XX:+UnlockDiagnosticVMOptions")
+                vmArg("-XX:+AlwaysCompileLoopMethods")
             }
         }
         splitEnvironmentSourceSets()
@@ -284,6 +294,24 @@ tasks {
         }
 
         from("LICENSE")
+    }
+    shadowJar {
+        // 1. 不要なファイルを徹底的に除外
+        exclude("META-INF/maven/**")
+        exclude("META-INF/LICENSE*")
+        exclude("META-INF/NOTICE*")
+        // 2. 未使用コードの削除 (非常に強力ですが、リフレクション使用時は注意)
+        // ClassGraphなどを入れている場合、これだけで数MB単位で削れることがあります
+        minimize()
+        // 3. リロケーション (競合回避)
+        // 他のModが古いOkHttpを持っていても衝突しないように、パッケージ名を書き換えます
+        relocate("okhttp3", "org.infinite.shadow.okhttp3")
+        relocate("okio", "org.infinite.shadow.okio")
+    }
+
+    // Fabric Loomとの連携: shadowJarの結果をremapする
+    remapJar {
+        inputFile.set(shadowJar.get().archiveFile)
     }
     publishing {
         publications {
@@ -373,6 +401,14 @@ tasks.withType<JavaCompile>().configureEach {
 
         option("UnusedMethod:ExemptAnnotations", mixinAnnotations)
         option("UnusedVariable:ExemptAnnotations", mixinAnnotations)
+        options.compilerArgs.addAll(
+            listOf(
+                "--add-modules",
+                "jdk.incubator.vector", // ベクトル演算
+                "-Xlint:-options",
+                "-parameters", // リフレクションを利用する場合の高速化
+            ),
+        )
     }
 }
 tasks.register<JavaExec>("docs") {
@@ -381,4 +417,42 @@ tasks.register<JavaExec>("docs") {
     classpath = sourceSets["client"].runtimeClasspath
     mainClass.set("org.infinite.docs.Infinite")
     args(project.rootDir.absolutePath)
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+    options.compilerArgs.addAll(
+        listOf(
+            "-Xlint:unchecked",
+            "-Xlint:deprecation",
+            "--release",
+            "25",
+            // パフォーマンスのためのプレビュー機能やインライン化のヒント（必要に応じて）
+        ),
+    )
+}
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_25
+        freeCompilerArgs.addAll(
+            "-Xjvm-default=all", // インターフェースのデフォルトメソッドをJVMネイティブに
+            "-Xbackend-threads=0", // 並列コンパイルでビルド速度向上
+            "-opt-in=kotlin.RequiresOptIn",
+        )
+    }
+}
+
+// プラグインではなくタスクとして定義
+tasks.register<proguard.gradle.ProGuardTask>("optimizeJar") {
+    // shadowJar の出力を入力にする
+    injars(tasks.shadowJar.get().archiveFile)
+    // 最適化後のファイル名
+    outjars(layout.buildDirectory.file("libs/${project.name}-${project.version}-optimized.jar"))
+
+    // Java 25 のランタイムをライブラリとして指定
+    val javaHome = System.getProperty("java.home")
+    libraryjars("$javaHome/jmods")
+
+    // 設定ファイルの読み込み
+    configuration("proguard-rules.pro")
 }
