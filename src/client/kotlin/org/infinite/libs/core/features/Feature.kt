@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.interfaces.MinecraftInterface
-import org.infinite.libs.log.LogSystem
 import org.infinite.utils.toLowerSnakeCase
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
@@ -79,8 +78,10 @@ open class Feature : MinecraftInterface() {
             if (isEnabled) {
                 resolveDependencies()
                 onEnabled()
+                onToggle()
             } else {
                 onDisabled()
+                onToggle()
             }
         }
     }
@@ -116,6 +117,7 @@ open class Feature : MinecraftInterface() {
 
     open fun onEnabled() {}
     open fun onDisabled() {}
+    open fun onToggle() {}
     fun enable() {
         if (isEnabled()) return
         startResolver()

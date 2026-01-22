@@ -20,6 +20,10 @@ class BrightSightFeature : LocalFeature() {
         }
     }
 
+    override fun onToggle() {
+        reload()
+    }
+
     // チャンクリロード用
     fun reload() {
         minecraft.levelRenderer.allChanged()
