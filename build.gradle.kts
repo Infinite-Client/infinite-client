@@ -16,7 +16,6 @@ plugins {
     java
     id("com.diffplug.spotless")
     id("net.ltgt.errorprone") version "4.3.0"
-    id("com.gradleup.shadow") version "9.3.1"
 }
 
 group = property("maven_group")!!
@@ -243,6 +242,14 @@ tasks {
                 into("natives/$id")
             }
         }
+        val expandProps = mapOf(
+            "version" to project.version,
+        )
+        inputs.properties(expandProps) // キャッシュの整合性のために追加推奨
+
+        filesMatching("fabric.mod.json") {
+            expand(expandProps)
+        }
     }
 
     loom {
@@ -294,24 +301,6 @@ tasks {
         }
 
         from("LICENSE")
-    }
-    shadowJar {
-        // 1. 不要なファイルを徹底的に除外
-        exclude("META-INF/maven/**")
-        exclude("META-INF/LICENSE*")
-        exclude("META-INF/NOTICE*")
-        // 2. 未使用コードの削除 (非常に強力ですが、リフレクション使用時は注意)
-        // ClassGraphなどを入れている場合、これだけで数MB単位で削れることがあります
-        minimize()
-        // 3. リロケーション (競合回避)
-        // 他のModが古いOkHttpを持っていても衝突しないように、パッケージ名を書き換えます
-        relocate("okhttp3", "org.infinite.shadow.okhttp3")
-        relocate("okio", "org.infinite.shadow.okio")
-    }
-
-    // Fabric Loomとの連携: shadowJarの結果をremapする
-    remapJar {
-        inputFile.set(shadowJar.get().archiveFile)
     }
     publishing {
         publications {
@@ -435,7 +424,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     compilerOptions {
         jvmTarget = JvmTarget.JVM_25
         freeCompilerArgs.addAll(
-            "-Xjvm-default=all", // インターフェースのデフォルトメソッドをJVMネイティブに
+            "-jvm-default=enable", // インターフェースのデフォルトメソッドをJVMネイティブに
             "-Xbackend-threads=0", // 並列コンパイルでビルド速度向上
             "-opt-in=kotlin.RequiresOptIn",
         )
@@ -444,8 +433,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 
 // プラグインではなくタスクとして定義
 tasks.register<proguard.gradle.ProGuardTask>("optimizeJar") {
-    // shadowJar の出力を入力にする
-    injars(tasks.shadowJar.get().archiveFile)
+    injars(tasks.jar.get().archiveFile)
     // 最適化後のファイル名
     outjars(layout.buildDirectory.file("libs/${project.name}-${project.version}-optimized.jar"))
 
