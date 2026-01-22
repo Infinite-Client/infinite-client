@@ -71,7 +71,9 @@ class SelectionPropertyWidget<T : Any>(
             g2d.flush()
         }
 
-        override fun updateWidgetNarration(output: NarrationElementOutput) = defaultButtonNarrationText(output)
+        override fun updateWidgetNarration(output: NarrationElementOutput) {
+            defaultButtonNarrationText(output)
+        }
     }
 
     private val cycleButton = PropertyCycleButton(x, y, 100, DEFAULT_WIDGET_HEIGHT, property)
