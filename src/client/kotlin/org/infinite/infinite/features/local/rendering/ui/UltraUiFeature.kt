@@ -60,7 +60,7 @@ class UltraUiFeature : LocalFeature() {
             scissorX,
             floor(y).toInt(),
             ceil(currentWidth).toInt(),
-            ceil(height).toInt()
+            ceil(height).toInt(),
         )
 
         this.fillStyle = color
@@ -80,16 +80,24 @@ class UltraUiFeature : LocalFeature() {
         // クアッド描画
         // getXを通しているため、isRightToLeft時には自動的に左右が入れ替わる
         this.fillQuad(
-            p0.first, p0.second,
-            p1.first, p1.second,
-            p2.first, p2.second,
-            p3.first, p3.second
+            p0.first,
+            p0.second,
+            p1.first,
+            p1.second,
+            p2.first,
+            p2.second,
+            p3.first,
+            p3.second,
         )
         this.fillQuad(
-            p0.first, p0.second,
-            p3.first, p3.second,
-            p4.first, p4.second,
-            p5.first, p5.second
+            p0.first,
+            p0.second,
+            p3.first,
+            p3.second,
+            p4.first,
+            p4.second,
+            p5.first,
+            p5.second,
         )
 
         this.disableScissor() // シザーの解除を忘れずに
