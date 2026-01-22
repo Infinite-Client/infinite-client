@@ -27,7 +27,7 @@ sealed class AimTarget : MinecraftInterface() {
         e: Entity,
         val anchor: EntityAnchor = EntityAnchor.Chest, // デフォルトを胸あたりに設定
     ) : AimTarget() {
-        open val entity = e
+        open val entity: Entity = e
 
         enum class EntityAnchor {
             Eyes, // 目（頭）
@@ -72,7 +72,7 @@ sealed class AimTarget : MinecraftInterface() {
     open class WaypointTarget(
         p: Vec3,
     ) : AimTarget() {
-        open val pos = p
+        open val pos: Vec3 = p
     }
 
     open class RollTarget(

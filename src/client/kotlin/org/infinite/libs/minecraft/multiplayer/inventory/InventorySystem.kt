@@ -45,12 +45,13 @@ object InventorySystem : MinecraftInterface() {
 
         is InventoryIndex.Backpack -> index.index + 9
 
-        is InventoryIndex.Armor -> when (index.slot) {
-            InventoryIndex.Armor.ArmorSlot.Feet -> 0
-            InventoryIndex.Armor.ArmorSlot.Legs -> 1
-            InventoryIndex.Armor.ArmorSlot.Chest -> 2
-            InventoryIndex.Armor.ArmorSlot.Head -> 3
-        }
+        is InventoryIndex.Armor.Foots -> 0
+
+        is InventoryIndex.Armor.Legs -> 1
+
+        is InventoryIndex.Armor.Chest -> 2
+
+        is InventoryIndex.Armor.Head -> 3
 
         is InventoryIndex.OffHand -> 0
 
@@ -111,6 +112,8 @@ object InventorySystem : MinecraftInterface() {
         if (getItem(InventoryIndex.OffHand).`is`(item)) return InventoryIndex.OffHand
         return null
     }
+
+    fun cursorItem(): ItemStack = minecraft.player?.containerMenu?.carried ?: ItemStack.EMPTY
 
     /**
      * 空きスロットの総数
