@@ -3,6 +3,8 @@ package org.infinite.utils
 import net.minecraft.client.gui.components.AbstractWidget
 import org.infinite.InfiniteClient.theme
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
+import org.infinite.utils.fillRoundedRect
+import org.infinite.utils.strokeRoundedRect
 import kotlin.math.min
 
 object WidgetRenderUtils {
@@ -18,7 +20,16 @@ object WidgetRenderUtils {
 
         // 1. 背景描画 (無効時は少し透過させる等のロジック)
         val bgAlpha = if (widget.active) alpha else alpha / 2f
-        theme.renderBackGround(widget.x, widget.y, widget.width, widget.height, renderer, bgAlpha)
+        val radius = (widget.height * 0.35f).coerceAtLeast(6f)
+        val baseColor = colorScheme.surfaceColor.mix(colorScheme.backgroundColor, 0.5f)
+        renderer.fillStyle = baseColor.alpha((255 * bgAlpha).toInt())
+        renderer.fillRoundedRect(
+            widget.x.toFloat(),
+            widget.y.toFloat(),
+            widget.width.toFloat(),
+            widget.height.toFloat(),
+            radius,
+        )
 
         // 2. 状態に応じた枠線色の決定
         val strokeColor: Int = if (widget.isHoveredOrFocused) {
@@ -33,6 +44,12 @@ object WidgetRenderUtils {
         // 3. 枠線の描画
         renderer.strokeStyle.width = 1f
         renderer.strokeStyle.color = strokeColor
-        renderer.strokeRect(widget.x, widget.y, widget.width, widget.height)
+        renderer.strokeRoundedRect(
+            widget.x.toFloat(),
+            widget.y.toFloat(),
+            widget.width.toFloat(),
+            widget.height.toFloat(),
+            radius,
+        )
     }
 }

@@ -28,6 +28,7 @@ open class SuggestInputWidget(
     init {
         this.value = initialValue
         this.setResponder { updateSuggestions(it) }
+        this.setBordered(false)
         this.isFocused = true
     }
 

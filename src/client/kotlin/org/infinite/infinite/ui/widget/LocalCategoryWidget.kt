@@ -24,13 +24,18 @@ class LocalCategoryWidget(
     Component.translatable(category.translation()),
 ) {
 
-    override fun buildContent(layout: LinearLayout, width: Int) {
-        val innerSpacing = 5
+    override fun buildContent(layout: LinearLayout, width: Int, query: String) {
+        val innerSpacing = 8
         val itemWidth = width - 2 * innerSpacing
+        val normalized = query.trim()
 
-        // 親クラスの 'data' (LocalCategory) にある features をループ
         data.features.forEach { (_, feature) ->
-            layout.addChild(LocalFeatureWidget(0, 0, itemWidth, feature = feature))
+            val matches = normalized.isEmpty() ||
+                feature.name.contains(normalized, ignoreCase = true) ||
+                Component.translatable(feature.translation()).string.contains(normalized, ignoreCase = true)
+            if (matches) {
+                layout.addChild(LocalFeatureWidget(0, 0, itemWidth, feature = feature))
+            }
         }
     }
 

@@ -24,15 +24,19 @@ class GlobalCategoryWidget(
     Component.translatable(category.translation()),
 ) {
 
-    override fun buildContent(layout: LinearLayout, width: Int) {
-        val innerSpacing = 5
+    override fun buildContent(layout: LinearLayout, width: Int, query: String) {
+        val innerSpacing = 8
         val itemWidth = width - 2 * innerSpacing
+        val normalized = query.trim()
 
         // GlobalCategory に含まれる GlobalFeature をループして Widget を追加
-        // data は親の CategoryWidget で定義されている GlobalCategory インスタンスです
         data.features.forEach { (_, feature) ->
-            // Global 用の FeatureWidget を作成して追加
-            layout.addChild(GlobalFeatureWidget(0, 0, itemWidth, feature = feature))
+            val matches = normalized.isEmpty() ||
+                feature.name.contains(normalized, ignoreCase = true) ||
+                Component.translatable(feature.translation()).string.contains(normalized, ignoreCase = true)
+            if (matches) {
+                layout.addChild(GlobalFeatureWidget(0, 0, itemWidth, feature = feature))
+            }
         }
     }
 

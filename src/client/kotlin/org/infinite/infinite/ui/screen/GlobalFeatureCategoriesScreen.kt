@@ -1,29 +1,12 @@
 package org.infinite.infinite.ui.screen
 
-import net.minecraft.client.gui.screens.Screen
 import org.infinite.InfiniteClient
-import org.infinite.infinite.ui.widget.GlobalCategoryWidget
-import org.infinite.libs.core.features.categories.category.GlobalCategory
-import org.infinite.libs.core.features.feature.GlobalFeature
-import kotlin.reflect.KClass
+import org.infinite.libs.core.features.Category
+import org.infinite.libs.core.features.Feature
 
-class GlobalFeatureCategoriesScreen(parent: Screen? = null) :
-    FeatureCategoriesScreen<
-        KClass<out GlobalFeature>,
-        GlobalFeature,
-        GlobalCategory,
-        GlobalCategoryWidget, // Global専用のWidget
-        >(parent) {
+class GlobalFeatureCategoriesScreen(parent: net.minecraft.client.gui.screens.Screen? = null) :
+    ClickGuiScreen(net.minecraft.network.chat.Component.literal("Infinite Client"), parent) {
 
-    // Globalのカテゴリデータソースを取得
-    override val dataSource: List<GlobalCategory>
+    override val categories: List<Category<*, out Feature>>
         get() = InfiniteClient.globalFeatures.categories.values.toList()
-
-    // Global用のWidgetをインスタンス化
-    override fun createWidget(
-        index: Int,
-        data: GlobalCategory,
-    ): GlobalCategoryWidget {
-        return GlobalCategoryWidget(0, 0, 120, 180, data, this, index)
-    }
 }

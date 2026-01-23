@@ -1,27 +1,12 @@
 package org.infinite.infinite.ui.screen
 
-import net.minecraft.client.gui.screens.Screen
 import org.infinite.InfiniteClient
-import org.infinite.infinite.ui.widget.LocalCategoryWidget
-import org.infinite.libs.core.features.categories.category.LocalCategory
-import org.infinite.libs.core.features.feature.LocalFeature
-import kotlin.reflect.KClass
+import org.infinite.libs.core.features.Category
+import org.infinite.libs.core.features.Feature
 
-class LocalFeatureCategoriesScreen(parent: Screen? = null) :
-    FeatureCategoriesScreen<
-        KClass<out LocalFeature>,
-        LocalFeature,
-        LocalCategory,
-        LocalCategoryWidget, // ここで使用する具体的なWidgetクラスを指定
-        >(parent) {
+class LocalFeatureCategoriesScreen(parent: net.minecraft.client.gui.screens.Screen? = null) :
+    ClickGuiScreen(net.minecraft.network.chat.Component.literal("Infinite Client"), parent) {
 
-    override val dataSource: List<LocalCategory>
+    override val categories: List<Category<*, out Feature>>
         get() = InfiniteClient.localFeatures.categories.values.toList()
-
-    override fun createWidget(
-        index: Int,
-        data: LocalCategory,
-    ): LocalCategoryWidget {
-        return LocalCategoryWidget(0, 0, 120, 180, data, this, index)
-    }
 }
