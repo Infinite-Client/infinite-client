@@ -10,7 +10,7 @@ object RenderLayers {
         "infinite:lines",
         RenderSetup.builder(ShaderPipelines.depthTestLines)
             .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
-            .setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET)
+            .setOutputTarget(OutputTarget.MAIN_TARGET)
             .createRenderSetup(),
     )
 
@@ -18,7 +18,7 @@ object RenderLayers {
         "infinite:esp_lines",
         RenderSetup.builder(ShaderPipelines.espLines)
             .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
-            .setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET)
+            .setOutputTarget(OutputTarget.MAIN_TARGET)
             .createRenderSetup(),
     )
 
