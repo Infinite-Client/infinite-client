@@ -154,7 +154,7 @@ abstract class CategoryWidget<T : Category<*, out Feature>>(
         graphics2D.fillStyle = accent.alpha(220)
         graphics2D.fillRoundedRect(10f, 10f, 30f, 30f, 10f)
 
-        val categoryName = Component.translatable(data.translation()).string
+        val categoryName = data.name
         val iconText = if (categoryName.isNotEmpty()) categoryName.first().toString() else "?"
         graphics2D.textStyle.font = "infinite_bolditalic"
         graphics2D.textStyle.size = 16f

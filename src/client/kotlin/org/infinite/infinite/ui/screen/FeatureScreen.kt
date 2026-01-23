@@ -18,7 +18,7 @@ import org.lwjgl.glfw.GLFW
 class FeatureScreen<T : Feature>(
     private val feature: T,
     private val parent: Screen,
-) : Screen(Component.translatable(feature.translation())) {
+) : Screen(Component.literal(feature.name)) {
 
     private lateinit var container: ScrollableLayoutContainer
 
@@ -81,7 +81,7 @@ class FeatureScreen<T : Feature>(
         val font = minecraft.font
         val titleX = panelX + panelPadding
         val titleY = panelY + 10
-        val title = Component.translatable(feature.translation()).string
+        val title = feature.name
         guiGraphics.drawString(font, title, titleX, titleY, ClickGuiPalette.TEXT, false)
 
         super.render(guiGraphics, mouseX, mouseY, delta)

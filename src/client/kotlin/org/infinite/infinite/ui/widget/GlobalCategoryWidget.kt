@@ -21,7 +21,7 @@ class GlobalCategoryWidget(
     category,
     parent,
     index,
-    Component.translatable(category.translation()),
+    Component.literal(category.name),
 ) {
 
     override fun buildContent(layout: LinearLayout, width: Int, query: String) {
@@ -32,8 +32,7 @@ class GlobalCategoryWidget(
         // GlobalCategory に含まれる GlobalFeature をループして Widget を追加
         data.features.forEach { (_, feature) ->
             val matches = normalized.isEmpty() ||
-                feature.name.contains(normalized, ignoreCase = true) ||
-                Component.translatable(feature.translation()).string.contains(normalized, ignoreCase = true)
+                feature.name.contains(normalized, ignoreCase = true)
             if (matches) {
                 layout.addChild(GlobalFeatureWidget(0, 0, itemWidth, feature = feature))
             }
@@ -42,6 +41,6 @@ class GlobalCategoryWidget(
 
     override fun onSelected(data: GlobalCategory) {
         // デバッグログまたは選択時の振る舞い
-        println("Selected Global Category: ${data.name} (Translation: ${data.translation()})")
+        println("Selected Global Category: ${data.name}")
     }
 }

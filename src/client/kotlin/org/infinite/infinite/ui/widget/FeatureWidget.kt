@@ -169,7 +169,7 @@ abstract class FeatureWidget<T : Feature>(
     /**
      * 表示する名前を決定します。
      */
-    protected open fun getDisplayName(): String = Component.translatable(feature.translation()).string
+    protected open fun getDisplayName(): String = feature.name
 
     override fun children(): List<GuiEventListener> =
         listOf(widgetComponents.resetButton, widgetComponents.settingButton, widgetComponents.toggleButton)

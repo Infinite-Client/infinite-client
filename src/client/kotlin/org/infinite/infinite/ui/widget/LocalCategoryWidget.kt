@@ -21,7 +21,7 @@ class LocalCategoryWidget(
     category,
     parent,
     index,
-    Component.translatable(category.translation()),
+    Component.literal(category.name),
 ) {
 
     override fun buildContent(layout: LinearLayout, width: Int, query: String) {
@@ -31,8 +31,7 @@ class LocalCategoryWidget(
 
         data.features.forEach { (_, feature) ->
             val matches = normalized.isEmpty() ||
-                feature.name.contains(normalized, ignoreCase = true) ||
-                Component.translatable(feature.translation()).string.contains(normalized, ignoreCase = true)
+                feature.name.contains(normalized, ignoreCase = true)
             if (matches) {
                 layout.addChild(LocalFeatureWidget(0, 0, itemWidth, feature = feature))
             }
@@ -40,6 +39,6 @@ class LocalCategoryWidget(
     }
 
     override fun onSelected(data: LocalCategory) {
-        println("Selected Category: ${data.name} (Translation: ${data.translation()})")
+        println("Selected Category: ${data.name}")
     }
 }

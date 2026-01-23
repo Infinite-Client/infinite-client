@@ -13,7 +13,6 @@ object WidgetRenderUtils {
         val alpha = widget.getAlpha()
         val alphaInt = (alpha * 255).toInt()
 
-
         val bgAlpha = if (widget.active) alpha else alpha / 2f
         val radius = (widget.height * 0.35f).coerceAtLeast(6f)
         val baseColor = colorScheme.surfaceColor.mix(colorScheme.backgroundColor, 0.5f)
@@ -25,7 +24,5 @@ object WidgetRenderUtils {
             widget.height.toFloat(),
             radius,
         )
-
-
     }
 }
