@@ -83,7 +83,6 @@ abstract class SliderWidget<T>(
 
         graphics2D.fillStyle = ClickGuiPalette.TEXT
         graphics2D.fillRoundedRect(knobX, knobY, knobSize, knobSize, knobRadius)
-
     }
 
     override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {

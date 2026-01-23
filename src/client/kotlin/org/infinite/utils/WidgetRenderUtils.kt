@@ -3,8 +3,6 @@ package org.infinite.utils
 import net.minecraft.client.gui.components.AbstractWidget
 import org.infinite.InfiniteClient.theme
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
-import org.infinite.utils.fillRoundedRect
-import org.infinite.utils.strokeRoundedRect
 import kotlin.math.min
 
 object WidgetRenderUtils {

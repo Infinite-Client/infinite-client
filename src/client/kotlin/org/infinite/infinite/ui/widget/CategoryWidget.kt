@@ -11,8 +11,8 @@ import org.infinite.libs.ui.widgets.AbstractCarouselWidget
 import org.infinite.utils.alpha
 import org.infinite.utils.fillRoundedRect
 import org.infinite.utils.mix
-import kotlin.math.roundToInt
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 abstract class CategoryWidget<T : Category<*, out Feature>>(
     x: Int,
