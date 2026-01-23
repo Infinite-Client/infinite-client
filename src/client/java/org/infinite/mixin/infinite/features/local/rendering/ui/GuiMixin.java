@@ -29,10 +29,56 @@ public class GuiMixin {
   }
 
   // ホットバー (アイテムスロットの並び)
-  @Inject(method = "renderHotbarAndDecorations", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "renderItemHotbar", at = @At("HEAD"), cancellable = true)
   private void onRenderHotbar(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getHotbarUi().getValue()) {
       ci.cancel();
+    }
+  }
+
+  // 経験値レベルの数字描画をキャンセル
+  @Inject(
+      method =
+          "renderHotbarAndDecorations(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V",
+      at =
+          @At(
+              value = "INVOKE",
+              target =
+                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;renderExperienceLevel(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/gui/Font;I)V"),
+      cancellable = true)
+  private void onRenderExperienceLevel(CallbackInfo ci) {
+    if (ultraUiFeature().isEnabled() && ultraUiFeature().getTopBoxUi().getValue()) {
+      ci.cancel();
+    }
+  }
+
+  @Inject(
+      method =
+          "renderHotbarAndDecorations(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V",
+      at =
+          @At(
+              value = "INVOKE",
+              target =
+                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;renderBackground(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V"),
+      cancellable = true)
+  private void onRenderExperienceBarBackgroudn(CallbackInfo ci) {
+    if (ultraUiFeature().isEnabled() && ultraUiFeature().getTopBoxUi().getValue()) {
+      ci.cancel(); // 厳密にはInvokeのキャンセルは複雑なため、HEADで判定するか下記の方法をとります
+    }
+  }
+
+  @Inject(
+      method =
+          "renderHotbarAndDecorations(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V",
+      at =
+          @At(
+              value = "INVOKE",
+              target =
+                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V"),
+      cancellable = true)
+  private void onRenderExperienceBar(CallbackInfo ci) {
+    if (ultraUiFeature().isEnabled() && ultraUiFeature().getTopBoxUi().getValue()) {
+      ci.cancel(); // 厳密にはInvokeのキャンセルは複雑なため、HEADで判定するか下記の方法をとります
     }
   }
 

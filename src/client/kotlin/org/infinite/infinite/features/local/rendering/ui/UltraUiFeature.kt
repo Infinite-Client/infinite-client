@@ -4,11 +4,14 @@ import org.infinite.infinite.features.local.rendering.ui.crosshair.CrosshairRend
 import org.infinite.infinite.features.local.rendering.ui.hotbar.HotbarRenderer
 import org.infinite.infinite.features.local.rendering.ui.left.LeftBoxRenderer
 import org.infinite.infinite.features.local.rendering.ui.right.RightBoxRenderer
+import org.infinite.infinite.features.local.rendering.ui.topbox.TopBoxRenderer
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.graphics.Graphics2D
+import org.infinite.utils.alpha
+import org.infinite.utils.mix
 import kotlin.math.absoluteValue
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -16,10 +19,11 @@ import kotlin.math.floor
 class UltraUiFeature : LocalFeature() {
     val crosshairRenderer = CrosshairRenderer()
     val hotbarRenderer = HotbarRenderer()
+    val topBoxRenderer = TopBoxRenderer()
     val leftBoxRenderer = LeftBoxRenderer()
     val rightBoxRenderer = RightBoxRenderer()
-
     val hotbarUi by property(BooleanProperty(true))
+    val topBoxUi by property(BooleanProperty(true))
     val leftBoxUi by property(BooleanProperty(true))
     val rightBoxUi by property(BooleanProperty(true))
     val crosshairUi by property(BooleanProperty(true))
@@ -29,6 +33,9 @@ class UltraUiFeature : LocalFeature() {
     override fun onStartUiRendering(graphics2D: Graphics2D) {
         if (hotbarUi.value) {
             hotbarRenderer.render(graphics2D)
+        }
+        if (topBoxUi.value) {
+            topBoxRenderer.render(graphics2D)
         }
         if (leftBoxUi.value) {
             leftBoxRenderer.render(graphics2D)
@@ -41,74 +48,98 @@ class UltraUiFeature : LocalFeature() {
         }
     }
 
+    // UltraUiFeature.kt 内の companion object を修正
     companion object {
         fun Graphics2D.renderUltraBar(
             x: Float,
             y: Float,
-            baseWidth: Float, // 形状の基準となる幅
-            baseHeight: Float, // 形状の基準となる高さ
-            progress: Float, // 横方向の進捗 (0.0~1.0)
-            heightProgress: Float, // 縦方向の表示割合 (0.0~1.0)
-            color: Int,
+            baseWidth: Float,
+            baseHeight: Float,
+            progress: Float,
+            heightProgress: Float,
+            color: Int, // 開始色 (左側)
+            colorEnd: Int = color, // 終了色 (右側) - デフォルトは開始色と同じ
             isRightToLeft: Boolean = false,
             isUpsideDown: Boolean = false,
         ) {
             if (baseWidth.absoluteValue < 1 || baseHeight.absoluteValue < 2) return
 
-            // 1. 実際に描画するサイズを計算
             val drawWidth = baseWidth * progress.coerceIn(0f, 1f)
             val drawHeight = baseHeight * heightProgress.coerceIn(0f, 1f)
             if (drawWidth <= 0f || drawHeight <= 0f) return
 
-            // 2. シザー設定 (表示領域の切り抜き)
-            // 左右反転時は x から左へ、上下反転時は y から上へ領域を確保
             val sx = if (isRightToLeft) floor(x - drawWidth).toInt() else floor(x).toInt()
             val sy = if (isUpsideDown) floor(y - drawHeight).toInt() else floor(y).toInt()
 
             this.enableScissor(sx, sy, ceil(drawWidth).toInt(), ceil(drawHeight).toInt())
 
-            // 3. 座標計算関数
             fun getX(offset: Float): Float = if (isRightToLeft) x - offset else x + offset
             fun getY(offset: Float): Float = if (isUpsideDown) y - offset else y + offset
 
-            // 4. 頂点定義 (常に baseWidth / baseHeight を使って計算することで傾斜を固定)
-            this.fillStyle = color
+            // 頂点ごとの色を計算 (左側はcolor, 右側はcolorEnd)
+            // fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, col0, col1, col2, col3)
+            // col0: 左下, col1: 左上, col2: 右上, col3: 右下 (標準的なQuad頂点順序)
 
-            // Y座標の各ライン (0.0, 0.5, 1.0 の位置)
             val yTop = getY(0f)
             val yMid = getY(baseHeight * 0.5f)
             val yBot = getY(baseHeight)
 
-            // X座標の各ポイント (baseWidthを基準に固定)
             val x0 = getX(0f)
             val x1 = getX(baseWidth * 0.45f)
             val x2 = getX(baseWidth * 0.55f)
             val x3 = getX(baseWidth * 0.9f)
             val x4 = getX(baseWidth)
-
-            // クアッド描画 (基準サイズで形を作り、シザーで削る)
+            val colorMid0 = color.mix(colorEnd, 0.45f)
+            val colorMid1 = color.mix(colorEnd, 0.55f)
+            val colorEnding = color.mix(colorEnd, 0.9f)
+            // 1つ目のクアッド (左端から中央斜め部分まで)
             this.fillQuad(
-                x0,
-                yBot, // p0 (Bottom-Left相当)
-                x0,
-                yTop, // p1 (Top-Left相当)
-                x1,
-                yTop, // p2
-                x2,
-                yMid, // p3
+                x0, yBot, // 左下
+                x0, yTop, // 左上
+                x1, yTop, // 右上(上)
+                x2, yMid, // 右下(中)
+                color, color, colorMid0, colorMid1,
             )
+
+            // 2つ目のクアッド (中央斜め部分から右端まで)
             this.fillQuad(
-                x0,
-                yBot, // p0
-                x2,
-                yMid, // p3
-                x3,
-                yMid, // p4
-                x4,
-                yBot, // p5
+                x0, yBot, // 左下
+                x2, yMid, // 左上(中)
+                x3, yMid, // 右上(中)
+                x4, yBot, // 右下
+                color, colorMid1, colorEnding, colorEnd, // グラデーション適用
             )
 
             this.disableScissor()
+        }
+
+        fun Graphics2D.renderLayeredBar(
+            x: Float,
+            y: Float,
+            width: Float,
+            height: Float,
+            current: Float,
+            target: Float,
+            startColor: Int,
+            endColor: Int,
+            alpha: Float,
+            isRightToLeft: Boolean,
+            whiteColor: Int,
+            blackColor: Int,
+        ) {
+            val isInc = target > current
+            val mixColor = if (isInc) whiteColor else blackColor
+
+            // 色の合成とアルファ適用
+            val sColor = startColor.mix(mixColor, 0.5f).alpha((255 * alpha).toInt())
+            val eColor = endColor.mix(mixColor, 0.5f).alpha((255 * alpha).toInt())
+            val sMain = startColor.alpha((255 * alpha).toInt())
+            val eMain = endColor.alpha((255 * alpha).toInt())
+
+            // 背面レイヤー
+            renderUltraBar(x, y, width, height, current, 1f, sColor, eColor, isRightToLeft)
+            // 前面レイヤー
+            renderUltraBar(x, y, width, height, target, 1f, sMain, eMain, isRightToLeft)
         }
     }
 

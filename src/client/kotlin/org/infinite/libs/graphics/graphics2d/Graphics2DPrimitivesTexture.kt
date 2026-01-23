@@ -6,6 +6,7 @@ import org.infinite.libs.graphics.graphics2d.structs.Image
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 import org.infinite.libs.graphics.graphics2d.structs.TextStyle
 import java.util.*
+import kotlin.math.roundToInt
 
 class Graphics2DPrimitivesTexture(
     private val commandQueue: LinkedList<RenderCommand2D>,
@@ -31,16 +32,18 @@ class Graphics2DPrimitivesTexture(
         if (stack.count > 1) {
             val text = stack.count.toString()
             // TextStyleなどは必要に応じてGraphics2Dから取得するか、デフォルト値を設定
+            val fontSize = 9f * scale
             val style = textStyle()
+            val pad = (fontSize * 0.75f).roundToInt()
             commandQueue.add(
-                RenderCommand2D.TextCentered(
+                RenderCommand2D.TextRight(
                     style.font,
                     text,
-                    x + size, // 右下寄りに配置する場合は座標を調整
-                    y + size,
-                    0xFFFFFFFF.toInt(), // 色（アルファ適用が必要なら計算）
+                    x + size + pad / 3f, // 右下寄りに配置する場合は座標を調整
+                    y + size - pad,
+                    InfiniteClient.theme.colorScheme.foregroundColor, // 色（アルファ適用が必要なら計算）
                     style.shadow,
-                    8f * scale,
+                    fontSize,
                 ),
             )
         }

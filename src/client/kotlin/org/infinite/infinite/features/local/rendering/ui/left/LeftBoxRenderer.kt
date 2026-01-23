@@ -1,14 +1,14 @@
 package org.infinite.infinite.features.local.rendering.ui.left
 
+import net.minecraft.world.entity.HumanoidArm
 import net.minecraft.world.entity.ai.attributes.Attributes
 import org.infinite.InfiniteClient
 import org.infinite.infinite.features.local.rendering.ui.IUiRenderer
 import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature
+import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature.Companion.renderLayeredBar
 import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature.Companion.renderUltraBar
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.interfaces.MinecraftInterface
-import org.infinite.utils.alpha
-import org.infinite.utils.mix
 
 class LeftBoxRenderer :
     MinecraftInterface(),
@@ -20,96 +20,57 @@ class LeftBoxRenderer :
     private var animatedArmor = 0f
     private var animatedToughness = 0f
 
-    override fun render(graphics2D: Graphics2D) {
-        val player = player ?: return
-        val colorScheme = InfiniteClient.theme.colorScheme
-        val alpha = ultraUiFeature.alpha.value
+    // 幅のアニメーション用
+    private var animatedWidthFactor = 1.0f
 
-        // --- 1. アニメーション計算 ---
+    private fun updateAnimation(): Triple<Float, Float, Float> {
+        val player = player ?: return Triple(0f, 0f, 0f)
+
         val actualHealth = (player.health / player.maxHealth).coerceIn(0f, 1f)
         val actualArmor = (player.armorValue / 20f).coerceIn(0f, 1f)
-        val actualToughness = ((player.attributes.getInstance(Attributes.ARMOR_TOUGHNESS)?.value?.toFloat() ?: 0f) / 20f).coerceIn(0f, 1f)
+        val actualToughness =
+            ((player.attributes.getInstance(Attributes.ARMOR_TOUGHNESS)?.value?.toFloat() ?: 0f) / 20f).coerceIn(0f, 1f)
 
         animatedHealth += (actualHealth - animatedHealth) * 0.1f
         animatedArmor += (actualArmor - animatedArmor) * 0.1f
         animatedToughness += (actualToughness - animatedToughness) * 0.1f
 
-        // --- 2. 座標定数の定義 ---
-        val pad = ultraUiFeature.padding.value.toFloat()
-        val bH = ultraUiFeature.barHeight.value.toFloat() // 背景の高さ
-        val sM = ultraUiFeature.sideMargin.toFloat()
+        // オフハンド所持かつ利き手が右（オフハンドが左）の場合、幅を狭める
+        val isOffhandOnLeft = player.mainArm == HumanoidArm.RIGHT && !player.offhandItem.isEmpty
+        val targetFactor = if (isOffhandOnLeft) 0.85f else 1.0f
+        animatedWidthFactor += (targetFactor - animatedWidthFactor) * 0.5f
 
-        // すべての基準となる「下端」の座標
-        val bottomY = graphics2D.height - pad
-        val baseW = sM - pad * 2f
+        return Triple(actualHealth, actualArmor, actualToughness)
+    }
 
-        // 背景描画：下端(bottomY)から上にbH分さかのぼった位置をyとする
-        graphics2D.renderUltraBar(
-            x = pad, y = bottomY - bH, baseWidth = baseW, baseHeight = bH,
-            progress = 1f, heightProgress = 1f, color = colorScheme.backgroundColor,
-            isRightToLeft = false, isUpsideDown = false,
-        )
+    override fun render(graphics2D: Graphics2D) {
+        val colorScheme = InfiniteClient.theme.colorScheme
+        val alphaValue = ultraUiFeature.alpha.value
 
-        // 内部コンテンツの基準下端と幅
-        val iPad = pad.coerceAtLeast(1f)
-        val contentBottomY = bottomY - iPad
-        val cX = pad + iPad
-        val cW = baseW - iPad * 2f
-        val cH = bH - iPad * 2f // 利用可能な最大の高さ
+        val bH = ultraUiFeature.barHeight.value.toFloat()
+        // アニメーション後の幅を計算
+        val sM = ultraUiFeature.sideMargin.toFloat() * animatedWidthFactor
+        val bottomY = graphics2D.height.toFloat()
+        val (actualHealth, actualArmor, actualToughness) = updateAnimation()
 
-        // --- 3. 共通描画関数 (下端固定レイアウト) ---
-        fun drawLayer(height: Float, current: Float, target: Float, baseColor: Int, isHealth: Boolean = false) {
-            val isInc = target > current
-            val mixColor = if (isInc) colorScheme.whiteColor else colorScheme.blackColor
+        graphics2D.renderUltraBar(0f, bottomY - bH, sM, bH, 1f, 1f, colorScheme.backgroundColor)
 
-            // 下端(contentBottomY)から自身の高さを引いた位置を開始点にする
-            val drawY = contentBottomY - height
+        val innerPadding = ultraUiFeature.padding.value.toFloat()
+        val cH = bH - innerPadding
+        val cW = sM - innerPadding
+        val sat = 0.8f
+        val bri = 0.5f
 
-            val secColor = (if (isHealth) colorScheme.color(current / 12f, 1f, 0.5f) else baseColor)
-                .mix(mixColor, 0.5f).alpha((255 * alpha).toInt())
-
-            val mainColor = (if (isHealth) colorScheme.color(target / 4f, 0.8f, 0.5f) else baseColor)
-                .alpha((255 * alpha).toInt())
-
-            // 背面
-            graphics2D.renderUltraBar(
-                x = cX, y = drawY, baseWidth = cW, baseHeight = height,
-                progress = current, heightProgress = 1f, color = secColor,
-                isRightToLeft = false, isUpsideDown = false,
-            )
-            // 前面
-            graphics2D.renderUltraBar(
-                x = cX, y = drawY, baseWidth = cW, baseHeight = height,
-                progress = target, heightProgress = 1f, color = mainColor,
-                isRightToLeft = false, isUpsideDown = false,
+        fun draw(h: Float, cur: Float, tar: Float, sH: Float, eH: Float) {
+            graphics2D.renderLayeredBar(
+                0f, bottomY - h, cW, h, cur, tar,
+                colorScheme.color(sH, sat, bri), colorScheme.color(eH, sat, bri),
+                alphaValue, false, colorScheme.whiteColor, colorScheme.blackColor,
             )
         }
 
-        // --- 4. 各バーの描画 (すべて下端contentBottomYに揃う) ---
-
-        // HPバー: 高さ9割
-        drawLayer(height = cH * 0.9f, current = animatedHealth, target = actualHealth, baseColor = 0, isHealth = true)
-
-        // 防具バー: 高さ5割 (下端がHPと重なる)
-        val subH = cH * 0.5f
-        drawLayer(height = subH, current = animatedArmor, target = actualArmor, baseColor = colorScheme.blueColor)
-
-        // タフネス: 防具バーのさらに中央付近 (これだけは少し浮かせるか、下端に揃えるか選べます)
-        if (actualToughness > 0 || animatedToughness > 0) {
-            val tH = subH * 0.4f
-            // 防具バーのちょうど真ん中に配置したい場合は、以下のようにyを調整
-            val tYOffset = (subH - tH) / 2f
-
-            // タフネス用の特別描画（これのみ中央寄せのため共通関数を使わず微調整）
-            val tDrawY = (contentBottomY - tH) - tYOffset
-
-            val tSecColor = colorScheme.cyanColor.mix(if (actualToughness > animatedToughness) colorScheme.whiteColor else colorScheme.blackColor, 0.5f).alpha((255 * alpha).toInt())
-
-            graphics2D.renderUltraBar(cX, tDrawY, cW, tH, animatedToughness, 1f, tSecColor, false, isUpsideDown = false)
-            graphics2D.renderUltraBar(
-                cX, tDrawY, cW, tH, actualToughness, 1f, colorScheme.cyanColor.alpha((255 * alpha).toInt()), false,
-                isUpsideDown = false,
-            )
-        }
+        draw(cH, animatedHealth, actualHealth, 0f, 60f)
+        if (actualArmor > 0 || animatedArmor > 0) draw(cH * 0.5f, animatedArmor, actualArmor, 120f, 180f)
+        if (actualToughness > 0 || animatedToughness > 0) draw(cH * 0.4f, animatedToughness, actualToughness, 210f, 270f)
     }
 }
