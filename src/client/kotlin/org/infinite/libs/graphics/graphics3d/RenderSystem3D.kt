@@ -89,10 +89,15 @@ class RenderSystem3D(
         for (i in 0 until commands.size) {
             when (val c = commands[i]) {
                 is RenderCommand3D.Line -> drawLine(c.from, c.to, c.color, c.size, c.depthTest)
+
                 RenderCommand3D.PopMatrix -> popMatrix()
+
                 RenderCommand3D.PushMatrix -> pushMatrix()
+
                 is RenderCommand3D.Quad -> drawQuad(c.a, c.b, c.c, c.d, c.color, c.depthTest)
+
                 is RenderCommand3D.QuadFill -> drawQuadFill(c.a, c.b, c.c, c.d, c.color, c.depthTest)
+
                 is RenderCommand3D.QuadFillGradient -> {
                     val renderType = RenderLayers.quads(c.depthTest)
                     quadRenderer.drawQuad(
@@ -109,6 +114,7 @@ class RenderSystem3D(
                     )
                     usedRenderTypes.add(renderType)
                 }
+
                 is RenderCommand3D.QuadTextured -> {
                     val renderType = RenderTypes.entityTranslucent(c.texture)
                     texturedRenderer.drawQuad(
@@ -123,9 +129,13 @@ class RenderSystem3D(
                     )
                     usedRenderTypes.add(renderType)
                 }
+
                 is RenderCommand3D.SetMatrix -> setMatrix(c.matrix)
+
                 is RenderCommand3D.Triangle -> drawTriangle(c.a, c.b, c.c, c.color, c.depthTest)
+
                 is RenderCommand3D.TriangleFill -> drawTriangleFill(c.a, c.b, c.c, c.color, c.depthTest)
+
                 is RenderCommand3D.TriangleFillGradient -> {
                     val renderType = RenderLayers.quads(c.depthTest)
                     quadRenderer.drawTriangle(
@@ -140,6 +150,7 @@ class RenderSystem3D(
                     )
                     usedRenderTypes.add(renderType)
                 }
+
                 is RenderCommand3D.TriangleTextured -> {
                     val renderType = RenderTypes.entityTranslucent(c.texture)
                     texturedRenderer.drawTriangle(
