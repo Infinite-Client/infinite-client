@@ -20,8 +20,7 @@ class TopBoxRenderer :
 
     override fun render(graphics2D: Graphics2D) {
         val player = player ?: return
-        val theme = InfiniteClient.theme
-        val colorScheme = theme.colorScheme
+        val colorScheme = InfiniteClient.theme.colorScheme
         val alphaValue = ultraUiFeature.alpha.value
 
         // 1. アニメーション更新
@@ -29,71 +28,50 @@ class TopBoxRenderer :
         val actualExp = player.experienceProgress.coerceIn(0f, 1f)
         animatedExp += (actualExp - animatedExp) * 0.1f
 
-        // 2. レイアウト計算 (ホットバーの少し上)
+        // 2. レイアウト計算 (ホットバーの直上)
         val barWidth = 182f
-        val barHeight = 6f
+        val barHeight = 4f
         val x = (graphics2D.width - barWidth) / 2f
+        // y座標の計算: 画面下端 - サイドバー高さ - このバーの高さ - マージン
         val y = graphics2D.height - ultraUiFeature.barHeight.value.toFloat() - barHeight - 4f
 
-        graphics2D.push()
+        // 3. 経験値バー背景
+        // theme.renderBackGround の代わりに直接 fillRect で背景を描画して確実に表示を確認
+        graphics2D.fillStyle = colorScheme.backgroundColor.alpha((150 * alphaValue).toInt())
+        graphics2D.fillRect(x, y, barWidth, barHeight)
 
-        // 3. 微細な浮遊アニメーション (上下にゆっくり揺れる)
-        val floatOffset = sin(renderTime) * 0.5f
-        graphics2D.translate(0f, floatOffset)
+        // 4. 経験値バー本体 (renderLayeredBarを使用)
+        val sHue = 90f // 黄緑
+        val eHue = 160f // エメラルド
 
-        // 4. 背景の描画 (斜めカットデザイン)
-        // theme.renderBackGround をベースにしつつ、上部に配置
-        theme.renderBackGround(x, y, barWidth, barHeight, graphics2D, alphaValue)
-
-        // 5. 経験値バー本体 (平行四辺形風に描画)
-        // ライムグリーン(90f) -> シアン(180f) へのグラデーション
-        val sHue = 90f
-        val eHue = 180f
-        val sat = 0.8f
-        val bri = 0.7f
-
-        // renderLayeredBar を使用して、増減アニメーションに対応
         graphics2D.renderLayeredBar(
             x, y, barWidth, barHeight, animatedExp, actualExp,
-            colorScheme.color(sHue, sat, bri), colorScheme.color(eHue, sat, bri),
+            colorScheme.color(sHue, 0.8f, 0.6f), colorScheme.color(eHue, 0.8f, 0.6f),
             alphaValue,
             isRightToLeft = false,
             whiteColor = colorScheme.whiteColor,
             blackColor = colorScheme.blackColor,
         )
 
-        // 6. 装飾的な枠線 (アクセントカラー)
-        graphics2D.strokeStyle.width = 1f
-        graphics2D.fillStyle = colorScheme.accentColor.alpha((200 * alphaValue).toInt())
-        graphics2D.strokeRect(x, y, barWidth, barHeight)
-
-        // 7. レベル表示 (テクニカルな配置)
+        // 5. レベル数字の描画
         if (player.experienceLevel > 0) {
             val levelText = player.experienceLevel.toString()
+            graphics2D.textStyle.size = 10.0f
 
-            graphics2D.push()
-            // わずかに傾ける (斜めのデザインに合わせる)
-            graphics2D.translate(x + barWidth / 2f, y - 4f)
-            graphics2D.rotateDegrees(sin(renderTime * 0.5f) * 2f) // 左右にわずかに揺れる
-
-            graphics2D.textStyle.size = 0.9f
+            graphics2D.textStyle.font = "infinite_regular"
+            graphics2D.textStyle.shadow = true
+            graphics2D.fillStyle = colorScheme.greenColor
+            // 座標を translate なしで直接指定
+            val textX = x + barWidth / 2f
+            val textY = y - graphics2D.textStyle.size / 2f
             graphics2D.textStyle.shadow = true
 
-            // レベルが高いほど色が輝くように
-            val glow = (sin(renderTime * 2f) * 0.2f + 0.8f)
+            // 輝くような緑色を計算
+            val glow = (sin(renderTime * 3f) * 0.1f + 0.9f)
             graphics2D.fillStyle = colorScheme.color(sHue, 0.4f, glow).alpha((255 * alphaValue).toInt())
 
-            graphics2D.textCentered(levelText, 0f, 0f)
-            graphics2D.pop()
+            // 中央揃えで描画
+            graphics2D.textCentered(levelText, textX, textY)
         }
-
-        // 8. 経験値が溜まっている時の「粒子」のような装飾 (オプション)
-        if (actualExp > 0) {
-            val particleX = x + (barWidth * animatedExp)
-            graphics2D.fillStyle = colorScheme.whiteColor.alpha((150 * alphaValue).toInt())
-            graphics2D.fillRect(particleX - 1f, y - 1f, 2f, barHeight + 2f)
-        }
-
-        graphics2D.pop()
     }
 }

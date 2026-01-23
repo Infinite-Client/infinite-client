@@ -87,7 +87,7 @@ open class AimTask(
         val scaledSensitivity = (mouseSensitivity().coerceAtLeast(0.1)) * multiply
 
         // 【修正】すべてのMethodで基準となる最大移動速度を定義する（Linearのscaler=10を基準とする）
-        val baseMaxSpeed = (duration * scaledSensitivity / 10)
+        val baseMaxSpeed = duration * scaledSensitivity
 
         val result =
             when (calcMethod) {
@@ -151,6 +151,7 @@ open class AimTask(
         val xRot = player.xRot
         setAim(player, CameraRoll(yRot + roll.yRot, xRot + roll.xRot))
     }
+
     companion object : MinecraftInterface() {
         fun calcLookAt(target: Vec3): CameraRoll {
             val player = player ?: return CameraRoll.Zero
