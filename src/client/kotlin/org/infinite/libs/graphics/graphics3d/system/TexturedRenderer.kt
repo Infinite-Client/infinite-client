@@ -4,90 +4,70 @@ import com.mojang.blaze3d.vertex.VertexConsumer
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.world.phys.Vec3
+import org.infinite.libs.graphics.graphics3d.structs.TexturedVertex
 import org.joml.Matrix4f
 import kotlin.math.sqrt
 
-class QuadRenderer(
+class TexturedRenderer(
     private val bufferSource: MultiBufferSource.BufferSource,
 ) {
     fun drawTriangle(
         renderType: RenderType,
         matrix: Matrix4f,
-        a: Vec3,
-        b: Vec3,
-        c: Vec3,
-        color: Int,
+        a: TexturedVertex,
+        b: TexturedVertex,
+        c: TexturedVertex,
+        overlay: Int,
+        light: Int,
     ) {
         val consumer = bufferSource.getBuffer(renderType)
-        val c0 = colorComponents(color)
-        val n = triangleNormal(a, b, c)
-        addVertex(consumer, matrix, a, c0, n)
-        addVertex(consumer, matrix, b, c0, n)
-        addVertex(consumer, matrix, c, c0, n)
-    }
-
-    fun drawTriangle(
-        renderType: RenderType,
-        matrix: Matrix4f,
-        a: Vec3,
-        b: Vec3,
-        c: Vec3,
-        colorA: Int,
-        colorB: Int,
-        colorC: Int,
-    ) {
-        val consumer = bufferSource.getBuffer(renderType)
-        val c0 = colorComponents(colorA)
-        val c1 = colorComponents(colorB)
-        val c2 = colorComponents(colorC)
-        val n = triangleNormal(a, b, c)
-        addVertex(consumer, matrix, a, c0, n)
-        addVertex(consumer, matrix, b, c1, n)
-        addVertex(consumer, matrix, c, c2, n)
+        val overlayUv = unpack(overlay)
+        val lightUv = unpack(light)
+        val n = triangleNormal(a.position, b.position, c.position)
+        addVertex(consumer, matrix, a, overlayUv, lightUv, n)
+        addVertex(consumer, matrix, b, overlayUv, lightUv, n)
+        addVertex(consumer, matrix, c, overlayUv, lightUv, n)
     }
 
     fun drawQuad(
         renderType: RenderType,
         matrix: Matrix4f,
-        a: Vec3,
-        b: Vec3,
-        c: Vec3,
-        d: Vec3,
-        color: Int,
+        a: TexturedVertex,
+        b: TexturedVertex,
+        c: TexturedVertex,
+        d: TexturedVertex,
+        overlay: Int,
+        light: Int,
     ) {
-        drawTriangle(renderType, matrix, a, b, c, color)
-        drawTriangle(renderType, matrix, a, c, d, color)
-    }
-
-    fun drawQuad(
-        renderType: RenderType,
-        matrix: Matrix4f,
-        a: Vec3,
-        b: Vec3,
-        c: Vec3,
-        d: Vec3,
-        colorA: Int,
-        colorB: Int,
-        colorC: Int,
-        colorD: Int,
-    ) {
-        drawTriangle(renderType, matrix, a, b, c, colorA, colorB, colorC)
-        drawTriangle(renderType, matrix, a, c, d, colorA, colorC, colorD)
+        drawTriangle(renderType, matrix, a, b, c, overlay, light)
+        drawTriangle(renderType, matrix, a, c, d, overlay, light)
     }
 
     private data class ColorComponents(val r: Int, val g: Int, val b: Int, val a: Int)
     private data class Normal(val x: Float, val y: Float, val z: Float)
+    private data class PackedUv(val u: Int, val v: Int)
 
     private fun addVertex(
         consumer: VertexConsumer,
         matrix: Matrix4f,
-        pos: Vec3,
-        color: ColorComponents,
+        vertex: TexturedVertex,
+        overlay: PackedUv,
+        light: PackedUv,
         normal: Normal,
     ) {
-        consumer.addVertex(matrix, pos.x.toFloat(), pos.y.toFloat(), pos.z.toFloat())
-            .setColor(color.r, color.g, color.b, color.a)
+        val c = colorComponents(vertex.color)
+        consumer.addVertex(matrix, vertex.position.x.toFloat(), vertex.position.y.toFloat(), vertex.position.z.toFloat())
+            .setColor(c.r, c.g, c.b, c.a)
+            .setUv(vertex.u, vertex.v)
+            .setUv1(overlay.u, overlay.v)
+            .setUv2(light.u, light.v)
             .setNormal(normal.x, normal.y, normal.z)
+    }
+
+    private fun unpack(packed: Int): PackedUv {
+        val u = packed and 0xFFFF
+        val v = packed ushr 16
+        return PackedUv(u, v)
     }
 
     private fun colorComponents(color: Int): ColorComponents {

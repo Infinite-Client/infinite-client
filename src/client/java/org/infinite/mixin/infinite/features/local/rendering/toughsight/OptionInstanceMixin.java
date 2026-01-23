@@ -8,12 +8,19 @@ import net.minecraft.client.gui.screens.options.OptionsScreen;
 import org.infinite.InfiniteClient;
 import org.infinite.infinite.features.local.rendering.toughsight.ToughSightFeature;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(OptionInstance.class)
 public class OptionInstanceMixin<T> {
+
+  @Unique
+  @SuppressWarnings("DataFlowIssue")
+  private OptionInstance<?> self() {
+    return (OptionInstance<?>) (Object) this;
+  }
 
   @SuppressWarnings("unchecked")
   @Inject(method = "get", at = @At("HEAD"), cancellable = true)
@@ -27,9 +34,10 @@ public class OptionInstanceMixin<T> {
       return;
     }
     Options options = Minecraft.getInstance().options;
+    OptionInstance<?> self = self();
     // 1. Darkness Pulse (暗闇の脈動) の偽装
     if (toughSight.getAntiDarkness().getValue()) {
-      if ((Object) this == options.darknessEffectScale()) {
+      if (self == options.darknessEffectScale()) {
         cir.setReturnValue((T) Double.valueOf(0.0));
         return;
       }
@@ -37,7 +45,7 @@ public class OptionInstanceMixin<T> {
 
     // 2. Screen Effects (吐き気の揺れなど) の偽装
     if (toughSight.getAntiNausea().getValue()) {
-      if ((Object) this == options.screenEffectScale()) {
+      if (self == options.screenEffectScale()) {
         cir.setReturnValue((T) Double.valueOf(0.0));
       }
     }
