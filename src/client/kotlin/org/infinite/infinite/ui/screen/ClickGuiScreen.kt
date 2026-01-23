@@ -3,6 +3,8 @@ package org.infinite.infinite.ui.screen
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.CharacterEvent
+import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import org.infinite.infinite.ui.ClickGuiPalette
@@ -305,12 +307,14 @@ abstract class ClickGuiScreen(
     private fun clamp(value: Double, max: Double): Double = value.coerceIn(0.0, max)
 
     override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean {
-        if (searchBox.mouseClicked(mouseButtonEvent, bl)) {
-            return true
-        }
-
         val mx = mouseButtonEvent.x
         val my = mouseButtonEvent.y
+        if (searchBox.isMouseOver(mx, my)) {
+            searchBox.setFocused(true)
+            searchBox.mouseClicked(mouseButtonEvent, bl)
+            return true
+        }
+        searchBox.setFocused(false)
         val sidebarX = padding
         val sidebarY = padding + searchHeight + searchGap
         val sidebarH = height - sidebarY - padding
@@ -358,6 +362,26 @@ abstract class ClickGuiScreen(
         }
 
         return super.mouseClicked(mouseButtonEvent, bl)
+    }
+
+    override fun keyPressed(keyEvent: KeyEvent): Boolean {
+        if (searchBox.isFocused) {
+            if (keyEvent.key == GLFW.GLFW_KEY_ESCAPE) {
+                searchBox.setFocused(false)
+                return true
+            }
+            if (searchBox.keyPressed(keyEvent)) {
+                return true
+            }
+        }
+        return super.keyPressed(keyEvent)
+    }
+
+    override fun charTyped(characterEvent: CharacterEvent): Boolean {
+        if (searchBox.charTyped(characterEvent)) {
+            return true
+        }
+        return super.charTyped(characterEvent)
     }
 
     override fun mouseScrolled(d: Double, e: Double, f: Double, g: Double): Boolean {

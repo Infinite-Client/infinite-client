@@ -92,6 +92,8 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
         themeManager.register(InfiniteTheme())
         // 1. グローバル設定のロード
         ConfigManager.loadGlobal()
+        globalFeatures.rendering.themeFeature.enable()
+        globalFeatures.rendering.infiniteLoadingFeature.enable()
         globalFeatures.onInitialized()
         TranslationChecker.register()
         localFeatures.registerAllActions()
