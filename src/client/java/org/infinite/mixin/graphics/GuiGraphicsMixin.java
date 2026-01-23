@@ -36,6 +36,12 @@ public class GuiGraphicsMixin {
   @Shadow @Final public GuiGraphics.ScissorStack scissorStack;
   @Shadow @Final private Matrix3x2fStack pose;
 
+  @Unique
+  @SuppressWarnings("DataFlowIssue")
+  private GuiGraphics self() {
+    return (GuiGraphics) (Object) this;
+  }
+
   // 1. 標準の textRenderer: 常に不透明 (1.0F)
   @Inject(
       method =
@@ -47,8 +53,7 @@ public class GuiGraphicsMixin {
       @Nullable Consumer<Style> consumer,
       CallbackInfoReturnable<ActiveTextCollector> cir) {
 
-    cir.setReturnValue(
-        new ModernTextRenderer((GuiGraphics) (Object) this, hoveredTextEffects, 1.0F, consumer));
+    cir.setReturnValue(new ModernTextRenderer(self(), hoveredTextEffects, 1.0F, consumer));
   }
 
   // 2. ウィジェット用: ウィジェットの透過度を取得して渡す
@@ -65,8 +70,7 @@ public class GuiGraphicsMixin {
     // ここでウィジェットの alpha を抽出
     float alpha = abstractWidget.getAlpha();
 
-    cir.setReturnValue(
-        new ModernTextRenderer((GuiGraphics) (Object) this, hoveredTextEffects, alpha, null));
+    cir.setReturnValue(new ModernTextRenderer(self(), hoveredTextEffects, alpha, null));
   }
 
   // 3. 直接描画用 (以前のロジックを維持)

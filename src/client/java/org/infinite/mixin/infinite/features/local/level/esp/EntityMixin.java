@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Entity.class)
 public class EntityMixin {
+  @SuppressWarnings("DataFlowIssue")
   @Inject(method = "isCurrentlyGlowing", at = @At("RETURN"), cancellable = true)
   public void onIsCurrentlyGlowing(CallbackInfoReturnable<Boolean> cir) {
     EspFeature espFeature = InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getEspFeature();
