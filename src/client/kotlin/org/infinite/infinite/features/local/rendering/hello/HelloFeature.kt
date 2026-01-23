@@ -50,10 +50,6 @@ class HelloFeature : LocalFeature() {
     @Suppress("Unused")
     val itemListProperty by property(ItemListProperty(listOf()))
 
-    init {
-        enable()
-    }
-
     override fun onConnected() {
         LogSystem.log("HelloFeature Connected!")
     }
@@ -199,5 +195,40 @@ class HelloFeature : LocalFeature() {
         }
     }
 
-    override fun onLevelRendering(graphics3D: Graphics3D): Graphics3D = graphics3D
+    override fun onLevelRendering(graphics3D: Graphics3D): Graphics3D {
+        val currentPlayer = player ?: return graphics3D
+        val eyePos = currentPlayer.getEyePosition(1.0f)
+        val forward = currentPlayer.lookAngle.normalize().scale(2.0)
+        val base = eyePos.add(forward)
+        val lineStart = base.add(-0.8, 0.0, 0.0)
+        val lineEnd = base.add(0.8, 0.0, 0.0)
+        graphics3D.line(lineStart, lineEnd, 0xFFFF0000.toInt(), 3.0f, false)
+
+        val triA = base.add(-0.3, -0.2, 0.3)
+        val triB = base.add(0.3, -0.2, 0.3)
+        val triC = base.add(0.0, 0.3, 0.3)
+        graphics3D.triangleFrame(triA, triB, triC, 0xFF00FF00.toInt(), 2.0f, false)
+
+        val triFillA = base.add(-0.3, -0.2, -0.2)
+        val triFillB = base.add(0.3, -0.2, -0.2)
+        val triFillC = base.add(0.0, 0.3, -0.2)
+        graphics3D.triangleFill(triFillA, triFillB, triFillC, 0x80FFAA00.toInt(), false)
+
+        val rectA = base.add(-0.4, -0.4, 0.0)
+        val rectB = base.add(0.4, -0.4, 0.0)
+        val rectC = base.add(0.4, 0.4, 0.0)
+        val rectD = base.add(-0.4, 0.4, 0.0)
+        graphics3D.rectangleFrame(rectA, rectB, rectC, rectD, 0xFF00CCFF.toInt(), 2.0f, false)
+
+        val rectFillA = base.add(-0.25, -0.25, 0.5)
+        val rectFillB = base.add(0.25, -0.25, 0.5)
+        val rectFillC = base.add(0.25, 0.25, 0.5)
+        val rectFillD = base.add(-0.25, 0.25, 0.5)
+        graphics3D.rectangleFill(rectFillA, rectFillB, rectFillC, rectFillD, 0x802266FF.toInt(), false)
+
+        val boxMin = base.add(-0.2, -0.2, -0.7)
+        val boxMax = base.add(0.2, 0.2, -0.3)
+        graphics3D.boxOptimized(boxMin, boxMax, 0xFFFFFF00.toInt(), 2.0f, false)
+        return graphics3D
+    }
 }
