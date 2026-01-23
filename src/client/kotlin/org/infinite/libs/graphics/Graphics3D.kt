@@ -1,10 +1,10 @@
 package org.infinite.libs.graphics
 
+import net.minecraft.world.phys.Vec3
 import org.infinite.libs.core.tick.RenderTicks
 import org.infinite.libs.graphics.graphics3d.RenderSystem3D
 import org.infinite.libs.graphics.graphics3d.structs.RenderCommand3D
 import org.joml.Matrix4f
-import net.minecraft.world.phys.Vec3
 import java.util.LinkedList
 
 class Graphics3D {

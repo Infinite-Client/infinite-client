@@ -4,11 +4,11 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator
 import net.minecraft.client.Camera
 import net.minecraft.client.DeltaTracker
-import net.minecraft.world.phys.Vec3
 import net.minecraft.gizmos.Gizmo
 import net.minecraft.gizmos.GizmoPrimitives
 import net.minecraft.gizmos.GizmoStyle
 import net.minecraft.gizmos.Gizmos
+import net.minecraft.world.phys.Vec3
 import org.infinite.libs.graphics.graphics3d.structs.RenderCommand3D
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
@@ -28,6 +28,7 @@ class RenderSystem3D(
     private val bl2: Boolean,
 ) : MinecraftInterface() {
     private val modelMatrixStack = ArrayDeque<Matrix4f>().apply { add(Matrix4f()) }
+
     /**
      * レンダリングスレッドから計算スレッドへ渡すための安全なスナップショット
      */
