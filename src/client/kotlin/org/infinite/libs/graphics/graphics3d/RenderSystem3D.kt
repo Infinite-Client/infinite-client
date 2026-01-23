@@ -22,6 +22,7 @@ import org.joml.Matrix4f
 import org.joml.Vector4f
 import java.util.ArrayDeque
 
+@Suppress("unused")
 class RenderSystem3D(
     private val graphicsResourceAllocator: GraphicsResourceAllocator,
     private val deltaTracker: DeltaTracker,
@@ -191,13 +192,7 @@ class RenderSystem3D(
         val p0 = transform(a)
         val p1 = transform(b)
         val p2 = transform(c)
-        val props = Gizmos.addGizmo(
-            object : Gizmo {
-                override fun emit(primitives: GizmoPrimitives, partialTick: Float) {
-                    primitives.addTriangleFan(arrayOf(p0, p1, p2), color)
-                }
-            },
-        )
+        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addTriangleFan(arrayOf(p0, p1, p2), color) }
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
@@ -233,13 +228,7 @@ class RenderSystem3D(
         val p1 = transform(b)
         val p2 = transform(c)
         val p3 = transform(d)
-        val props = Gizmos.addGizmo(
-            object : Gizmo {
-                override fun emit(primitives: GizmoPrimitives, partialTick: Float) {
-                    primitives.addQuad(p0, p1, p2, p3, color)
-                }
-            },
-        )
+        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addQuad(p0, p1, p2, p3, color) }
         if (!depthTest) {
             props.setAlwaysOnTop()
         }

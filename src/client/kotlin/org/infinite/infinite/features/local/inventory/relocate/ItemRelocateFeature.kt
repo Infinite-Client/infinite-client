@@ -51,6 +51,7 @@ class ItemRelocateFeature : LocalFeature() {
                 }
             }
         }
+        updateTargetSlots(inv)
     }
 
     private fun processRelocation(inv: InventorySystem, fromIdx: InventoryIndex): Boolean {

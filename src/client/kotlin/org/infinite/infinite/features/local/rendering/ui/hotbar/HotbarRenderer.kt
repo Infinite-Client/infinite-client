@@ -42,7 +42,7 @@ class HotbarRenderer :
         // 3. アニメーション計算 (選択中のスロット座標)
         val targetSelectedX = mainStartX + 1f + (player.inventory.selectedSlot * slotSize)
         if (animatedSelectedX == -1f) animatedSelectedX = targetSelectedX
-        animatedSelectedX += (targetSelectedX - animatedSelectedX) * 0.2f // 追従スピード
+        animatedSelectedX += (targetSelectedX - animatedSelectedX) * 0.5f // 追従スピード
 
         // --- A. メインホットバー描画 ---
         theme.renderBackGround(mainStartX, startY, totalWidth, totalHeight, graphics2D, alphaValue)
@@ -51,6 +51,9 @@ class HotbarRenderer :
         graphics2D.strokeStyle.width = 1f
         graphics2D.fillStyle = colorScheme.accentColor.alpha((255 * alphaValue).toInt())
         graphics2D.strokeRect(mainStartX, startY, totalWidth, totalHeight)
+        // selected Item
+        graphics2D.fillStyle = colorScheme.accentColor.alpha((100 * alphaValue).toInt())
+        graphics2D.fillRect(animatedSelectedX + 0.5f, startY + 1.5f, 19f, 19f)
 
         // スロットとアイテム
         for (i in 0 until 9) {
@@ -69,12 +72,6 @@ class HotbarRenderer :
                 graphics2D.itemCentered(stack, slotX + 10f, slotY + 10f, 16f)
             }
         }
-
-        // 選択スロットの動くハイライト
-        graphics2D.push()
-        graphics2D.fillStyle = colorScheme.accentColor.alpha((100 * alphaValue).toInt())
-        graphics2D.fillRect(animatedSelectedX + 0.5f, startY + 1.5f, 19f, 19f)
-        graphics2D.pop()
 
         // --- B. オフハンドスロット描画 ---
         val offhandStack = player.offhandItem

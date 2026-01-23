@@ -1,6 +1,7 @@
 package org.infinite.infinite.features.local.inventory.control
 
 import net.minecraft.world.item.Items
+import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.graphics.Graphics2D
@@ -21,6 +22,7 @@ class ContainerUtilFeature : LocalFeature() {
     private val hotbarKeysWasPressed = BooleanArray(9) { false }
 
     private class SlotAnimation(var progress: Float = 1.0f)
+
     private val animations = Array(9) { SlotAnimation() }
 
     override fun onStartTick() {
@@ -69,27 +71,44 @@ class ContainerUtilFeature : LocalFeature() {
         }
     }
 
+    private var lastSelectedSlot: Int = 0 // -1ではなく0で初期化（またはonEnabledで同期）
+
     private fun handleHotbarRotation(inv: InventorySystem) {
         val player = player ?: return
+        val currentSlot = player.inventory.selectedSlot
+
+        // 全スロットのキー状態を更新しつつ、現在のスロットのキーを判定
         for (i in 0..8) {
             val key = options.keyHotbarSlots[i]
-            if (key.isDown && !hotbarKeysWasPressed[i]) {
-                if (player.inventory.selectedSlot == i) {
+            val isPressed = key.isDown
+
+            // 1. 今押されたのが「現在選択中のスロット」のキーである
+            // 2. かつ、前回のスロットが今回のスロットと同じ（移動してきた瞬間ではない）
+            if (isPressed && !hotbarKeysWasPressed[i]) {
+                if (i == currentSlot && i == lastSelectedSlot) {
                     rotateSlot(inv, i)
                     animations[i].progress = 0f
                 }
             }
-            hotbarKeysWasPressed[i] = key.isDown
-        }
-    }
 
-    private fun rotateSlot(inv: InventorySystem, slotIdx: Int) {
-        val hotbarIdx = InventoryIndex.Hotbar(slotIdx)
-        // 循環ロジック: 上から下へ押し出す
-        for (row in 2 downTo 0) {
-            val bpIdx = InventoryIndex.Backpack(slotIdx + (row * 9))
-            inv.swapItems(hotbarIdx, bpIdx)
+            hotbarKeysWasPressed[i] = isPressed
         }
+
+        lastSelectedSlot = currentSlot
+    }
+    private fun rotateSlot(inv: InventorySystem, slotIdx: Int) {
+        val hotbar = InventoryIndex.Hotbar(slotIdx)
+        val bp0 = InventoryIndex.Backpack(slotIdx) // 上段
+        val bp1 = InventoryIndex.Backpack(slotIdx + 9) // 中段
+        val bp2 = InventoryIndex.Backpack(slotIdx + 18) // 下段
+
+        // 空のスロットであっても強制的に入れ替える
+        // 順序: Hotbar <-> BP0 <-> BP1 <-> BP2
+        // これにより、Hotbarにあったものが上から順に下に落ちていきます
+        inv.swapItems(hotbar, bp0)
+        inv.swapItems(hotbar, bp1)
+        inv.swapItems(hotbar, bp2)
+        InfiniteClient.localFeatures.inventory.itemRelocateFeature.updateTargetSlots(inv)
     }
 
     /**
@@ -100,6 +119,9 @@ class ContainerUtilFeature : LocalFeature() {
         val screenH = graphics2D.height
         val hotbarLeft = screenW / 2 - 91
 
+        // UltraUiの状態を取得
+        val isUltraUiEnabled = InfiniteClient.localFeatures.rendering.ultraUiFeature.isEnabled()
+
         for (i in 0..8) {
             val anim = animations[i]
             if (anim.progress < 1.0f) {
@@ -107,28 +129,29 @@ class ContainerUtilFeature : LocalFeature() {
                 if (anim.progress > 1.0f) anim.progress = 1.0f
             }
 
-            // 進行度をイージング処理
             val easedProgress = anim.progress.pow(0.5f)
             val x = (hotbarLeft + i * 20 + 10).toFloat()
-            val baseY = (screenH - 11).toFloat()
+            val baseY = (screenH - 16).toFloat()
 
             for (row in 0..2) {
                 val stack = inv.getItem(InventoryIndex.Backpack(i + (row * 9)))
                 if (stack.isEmpty) continue
 
-                // アニメーションを考慮した垂直距離の計算
                 val distance = (row + 1) - (1.0f - easedProgress)
                 val offsetY = -20f * distance
-                val scale = 1.0f / (1.0f + distance * 0.3f)
+
+                // UltraUiが有効ならスケールは常に1.0f、無効なら距離に応じて縮小
+                val scale = if (isUltraUiEnabled) 1.0f else 1.0f / (1.0f + distance * 0.3f)
 
                 graphics2D.push()
                 graphics2D.translate(x, baseY + offsetY)
                 graphics2D.scale(scale, scale)
 
-                // 距離に応じてアルファ値を下げる (奥にある演出)
-                val alpha = (255 * (1.0f - (distance * 0.25f))).toInt().coerceIn(0, 255)
-                graphics2D.fillStyle = (alpha shl 24) or 0xFFFFFF
+                // UltraUiが有効な場合は透明度も少し控えめにする（または一定にする）とより馴染みます
+                val alphaFactor = if (isUltraUiEnabled) 0.15f else 0.25f
+                val alpha = (255 * (1.0f - (distance * alphaFactor))).toInt().coerceIn(0, 255)
 
+                graphics2D.fillStyle = (alpha shl 24) or 0xFFFFFF
                 graphics2D.itemCentered(stack, 0f, 0f, 16f)
                 graphics2D.pop()
             }

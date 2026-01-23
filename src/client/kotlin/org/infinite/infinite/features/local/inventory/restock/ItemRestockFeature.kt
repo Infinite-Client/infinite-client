@@ -34,24 +34,19 @@ class ItemRestockFeature : LocalFeature() {
             if (tickDelay > 0) tickDelay--
             return
         }
-
+        val itemRelocateFeature = InfiniteClient.localFeatures.inventory.itemRelocateFeature
         val inv = InventorySystem
         val selectedSlot = player?.inventory?.selectedSlot ?: 0
 
         // 1. メインハンドを優先
-        if (checkAndRestock(inv, selectedSlot, isMainHand = true)) return
-
-        // 2. 他のスロット
-        for (i in 0..8) {
-            if (i == selectedSlot) continue
-            if (checkAndRestock(inv, i, isMainHand = false)) return
-        }
+        checkAndRestock(inv, selectedSlot)
+        itemRelocateFeature.updateTargetSlots(inv)
     }
 
-    private fun checkAndRestock(inv: InventorySystem, slotIndex: Int, isMainHand: Boolean): Boolean {
+    private fun checkAndRestock(inv: InventorySystem, slotIndex: Int) {
         val relocate = InfiniteClient.localFeatures.inventory.itemRelocateFeature
         if (relocate.isEnabled() && relocate.targetSlots.contains(slotIndex)) {
-            return false
+            return
         }
 
         val hotbarIdx = InventoryIndex.Hotbar(slotIndex)
@@ -60,24 +55,12 @@ class ItemRestockFeature : LocalFeature() {
 
         if (currentStack.isEmpty || (currentStack.count <= thresholdProperty.value && currentStack.isStackable)) {
             val itemToFind = if (currentStack.isEmpty) lastItem else currentStack.item
-
             if (itemToFind != null && itemToFind != Items.AIR) {
-                // ホットバー内検索（メインハンド時）
-                if (isMainHand) {
-                    val otherHotbarIdx = findItemInHotbar(inv, itemToFind, excludeSlot = slotIndex)
-                    if (otherHotbarIdx != null) {
-                        inv.swapItems(otherHotbarIdx, hotbarIdx)
-                        tickDelay = delayProperty.value
-                        return true
-                    }
-                }
-
-                // バックパック内検索
-                val backpackIdx = findItemInBackpack(inv, itemToFind)
-                if (backpackIdx != null) {
-                    inv.swapItems(backpackIdx, hotbarIdx)
+                val otherHotbarIdx =
+                    findItemInHotbar(inv, itemToFind, excludeSlot = slotIndex) ?: findItemInBackpack(inv, itemToFind)
+                if (otherHotbarIdx != null) {
+                    inv.swapItems(otherHotbarIdx, hotbarIdx)
                     tickDelay = delayProperty.value
-                    return true
                 }
             }
         }
@@ -85,8 +68,8 @@ class ItemRestockFeature : LocalFeature() {
         if (!currentStack.isEmpty) {
             lastKnownItems[slotIndex] = currentStack.item
         }
-        return false
     }
+
     private fun findItemInHotbar(inv: InventorySystem, item: Item, excludeSlot: Int): InventoryIndex? {
         for (i in 0..8) {
             if (i == excludeSlot) continue

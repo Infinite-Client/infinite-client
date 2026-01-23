@@ -27,8 +27,8 @@ class UltraUiFeature : LocalFeature() {
     val leftBoxUi by property(BooleanProperty(true))
     val rightBoxUi by property(BooleanProperty(true))
     val crosshairUi by property(BooleanProperty(true))
-    val barHeight by property(IntProperty(16, 8, 32))
-    val padding by property(IntProperty(2, 0, 4))
+    val barHeight by property(IntProperty(24, 8, 32))
+    val padding by property(IntProperty(4, 0, 8))
     val alpha by property(FloatProperty(0.8f, 0f, 1f))
     override fun onStartUiRendering(graphics2D: Graphics2D) {
         if (hotbarUi.value) {

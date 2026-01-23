@@ -9,6 +9,7 @@ import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature.Companio
 import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature.Companion.renderUltraBar
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.interfaces.MinecraftInterface
+import org.infinite.utils.alpha
 
 class LeftBoxRenderer :
     MinecraftInterface(),
@@ -52,8 +53,8 @@ class LeftBoxRenderer :
         val sM = ultraUiFeature.sideMargin.toFloat() * animatedWidthFactor
         val bottomY = graphics2D.height.toFloat()
         val (actualHealth, actualArmor, actualToughness) = updateAnimation()
-
-        graphics2D.renderUltraBar(0f, bottomY - bH, sM, bH, 1f, 1f, colorScheme.backgroundColor)
+        val alphaInt = (alphaValue * 255).toInt()
+        graphics2D.renderUltraBar(0f, bottomY - bH, sM, bH, 1f, 1f, colorScheme.backgroundColor.alpha(alphaInt))
 
         val innerPadding = ultraUiFeature.padding.value.toFloat()
         val cH = bH - innerPadding
@@ -71,6 +72,14 @@ class LeftBoxRenderer :
 
         draw(cH, animatedHealth, actualHealth, 0f, 60f)
         if (actualArmor > 0 || animatedArmor > 0) draw(cH * 0.5f, animatedArmor, actualArmor, 120f, 180f)
-        if (actualToughness > 0 || animatedToughness > 0) draw(cH * 0.4f, animatedToughness, actualToughness, 210f, 270f)
+        if (actualToughness > 0 || animatedToughness > 0) {
+            draw(
+                cH * 0.4f,
+                animatedToughness,
+                actualToughness,
+                210f,
+                270f,
+            )
+        }
     }
 }

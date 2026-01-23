@@ -42,7 +42,7 @@ class Graphics2DPrimitivesTexture(
                     x + size + pad / 3f, // 右下寄りに配置する場合は座標を調整
                     y + size - pad,
                     InfiniteClient.theme.colorScheme.foregroundColor, // 色（アルファ適用が必要なら計算）
-                    style.shadow,
+                    true,
                     fontSize,
                 ),
             )
