@@ -1,9 +1,11 @@
 package org.infinite.libs.graphics
 
+import net.minecraft.resources.Identifier
 import net.minecraft.world.phys.Vec3
 import org.infinite.libs.core.tick.RenderTicks
 import org.infinite.libs.graphics.graphics3d.RenderSystem3D
 import org.infinite.libs.graphics.graphics3d.structs.RenderCommand3D
+import org.infinite.libs.graphics.graphics3d.structs.TexturedVertex
 import org.joml.Matrix4f
 import java.util.LinkedList
 
@@ -43,6 +45,28 @@ class Graphics3D {
         commandQueue.add(RenderCommand3D.TriangleFill(a, b, c, color, depthTest))
     }
 
+    fun triangleFill(
+        a: Vec3,
+        b: Vec3,
+        c: Vec3,
+        colorA: Int,
+        colorB: Int,
+        colorC: Int,
+        depthTest: Boolean = true,
+    ) {
+        commandQueue.add(
+            RenderCommand3D.TriangleFillGradient(
+                a,
+                b,
+                c,
+                colorA,
+                colorB,
+                colorC,
+                depthTest,
+            ),
+        )
+    }
+
     fun triangleFrame(
         a: Vec3,
         b: Vec3,
@@ -65,6 +89,53 @@ class Graphics3D {
         depthTest: Boolean = true,
     ) {
         commandQueue.add(RenderCommand3D.QuadFill(a, b, c, d, color, depthTest))
+    }
+
+    fun rectangleFill(
+        a: Vec3,
+        b: Vec3,
+        c: Vec3,
+        d: Vec3,
+        colorA: Int,
+        colorB: Int,
+        colorC: Int,
+        colorD: Int,
+        depthTest: Boolean = true,
+    ) {
+        commandQueue.add(
+            RenderCommand3D.QuadFillGradient(
+                a,
+                b,
+                c,
+                d,
+                colorA,
+                colorB,
+                colorC,
+                colorD,
+                depthTest,
+            ),
+        )
+    }
+
+    fun triangleTexture(
+        a: TexturedVertex,
+        b: TexturedVertex,
+        c: TexturedVertex,
+        texture: Identifier,
+        depthTest: Boolean = true,
+    ) {
+        commandQueue.add(RenderCommand3D.TriangleTextured(a, b, c, texture, depthTest))
+    }
+
+    fun rectangleTexture(
+        a: TexturedVertex,
+        b: TexturedVertex,
+        c: TexturedVertex,
+        d: TexturedVertex,
+        texture: Identifier,
+        depthTest: Boolean = true,
+    ) {
+        commandQueue.add(RenderCommand3D.QuadTextured(a, b, c, d, texture, depthTest))
     }
 
     fun rectangleFrame(

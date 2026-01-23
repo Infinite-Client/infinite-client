@@ -1,5 +1,6 @@
 package org.infinite.infinite.features.local.rendering.hello
 
+import net.minecraft.resources.Identifier
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.StringProperty
@@ -13,6 +14,7 @@ import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
 import org.infinite.libs.graphics.graphics2d.structs.TextStyle
+import org.infinite.libs.graphics.graphics3d.structs.TexturedVertex
 import org.infinite.libs.log.LogSystem
 import org.lwjgl.glfw.GLFW
 import kotlin.math.cos
@@ -229,6 +231,29 @@ class HelloFeature : LocalFeature() {
         val boxMin = base.add(-0.2, -0.2, -0.7)
         val boxMax = base.add(0.2, 0.2, -0.3)
         graphics3D.boxOptimized(boxMin, boxMax, 0xFFFFFF00.toInt(), 2.0f, false)
+
+        val gradA = base.add(-0.25, -0.25, 0.8)
+        val gradB = base.add(0.25, -0.25, 0.8)
+        val gradC = base.add(0.25, 0.25, 0.8)
+        val gradD = base.add(-0.25, 0.25, 0.8)
+        graphics3D.rectangleFill(
+            gradA,
+            gradB,
+            gradC,
+            gradD,
+            0xFFFF3366.toInt(),
+            0xFF33FF66.toInt(),
+            0xFF3366FF.toInt(),
+            0xFFFFFF33.toInt(),
+            false,
+        )
+
+        val texture = Identifier.parse("minecraft:textures/block/stone.png")
+        val texA = TexturedVertex(base.add(-0.25, -0.25, 1.1), 0f, 0f, 0xFFFFFFFF.toInt())
+        val texB = TexturedVertex(base.add(0.25, -0.25, 1.1), 1f, 0f, 0xFFFFFFFF.toInt())
+        val texC = TexturedVertex(base.add(0.25, 0.25, 1.1), 1f, 1f, 0xFFFFFFFF.toInt())
+        val texD = TexturedVertex(base.add(-0.25, 0.25, 1.1), 0f, 1f, 0xFFFFFFFF.toInt())
+        graphics3D.rectangleTexture(texA, texB, texC, texD, texture, false)
         return graphics3D
     }
 }

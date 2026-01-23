@@ -4,12 +4,19 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator
 import net.minecraft.client.Camera
 import net.minecraft.client.DeltaTracker
+import net.minecraft.client.renderer.LightTexture
+import net.minecraft.client.renderer.rendertype.RenderType
+import net.minecraft.client.renderer.rendertype.RenderTypes
+import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.gizmos.Gizmo
 import net.minecraft.gizmos.GizmoPrimitives
 import net.minecraft.gizmos.GizmoStyle
 import net.minecraft.gizmos.Gizmos
 import net.minecraft.world.phys.Vec3
 import org.infinite.libs.graphics.graphics3d.structs.RenderCommand3D
+import org.infinite.libs.graphics.graphics3d.system.QuadRenderer
+import org.infinite.libs.graphics.graphics3d.system.TexturedRenderer
+import org.infinite.libs.graphics.graphics3d.system.resource.RenderLayers
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import org.joml.Vector4f
@@ -28,6 +35,9 @@ class RenderSystem3D(
     private val bl2: Boolean,
 ) : MinecraftInterface() {
     private val modelMatrixStack = ArrayDeque<Matrix4f>().apply { add(Matrix4f()) }
+    private val bufferSource = minecraft.renderBuffers().bufferSource()
+    private val quadRenderer = QuadRenderer(bufferSource)
+    private val texturedRenderer = TexturedRenderer(bufferSource)
 
     /**
      * レンダリングスレッドから計算スレッドへ渡すための安全なスナップショット
@@ -75,6 +85,7 @@ class RenderSystem3D(
     }
 
     fun render(commands: List<RenderCommand3D>) {
+        val usedRenderTypes = LinkedHashSet<RenderType>()
         for (i in 0 until commands.size) {
             when (val c = commands[i]) {
                 is RenderCommand3D.Line -> drawLine(c.from, c.to, c.color, c.size, c.depthTest)
@@ -82,9 +93,71 @@ class RenderSystem3D(
                 RenderCommand3D.PushMatrix -> pushMatrix()
                 is RenderCommand3D.Quad -> drawQuad(c.a, c.b, c.c, c.d, c.color, c.depthTest)
                 is RenderCommand3D.QuadFill -> drawQuadFill(c.a, c.b, c.c, c.d, c.color, c.depthTest)
+                is RenderCommand3D.QuadFillGradient -> {
+                    val renderType = RenderLayers.quads(c.depthTest)
+                    quadRenderer.drawQuad(
+                        renderType,
+                        currentMatrix(),
+                        c.a,
+                        c.b,
+                        c.c,
+                        c.d,
+                        c.colorA,
+                        c.colorB,
+                        c.colorC,
+                        c.colorD,
+                    )
+                    usedRenderTypes.add(renderType)
+                }
+                is RenderCommand3D.QuadTextured -> {
+                    val renderType = RenderTypes.entityTranslucent(c.texture)
+                    texturedRenderer.drawQuad(
+                        renderType,
+                        currentMatrix(),
+                        c.a,
+                        c.b,
+                        c.c,
+                        c.d,
+                        OverlayTexture.NO_OVERLAY,
+                        LightTexture.FULL_BRIGHT,
+                    )
+                    usedRenderTypes.add(renderType)
+                }
                 is RenderCommand3D.SetMatrix -> setMatrix(c.matrix)
                 is RenderCommand3D.Triangle -> drawTriangle(c.a, c.b, c.c, c.color, c.depthTest)
                 is RenderCommand3D.TriangleFill -> drawTriangleFill(c.a, c.b, c.c, c.color, c.depthTest)
+                is RenderCommand3D.TriangleFillGradient -> {
+                    val renderType = RenderLayers.quads(c.depthTest)
+                    quadRenderer.drawTriangle(
+                        renderType,
+                        currentMatrix(),
+                        c.a,
+                        c.b,
+                        c.c,
+                        c.colorA,
+                        c.colorB,
+                        c.colorC,
+                    )
+                    usedRenderTypes.add(renderType)
+                }
+                is RenderCommand3D.TriangleTextured -> {
+                    val renderType = RenderTypes.entityTranslucent(c.texture)
+                    texturedRenderer.drawTriangle(
+                        renderType,
+                        currentMatrix(),
+                        c.a,
+                        c.b,
+                        c.c,
+                        OverlayTexture.NO_OVERLAY,
+                        LightTexture.FULL_BRIGHT,
+                    )
+                    usedRenderTypes.add(renderType)
+                }
+            }
+        }
+        if (usedRenderTypes.isNotEmpty()) {
+            for (renderType in usedRenderTypes) {
+                bufferSource.endBatch(renderType)
             }
         }
     }
@@ -188,5 +261,10 @@ class RenderSystem3D(
             modelMatrixStack.removeLast()
         }
         modelMatrixStack.add(Matrix4f(matrix))
+    }
+
+    private fun currentMatrix(): Matrix4f {
+        val model = modelMatrixStack.peekLast() ?: Matrix4f()
+        return Matrix4f(positionMatrix).mul(model)
     }
 }
