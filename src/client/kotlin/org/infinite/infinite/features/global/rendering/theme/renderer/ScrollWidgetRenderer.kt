@@ -1,7 +1,6 @@
 // org.infinite.infinite.features.global.rendering.theme.renderer.ScrollWidgetRenderer.kt
 package org.infinite.infinite.features.global.rendering.theme.renderer
 
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.AbstractScrollArea
 import org.infinite.InfiniteClient
@@ -21,15 +20,15 @@ class ScrollWidgetRenderer : WidgetRenderer<AbstractScrollArea> {
         val colorScheme = theme.colorScheme
         val g2d = Graphics2DRenderer(guiGraphics)
 
-        val x = widget.scrollBarX()
+        val barX = widget.scrollBarX()
         val barY = widget.scrollBarY()
         val barHeight = widget.scrollerHeight()
         val barWidth = 4f
-        val xCentered = x + 1f // 6px幅の中央付近に配置
+        val xCentered = barX + 1f // 6px幅の中央付近に配置
 
         // 1. スクロールバーの背景（レール）
         // alpha 0.5f で背景に馴染ませる
-        theme.renderBackGround(x.toFloat(), barY.toFloat(), 6f, widget.height.toFloat(), g2d, 0.3f)
+        theme.renderBackGround(barX.toFloat(), widget.y.toFloat(), 6f, widget.height.toFloat(), g2d, 0.3f)
 
         // 2. スクロールバー本体（つまみ）の色決定
         // isOverScrollbar は AbstractScrollArea の protected メソッドなので、

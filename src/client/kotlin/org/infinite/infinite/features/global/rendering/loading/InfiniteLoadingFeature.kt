@@ -11,10 +11,6 @@ import org.infinite.utils.alpha
 import kotlin.math.PI
 
 class InfiniteLoadingFeature : GlobalFeature() {
-    init {
-        enabled.value = true
-    }
-
     data class LoadingRenderContext(
         val guiGraphics: GuiGraphics,
         val mouseX: Int,

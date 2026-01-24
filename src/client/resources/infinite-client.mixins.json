@@ -41,6 +41,7 @@
     "infinite.features.local.rendering.clearsight.AbstractClientPlayerMixin",
     "infinite.features.local.rendering.clearsight.FogRendererMixin",
     "infinite.features.local.rendering.clearsight.GuiMixin",
+    "infinite.features.local.rendering.stablesight.CameraMixin",
     "infinite.features.local.rendering.toughsight.GuiMixin",
     "infinite.features.local.rendering.toughsight.LivingEntityMixin",
     "infinite.features.local.rendering.toughsight.OptionInstanceMixin",

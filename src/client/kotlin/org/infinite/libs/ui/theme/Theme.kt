@@ -17,7 +17,6 @@ abstract class Theme {
         graphics2D.fillStyle = backgroundColor.alpha((255 * alpha).toInt())
         graphics2D.fillRect(x, y, width, height)
     }
-
     fun renderBackGround(
         x: Int,
         y: Int,

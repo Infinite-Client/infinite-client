@@ -44,6 +44,7 @@ fun Int.red(value: Int): Int = (this and 0xFF00FFFF.toInt()) or (value.coerceIn(
 fun Int.green(value: Int): Int = (this and 0xFFFF00FF.toInt()) or (value.coerceIn(0, 255) shl 8)
 fun Int.blue(value: Int): Int = (this and 0xFFFFFF00.toInt()) or value.coerceIn(0, 255)
 fun Int.alpha(value: Int): Int = (this and 0x00FFFFFF) or (value.coerceIn(0, 255) shl 24)
+fun Int.alpha(value: Float): Int = this.alpha((255 * value).toInt())
 
 /**
  * 現在の色と別の色を、指定された比率で混ぜ合わせます。

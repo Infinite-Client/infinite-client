@@ -73,9 +73,9 @@ class ListFeatureScreen<T : Feature>(
     }
 
     override fun renderBackground(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        // オーバーレイ背景（スクリーン全体を暗くする）
+        super.renderBackground(guiGraphics, mouseX, mouseY, delta)
         val g2d = Graphics2DRenderer(guiGraphics)
-        InfiniteClient.theme.renderBackGround(0f, 0f, width.toFloat(), height.toFloat(), g2d, 0.65f)
+        InfiniteClient.theme.renderBackGround(0f, 0f, width.toFloat(), height.toFloat(), g2d, 0.1f)
         g2d.flush()
     }
 

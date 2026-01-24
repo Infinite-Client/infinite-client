@@ -1,15 +1,9 @@
 package org.infinite.libs.graphics.graphics2d
 
-import com.mojang.blaze3d.systems.RenderSystem
+import com.mojang.blaze3d.opengl.GlStateManager
 import net.minecraft.client.gui.GuiGraphics
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
-import org.infinite.libs.graphics.graphics2d.system.BlockRenderer
-import org.infinite.libs.graphics.graphics2d.system.ItemRenderer
-import org.infinite.libs.graphics.graphics2d.system.QuadRenderer
-import org.infinite.libs.graphics.graphics2d.system.RectRenderer
-import org.infinite.libs.graphics.graphics2d.system.TextRenderer
-import org.infinite.libs.graphics.graphics2d.system.TextureRenderer
-import org.infinite.libs.graphics.graphics2d.system.TriangleRenderer
+import org.infinite.libs.graphics.graphics2d.system.*
 
 class RenderSystem2D(
     private val gui: GuiGraphics,
@@ -165,6 +159,7 @@ class RenderSystem2D(
             }
 
             is RenderCommand2D.BeginStencil -> {
+                GlStateManager._enableScissorTest()
             }
 
             is RenderCommand2D.StartMasking -> {

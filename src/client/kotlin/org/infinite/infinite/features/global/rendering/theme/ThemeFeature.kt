@@ -8,12 +8,10 @@ import org.infinite.infinite.features.global.rendering.theme.renderer.ScrollWidg
 import org.infinite.infinite.features.global.rendering.theme.renderer.SliderButtonRenderer
 import org.infinite.libs.core.features.feature.GlobalFeature
 import org.infinite.libs.core.features.property.SelectionProperty
+import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
+import org.infinite.libs.ui.style.UiStyle
 
 class ThemeFeature : GlobalFeature() {
-    init {
-        enabled.value = true
-    }
-
     val sliderButtonRenderer = SliderButtonRenderer()
     val scrollWidgetRenderer = ScrollWidgetRenderer()
     val plainButtonRenderer = PlainButtonRenderer()
@@ -32,6 +30,6 @@ class ThemeFeature : GlobalFeature() {
     }
     fun shouldRenderCustom(): Boolean = isEnabled() && minecraft.screen !is ChatScreen
 
-    // デリゲートプロパティとして登録
     val currentTheme by property(ThemeSelectionProperty())
+    val style by property(EnumSelectionProperty(UiStyle.Simple))
 }

@@ -27,12 +27,36 @@ class CrosshairRenderer :
     override fun render(graphics2D: Graphics2D) {
         val player = player ?: return
         val mc = minecraft
+        val options = mc.options
+
+        // 1. 描画座標の決定
+        val (renderX, renderY) = if (options.cameraType.isFirstPerson) {
+            // 一人称視点：画面中央
+            graphics2D.width / 2f to graphics2D.height / 2f
+        } else {
+            // 三人称視点：レイキャストで衝突地点を計算
+            val pickRange = 100.0 // レイキャストの最大距離
+            val hitResult = player.pick(pickRange, graphics2D.gameDelta, false)
+            val worldPos = hitResult.location
+
+            // ワールド座標をスクリーン座標に投影
+            val screenPos = graphics2D.projectWorldToScreen(worldPos) ?: return
+            screenPos.first.toFloat() to screenPos.second.toFloat()
+        }
+
+        // 2. メインの描画処理を呼び出し
+        renderCrosshair(graphics2D, renderX, renderY)
+    }
+
+    /**
+     * 指定した座標にクロスヘアを描画する
+     */
+    fun renderCrosshair(graphics2D: Graphics2D, x: Float, y: Float) {
+        val player = player ?: return
+        val mc = minecraft
         val colorScheme = InfiniteClient.theme.colorScheme
         val alphaValue = ultraUiFeature.alpha.value
         val partialTicks = graphics2D.gameDelta
-
-        val centerX = graphics2D.width / 2f
-        val centerY = graphics2D.height / 2f
 
         // 1. ターゲット解析
         val hit = mc.hitResult
@@ -53,25 +77,14 @@ class CrosshairRenderer :
             val totalTicks = when (player.useItem.item) {
                 Items.BOW -> 20
 
-                // 弓: 1.0秒でフルチャージ
                 Items.TRIDENT -> 10
 
-                // トライデント: 0.5秒でフルチャージ
-                Items.CROSSBOW -> {
-                    // クロスボウはクイックチャージのエンチャントで速度が変わる
-                    CrossbowItem.getChargeDuration(player.useItem, player)
-                }
+                Items.CROSSBOW -> CrossbowItem.getChargeDuration(player.useItem, player)
 
                 Items.SPYGLASS -> 1
 
-                // 望遠鏡: 即座（または非常に短い）
                 Items.GOAT_HORN -> 140
 
-                // ヤギの角笛: 約7秒（吹く時間）
-
-                // 食料、ポーション、牛乳などは getUseDuration が 32 (1.6秒)
-                // ただし Honey Bottle (40) や Dried Kelp (16) のような例外があるため
-                // 72000 未満のものはそのまま getUseDuration を使うのが安全です
                 else -> {
                     val duration = player.useItem.getUseDuration(player)
                     if (duration >= 72000) 32 else duration
@@ -81,9 +94,10 @@ class CrosshairRenderer :
         } else {
             0f
         }
+
         // 描画開始
         graphics2D.push()
-        graphics2D.translate(centerX, centerY)
+        graphics2D.translate(x, y) // 指定された座標へ移動
 
         // 全体のアニメーション
         val finalScale = 1.0f + (smoothEntityFactor * 0.1f)
@@ -96,12 +110,13 @@ class CrosshairRenderer :
         val mainColor = if (smoothEntityFactor > 0.5f) colorScheme.accentColor else colorScheme.foregroundColor
         val shadowColor = colorScheme.backgroundColor.alpha((160 * alphaValue).toInt())
 
-        fun fillWithThinOutline(x: Float, y: Float, w: Float, h: Float, color: Int) {
+        // 内部ヘルパー関数
+        fun fillWithThinOutline(ox: Float, oy: Float, w: Float, h: Float, color: Int) {
             val spread = 0.75f
             graphics2D.fillStyle = shadowColor
-            graphics2D.fillRect(x - spread, y - spread, w + spread * 2, h + spread * 2)
+            graphics2D.fillRect(ox - spread, oy - spread, w + spread * 2, h + spread * 2)
             graphics2D.fillStyle = color.alpha((255 * alphaValue).toInt())
-            graphics2D.fillRect(x, y, w, h)
+            graphics2D.fillRect(ox, oy, w, h)
         }
 
         // A. 中心ドット
@@ -119,21 +134,19 @@ class CrosshairRenderer :
 
         graphics2D.pop() // 回転コンテキストを終了
 
-        // B. 円形ゲージ (回転の影響を受けないように個別に制御)
+        // B. 円形ゲージ
         val progress = if (useProgress > 0f) useProgress else attackStrength
         if (progress < 0.99f) {
             val radius = 10.0f
             val startAngle = -PI.toFloat() / 2f
             val sweepAngle = 2 * PI.toFloat() * progress
 
-            // アウトライン (背面に全円を描画)
             graphics2D.strokeStyle.width = 1.6f
             graphics2D.strokeStyle.color = shadowColor
             graphics2D.beginPath()
             graphics2D.arc(0f, 0f, radius, 0f, (2 * PI).toFloat())
             graphics2D.strokePath()
 
-            // メインゲージ
             graphics2D.strokeStyle.width = 0.8f
             graphics2D.strokeStyle.color = mainColor.alpha((255 * alphaValue).toInt())
             graphics2D.beginPath()
