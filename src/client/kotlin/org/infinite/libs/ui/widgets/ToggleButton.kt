@@ -31,11 +31,10 @@ abstract class ToggleButton(
     private var animationStartTime: Long = -1L
     private val animationDuration = 200L
     private var beforeValue: Boolean? = null
+
     private fun renewCheck() {
-        // 初回（nullの場合）または値が変化した瞬間を検知
         if (beforeValue == null) {
             beforeValue = value
-            // 初回はアニメーションさせないならStartTimeは更新しない
         } else if (beforeValue != value) {
             beforeValue = value
             animationStartTime = System.currentTimeMillis()
@@ -46,16 +45,18 @@ abstract class ToggleButton(
         renewCheck()
         val colorScheme = InfiniteClient.theme.colorScheme
 
-        // --- サイズ計算 ---
-        val margin = height * 0.1f
-        val knobSize = height - (margin * 2)
+        // --- レイアウト計算 ---
+        val margin = height * 0.15f
+        val knobRadius = (height - (margin * 2)) / 2f
         val toggleAreaWidth = width.toFloat().coerceAtMost(height * 2f)
         val toggleAreaX = x + (width - toggleAreaWidth) / 2f
-        val barHeight = height * 0.4f
-        val barY = y + (height - barHeight) / 2f
-        val barWidth = toggleAreaWidth - margin
 
-        // --- アニメーション・進捗計算 ---
+        // 背景バーを少しスリムに、かつ角を完全に丸く (height / 2)
+        val barHeight = height * 0.6f
+        val barY = y + (height - barHeight) / 2f
+        val barCornerRadius = barHeight / 2f
+
+        // --- アニメーション進捗 ---
         val currentTime = System.currentTimeMillis()
         val rawProgress = if (animationStartTime == -1L) {
             1f
@@ -63,56 +64,46 @@ abstract class ToggleButton(
             ((currentTime - animationStartTime).toFloat() / animationDuration).coerceIn(0f, 1f)
         }
 
-        // サインカーブによるイージング (0.0 -> 1.0)
+        // イージングを適用
         val easedProgress = sin(rawProgress * Math.PI / 2).toFloat()
-
-        // 移動位置の計算 (valueがtrueに向かっているなら 0->1、falseに向かっているなら 1->0 になるよう調整)
-        // 現在の value に基づいて、補間係数 (mixFactor) を決定
         val mixFactor = if (value) easedProgress else 1f - easedProgress
 
-        val minKnobX = toggleAreaX + margin
-        val maxKnobX = toggleAreaX + toggleAreaWidth - knobSize - margin
-        val currentKnobX = minKnobX + (maxKnobX - minKnobX) * mixFactor
+        // ノブの移動範囲
+        val minKnobCenterX = toggleAreaX + margin + knobRadius
+        val maxKnobCenterX = toggleAreaX + toggleAreaWidth - margin - knobRadius
+        val currentKnobCenterX = minKnobCenterX + (maxKnobCenterX - minKnobCenterX) * mixFactor
 
-        // --- 色の計算 (mix関数の活用) ---
-        // 状態ごとの色を定義
+        // --- 描画 ---
+
+        // 1. 背景バーの描画 (角丸)
         val colorOff = if (isHovered) colorScheme.secondaryColor else colorScheme.backgroundColor
         val colorOn = if (isHovered) colorScheme.greenColor else colorScheme.accentColor
 
-        // 背景バーの色をミックス
-        val currentBarColor = colorOff.mix(colorOn, mixFactor)
+        graphics2D.fillStyle = if (active) colorOff.mix(colorOn, mixFactor) else colorScheme.backgroundColor
+        graphics2D.fillRoundedRect(toggleAreaX, barY, toggleAreaWidth, barHeight, barCornerRadius)
 
-        // 背景バーの描画
-        graphics2D.fillStyle = if (active) currentBarColor else colorScheme.backgroundColor
-        graphics2D.fillRect(toggleAreaX + (margin / 2), barY, barWidth, barHeight)
+        // 2. ノブの描画 (円形)
+        val knobY = y + (height / 2f)
+        val knobBorderWidth = height * 0.08f
 
-        // --- ノブの描画 ---
-        val knobY = y + margin
-        val knobBorder = knobSize * 0.15f
-
-        // ノブの枠線の色をミックス
+        // 外枠の色補間
         val strokeColorOff = colorScheme.secondaryColor
         val strokeColorOn = colorScheme.accentColor
-        val currentStrokeColor = strokeColorOff.mix(strokeColorOn, mixFactor)
 
-        // 内側ノブ
+        // ノブ本体 (塗りつぶし)
         graphics2D.fillStyle = if (isHovered) colorScheme.accentColor else colorScheme.foregroundColor
-        graphics2D.fillRect(
-            currentKnobX + knobBorder / 2f,
-            knobY + knobBorder / 2f,
-            knobSize - knobBorder, // サイズ計算の微調整
-            knobSize - knobBorder,
-        )
+        graphics2D.fillCircle(currentKnobCenterX, knobY, knobRadius)
 
-        // 外枠ノブ
-        graphics2D.strokeStyle.width = knobBorder
-        graphics2D.strokeStyle.color = currentStrokeColor
-        graphics2D.strokeRect(currentKnobX, knobY, knobSize, knobSize)
+        // ノブの枠線 (ストローク)
+        graphics2D.strokeStyle.width = knobBorderWidth
+        graphics2D.strokeStyle.color = strokeColorOff.mix(strokeColorOn, mixFactor)
+        // strokeCircle を自作していない場合は、円のパスを作って strokePath()
+        graphics2D.beginPath()
+        graphics2D.arc(currentKnobCenterX, knobY, knobRadius, 0f, (Math.PI * 2).toFloat())
+        graphics2D.strokePath()
 
         // アニメーション終了判定
-        if (rawProgress >= 1f) {
-            animationStartTime = -1L
-        }
+        if (rawProgress >= 1f) animationStartTime = -1L
     }
 
     override fun renderContents(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {

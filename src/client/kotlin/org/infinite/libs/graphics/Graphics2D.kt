@@ -9,6 +9,7 @@ import org.infinite.libs.graphics.graphics2d.Graphics2DPrimitivesFill
 import org.infinite.libs.graphics.graphics2d.Graphics2DPrimitivesStroke
 import org.infinite.libs.graphics.graphics2d.Graphics2DPrimitivesTexture
 import org.infinite.libs.graphics.graphics2d.Graphics2DTransformations
+import org.infinite.libs.graphics.graphics2d.structs.FillRule
 import org.infinite.libs.graphics.graphics2d.structs.Image
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
@@ -17,6 +18,8 @@ import org.infinite.libs.graphics.graphics2d.system.Path2D
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import java.util.*
+import kotlin.math.PI
+import kotlin.math.min
 
 /**
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
@@ -32,6 +35,7 @@ open class Graphics2D(
     open val height: Int = minecraft.window.guiScaledHeight
     var strokeStyle: StrokeStyle = StrokeStyle()
     var fillStyle: Int = 0xFFFFFFFF.toInt()
+    var fillRule: FillRule = FillRule.EvenOdd
     var textStyle: TextStyle = TextStyle()
     var enablePathGradient: Boolean = false // New property for gradient control
     val fovFactor: Float
@@ -96,11 +100,11 @@ open class Graphics2D(
     }
 
     // 新しい描画および変換機能のインスタンス
-    private val fillOperations: Graphics2DPrimitivesFill = Graphics2DPrimitivesFill(commandQueue) { fillStyle }
+    private val fillOperations: Graphics2DPrimitivesFill =
+        Graphics2DPrimitivesFill(commandQueue, { fillStyle }, { fillRule })
     private val strokeOperations: Graphics2DPrimitivesStroke =
         Graphics2DPrimitivesStroke(commandQueue, { strokeStyle }, { enablePathGradient })
-    private val textureOperations: Graphics2DPrimitivesTexture =
-        Graphics2DPrimitivesTexture(commandQueue) { textStyle }
+    private val textureOperations: Graphics2DPrimitivesTexture = Graphics2DPrimitivesTexture(commandQueue) { textStyle }
 
     // --- fillRect ---
     fun fillRect(x: Int, y: Int, width: Int, height: Int) = fillRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat())
@@ -233,7 +237,14 @@ open class Graphics2D(
     }
 
     fun strokePath() {
-        strokeOperations.strokePolyline(path2D.getSegments())
+        // 蓄積されたサブパス（Segments）をすべて描画
+        strokeOperations.strokePath(path2D)
+        // 描画後にデータをクリア
+        path2D.clearSegments()
+    }
+
+    fun fillPath() {
+        fillOperations.fillPath(path2D)
         path2D.clearSegments()
     }
 
@@ -351,6 +362,65 @@ open class Graphics2D(
 
     fun blockCentered(block: Block, x: Float, y: Float, size: Float) {
         block(block, x - size / 2f, y - size / 2f, size)
+    }
+
+    /**
+     * 現在のパスを一時保存し、ブロック内の処理（独自パスの構築・描画）を実行した後、
+     * 元のパス状態を復元するユーティリティ。
+     */
+    private inline fun withTemporaryPath(block: () -> Unit) {
+        // 現在の状態を退避
+        val snapshot = path2D.snapshot()
+        val last = path2D.lastPointData
+        val first = path2D.firstPointData
+
+        // 独立した描画処理を実行
+        path2D.beginPath()
+        block()
+
+        // 状態を復元
+        path2D.restore(snapshot, last, first)
+    }
+
+    fun fillRoundedRect(x: Float, y: Float, width: Float, height: Float, radius: Float) {
+        withTemporaryPath {
+            val ss = strokeStyle.color
+            strokeStyle.color = fillStyle
+            roundedRectPath(x, y, width, height, radius)
+            fillPath()
+            strokeStyle.color = ss
+        }
+    }
+
+    fun strokeRoundedRect(x: Float, y: Float, width: Float, height: Float, radius: Float) {
+        withTemporaryPath {
+            roundedRectPath(x, y, width, height, radius)
+            strokePath()
+        }
+    }
+
+    /**
+     * 共通の角丸パス生成ロジック
+     */
+    private fun roundedRectPath(x: Float, y: Float, w: Float, h: Float, r: Float) {
+        val radius = r.coerceAtMost(min(w, h) / 2f)
+        moveTo(x + radius, y)
+        lineTo(x + w - radius, y)
+        arcTo(x + w, y, x + w, y + radius, radius)
+        lineTo(x + w, y + h - radius)
+        arcTo(x + w, y + h, x + w - radius, y + h, radius)
+        lineTo(x + radius, y + h)
+        arcTo(x, y + h, x, y + h - radius, radius)
+        lineTo(x, y + radius)
+        arcTo(x, y, x + radius, y, radius)
+        closePath()
+    }
+    fun fillCircle(x: Float, y: Float, radius: Float) {
+        withTemporaryPath {
+            arc(x, y, radius, 0f, (PI * 2).toFloat())
+            closePath()
+            fillPath()
+        }
     }
 
     /**
