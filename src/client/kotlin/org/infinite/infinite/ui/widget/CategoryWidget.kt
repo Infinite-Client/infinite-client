@@ -182,4 +182,3 @@ abstract class CategoryWidget<T : Category<*, out Feature>>(
         return if (translated != key && translated != data.name) translated else ""
     }
 }
-

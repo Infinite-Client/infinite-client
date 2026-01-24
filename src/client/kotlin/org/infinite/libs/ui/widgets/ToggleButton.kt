@@ -55,4 +55,3 @@ abstract class ToggleButton(
         graphics2DRenderer.flush()
     }
 }
-

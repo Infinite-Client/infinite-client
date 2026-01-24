@@ -199,4 +199,3 @@ abstract class FeatureWidget<T : Feature>(
         this.defaultButtonNarrationText(narrationElementOutput)
     }
 }
-

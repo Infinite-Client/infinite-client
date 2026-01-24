@@ -92,4 +92,3 @@ abstract class SliderWidget<T>(
 
     override fun updateWidgetNarration(output: NarrationElementOutput) = defaultButtonNarrationText(output)
 }
-

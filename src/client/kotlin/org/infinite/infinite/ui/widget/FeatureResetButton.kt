@@ -48,4 +48,3 @@ class FeatureResetButton(x: Int, y: Int, width: Int, height: Int, feature: Featu
         graphics2D.fillRoundedRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat(), radius)
     }
 }
-

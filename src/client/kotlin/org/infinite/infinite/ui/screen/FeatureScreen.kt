@@ -140,4 +140,3 @@ class FeatureScreen<T : Feature>(
         minecraft.setScreen(parent)
     }
 }
-

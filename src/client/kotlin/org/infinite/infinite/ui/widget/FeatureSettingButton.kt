@@ -50,4 +50,3 @@ class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Fea
         graphics2D.fillRoundedRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat(), radius)
     }
 }
-

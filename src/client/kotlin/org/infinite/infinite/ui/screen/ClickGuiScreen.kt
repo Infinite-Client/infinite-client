@@ -535,4 +535,3 @@ abstract class ClickGuiScreen(
     private fun toUiX(x: Double): Double = (x - uiOffsetX()) / uiScale
     private fun toUiY(y: Double): Double = (y - uiOffsetY()) / uiScale
 }
-

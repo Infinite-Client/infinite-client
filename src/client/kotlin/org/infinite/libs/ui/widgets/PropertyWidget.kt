@@ -136,5 +136,4 @@ open class PropertyWidget<T : Property<*>>(
             else -> "Set $trimmed$suffix"
         }
     }
-
 }

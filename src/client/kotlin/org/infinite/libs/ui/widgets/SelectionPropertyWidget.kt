@@ -88,4 +88,3 @@ class SelectionPropertyWidget<T : Any>(
         cycleButton.render(guiGraphics, i, j, f)
     }
 }
-

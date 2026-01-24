@@ -162,4 +162,3 @@ abstract class FeatureCategoriesScreen<K : KClass<out Feature>, V : Feature, T :
         return super.charTyped(characterEvent)
     }
 }
-
