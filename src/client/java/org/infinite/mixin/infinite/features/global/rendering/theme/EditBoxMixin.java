@@ -12,7 +12,9 @@ import org.infinite.libs.graphics.bundle.Graphics2DRenderer;
 import org.infinite.libs.ui.theme.ColorScheme;
 import org.infinite.libs.ui.theme.Theme;
 import org.infinite.utils.ColorKt;
+import org.infinite.utils.FontKt;
 import org.infinite.utils.WidgetRenderUtils;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -27,9 +29,8 @@ public abstract class EditBoxMixin extends net.minecraft.client.gui.components.A
   @Shadow public int displayPos; // 表示開始インデックス
   @Shadow public int cursorPos;
   @Shadow public int highlightPos;
-  @Shadow public int maxLength;
 
-  @Unique private Minecraft minecraft = Minecraft.getInstance();
+  @Unique @Final private final Minecraft minecraft = Minecraft.getInstance();
 
   @Shadow
   public abstract int getInnerWidth();
@@ -47,11 +48,11 @@ public abstract class EditBoxMixin extends net.minecraft.client.gui.components.A
     ThemeFeature themeFeature =
         InfiniteClient.INSTANCE.getGlobalFeatures().getRendering().getThemeFeature();
     if (!themeFeature.isEnabled()) return;
-
+    String fontName = "infinite_regular";
     Theme theme = InfiniteClient.INSTANCE.getTheme();
     ColorScheme colorScheme = theme.getColorScheme();
     Graphics2DRenderer renderer = new Graphics2DRenderer(guiGraphics, minecraft.getDeltaTracker());
-    Font font = minecraft.font;
+    Font font = FontKt.Font(fontName);
 
     WidgetRenderUtils.INSTANCE.renderCustomBackground(this, renderer);
     // 2. テキスト描画の準備
@@ -66,7 +67,7 @@ public abstract class EditBoxMixin extends net.minecraft.client.gui.components.A
     int highlightOffset = this.highlightPos - this.displayPos;
 
     // 3. テキスト本体の描画
-    renderer.getTextStyle().setFont("infinite_regular");
+    renderer.getTextStyle().setFont(fontName);
     renderer.getTextStyle().setShadow(false);
     renderer.setFillStyle(textColor);
 

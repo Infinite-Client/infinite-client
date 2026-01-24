@@ -175,7 +175,6 @@ class Graphics2DPrimitivesStroke(
     }
 
     fun strokePath(path: Path2D) {
-        // パス内のすべての独立したサブパスをループ
         for (subPath in path.getSubPaths()) {
             if (subPath.points.size < 2) continue
             renderSubPath(subPath)
@@ -187,70 +186,52 @@ class Graphics2DPrimitivesStroke(
         val isClosed = subPath.isClosed
         val miteredPairs = mutableListOf<PointPair>()
 
+        // 1. 全てのジョイント座標を先に計算 (計算方法は前回提供したものでOK)
         for (i in points.indices) {
             val curr = points[i]
+            val hw = curr.style.width / 2f
 
             val pair = if (isClosed) {
-                val prev = points[if (i == 0) points.size - 2 else i - 1]
-                val next = points[if (i == points.size - 1) 1 else i + 1]
-                PointPair.calculateForMiter(curr.x, curr.y, prev.x, prev.y, next.x, next.y, curr.style.width / 2f)
+                val prevIdx = if (i == 0) points.size - 2 else i - 1
+                val nextIdx = if (i == points.size - 1) 1 else i + 1
+                PointPair.calculateForMiter(curr.x, curr.y, points[prevIdx].x, points[prevIdx].y, points[nextIdx].x, points[nextIdx].y, hw)
             } else {
                 when (i) {
-                    0 -> calculateCap(curr, points[1], isStart = true)
-
-                    // adjは「次の点」
+                    0 -> calculateCap(curr, points[1], true)
                     points.size - 1 -> calculateCap(curr, points[i - 1], false)
-
-                    // adjは「前の点」
-                    else -> {
-                        val prev = points[i - 1]
-                        val next = points[i + 1]
-                        PointPair.calculateForMiter(curr.x, curr.y, prev.x, prev.y, next.x, next.y, curr.style.width / 2f)
-                    }
+                    else -> PointPair.calculateForMiter(curr.x, curr.y, points[i - 1].x, points[i - 1].y, points[i + 1].x, points[i + 1].y, hw)
                 }
             }
             miteredPairs.add(pair)
         }
 
-        // 2. 計算された座標ペアを用いて実際の描画コマンドを発行
+        // 2. 描画 (三角形の隙間を埋めるため、接続部を意識)
         for (i in 0 until points.size - 1) {
             val startPair = miteredPairs[i]
             val endPair = miteredPairs[i + 1]
-            val style = points[i + 1].style // セグメントの色は終点のスタイルを採用
 
+            // グラデーション設定
             val startCol = points[i].style.color
-            val endCol = if (isPathGradientEnabled) style.color else startCol
+            val endCol = if (isPathGradientEnabled) points[i + 1].style.color else startCol
 
+            // 座標が 0.01px 単位でズレると太さが変わって見えるため、
+            // drawColoredEdge 内で渡す頂点を再確認
             drawColoredEdge(startPair, endPair, startCol, endCol, startCol, endCol)
         }
     }
-
     private fun calculateCap(curr: Path2D.PathPoint, adj: Path2D.PathPoint, isStart: Boolean): PointPair {
-        // adj -> curr のベクトル（isStart=trueなら開始点から隣の点へ、falseなら終点の手前から終点へ）
-        // ただし、常に「進行方向」を基準にするため、計算を統一します
         val dx = adj.x - curr.x
         val dy = adj.y - curr.y
-        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(0.0001f)
-
-        // 進行方向の単位ベクトル
-        val ux = dx / len
-        val uy = dy / len
-
-        // 進行方向に対して左側の法線ベクトル (nx, ny)
-        // Canvas座標系(y下向き)において、(ux, uy)を左に90度回転させると (uy, -ux)
-        val nx = uy
-        val ny = -ux
-
+        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(0.001f)
+        val nx = -dy / len
+        val ny = dx / len
         val hw = curr.style.width / 2f
 
         return if (isStart) {
-            // 開始点の場合、adjは「次の点」なので (ux, uy) は進行方向そのもの
-            // ix: 左側, ox: 右側
-            PointPair(curr.x + nx * hw, curr.y + ny * hw, curr.x - nx * hw, curr.y - ny * hw)
-        } else {
-            // 終点の場合、adjは「前の点」なので (ux, uy) は進行方向と逆
-            // なので法線を反転させて、進行方向基準の左右に合わせる
             PointPair(curr.x - nx * hw, curr.y - ny * hw, curr.x + nx * hw, curr.y + ny * hw)
+        } else {
+            // 終点では法線を反転させ、進行方向に対して右側が ox になるように維持
+            PointPair(curr.x + nx * hw, curr.y + ny * hw, curr.x - nx * hw, curr.y - ny * hw)
         }
     }
 }

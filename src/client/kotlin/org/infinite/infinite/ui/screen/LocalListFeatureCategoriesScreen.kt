@@ -11,9 +11,4 @@ class LocalListFeatureCategoriesScreen(parent: Screen? = null) : ClickGuiScreen<
 
     override val categories: List<Category<*, out Feature>>
         get() = InfiniteClient.localFeatures.categories.values.toList()
-
-    // 2. ClickGuiScreen で定義した抽象メソッドを実装する
-    override fun openFeatureSettings(feature: Feature) {
-        minecraft.setScreen(ListFeatureScreen(feature, this))
-    }
 }

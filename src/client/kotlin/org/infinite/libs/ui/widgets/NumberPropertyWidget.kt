@@ -61,9 +61,9 @@ class NumberPropertyWidget<T>(
         propertySliderWidget.y = y + height - propertySliderWidget.height
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
-        super.renderWidget(guiGraphics, i, j, f)
-        propertySliderWidget.render(guiGraphics, i, j, f)
+    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
+        propertySliderWidget.render(guiGraphics, mouseX, mouseY, delta)
         val colorScheme = InfiniteClient.theme.colorScheme
         val displayText = property.display()
         val g2d = Graphics2DRenderer(guiGraphics)
