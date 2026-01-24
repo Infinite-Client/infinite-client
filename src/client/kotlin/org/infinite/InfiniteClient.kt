@@ -26,6 +26,7 @@ import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
 import org.infinite.libs.rust.LibInfiniteClient
 import org.infinite.libs.translation.TranslationChecker
+import org.infinite.libs.ui.style.UiStyle
 import org.infinite.libs.ui.theme.Theme
 import org.infinite.libs.ui.theme.ThemeManager
 import org.lwjgl.glfw.GLFW
@@ -86,6 +87,8 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             val themeName = globalFeatures.rendering.themeFeature.currentTheme.value
             return themeManager.getTheme(themeName)
         }
+    val uiStyle: UiStyle
+        get() = globalFeatures.rendering.uiStyleFeature.style.value
 
     override fun onInitializeClient() {
         LogSystem.init()
