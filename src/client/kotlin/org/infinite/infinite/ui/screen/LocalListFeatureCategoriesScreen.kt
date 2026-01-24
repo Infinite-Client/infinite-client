@@ -14,6 +14,6 @@ class LocalListFeatureCategoriesScreen(parent: Screen? = null) : ClickGuiScreen<
 
     // 2. ClickGuiScreen で定義した抽象メソッドを実装する
     override fun openFeatureSettings(feature: Feature) {
-        // ここに設定画面を開く処理を記述（現時点では空でもビルドは通ります）
+        minecraft.setScreen(ListFeatureScreen(feature, this))
     }
 }

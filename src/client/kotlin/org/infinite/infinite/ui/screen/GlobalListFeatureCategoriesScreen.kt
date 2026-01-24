@@ -14,6 +14,6 @@ class GlobalListFeatureCategoriesScreen(parent: Screen? = null) : ClickGuiScreen
 
     // 2. 抽象メソッド openFeatureSettings を実装
     override fun openFeatureSettings(feature: Feature) {
-        // 必要に応じて設定画面を開くロジックをここに記述
+        minecraft.setScreen(ListFeatureScreen(feature, this))
     }
 }
