@@ -91,16 +91,13 @@ abstract class ToggleButton(
         val currentKnobX = minX + (maxX - minX) * mixFactor
         val knobY = toggleAreaY + toggleH / 2f
 
-        // 3. ノブの描画
-        // ONのときは少し発光（Glow）させる
-        if (mixFactor > 0.1f) {
-            graphics2D.fillStyle = themeScheme.accentColor.alpha((60 * mixFactor).toInt())
-            graphics2D.fillCircle(currentKnobX, knobY, knobRadius + 2f)
-        }
-
         // ノブ本体 (常に明るい色)
-        graphics2D.fillStyle = themeScheme.foregroundColor.mix(themeScheme.accentColor, mixFactor * 0.2f)
+        graphics2D.fillStyle = themeScheme.foregroundColor
         graphics2D.fillCircle(currentKnobX, knobY, knobRadius)
+
+        graphics2D.strokeStyle.color = themeScheme.accentColor.alpha((60 * mixFactor).toInt())
+        graphics2D.strokeStyle.width = 1f
+        graphics2D.strokeCircle(currentKnobX, knobY, knobRadius)
 
         // ノブの縁取り
         graphics2D.strokeStyle.apply {

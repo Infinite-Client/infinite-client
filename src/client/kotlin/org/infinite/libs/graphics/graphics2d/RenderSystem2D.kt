@@ -1,5 +1,6 @@
 package org.infinite.libs.graphics.graphics2d
 
+import com.mojang.blaze3d.systems.RenderSystem
 import net.minecraft.client.gui.GuiGraphics
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 import org.infinite.libs.graphics.graphics2d.system.BlockRenderer
@@ -49,7 +50,7 @@ class RenderSystem2D(
             }
 
             is RenderCommand2D.Transform -> {
-//                gui.pose().transform(command.m00, command.m10, command.m01, command.m11, command.m02, command.m12)
+                gui.pose().transform(command.vec)
             }
 
             is RenderCommand2D.ResetTransform -> {
@@ -161,6 +162,18 @@ class RenderSystem2D(
 
             is RenderCommand2D.RenderBlock -> {
                 blockRenderer.block(command.block, command.x, command.y, command.size)
+            }
+
+            is RenderCommand2D.BeginStencil -> {
+            }
+
+            is RenderCommand2D.StartMasking -> {
+            }
+
+            is RenderCommand2D.StopMasking -> {
+            }
+
+            is RenderCommand2D.DisableStencil -> {
             }
         }
     }
