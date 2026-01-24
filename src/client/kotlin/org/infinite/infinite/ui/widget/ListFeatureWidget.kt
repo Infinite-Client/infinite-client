@@ -49,21 +49,21 @@ abstract class ListFeatureWidget<T : Feature>(
         val buttonY = this.y + PADDING
 
         widgetComponents.resetButton.apply {
-            x = this@FeatureWidget.x + this@FeatureWidget.width - 3 * PADDING - 3 * buttonSize
+            x = this@ListFeatureWidget.x + this@ListFeatureWidget.width - 3 * PADDING - 3 * buttonSize
             y = buttonY
             width = buttonSize
             height = buttonSize
         }
 
         widgetComponents.settingButton.apply {
-            x = this@FeatureWidget.x + this@FeatureWidget.width - 2 * PADDING - 2 * buttonSize
+            x = this@ListFeatureWidget.x + this@ListFeatureWidget.width - 2 * PADDING - 2 * buttonSize
             y = buttonY
             width = buttonSize
             height = buttonSize
         }
 
         widgetComponents.toggleButton.apply {
-            x = this@FeatureWidget.x + this@FeatureWidget.width - PADDING - 2 * buttonSize
+            x = this@ListFeatureWidget.x + this@ListFeatureWidget.width - PADDING - 2 * buttonSize
             y = buttonY
             width = 2 * buttonSize
             height = buttonSize
