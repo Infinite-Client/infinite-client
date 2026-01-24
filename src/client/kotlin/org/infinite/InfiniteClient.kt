@@ -12,7 +12,7 @@ import org.infinite.infinite.features.global.InfiniteGlobalFeatures
 import org.infinite.infinite.features.local.InfiniteLocalFeatures
 import org.infinite.infinite.theme.default.DefaultTheme
 import org.infinite.infinite.theme.infinite.InfiniteTheme
-import org.infinite.infinite.ui.screen.LocalFeatureCategoriesScreen
+import org.infinite.infinite.ui.screen.LocalCarouselFeatureCategoriesScreen
 import org.infinite.libs.config.ConfigManager
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.Feature
@@ -46,7 +46,7 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             ),
         ) {
             minecraft.execute {
-                minecraft.setScreen(LocalFeatureCategoriesScreen())
+                minecraft.setScreen(LocalCarouselFeatureCategoriesScreen())
             }
         }
     }

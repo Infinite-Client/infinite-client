@@ -5,7 +5,7 @@ import net.minecraft.network.chat.Component
 import org.infinite.libs.core.features.categories.category.LocalCategory
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 
-class LocalCategoryWidget(
+class LocalCarouselCategoryWidget(
     x: Int,
     y: Int,
     width: Int,
@@ -13,7 +13,7 @@ class LocalCategoryWidget(
     category: LocalCategory, // プロパティとして保持しなくても、親の 'data' を利用可能
     parent: AbstractCarouselScreen<LocalCategory>,
     index: Int,
-) : CategoryWidget<LocalCategory>(
+) : CarouselCategoryWidget<LocalCategory>(
     x,
     y,
     width,
@@ -30,7 +30,7 @@ class LocalCategoryWidget(
 
         // 親クラスの 'data' (LocalCategory) にある features をループ
         data.features.forEach { (_, feature) ->
-            layout.addChild(LocalFeatureWidget(0, 0, itemWidth, feature = feature))
+            layout.addChild(LocalCarouselFeatureWidget(0, 0, itemWidth, feature = feature))
         }
     }
 

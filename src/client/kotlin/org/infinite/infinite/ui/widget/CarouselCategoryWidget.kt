@@ -11,7 +11,7 @@ import org.infinite.libs.ui.widgets.AbstractCarouselWidget
 import org.infinite.utils.Font
 import kotlin.math.roundToInt
 
-abstract class CategoryWidget<T : Category<*, out Feature>>(
+abstract class CarouselCategoryWidget<T : Category<*, out Feature>>(
     x: Int,
     y: Int,
     width: Int,

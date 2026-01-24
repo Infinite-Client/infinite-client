@@ -2,13 +2,13 @@ package org.infinite.infinite.ui.screen
 
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
-import org.infinite.infinite.ui.widget.CategoryWidget
+import org.infinite.infinite.ui.widget.CarouselCategoryWidget
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 import kotlin.reflect.KClass
 
-abstract class FeatureCategoriesScreen<K : KClass<out Feature>, V : Feature, T : Category<K, V>, W : CategoryWidget<T>>(
+abstract class CarouselFeatureCategoriesScreen<K : KClass<out Feature>, V : Feature, T : Category<K, V>, W : CarouselCategoryWidget<T>>(
     parent: Screen? = null,
 ) : AbstractCarouselScreen<T>(Component.literal("Infinite Client"), parent) {
 

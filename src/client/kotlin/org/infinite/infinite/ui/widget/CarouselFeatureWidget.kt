@@ -12,7 +12,7 @@ import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 /**
  * Featureを表示・操作するための基本ウィジェット
  */
-abstract class FeatureWidget<T : Feature>(
+abstract class CarouselFeatureWidget<T : Feature>(
     x: Int,
     y: Int,
     width: Int,
@@ -46,21 +46,21 @@ abstract class FeatureWidget<T : Feature>(
         val buttonY = this.y + PADDING / 2
 
         widgetComponents.resetButton.apply {
-            x = this@FeatureWidget.x + this@FeatureWidget.width - 4 * PADDING - 4 * buttonSize
+            x = this@CarouselFeatureWidget.x + this@CarouselFeatureWidget.width - 4 * PADDING - 4 * buttonSize
             y = buttonY
             width = buttonSize
             height = buttonSize
         }
 
         widgetComponents.settingButton.apply {
-            x = this@FeatureWidget.x + this@FeatureWidget.width - 3 * PADDING - 3 * buttonSize
+            x = this@CarouselFeatureWidget.x + this@CarouselFeatureWidget.width - 3 * PADDING - 3 * buttonSize
             y = buttonY
             width = buttonSize
             height = buttonSize
         }
 
         widgetComponents.toggleButton.apply {
-            x = this@FeatureWidget.x + this@FeatureWidget.width - PADDING - 2 * buttonSize
+            x = this@CarouselFeatureWidget.x + this@CarouselFeatureWidget.width - PADDING - 2 * buttonSize
             y = buttonY
             width = 2 * buttonSize
             height = buttonSize

@@ -5,7 +5,7 @@ import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.network.chat.Component;
-import org.infinite.infinite.ui.screen.GlobalFeatureCategoriesScreen;
+import org.infinite.infinite.ui.screen.GlobalCarouselFeatureCategoriesScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -42,7 +42,7 @@ public abstract class OptionsScreenMixin extends Screen {
                 Component.literal("Infinite Settings"),
                 (button) -> {
                   Screen parent = minecraft.screen;
-                  minecraft.setScreen(new GlobalFeatureCategoriesScreen(parent));
+                  minecraft.setScreen(new GlobalCarouselFeatureCategoriesScreen(parent));
                 })
             .build());
   }

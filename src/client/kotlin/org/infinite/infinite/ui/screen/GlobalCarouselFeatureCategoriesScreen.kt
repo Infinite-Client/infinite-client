@@ -2,17 +2,17 @@ package org.infinite.infinite.ui.screen
 
 import net.minecraft.client.gui.screens.Screen
 import org.infinite.InfiniteClient
-import org.infinite.infinite.ui.widget.GlobalCategoryWidget
+import org.infinite.infinite.ui.widget.GlobalCarouselCategoryWidget
 import org.infinite.libs.core.features.categories.category.GlobalCategory
 import org.infinite.libs.core.features.feature.GlobalFeature
 import kotlin.reflect.KClass
 
-class GlobalFeatureCategoriesScreen(parent: Screen? = null) :
-    FeatureCategoriesScreen<
+class GlobalCarouselFeatureCategoriesScreen(parent: Screen? = null) :
+    CarouselFeatureCategoriesScreen<
         KClass<out GlobalFeature>,
         GlobalFeature,
         GlobalCategory,
-        GlobalCategoryWidget,
+        GlobalCarouselCategoryWidget,
         >(parent) {
 
     // Globalのカテゴリデータソースを取得
@@ -23,5 +23,5 @@ class GlobalFeatureCategoriesScreen(parent: Screen? = null) :
     override fun createWidget(
         index: Int,
         data: GlobalCategory,
-    ): GlobalCategoryWidget = GlobalCategoryWidget(0, 0, 120, 180, data, this, index)
+    ): GlobalCarouselCategoryWidget = GlobalCarouselCategoryWidget(0, 0, 120, 180, data, this, index)
 }

@@ -5,7 +5,7 @@ import net.minecraft.network.chat.Component
 import org.infinite.libs.core.features.categories.category.GlobalCategory
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 
-class GlobalCategoryWidget(
+class GlobalCarouselCategoryWidget(
     x: Int,
     y: Int,
     width: Int,
@@ -13,7 +13,7 @@ class GlobalCategoryWidget(
     category: GlobalCategory,
     parent: AbstractCarouselScreen<GlobalCategory>,
     index: Int,
-) : CategoryWidget<GlobalCategory>(
+) : CarouselCategoryWidget<GlobalCategory>(
     x,
     y,
     width,
@@ -32,7 +32,7 @@ class GlobalCategoryWidget(
         // data は親の CategoryWidget で定義されている GlobalCategory インスタンスです
         data.features.forEach { (_, feature) ->
             // Global 用の FeatureWidget を作成して追加
-            layout.addChild(GlobalFeatureWidget(0, 0, itemWidth, feature = feature))
+            layout.addChild(GlobalCarouselFeatureWidget(0, 0, itemWidth, feature = feature))
         }
     }
 
