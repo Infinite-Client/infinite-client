@@ -2,9 +2,9 @@ package org.infinite.libs.graphics.graphics2d
 
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
-import org.infinite.libs.graphics.graphics2d.system.PathSegment
+import org.infinite.libs.graphics.graphics2d.system.Path2D
 import org.infinite.libs.graphics.graphics2d.system.PointPair
-import java.util.LinkedList
+import java.util.*
 import kotlin.math.sqrt
 
 class Graphics2DPrimitivesStroke(
@@ -25,85 +25,32 @@ class Graphics2DPrimitivesStroke(
         y: Float,
         w: Float,
         h: Float,
-        col0: Int, // 左上
-        col1: Int, // 右上
-        col2: Int, // 右下
-        col3: Int, // 左下
+        col0: Int,
+        col1: Int,
+        col2: Int,
+        col3: Int,
     ) {
         val style = strokeStyle ?: return
-        val strokeWidth = style.width
-        val v = strokeWidth / 2f
-        val p1 = PointPair(x + v, y + v, x - v, y - v)
-        val p2 = PointPair(x + v, y + h - v, x - v, y + h + v)
-        val p3 = PointPair(x + w - v, y + h - v, x + w + v, y + h + v)
-        val p4 = PointPair(x + w - v, y + v, x + w + v, y - v)
+        val hw = style.width / 2f
 
-        commandQueue.add(
-            RenderCommand2D.FillQuad(
-                p1.ix,
-                p1.iy,
-                p1.ox,
-                p1.oy,
-                p2.ox,
-                p2.oy,
-                p2.ix,
-                p2.iy,
-                col0,
-                col0,
-                col1,
-                col1,
-            ),
+        // 4角の座標ペアを定義 (ix, iy は内側 / ox, oy は外側)
+        val p0 = PointPair(x + hw, y + hw, x - hw, y - hw) // 左上
+        val p1 = PointPair(x + w - hw, y + hw, x + w + hw, y - hw) // 右上
+        val p2 = PointPair(x + w - hw, y + h - hw, x + w + hw, y + h + hw) // 右下
+        val p3 = PointPair(x + hw, y + h - hw, x - hw, y + h + hw) // 左下
+
+        // エッジのリストを作成 (開始点, 終了点, 開始色, 終了色)
+        val edges = listOf(
+            Triple(p0, p1, col0 to col1),
+            Triple(p1, p2, col1 to col2),
+            Triple(p2, p3, col2 to col3),
+            Triple(p3, p0, col3 to col0),
         )
-        commandQueue.add(
-            RenderCommand2D.FillQuad(
-                p2.ix,
-                p2.iy,
-                p2.ox,
-                p2.oy,
-                p3.ox,
-                p3.oy,
-                p3.ix,
-                p3.iy,
-                col1,
-                col1,
-                col2,
-                col2,
-            ),
-        )
-        commandQueue.add(
-            RenderCommand2D.FillQuad(
-                p3.ix,
-                p3.iy,
-                p3.ox,
-                p3.oy,
-                p4.ox,
-                p4.oy,
-                p4.ix,
-                p4.iy,
-                col2,
-                col2,
-                col3,
-                col3,
-            ),
-        )
-        commandQueue.add(
-            RenderCommand2D.FillQuad(
-                p4.ix,
-                p4.iy,
-                p4.ox,
-                p4.oy,
-                p1.ox,
-                p1.oy,
-                p1.ix,
-                p1.iy,
-                col3,
-                col3,
-                col0,
-                col0,
-            ),
-        )
+
+        for ((start, end, cols) in edges) {
+            drawColoredEdge(start, end, cols.first, cols.second, cols.first, cols.second)
+        }
     }
-
     fun strokeQuad(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
         val style = strokeStyle ?: return
         val color = style.color
@@ -227,101 +174,83 @@ class Graphics2DPrimitivesStroke(
         drawColoredEdge(p2, p0, inCol2, inCol0, col2, col0)
     }
 
-    fun strokePolyline(segments: List<PathSegment>) {
-        if (segments.isEmpty()) return
-
-        // 1. 頂点リストの構築
-        val polylineVerticesWithStyles = mutableListOf<Triple<Float, Float, StrokeStyle>>()
-        polylineVerticesWithStyles.add(Triple(segments.first().x1, segments.first().y1, segments.first().style))
-        for (segment in segments) {
-            polylineVerticesWithStyles.add(Triple(segment.x2, segment.y2, segment.style))
+    fun strokePath(path: Path2D) {
+        // パス内のすべての独立したサブパスをループ
+        for (subPath in path.getSubPaths()) {
+            if (subPath.points.size < 2) continue
+            renderSubPath(subPath)
         }
+    }
 
-        val isClosed = segments.size > 1 &&
-            segments.first().x1 == segments.last().x2 &&
-            segments.first().y1 == segments.last().y2
+    private fun renderSubPath(subPath: Path2D.Segments) {
+        val points = subPath.points
+        val isClosed = subPath.isClosed
+        val miteredPairs = mutableListOf<PointPair>()
 
-        val miteredPoints = mutableListOf<PointPair>()
+        for (i in points.indices) {
+            val curr = points[i]
 
-        // 2. Miter座標（角の広がり）の計算
-        for (j in 0 until polylineVerticesWithStyles.size) {
-            val currV = polylineVerticesWithStyles[j]
-            val currX = currV.first
-            val currY = currV.second
-            val currStyle = currV.third
-
-            val miter: PointPair
-            if (isClosed) {
-                val prevIdx = if (j == 0) polylineVerticesWithStyles.size - 2 else j - 1
-                val nextIdx = if (j == polylineVerticesWithStyles.size - 1) 1 else j + 1
-                val hw = (polylineVerticesWithStyles[prevIdx].third.width + currStyle.width) / 4f
-                miter = PointPair.calculateForMiter(
-                    currX, currY,
-                    polylineVerticesWithStyles[prevIdx].first, polylineVerticesWithStyles[prevIdx].second,
-                    polylineVerticesWithStyles[nextIdx].first, polylineVerticesWithStyles[nextIdx].second,
-                    hw,
-                )
+            val pair = if (isClosed) {
+                val prev = points[if (i == 0) points.size - 2 else i - 1]
+                val next = points[if (i == points.size - 1) 1 else i + 1]
+                PointPair.calculateForMiter(curr.x, curr.y, prev.x, prev.y, next.x, next.y, curr.style.width / 2f)
             } else {
-                when (j) {
-                    0 -> { // 開始点
-                        val nextV = polylineVerticesWithStyles[1]
-                        val dx = nextV.first - currX
-                        val dy = nextV.second - currY
-                        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(0.0001f)
-                        val nx = -dy / len
-                        val ny = dx / len
-                        val hw = currStyle.width / 2f
-                        miter = PointPair(currX - nx * hw, currY - ny * hw, currX + nx * hw, currY + ny * hw)
-                    }
+                when (i) {
+                    0 -> calculateCap(curr, points[1], isStart = true)
 
-                    polylineVerticesWithStyles.size - 1 -> { // 終了点
-                        val prevV = polylineVerticesWithStyles[j - 1]
-                        val dx = currX - prevV.first
-                        val dy = currY - prevV.second
-                        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(0.0001f)
-                        val nx = -dy / len
-                        val ny = dx / len
-                        val hw = polylineVerticesWithStyles[j - 1].third.width / 2f
-                        miter = PointPair(currX - nx * hw, currY - ny * hw, currX + nx * hw, currY + ny * hw)
-                    }
+                    // adjは「次の点」
+                    points.size - 1 -> calculateCap(curr, points[i - 1], false)
 
-                    else -> { // 中間点
-                        val prevV = polylineVerticesWithStyles[j - 1]
-                        val nextV = polylineVerticesWithStyles[j + 1]
-                        val hw = (polylineVerticesWithStyles[j - 1].third.width + currStyle.width) / 4f
-                        miter = PointPair.calculateForMiter(
-                            currX, currY,
-                            prevV.first, prevV.second,
-                            nextV.first, nextV.second,
-                            hw,
-                        )
+                    // adjは「前の点」
+                    else -> {
+                        val prev = points[i - 1]
+                        val next = points[i + 1]
+                        PointPair.calculateForMiter(curr.x, curr.y, prev.x, prev.y, next.x, next.y, curr.style.width / 2f)
                     }
                 }
             }
-            miteredPoints.add(miter)
+            miteredPairs.add(pair)
         }
 
-        // 3. 【重要】描画ループ（ここが抜けていました）
-        for (j in 0 until segments.size) {
-            val segment = segments[j]
-            val startMiter = miteredPoints[j]
-            val endMiter = miteredPoints[j + 1]
+        // 2. 計算された座標ペアを用いて実際の描画コマンドを発行
+        for (i in 0 until points.size - 1) {
+            val startPair = miteredPairs[i]
+            val endPair = miteredPairs[i + 1]
+            val style = points[i + 1].style // セグメントの色は終点のスタイルを採用
 
-            val startColor = segment.style.color
-            val endColor = if (isPathGradientEnabled) {
-                if (j + 1 < segments.size) {
-                    segments[j + 1].style.color
-                } else if (isClosed) {
-                    segments.first().style.color
-                } else {
-                    startColor
-                }
-            } else {
-                startColor
-            }
+            val startCol = points[i].style.color
+            val endCol = if (isPathGradientEnabled) style.color else startCol
 
-            // 頂点を描画コマンドへ追加
-            drawColoredEdge(startMiter, endMiter, startColor, endColor, startColor, endColor)
+            drawColoredEdge(startPair, endPair, startCol, endCol, startCol, endCol)
+        }
+    }
+
+    private fun calculateCap(curr: Path2D.PathPoint, adj: Path2D.PathPoint, isStart: Boolean): PointPair {
+        // adj -> curr のベクトル（isStart=trueなら開始点から隣の点へ、falseなら終点の手前から終点へ）
+        // ただし、常に「進行方向」を基準にするため、計算を統一します
+        val dx = adj.x - curr.x
+        val dy = adj.y - curr.y
+        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(0.0001f)
+
+        // 進行方向の単位ベクトル
+        val ux = dx / len
+        val uy = dy / len
+
+        // 進行方向に対して左側の法線ベクトル (nx, ny)
+        // Canvas座標系(y下向き)において、(ux, uy)を左に90度回転させると (uy, -ux)
+        val nx = uy
+        val ny = -ux
+
+        val hw = curr.style.width / 2f
+
+        return if (isStart) {
+            // 開始点の場合、adjは「次の点」なので (ux, uy) は進行方向そのもの
+            // ix: 左側, ox: 右側
+            PointPair(curr.x + nx * hw, curr.y + ny * hw, curr.x - nx * hw, curr.y - ny * hw)
+        } else {
+            // 終点の場合、adjは「前の点」なので (ux, uy) は進行方向と逆
+            // なので法線を反転させて、進行方向基準の左右に合わせる
+            PointPair(curr.x - nx * hw, curr.y - ny * hw, curr.x + nx * hw, curr.y + ny * hw)
         }
     }
 }

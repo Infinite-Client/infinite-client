@@ -221,12 +221,10 @@ class LockOnFeature : LocalFeature() {
             priority = AimPriority.Normally,
             target = AimTarget.EntityTarget(target, AimTarget.EntityTarget.EntityAnchor.Center),
             condition = object : AimTaskConditionInterface {
-                override fun check(): AimTaskConditionReturn {
-                    return if (isEnabled() && !isPaused && targetList.contains(target) && target.isAlive) {
-                        AimTaskConditionReturn.Exec
-                    } else {
-                        AimTaskConditionReturn.Failure
-                    }
+                override fun check(): AimTaskConditionReturn = if (isEnabled() && !isPaused && targetList.contains(target) && target.isAlive) {
+                    AimTaskConditionReturn.Exec
+                } else {
+                    AimTaskConditionReturn.Failure
                 }
             },
             calcMethod = method.value,
@@ -305,8 +303,12 @@ class LockOnFeature : LocalFeature() {
 
         val colorScheme = InfiniteClient.theme.colorScheme
         val color = when {
-            paused -> colorScheme.secondaryColor // ポーズ中
-            active -> colorScheme.accentColor // アクティブ
+            paused -> colorScheme.secondaryColor
+
+            // ポーズ中
+            active -> colorScheme.accentColor
+
+            // アクティブ
             else -> colorScheme.accentColor.alpha(120) // 非アクティブ（少し透過）
         }
 

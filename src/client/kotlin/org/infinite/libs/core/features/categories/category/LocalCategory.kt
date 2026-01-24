@@ -43,18 +43,14 @@ abstract class LocalCategory : Category<KClass<out LocalFeature>, LocalFeature>(
 
     // --- Rendering Logic ---
 
-    open suspend fun onStartUiRendering(deltaTracker: DeltaTracker): LinkedList<Pair<Int, List<RenderCommand2D>>> {
-        return collectAndGroupRenderCommands(deltaTracker) { feature, graphics ->
-            feature.onStartUiRendering(graphics)
-            feature.renderPriority.start
-        }
+    open suspend fun onStartUiRendering(deltaTracker: DeltaTracker): LinkedList<Pair<Int, List<RenderCommand2D>>> = collectAndGroupRenderCommands(deltaTracker) { feature, graphics ->
+        feature.onStartUiRendering(graphics)
+        feature.renderPriority.start
     }
 
-    open suspend fun onEndUiRendering(deltaTracker: DeltaTracker): LinkedList<Pair<Int, List<RenderCommand2D>>> {
-        return collectAndGroupRenderCommands(deltaTracker) { feature, graphics ->
-            feature.onEndUiRendering(graphics)
-            feature.renderPriority.end
-        }
+    open suspend fun onEndUiRendering(deltaTracker: DeltaTracker): LinkedList<Pair<Int, List<RenderCommand2D>>> = collectAndGroupRenderCommands(deltaTracker) { feature, graphics ->
+        feature.onEndUiRendering(graphics)
+        feature.renderPriority.end
     }
     open suspend fun onLevelRendering(): List<RenderCommand3D> = coroutineScope {
         // 有効な Feature ごとに並列でコマンドを生成

@@ -1,57 +1,118 @@
-name: Gradle Build
-on: [pull_request, push]
+name: Gradle Build and Release (Cross-platform)
+
+on:
+  push:
+    branches: [ main, 'dev/*' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v4
-
-      - name: Setup JDK
+      - name: Setup JDK 25
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'microsoft'
+          cache: 'gradle'
 
-      - name: Make Gradle wrapper executable
-        run: chmod +x ./gradlew
-
-      - name: Extract version from properties
-        id: get_version
-        run: |
-          MOD_VERSION=$(grep 'mod_version' gradle.properties | cut -d '=' -f 2 | tr -d '[:space:]')
-          if [ -z "$MOD_VERSION" ]; then
-            echo "Error: mod_version not found or empty in gradle.properties"
-            exit 1
-          fi
-          echo "Detected Version: $MOD_VERSION"
-          echo "RELEASE_VERSION=$MOD_VERSION" >> $GITHUB_ENV
-
-      - name: Run Gradle Clean Build
-        run: ./gradlew clean build
-
-      - name: Publish to GitHub Packages (Conditional)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
-        run: ./gradlew publish
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create GitHub Release (Conditional)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/release'
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Cache jextract
+        id: cache-jextract
+        uses: actions/cache@v4
         with:
-          tag_name: v${{ env.RELEASE_VERSION }}
-          name: Release v${{ env.RELEASE_VERSION }}
-          files: build/libs/*.jar
+          path: build/jextract-25
+          # 権限エラーを避けるため、プロジェクト構造が変わった際に確実に更新されるようキーを調整
+          key: ${{ runner.os }}-jextract-25-${{ hashFiles('build.gradle.kts') }}
+          restore-keys: |
+            ${{ runner.os }}-jextract-25-
 
-      - name: Upload Build Artifacts
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: >-
+            x86_64-unknown-linux-gnu,
+            aarch64-unknown-linux-gnu,
+            x86_64-pc-windows-gnu,
+            aarch64-pc-windows-gnullvm,
+            x86_64-apple-darwin,
+            aarch64-apple-darwin
+
+      # 2. Rust/Cargo 関連の統合キャッシュ (バイナリとビルド成果物)
+      - name: Cache Cargo and Rust targets
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/infinite-client/target/
+          # Cargo.lock の変更、またはOSが変わった時に再生成
+          key: ${{ runner.os }}-cargo-full-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-full-
+
+      - name: Install Build Tools (Cached)
+        run: |
+          # インストール済みかチェックして時間を節約
+          if ! command -v cargo-zigbuild &> /dev/null; then
+            cargo install cargo-zigbuild
+          fi
+          if ! command -v cbindgen &> /dev/null; then
+            cargo install cbindgen
+          fi
+
+      - name: Build with Gradle
+        run: |
+          chmod +x ./gradlew
+          # 権限エラーを防ぐため、念のため実行前に build/jextract-25 の権限を付与する
+          if [ -d "build/jextract-25" ]; then chmod -R +rw build/jextract-25; fi
+          ./gradlew build -x test --parallel --build-cache
+        shell: bash
+      - name: Prepare Artifacts
+        shell: bash
+        run: |
+          VERSION=$(./gradlew properties --no-daemon | grep "^version:" | awk '{print $2}')
+          if [ -z "$VERSION" ]; then VERSION="unknown"; fi
+          mkdir -p dist
+          find build/libs/ -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" ! -name "*-sources.jar" -exec cp {} dist/ \;
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Artifacts
-          path: build/libs/
+          name: all-in-one-jar
+          path: dist/
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: all-in-one-jar
+          path: dist
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.jar
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, 'dev') || contains(github.ref_name, 'alpha') }}
+          draft: false

@@ -9,7 +9,7 @@ import net.minecraft.client.gui.narration.NarrationElementOutput
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.infinite.ui.ClickGuiPalette
-import org.infinite.infinite.ui.screen.FeatureScreen
+import org.infinite.infinite.ui.screen.ListFeatureScreen
 import org.infinite.libs.core.features.Property
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.ListProperty
@@ -23,8 +23,8 @@ open class PropertyWidget<T : Property<*>>(
     width: Int,
     height: Int = DEFAULT_WIDGET_HEIGHT,
     protected val property: T,
-) :
-    AbstractContainerWidget(x, y, width, height, Component.literal("")), Renderable {
+) : AbstractContainerWidget(x, y, width, height, Component.literal("")),
+    Renderable {
     companion object {
         protected const val DEFAULT_WIDGET_HEIGHT = 20
     }
@@ -33,8 +33,7 @@ open class PropertyWidget<T : Property<*>>(
 
     override fun scrollRate(): Double = 10.0
 
-    override fun children(): List<GuiEventListener> =
-        listOf()
+    override fun children(): List<GuiEventListener> = listOf()
 
     override fun setWidth(i: Int) {
         super.setWidth(i)
@@ -81,7 +80,7 @@ open class PropertyWidget<T : Property<*>>(
     ) {
         val g2d = Graphics2DRenderer(guiGraphics)
         val colorScheme = InfiniteClient.theme.colorScheme
-        val usePalette = Minecraft.getInstance().screen is FeatureScreen<*>
+        val usePalette = Minecraft.getInstance().screen is ListFeatureScreen<*>
         val translationKey = property.translationKey()
         val rawDescription = translationKey
             ?.let { Component.translatable(it).string }
@@ -130,9 +129,13 @@ open class PropertyWidget<T : Property<*>>(
                 val base = if (verbPrefixes.any { trimmed.startsWith(it) }) trimmed else "Toggle $trimmed"
                 base + suffix
             }
+
             is SelectionProperty<*> -> "Select $trimmed$suffix"
+
             is NumberProperty<*> -> "Adjust $trimmed$suffix"
+
             is ListProperty<*> -> "Edit $trimmed$suffix"
+
             else -> "Set $trimmed$suffix"
         }
     }

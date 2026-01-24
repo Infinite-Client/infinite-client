@@ -60,11 +60,7 @@ class StringPropertyWidget(
         editBox.render(guiGraphics, i, j, f)
     }
 
-    override fun charTyped(characterEvent: CharacterEvent): Boolean {
-        return editBox.charTyped(characterEvent) || super.charTyped(characterEvent)
-    }
+    override fun charTyped(characterEvent: CharacterEvent): Boolean = editBox.charTyped(characterEvent) || super.charTyped(characterEvent)
 
-    override fun keyPressed(keyEvent: KeyEvent): Boolean {
-        return editBox.keyPressed(keyEvent) || super.keyPressed(keyEvent)
-    }
+    override fun keyPressed(keyEvent: KeyEvent): Boolean = editBox.keyPressed(keyEvent) || super.keyPressed(keyEvent)
 }

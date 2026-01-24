@@ -1,16 +1,6 @@
 package org.infinite.infinite.features.local.combat.throwable.projectile
 
-import net.minecraft.world.entity.projectile.ProjectileUtil
-import net.minecraft.world.item.EggItem
-import net.minecraft.world.item.EnderpearlItem
-import net.minecraft.world.item.ExperienceBottleItem
-import net.minecraft.world.item.FishingRodItem
-import net.minecraft.world.item.ItemStack
-import net.minecraft.world.item.SnowballItem
-import net.minecraft.world.item.ThrowablePotionItem
-import net.minecraft.world.item.TridentItem
-import net.minecraft.world.phys.HitResult
-import net.minecraft.world.phys.Vec3
+import net.minecraft.world.item.*
 import org.infinite.InfiniteClient
 import org.infinite.infinite.features.local.combat.throwable.ThrowableFeature
 import org.infinite.libs.minecraft.projectile.AbstractProjectile
@@ -106,18 +96,6 @@ object ThrowableProjectile : AbstractProjectile() {
         }
     }
 
-    private fun isThrowableItem(stack: ItemStack): Boolean =
-        stack.item is SnowballItem || stack.item is EggItem || stack.item is EnderpearlItem ||
-            stack.item is ThrowablePotionItem || stack.item is ExperienceBottleItem || stack.item is TridentItem
-
-    private fun getTargetPos(reach: Double): Vec3? {
-        val p = player ?: return null
-        // エンティティを含めたレイキャスト。MISSなら射程限界の空中をターゲットにする
-        val hitResult = ProjectileUtil.getHitResultOnViewVector(p, { !it.isSpectator && it.isPickable }, reach)
-        return if (hitResult.type != HitResult.Type.MISS) {
-            hitResult.location
-        } else {
-            p.getEyePosition(1.0f).add(p.lookAngle.normalize().scale(reach))
-        }
-    }
+    private fun isThrowableItem(stack: ItemStack): Boolean = stack.item is SnowballItem || stack.item is EggItem || stack.item is EnderpearlItem ||
+        stack.item is ThrowablePotionItem || stack.item is ExperienceBottleItem || stack.item is TridentItem
 }

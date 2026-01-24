@@ -68,6 +68,7 @@ class RenderSystem2D(
 
             // --- 移譲 (Delegation) ---
             is RenderCommand2D.DrawTexture -> textureRenderer.drawTexture(command)
+
             is RenderCommand2D.RenderItem -> itemRenderer.drawItem(command)
 
             is RenderCommand2D.FillRect -> {

@@ -7,11 +7,7 @@ import net.minecraft.client.gui.font.glyphs.EffectGlyph
 import net.minecraft.network.chat.FontDescription
 
 class FontSetProvider(private val fontSet: FontSet) : Font.Provider {
-    override fun glyphs(fontDescription: FontDescription): GlyphSource {
-        return fontSet.source(false)
-    }
+    override fun glyphs(fontDescription: FontDescription): GlyphSource = fontSet.source(false)
 
-    override fun effect(): EffectGlyph {
-        return fontSet.whiteGlyph()
-    }
+    override fun effect(): EffectGlyph = fontSet.whiteGlyph()
 }

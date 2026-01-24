@@ -8,7 +8,9 @@ import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
 import org.lwjgl.glfw.GLFW
 
-open class LocalFeature : Feature(), TickInterface {
+open class LocalFeature :
+    Feature(),
+    TickInterface {
     open val defaultToggleKey: Int = GLFW.GLFW_KEY_UNKNOWN
 
     data class KeyAction(
@@ -72,14 +74,14 @@ open class LocalFeature : Feature(), TickInterface {
         registeredActions.add(KeyAction(name, key, category, action))
     }
 
-    open fun onConnected() {}
-    open fun onDisconnected() {}
-    override fun onStartTick() {}
-    override fun onEndTick() {}
+    open fun onConnected() = Unit
+    open fun onDisconnected() = Unit
+    override fun onStartTick() = Unit
+    override fun onEndTick() = Unit
     data class RenderPriority(var start: Int, var end: Int)
 
     val renderPriority = RenderPriority(0, 0)
-    open fun onStartUiRendering(graphics2D: Graphics2D): Unit = Unit
-    open fun onEndUiRendering(graphics2D: Graphics2D): Unit = Unit
-    open fun onLevelRendering(graphics3D: Graphics3D): Graphics3D = graphics3D
+    open fun onStartUiRendering(graphics2D: Graphics2D) = Unit
+    open fun onEndUiRendering(graphics2D: Graphics2D) = Unit
+    open fun onLevelRendering(graphics3D: Graphics3D) = Unit
 }

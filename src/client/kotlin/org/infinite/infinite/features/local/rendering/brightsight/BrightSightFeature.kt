@@ -7,7 +7,9 @@ class BrightSightFeature : LocalFeature() {
     override val featureType = FeatureLevel.Extend
 
     enum class Method {
-        GamMax, NightSight, UltraBright,
+        GamMax,
+        NightSight,
+        UltraBright,
     }
 
     val method by property(EnumSelectionProperty(Method.GamMax))
@@ -16,6 +18,10 @@ class BrightSightFeature : LocalFeature() {
         method.addListener { _, _ ->
             reload()
         }
+    }
+
+    override fun onToggle() {
+        reload()
     }
 
     // チャンクリロード用

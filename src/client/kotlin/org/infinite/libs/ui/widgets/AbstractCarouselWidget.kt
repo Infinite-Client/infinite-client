@@ -161,7 +161,11 @@ abstract class AbstractCarouselWidget<T>(
         }
 
         // 2. 子要素が処理しなかった場合、カルーセルのページ切り替えを行う
-        if (verticalAmount > 0) parent.pageIndex-- else if (verticalAmount < 0) parent.pageIndex++
+        if (verticalAmount > 0) {
+            parent.pageIndex--
+        } else if (verticalAmount < 0) {
+            parent.pageIndex++
+        }
         return true
     }
 

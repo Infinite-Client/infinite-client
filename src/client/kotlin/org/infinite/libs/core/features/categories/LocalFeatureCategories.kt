@@ -24,12 +24,13 @@ import kotlin.reflect.KClass
 /**
  * Local（ワールド/サーバー接続中のみ生存）なカテゴリー管理の基底クラス
  */
-abstract class LocalFeatureCategories : FeatureCategories<
-    KClass<out LocalFeature>,
-    LocalFeature,
-    KClass<out LocalCategory>,
-    LocalCategory,
-    >() {
+abstract class LocalFeatureCategories :
+    FeatureCategories<
+        KClass<out LocalFeature>,
+        LocalFeature,
+        KClass<out LocalCategory>,
+        LocalCategory,
+        >() {
 
     private var connectionScope: CoroutineScope? = null
 
@@ -70,13 +71,9 @@ abstract class LocalFeatureCategories : FeatureCategories<
 
     // --- レンダリング統合ロジック ---
 
-    suspend fun onStartUiRendering(deltaTracker: DeltaTracker): List<RenderCommand2D> {
-        return mergeCategoriesRendering { it.onStartUiRendering(deltaTracker) }
-    }
+    suspend fun onStartUiRendering(deltaTracker: DeltaTracker): List<RenderCommand2D> = mergeCategoriesRendering { it.onStartUiRendering(deltaTracker) }
 
-    suspend fun onEndUiRendering(deltaTracker: DeltaTracker): List<RenderCommand2D> {
-        return mergeCategoriesRendering { it.onEndUiRendering(deltaTracker) }
-    }
+    suspend fun onEndUiRendering(deltaTracker: DeltaTracker): List<RenderCommand2D> = mergeCategoriesRendering { it.onEndUiRendering(deltaTracker) }
 
     private suspend fun mergeCategoriesRendering(
         fetchBlock: suspend (LocalCategory) -> LinkedList<Pair<Int, List<RenderCommand2D>>>,

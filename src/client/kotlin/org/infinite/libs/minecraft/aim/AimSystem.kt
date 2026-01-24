@@ -51,10 +51,12 @@ object AimSystem : MinecraftInterface() {
 
         when (currentTask.process()) {
             AimProcessResult.Progress -> {}
+
             AimProcessResult.Failure -> {
                 currentTask.atFailure()
                 tasks.removeFirstOrNull()
             }
+
             AimProcessResult.Success -> {
                 currentTask.atSuccess()
                 tasks.removeFirstOrNull()

@@ -103,8 +103,7 @@ object QuadColorSampler {
         y2: Float,
     ): Boolean {
         // 外積を用いた包含判定（方向を一貫させる）
-        fun crossProduct(ax: Float, ay: Float, bx: Float, by: Float, cx: Float, cy: Float) =
-            (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+        fun crossProduct(ax: Float, ay: Float, bx: Float, by: Float, cx: Float, cy: Float) = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
 
         val d1 = crossProduct(px, py, x0, y0, x1, y1)
         val d2 = crossProduct(px, py, x1, y1, x2, y2)

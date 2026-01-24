@@ -8,6 +8,8 @@ import net.minecraft.network.chat.Component
 import org.infinite.infinite.ui.ClickGuiPalette
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
+import org.infinite.utils.alpha
+import org.infinite.utils.mix
 
 abstract class SliderWidget<T>(
     x: Int,
@@ -74,21 +76,45 @@ abstract class SliderWidget<T>(
         val knobY = y + (height - knobSize) / 2f
         val knobRadius = knobSize / 2f
 
+        // --- トラック（背景）の描画 ---
         graphics2D.fillStyle = ClickGuiPalette.PANEL_ALT
         graphics2D.fillRoundedRect(trackX, trackY, trackW, trackH, trackRadius)
 
+        // --- 進捗バー（アクセント色）の描画 ---
+        // active状態やドラッグ状態に応じて色を変えるとより直感的になります
         graphics2D.fillStyle = if (active) ClickGuiPalette.ACCENT else ClickGuiPalette.BORDER
         graphics2D.fillRoundedRect(trackX, trackY, trackW * currentProgress, trackH, trackRadius)
 
-        graphics2D.fillStyle = ClickGuiPalette.TEXT
-        graphics2D.fillRoundedRect(knobX, knobY, knobSize, knobSize, knobRadius)
-    }
+        // --- ノブ（つまみ）の描画 ---
+        // HEAD側の「状態に応じた色の変化」を、dev側の「丸ノブ」に適用します
+        val mixFactor = if (isDragging) {
+            1.0f
+        } else if (isMouseOver(x.toDouble(), y.toDouble())) { // 擬似的にisHoveredを判定
+            0.5f
+        } else {
+            0.0f
+        }
 
+        // ClickGuiPaletteとHEAD側の色の変化ロジックを融合
+        val knobColor = ClickGuiPalette.TEXT.mix(ClickGuiPalette.ACCENT, mixFactor)
+
+        graphics2D.fillStyle = knobColor
+        graphics2D.fillCircle(knobX + knobRadius, knobY + knobRadius, knobRadius)
+
+        // ドラッグ中やホバー中に少し外枠（グロー）を付けると高級感が出ます
+        if (mixFactor > 0f) {
+            graphics2D.strokeStyle.width = 1.5f
+            graphics2D.strokeStyle.color = ClickGuiPalette.ACCENT.alpha((100 * mixFactor).toInt())
+            graphics2D.strokeCircle(knobX + knobRadius, knobY + knobRadius, knobRadius + 1f)
+        }
+    }
     override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
         val renderer = Graphics2DRenderer(guiGraphics)
         render(renderer)
         renderer.flush()
     }
 
-    override fun updateWidgetNarration(output: NarrationElementOutput) = defaultButtonNarrationText(output)
+    override fun updateWidgetNarration(output: NarrationElementOutput) {
+        defaultButtonNarrationText(output)
+    }
 }

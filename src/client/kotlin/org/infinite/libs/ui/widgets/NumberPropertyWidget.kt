@@ -37,17 +37,15 @@ class NumberPropertyWidget<T>(
             }
 
         @Suppress("UNCHECKED_CAST")
-        override fun convertToType(v: Double): T {
-            return when (property.value) {
-                is Int -> v.toInt()
-                is Float -> v.toFloat()
-                is Long -> v.toLong()
-                is Byte -> v.toInt().toByte()
-                is Short -> v.toInt().toShort()
-                is Double -> v
-                else -> v as Any // 基本的にはここに来ない
-            } as T
-        }
+        override fun convertToType(v: Double): T = when (property.value) {
+            is Int -> v.toInt()
+            is Float -> v.toFloat()
+            is Long -> v.toLong()
+            is Byte -> v.toInt().toByte()
+            is Short -> v.toInt().toShort()
+            is Double -> v
+            else -> v as Any // 基本的にはここに来ない
+        } as T
     }
 
     // スライダー本体。初期位置は relocate() で制御

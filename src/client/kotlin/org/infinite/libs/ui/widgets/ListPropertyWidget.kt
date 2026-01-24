@@ -244,13 +244,9 @@ class ListPropertyWidget<T : Any>(
     }
 
     // キーボード入力の転送
-    override fun keyPressed(keyEvent: KeyEvent): Boolean {
-        return activeInputWidget?.keyPressed(keyEvent) ?: super.keyPressed(keyEvent)
-    }
+    override fun keyPressed(keyEvent: KeyEvent): Boolean = activeInputWidget?.keyPressed(keyEvent) ?: super.keyPressed(keyEvent)
 
-    override fun charTyped(characterEvent: CharacterEvent): Boolean {
-        return activeInputWidget?.charTyped(characterEvent) ?: super.charTyped(characterEvent)
-    }
+    override fun charTyped(characterEvent: CharacterEvent): Boolean = activeInputWidget?.charTyped(characterEvent) ?: super.charTyped(characterEvent)
 
     // マウス移動・ドラッグの転送（入力欄内のカーソル選択などに必要）
     override fun mouseMoved(mouseX: Double, mouseY: Double) {

@@ -29,14 +29,12 @@ class ItemListProperty(default: List<String>) : StringListProperty(default) {
         width: Int,
         initialValue: String?,
         onComplete: (String?) -> Unit,
-    ): AbstractWidget {
-        return SuggestInputWidget(
-            x,
-            y,
-            width,
-            initialValue ?: "",
-            suggestions = { BuiltInRegistries.ITEM.keySet().map { it.toString() } },
-            onComplete = onComplete,
-        )
-    }
+    ): AbstractWidget = SuggestInputWidget(
+        x,
+        y,
+        width,
+        initialValue ?: "",
+        suggestions = { BuiltInRegistries.ITEM.keySet().map { it.toString() } },
+        onComplete = onComplete,
+    )
 }
