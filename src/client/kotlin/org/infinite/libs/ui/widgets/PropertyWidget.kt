@@ -9,7 +9,7 @@ import net.minecraft.client.gui.narration.NarrationElementOutput
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.infinite.ui.ClickGuiPalette
-import org.infinite.infinite.ui.screen.FeatureScreen
+import org.infinite.infinite.ui.screen.ListFeatureScreen
 import org.infinite.libs.core.features.Property
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.ListProperty
@@ -80,7 +80,7 @@ open class PropertyWidget<T : Property<*>>(
     ) {
         val g2d = Graphics2DRenderer(guiGraphics)
         val colorScheme = InfiniteClient.theme.colorScheme
-        val usePalette = Minecraft.getInstance().screen is FeatureScreen<*>
+        val usePalette = Minecraft.getInstance().screen is ListFeatureScreen<*>
         val translationKey = property.translationKey()
         val rawDescription = translationKey
             ?.let { Component.translatable(it).string }

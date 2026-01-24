@@ -9,6 +9,7 @@ import org.infinite.libs.ui.layout.ScrollableLayoutContainer
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 import org.infinite.libs.ui.widgets.AbstractCarouselWidget
 import org.infinite.utils.Font
+import org.infinite.utils.mix
 import kotlin.math.roundToInt
 
 abstract class CarouselCategoryWidget<T : Category<*, out Feature>>(
@@ -118,7 +119,8 @@ abstract class CarouselCategoryWidget<T : Category<*, out Feature>>(
         graphics2D.strokeStyle.width = 2f
         val startColor = colorScheme.color(360 * thisPageProgress, 1f, 0.5f, alpha)
         val endColor = colorScheme.color(360 * (thisPageProgress + 0.5f / parent.pageSize), 1f, 0.5f, alpha)
-        graphics2D.strokeRect(0f, 0f, w, h, startColor, startColor, endColor, endColor)
+        val midColor = startColor.mix(endColor, 0.5f)
+        graphics2D.strokeRect(0f, 0f, w, h, startColor, midColor, endColor, midColor)
 
         graphics2D.textStyle.font = "infinite_regular"
         graphics2D.textStyle.size = 16f

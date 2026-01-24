@@ -5,10 +5,12 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
-import org.infinite.infinite.ui.screen.FeatureScreen
+import org.infinite.infinite.ui.screen.CarouselFeatureScreen
+import org.infinite.infinite.ui.screen.ListFeatureScreen
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
+import org.infinite.libs.ui.style.UiStyle
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.pow
@@ -29,7 +31,11 @@ class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Fea
             // 修正ポイント: execute を使用してメインスレッドのキューに送る
             mc.execute {
                 mc.screen?.let { currentScreen ->
-                    mc.setScreen(FeatureScreen(feature, currentScreen))
+                    val screen = when (InfiniteClient.uiStyle) {
+                        UiStyle.Simple -> ListFeatureScreen(feature, currentScreen)
+                        UiStyle.Carousel -> CarouselFeatureScreen(feature, currentScreen)
+                    }
+                    mc.setScreen(screen)
                 }
             }
         },

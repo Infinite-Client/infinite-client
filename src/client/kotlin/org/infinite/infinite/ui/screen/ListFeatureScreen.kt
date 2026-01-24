@@ -14,7 +14,7 @@ import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.libs.ui.layout.ScrollableLayoutContainer
 import org.lwjgl.glfw.GLFW
 
-class FeatureScreen<T : Feature>(
+class ListFeatureScreen<T : Feature>(
     private val feature: T,
     private val parent: Screen,
 ) : Screen(Component.literal(feature.name)) {

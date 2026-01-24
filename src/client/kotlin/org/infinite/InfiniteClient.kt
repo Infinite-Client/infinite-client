@@ -6,13 +6,17 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.client.KeyMapping
+import net.minecraft.client.gui.screens.Screen
 import org.infinite.InfiniteClient.feature
 import org.infinite.infinite.command.InfiniteCommand
 import org.infinite.infinite.features.global.InfiniteGlobalFeatures
 import org.infinite.infinite.features.local.InfiniteLocalFeatures
 import org.infinite.infinite.theme.default.DefaultTheme
 import org.infinite.infinite.theme.infinite.InfiniteTheme
+import org.infinite.infinite.ui.screen.GlobalCarouselFeatureCategoriesScreen
+import org.infinite.infinite.ui.screen.GlobalListFeatureCategoriesScreen
 import org.infinite.infinite.ui.screen.LocalCarouselFeatureCategoriesScreen
+import org.infinite.infinite.ui.screen.LocalListFeatureCategoriesScreen
 import org.infinite.libs.config.ConfigManager
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.Feature
@@ -48,7 +52,13 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             minecraft.execute {
                 // 現時点での要望: 直接 Carousel を開く
                 // もし「設定に従いたい」場合は dev 側のロジック（後述）を使用してください
-                minecraft.setScreen(LocalCarouselFeatureCategoriesScreen())
+                val screen = when (uiStyle) {
+                    UiStyle.Simple -> LocalListFeatureCategoriesScreen()
+                    UiStyle.Carousel -> LocalCarouselFeatureCategoriesScreen()
+                }
+                minecraft.setScreen(
+                    screen,
+                )
             }
         }
     }
@@ -137,5 +147,13 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             globalFeatures.onShutdown()
             localFeatures.onShutdown()
         }
+    }
+
+    fun handleOpenGlobalSettingScreen(parent: Screen) {
+        val screen = when (uiStyle) {
+            UiStyle.Simple -> GlobalListFeatureCategoriesScreen(parent)
+            UiStyle.Carousel -> GlobalCarouselFeatureCategoriesScreen(parent)
+        }
+        minecraft.setScreen(screen)
     }
 }
