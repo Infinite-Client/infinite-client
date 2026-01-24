@@ -8,7 +8,7 @@ import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
-import org.infinite.InfiniteClient
+import org.infinite.infinite.ui.ClickGuiPalette
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.libs.ui.layout.ScrollableLayoutContainer
@@ -17,60 +17,89 @@ import org.lwjgl.glfw.GLFW
 class FeatureScreen<T : Feature>(
     private val feature: T,
     private val parent: Screen,
-) : Screen(Component.translatable(feature.translation())) {
+) : Screen(Component.literal(feature.name)) {
 
     private lateinit var container: ScrollableLayoutContainer
 
-    // レイアウト定数
-    private val headerHeight = 60
-    private val margin = 10
+    private val panelRadius = 12f
+    private val headerHeight = 44
+    private val panelPadding = 16
+    private val screenPadding = 24
+    private val scrollbarWidth = 20
+
+    private var panelX = 0
+    private var panelY = 0
+    private var panelW = 0
+    private var panelH = 0
 
     override fun init() {
+        clearWidgets()
         feature.ensureAllPropertiesRegistered()
-        val innerWidth = width - (margin * 2)
 
-        // 内部レイアウトの構築
-        val innerLayout = LinearLayout.vertical().spacing(margin)
+        val maxPanelW = (width - screenPadding * 2).coerceAtLeast(200)
+        val maxPanelH = (height - screenPadding * 2).coerceAtLeast(180)
+        val minPanelW = minOf(320, maxPanelW)
+        val minPanelH = minOf(220, maxPanelH)
+        panelW = (width * 0.72f).toInt().coerceIn(minPanelW, maxPanelW)
+        panelH = (height * 0.78f).toInt().coerceIn(minPanelH, maxPanelH)
+        panelX = (width - panelW) / 2
+        panelY = (height - panelH) / 2
+
+        val availableWidth = panelW - panelPadding * 2
+        val innerWidth = (availableWidth - scrollbarWidth).coerceAtLeast(120)
+        val innerLayout = LinearLayout.vertical().spacing(8)
 
         feature.properties.forEach { (_, property) ->
-            val propertyWidget = property.widget(0, 0, innerWidth - margin * 2)
+            val propertyWidget = property.widget(0, 0, innerWidth)
             innerLayout.addChild(propertyWidget)
         }
         innerLayout.arrangeElements()
         container = ScrollableLayoutContainer(innerLayout, innerWidth).apply {
-            this.x = margin
-            this.y = headerHeight
-            this.setMinWidth(innerWidth)
-            this.setMaxHeight(parent.height - headerHeight - margin)
+            x = panelX + panelPadding
+            y = panelY + headerHeight
+            setMinWidth(availableWidth)
+            setMaxHeight(panelH - headerHeight - panelPadding)
         }
-        this.addRenderableWidget(container)
+        addRenderableWidget(container)
+    }
+
+    override fun renderBackground(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+        // Custom background render in render().
     }
 
     override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        super.render(guiGraphics, mouseX, mouseY, delta)
         val g2d = Graphics2DRenderer(guiGraphics)
-        val theme = InfiniteClient.theme
-        val colorScheme = theme.colorScheme
-        val centerX = width / 2f
-        val size = 24f
-        theme.renderBackGround(0, 0, this.width, this.height, g2d, 0.5f)
-        g2d.fillStyle = when (feature.featureType) {
-            Feature.FeatureLevel.Cheat -> colorScheme.redColor
-            Feature.FeatureLevel.Extend -> colorScheme.yellowColor
-            Feature.FeatureLevel.Utils -> colorScheme.greenColor
+        g2d.fillStyle = ClickGuiPalette.BACKDROP
+        g2d.fillRoundedRect(0f, 0f, width.toFloat(), height.toFloat(), 0f)
+        g2d.fillStyle = ClickGuiPalette.PANEL
+        g2d.fillRoundedRect(panelX.toFloat(), panelY.toFloat(), panelW.toFloat(), panelH.toFloat(), panelRadius)
+        g2d.fillStyle = ClickGuiPalette.PANEL_ALT
+        val headerRadius = panelRadius.coerceAtMost(headerHeight / 2f)
+        g2d.fillRoundedRect(panelX.toFloat(), panelY.toFloat(), panelW.toFloat(), headerHeight.toFloat(), headerRadius)
+        if (headerHeight > headerRadius) {
+            g2d.fillRect(
+                panelX.toFloat(),
+                panelY.toFloat() + headerHeight - headerRadius,
+                panelW.toFloat(),
+                headerRadius,
+            )
         }
-        g2d.textStyle.size = size
-        g2d.textStyle.font = "infinite_bolditalic"
-        g2d.textStyle.shadow = true
-        g2d.textCentered(feature.name, centerX, size)
-        g2d.textStyle.size = size / 2f
-        g2d.textStyle.font = "infinite_italic"
-        g2d.textStyle.shadow = false
-        g2d.fillStyle = colorScheme.secondaryColor
-        val description = Component.translatable(feature.translation()).string
-        g2d.textCentered(description, centerX, 2f * size)
         g2d.flush()
-        container.render(guiGraphics, mouseX, mouseY, delta)
+
+        val font = minecraft.font
+        val titleX = panelX + panelPadding
+        val titleY = panelY + 8
+        val title = feature.name
+        guiGraphics.drawString(font, title, titleX, titleY, ClickGuiPalette.TEXT, false)
+
+        val descriptionKey = feature.translation()
+        val description = Component.translatable(descriptionKey).string
+        if (description != descriptionKey && description != feature.name) {
+            val descY = titleY + font.lineHeight + 2
+            guiGraphics.drawString(font, description, titleX, descY, ClickGuiPalette.MUTED, false)
+        }
+
+        super.render(guiGraphics, mouseX, mouseY, delta)
     }
 
     override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean = container.mouseClicked(mouseButtonEvent, bl)

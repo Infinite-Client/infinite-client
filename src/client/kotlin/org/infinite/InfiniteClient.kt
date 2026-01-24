@@ -46,6 +46,8 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             ),
         ) {
             minecraft.execute {
+                // 現時点での要望: 直接 Carousel を開く
+                // もし「設定に従いたい」場合は dev 側のロジック（後述）を使用してください
                 minecraft.setScreen(LocalCarouselFeatureCategoriesScreen())
             }
         }
@@ -97,6 +99,8 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
         themeManager.register(InfiniteTheme())
         // 1. グローバル設定のロード
         ConfigManager.loadGlobal()
+        globalFeatures.rendering.themeFeature.enable()
+        globalFeatures.rendering.infiniteLoadingFeature.enable()
         globalFeatures.onInitialized()
         TranslationChecker.register()
         localFeatures.registerAllActions()

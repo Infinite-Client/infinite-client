@@ -5,9 +5,10 @@ import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.narration.NarrationElementOutput
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
-import org.infinite.InfiniteClient
+import org.infinite.infinite.ui.ClickGuiPalette
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
+import org.infinite.utils.alpha
 import org.infinite.utils.mix
 
 abstract class SliderWidget<T>(
@@ -52,14 +53,9 @@ abstract class SliderWidget<T>(
     }
 
     private fun updateValueFromMouse(mouseX: Double) {
-        // --- レイアウト計算で定義した margin と knobSize を考慮 ---
-        val margin = height * 0.15f
-        val knobSize = height * 0.7f
-        val trackWidth = width - (margin * 2) - knobSize
-
-        // マウス位置から進捗率を計算（ノブの中心がマウスに来るように調整）
-        val relativeMouseX = mouseX - (x + margin + knobSize / 2f)
-        val nextProgress = (relativeMouseX / trackWidth).coerceIn(0.0, 1.0)
+        val trackX = x + 4f
+        val trackWidth = width - 8f
+        val nextProgress = ((mouseX - trackX) / trackWidth).coerceIn(0.0, 1.0)
 
         // 進捗から実数値を計算し、抽象メソッド経由で型変換して代入
         val nextDoubleValue =
@@ -68,54 +64,50 @@ abstract class SliderWidget<T>(
     }
 
     fun render(graphics2D: Graphics2D) {
-        val colorScheme = InfiniteClient.theme.colorScheme
-
-        val margin = height * 0.15f
-        val barHeight = height * 0.2f
-        val barY = y + (height - barHeight) / 2f
-        val knobSize = height * 0.7f
-        val knobY = y + (height - knobSize) / 2f
+        val trackX = x + 4f
+        val trackY = y + height / 2f - 3f
+        val trackW = width - 8f
+        val trackH = 6f
+        val trackRadius = trackH / 2f
 
         val currentProgress = progress.toFloat()
-        val trackWidth = width - (margin * 2) - knobSize
-        val currentKnobX = (x + margin) + trackWidth * currentProgress
+        val knobSize = 10f
+        val knobX = trackX + (trackW * currentProgress) - knobSize / 2f
+        val knobY = y + (height - knobSize) / 2f
+        val knobRadius = knobSize / 2f
 
-        // --- 背景バーの描画 ---
-        val barStartX = x + margin
-        val barEndX = x + width - margin
-        val knobCenter = currentKnobX + (knobSize / 2f)
+        // --- トラック（背景）の描画 ---
+        graphics2D.fillStyle = ClickGuiPalette.PANEL_ALT
+        graphics2D.fillRoundedRect(trackX, trackY, trackW, trackH, trackRadius)
 
-        graphics2D.fillStyle = if (isHovered || isDragging) colorScheme.accentColor else colorScheme.secondaryColor
-        graphics2D.fillRect(barStartX, barY, knobCenter - barStartX, barHeight)
+        // --- 進捗バー（アクセント色）の描画 ---
+        // active状態やドラッグ状態に応じて色を変えるとより直感的になります
+        graphics2D.fillStyle = if (active) ClickGuiPalette.ACCENT else ClickGuiPalette.BORDER
+        graphics2D.fillRoundedRect(trackX, trackY, trackW * currentProgress, trackH, trackRadius)
 
-        graphics2D.fillStyle = colorScheme.backgroundColor
-        graphics2D.fillRect(knobCenter, barY, barEndX - knobCenter, barHeight)
-
-        // --- ノブの描画 ---
-        val knobBorder = knobSize * 0.15f
+        // --- ノブ（つまみ）の描画 ---
+        // HEAD側の「状態に応じた色の変化」を、dev側の「丸ノブ」に適用します
         val mixFactor = if (isDragging) {
-            1f
-        } else if (isHovered) {
+            1.0f
+        } else if (isMouseOver(x.toDouble(), y.toDouble())) { // 擬似的にisHoveredを判定
             0.5f
         } else {
-            0f
+            0.0f
         }
-        val currentKnobColor = colorScheme.foregroundColor.mix(colorScheme.accentColor, mixFactor)
-        val currentStrokeColor = colorScheme.secondaryColor.mix(colorScheme.accentColor, mixFactor)
 
-        graphics2D.strokeStyle.width = knobBorder
-        graphics2D.strokeStyle.color = currentStrokeColor
-        graphics2D.strokeRect(currentKnobX, knobY, knobSize, knobSize)
+        // ClickGuiPaletteとHEAD側の色の変化ロジックを融合
+        val knobColor = ClickGuiPalette.TEXT.mix(ClickGuiPalette.ACCENT, mixFactor)
 
-        graphics2D.fillStyle = currentKnobColor
-        graphics2D.fillRect(
-            currentKnobX + knobBorder / 2f,
-            knobY + knobBorder / 2f,
-            knobSize - knobBorder,
-            knobSize - knobBorder,
-        )
+        graphics2D.fillStyle = knobColor
+        graphics2D.fillCircle(knobX + knobRadius, knobY + knobRadius, knobRadius)
+
+        // ドラッグ中やホバー中に少し外枠（グロー）を付けると高級感が出ます
+        if (mixFactor > 0f) {
+            graphics2D.strokeStyle.width = 1.5f
+            graphics2D.strokeStyle.color = ClickGuiPalette.ACCENT.alpha((100 * mixFactor).toInt())
+            graphics2D.strokeCircle(knobX + knobRadius, knobY + knobRadius, knobRadius + 1f)
+        }
     }
-
     override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
         val renderer = Graphics2DRenderer(guiGraphics)
         render(renderer)

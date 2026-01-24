@@ -9,11 +9,7 @@ import org.infinite.libs.graphics.graphics2d.Graphics2DPrimitivesFill
 import org.infinite.libs.graphics.graphics2d.Graphics2DPrimitivesStroke
 import org.infinite.libs.graphics.graphics2d.Graphics2DPrimitivesTexture
 import org.infinite.libs.graphics.graphics2d.Graphics2DTransformations
-import org.infinite.libs.graphics.graphics2d.structs.FillRule
-import org.infinite.libs.graphics.graphics2d.structs.Image
-import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
-import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
-import org.infinite.libs.graphics.graphics2d.structs.TextStyle
+import org.infinite.libs.graphics.graphics2d.structs.*
 import org.infinite.libs.graphics.graphics2d.system.Path2D
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
@@ -112,7 +108,6 @@ open class Graphics2D(
     fun fillRect(x: Float, y: Float, width: Float, height: Float) {
         fillOperations.fillRect(x, y, width, height)
     }
-
     // --- fillQuad ---
 
     fun fillQuad(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
@@ -415,11 +410,20 @@ open class Graphics2D(
         arcTo(x, y, x + radius, y, radius)
         closePath()
     }
+
     fun fillCircle(x: Float, y: Float, radius: Float) {
         withTemporaryPath {
             arc(x, y, radius, 0f, (PI * 2).toFloat())
             closePath()
             fillPath()
+        }
+    }
+
+    fun strokeCircle(x: Float, y: Float, radius: Float) {
+        withTemporaryPath {
+            arc(x, y, radius, 0f, (PI * 2).toFloat())
+            closePath()
+            strokePath()
         }
     }
 

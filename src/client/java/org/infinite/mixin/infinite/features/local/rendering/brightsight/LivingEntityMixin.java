@@ -1,5 +1,6 @@
 package org.infinite.mixin.infinite.features.local.rendering.brightsight;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffect;
@@ -25,17 +26,20 @@ public abstract class LivingEntityMixin extends Entity {
 
   @Inject(method = "hasEffect", at = @At("HEAD"), cancellable = true)
   private void onHasEffect(@NonNull Holder<MobEffect> effect, CallbackInfoReturnable<Boolean> cir) {
-    if ((Object) this instanceof LocalPlayer) {
-      BrightSightFeature brightSight =
-          InfiniteClient.INSTANCE.getLocalFeatures().getRendering().getBrightSightFeature();
-      if (brightSight.isEnabled()) {
-        var nightVisionKey = MobEffects.NIGHT_VISION.unwrapKey();
-        if (nightVisionKey.isPresent() && effect.is(nightVisionKey.get())) {
-          BrightSightFeature.Method method = brightSight.getMethod().getValue();
-          if (method == BrightSightFeature.Method.UltraBright
-              || method == BrightSightFeature.Method.NightSight) {
-            cir.setReturnValue(true);
-          }
+    LocalPlayer localPlayer = Minecraft.getInstance().player;
+    if (localPlayer == null || localPlayer.getId() != this.getId()) {
+      return;
+    }
+
+    BrightSightFeature brightSight =
+        InfiniteClient.INSTANCE.getLocalFeatures().getRendering().getBrightSightFeature();
+    if (brightSight.isEnabled()) {
+      var nightVisionKey = MobEffects.NIGHT_VISION.unwrapKey();
+      if (nightVisionKey.isPresent() && effect.is(nightVisionKey.get())) {
+        BrightSightFeature.Method method = brightSight.getMethod().getValue();
+        if (method == BrightSightFeature.Method.UltraBright
+            || method == BrightSightFeature.Method.NightSight) {
+          cir.setReturnValue(true);
         }
       }
     }

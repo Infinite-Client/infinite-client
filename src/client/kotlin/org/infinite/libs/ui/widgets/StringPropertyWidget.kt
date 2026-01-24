@@ -32,6 +32,7 @@ class StringPropertyWidget(
         Component.empty(),
     ).apply {
         setMaxLength(256)
+        setBordered(false)
         value = property.value
         setResponder { newValue ->
             property.value = newValue
