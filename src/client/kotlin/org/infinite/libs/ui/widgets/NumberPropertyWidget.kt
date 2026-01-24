@@ -1,5 +1,6 @@
 package org.infinite.libs.ui.widgets
 
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.events.GuiEventListener
 import org.infinite.InfiniteClient
@@ -70,7 +71,7 @@ class NumberPropertyWidget<T>(
         val g2d = Graphics2DRenderer(guiGraphics)
         g2d.fillStyle = colorScheme.foregroundColor
         g2d.textStyle.font = "infinite_regular"
-        g2d.textStyle.size = 8f
+        g2d.textStyle.size = Minecraft.getInstance().font.lineHeight.toFloat()
         g2d.textStyle.shadow = true
         g2d.textRight(displayText, x + width, y)
         g2d.flush()

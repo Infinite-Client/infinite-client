@@ -7,12 +7,13 @@ import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
+import org.infinite.InfiniteClient
 import org.infinite.infinite.ui.ClickGuiPalette
+import org.infinite.infinite.ui.UiStyleRegistry
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.utils.alpha
-import org.infinite.utils.fillRoundedRect
 import org.infinite.utils.mix
 import org.lwjgl.glfw.GLFW
 import kotlin.math.abs
@@ -36,7 +37,7 @@ abstract class ClickGuiScreen(
     private val rowRadius = 6f
     private val panelRadius = 10f
     private val settingsWidth = 44
-    private val uiScale = 0.8f
+    private val uiScale = 1.0f
 
     private var selectedCategory: Category<*, out Feature>? = null
     private var searchQuery: String = ""
@@ -458,7 +459,8 @@ abstract class ClickGuiScreen(
                     val openSettings = mouseButtonEvent.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT ||
                         localX >= contentW - padding - settingsWidth
                     if (openSettings) {
-                        minecraft.setScreen(FeatureScreen(feature, this))
+                        val style = InfiniteClient.globalFeatures.rendering.uiStyleFeature.style.value
+                        UiStyleRegistry.provider(style).openFeatureSettings(feature, this)
                     } else if (mouseButtonEvent.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
                         if (feature.isEnabled()) feature.disable() else feature.enable()
                     }
@@ -533,3 +535,4 @@ abstract class ClickGuiScreen(
     private fun toUiX(x: Double): Double = (x - uiOffsetX()) / uiScale
     private fun toUiY(y: Double): Double = (y - uiOffsetY()) / uiScale
 }
+

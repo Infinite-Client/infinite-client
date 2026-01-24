@@ -17,6 +17,16 @@ import org.infinite.libs.graphics.graphics2d.system.Path2D
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import java.util.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sin
+
+private fun roundedSegments(radius: Float): Int {
+    val segments = (radius / 3f).roundToInt().coerceIn(4, 12)
+    return if (segments % 2 == 0) segments else segments + 1
+}
 
 /**
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
@@ -110,6 +120,53 @@ open class Graphics2D(
         fillOperations.fillRect(x, y, width, height)
     }
 
+    fun fillRoundedRect(
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        radius: Float,
+        segments: Int = roundedSegments(radius),
+    ) {
+        val r = radius.coerceAtLeast(0f).coerceAtMost(min(width, height) / 2f)
+        if (r <= 0.5f) {
+            fillRect(x, y, width, height)
+            return
+        }
+
+        val innerW = width - 2f * r
+        val innerH = height - 2f * r
+
+        fillRect(x + r, y, innerW, height)
+        fillRect(x, y + r, r, innerH)
+        fillRect(x + width - r, y + r, r, innerH)
+
+        val evenSegments = if (segments % 2 == 0) segments else segments + 1
+        val step = (PI / 2.0) / evenSegments
+
+        fun corner(cx: Float, cy: Float, startAngle: Double) {
+            var i = 0
+            while (i < evenSegments) {
+                val a0 = startAngle + i * step
+                val a1 = startAngle + (i + 1) * step
+                val a2 = startAngle + (i + 2) * step
+                val x0 = cx + cos(a0).toFloat() * r
+                val y0 = cy + sin(a0).toFloat() * r
+                val x1 = cx + cos(a1).toFloat() * r
+                val y1 = cy + sin(a1).toFloat() * r
+                val x2 = cx + cos(a2).toFloat() * r
+                val y2 = cy + sin(a2).toFloat() * r
+                fillQuad(cx, cy, x0, y0, x1, y1, x2, y2)
+                i += 2
+            }
+        }
+
+        corner(x + r, y + r, PI)
+        corner(x + width - r, y + r, 1.5 * PI)
+        corner(x + width - r, y + height - r, 0.0)
+        corner(x + r, y + height - r, 0.5 * PI)
+    }
+
     // --- fillQuad ---
 
     fun fillQuad(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
@@ -158,6 +215,33 @@ open class Graphics2D(
 
     fun strokeRect(x: Float, y: Float, width: Float, height: Float) {
         strokeOperations.strokeRect(x, y, width, height)
+    }
+
+    fun strokeRoundedRect(
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        radius: Float,
+    ) {
+        val r = radius.coerceAtLeast(0f).coerceAtMost(min(width, height) / 2f)
+        if (r <= 0.5f) {
+            strokeRect(x, y, width, height)
+            return
+        }
+
+        beginPath()
+        moveTo(x + r, y)
+        lineTo(x + width - r, y)
+        arcTo(x + width, y, x + width, y + r, r)
+        lineTo(x + width, y + height - r)
+        arcTo(x + width, y + height, x + width - r, y + height, r)
+        lineTo(x + r, y + height)
+        arcTo(x, y + height, x, y + height - r, r)
+        lineTo(x, y + r)
+        arcTo(x, y, x + r, y, r)
+        closePath()
+        strokePath()
     }
 
     fun strokeRect(

@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component
 import org.infinite.infinite.ui.ClickGuiPalette
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
-import org.infinite.utils.fillRoundedRect
 import org.infinite.utils.mix
 
 abstract class ToggleButton(
@@ -56,3 +55,4 @@ abstract class ToggleButton(
         graphics2DRenderer.flush()
     }
 }
+

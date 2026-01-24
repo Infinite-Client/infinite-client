@@ -11,7 +11,7 @@ import org.infinite.infinite.InfiniteGlobalFeatures
 import org.infinite.infinite.InfiniteLocalFeatures
 import org.infinite.infinite.theme.default.DefaultTheme
 import org.infinite.infinite.theme.infinite.InfiniteTheme
-import org.infinite.infinite.ui.screen.LocalFeatureCategoriesScreen
+import org.infinite.infinite.ui.UiStyleRegistry
 import org.infinite.libs.config.ConfigManager
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.Feature
@@ -43,7 +43,8 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             ),
         ) {
             minecraft.execute {
-                minecraft.setScreen(LocalFeatureCategoriesScreen())
+                val style = globalFeatures.rendering.uiStyleFeature.style.value
+                UiStyleRegistry.provider(style).openLocalFeatures()
             }
         }
     }

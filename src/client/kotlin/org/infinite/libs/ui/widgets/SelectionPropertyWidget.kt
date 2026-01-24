@@ -1,5 +1,6 @@
 package org.infinite.libs.ui.widgets
 
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.narration.NarrationElementOutput
@@ -9,7 +10,6 @@ import org.infinite.infinite.ui.ClickGuiPalette
 import org.infinite.libs.core.features.property.SelectionProperty
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.utils.alpha
-import org.infinite.utils.fillRoundedRect
 import org.infinite.utils.mix
 
 class SelectionPropertyWidget<T : Any>(
@@ -52,7 +52,7 @@ class SelectionPropertyWidget<T : Any>(
             g2d.fillRoundedRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat(), radius)
 
             val displayText = property.propertyString(property.value)
-            g2d.textStyle.size = 10f
+            g2d.textStyle.size = Minecraft.getInstance().font.lineHeight.toFloat()
             g2d.textStyle.font = "infinite_regular"
             val textColor = if (active) ClickGuiPalette.TEXT else ClickGuiPalette.MUTED
             g2d.fillStyle = textColor.alpha((alpha * 255).toInt())
@@ -88,3 +88,4 @@ class SelectionPropertyWidget<T : Any>(
         cycleButton.render(guiGraphics, i, j, f)
     }
 }
+

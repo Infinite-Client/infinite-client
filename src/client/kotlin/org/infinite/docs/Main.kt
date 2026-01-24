@@ -159,7 +159,7 @@ class Main(
         val categoryDir = parentDir.resolve(categoryFolderName)
 
         // 1. Docusaurus用メタファイル (_category_.json) を生成
-        val label = translate(category.name, langCode)
+        val label = category.name
         val isLocal = parentDir.fileName?.toString() == "local-features"
         categoryDir.resolve("_category_.json").writeText(
             """

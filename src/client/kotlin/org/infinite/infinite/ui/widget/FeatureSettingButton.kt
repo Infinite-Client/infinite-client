@@ -5,12 +5,11 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
-import org.infinite.infinite.ui.screen.FeatureScreen
+import org.infinite.infinite.ui.UiStyleRegistry
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.utils.alpha
-import org.infinite.utils.fillRoundedRect
 import org.infinite.utils.mix
 
 class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Feature) :
@@ -21,13 +20,11 @@ class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Fea
         height,
         Component.empty(),
         { button ->
-            val mc = Minecraft.getInstance()
             button as FeatureSettingButton
-            mc.execute {
-                mc.screen?.let { currentScreen ->
-                    mc.setScreen(FeatureScreen(feature, currentScreen))
-                }
-            }
+            val style = InfiniteClient.globalFeatures.rendering.uiStyleFeature.style.value
+            val provider = UiStyleRegistry.provider(style)
+            val currentScreen = Minecraft.getInstance().screen
+            if (currentScreen != null) provider.openFeatureSettings(feature, currentScreen)
         },
         DEFAULT_NARRATION,
     ) {
@@ -53,3 +50,4 @@ class FeatureSettingButton(x: Int, y: Int, width: Int, height: Int, feature: Fea
         graphics2D.fillRoundedRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat(), radius)
     }
 }
+

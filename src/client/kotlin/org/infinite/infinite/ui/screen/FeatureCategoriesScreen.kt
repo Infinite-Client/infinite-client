@@ -14,7 +14,6 @@ import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 import org.infinite.utils.alpha
-import org.infinite.utils.fillRoundedRect
 import org.lwjgl.glfw.GLFW
 import kotlin.reflect.KClass
 
@@ -163,3 +162,4 @@ abstract class FeatureCategoriesScreen<K : KClass<out Feature>, V : Feature, T :
         return super.charTyped(characterEvent)
     }
 }
+

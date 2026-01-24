@@ -12,7 +12,6 @@ import org.infinite.infinite.ui.ClickGuiPalette
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.libs.ui.layout.ScrollableLayoutContainer
-import org.infinite.utils.fillRoundedRect
 import org.lwjgl.glfw.GLFW
 
 class FeatureScreen<T : Feature>(
@@ -75,14 +74,30 @@ class FeatureScreen<T : Feature>(
         g2d.fillStyle = ClickGuiPalette.PANEL
         g2d.fillRoundedRect(panelX.toFloat(), panelY.toFloat(), panelW.toFloat(), panelH.toFloat(), panelRadius)
         g2d.fillStyle = ClickGuiPalette.PANEL_ALT
-        g2d.fillRoundedRect(panelX.toFloat(), panelY.toFloat(), panelW.toFloat(), headerHeight.toFloat(), panelRadius)
+        val headerRadius = panelRadius.coerceAtMost(headerHeight / 2f)
+        g2d.fillRoundedRect(panelX.toFloat(), panelY.toFloat(), panelW.toFloat(), headerHeight.toFloat(), headerRadius)
+        if (headerHeight > headerRadius) {
+            g2d.fillRect(
+                panelX.toFloat(),
+                panelY.toFloat() + headerHeight - headerRadius,
+                panelW.toFloat(),
+                headerRadius,
+            )
+        }
         g2d.flush()
 
         val font = minecraft.font
         val titleX = panelX + panelPadding
-        val titleY = panelY + 10
+        val titleY = panelY + 8
         val title = feature.name
         guiGraphics.drawString(font, title, titleX, titleY, ClickGuiPalette.TEXT, false)
+
+        val descriptionKey = feature.translation()
+        val description = Component.translatable(descriptionKey).string
+        if (description != descriptionKey && description != feature.name) {
+            val descY = titleY + font.lineHeight + 2
+            guiGraphics.drawString(font, description, titleX, descY, ClickGuiPalette.MUTED, false)
+        }
 
         super.render(guiGraphics, mouseX, mouseY, delta)
     }
@@ -125,3 +140,4 @@ class FeatureScreen<T : Feature>(
         minecraft.setScreen(parent)
     }
 }
+

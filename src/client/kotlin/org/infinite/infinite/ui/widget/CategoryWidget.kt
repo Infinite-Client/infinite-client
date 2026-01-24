@@ -9,7 +9,6 @@ import org.infinite.libs.ui.layout.ScrollableLayoutContainer
 import org.infinite.libs.ui.screen.AbstractCarouselScreen
 import org.infinite.libs.ui.widgets.AbstractCarouselWidget
 import org.infinite.utils.alpha
-import org.infinite.utils.fillRoundedRect
 import org.infinite.utils.mix
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -168,10 +167,19 @@ abstract class CategoryWidget<T : Category<*, out Feature>>(
         graphics2D.textStyle.font = "infinite_regular"
         graphics2D.textStyle.size = 11f
         graphics2D.fillStyle = colorScheme.secondaryColor
-        graphics2D.text("${data.features.size} modules", 48f, 40f)
+        val description = categoryDescription()
+        val subText = if (description.isNotBlank()) description else "${data.features.size} modules"
+        graphics2D.text(subText, 48f, 40f)
 
         graphics2D.pop()
 
         return graphics2D
     }
+
+    private fun categoryDescription(): String {
+        val key = data.translation()
+        val translated = Component.translatable(key).string
+        return if (translated != key && translated != data.name) translated else ""
+    }
 }
+

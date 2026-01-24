@@ -11,6 +11,10 @@ import org.infinite.InfiniteClient
 import org.infinite.infinite.ui.ClickGuiPalette
 import org.infinite.infinite.ui.screen.FeatureScreen
 import org.infinite.libs.core.features.Property
+import org.infinite.libs.core.features.property.BooleanProperty
+import org.infinite.libs.core.features.property.ListProperty
+import org.infinite.libs.core.features.property.NumberProperty
+import org.infinite.libs.core.features.property.SelectionProperty
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 
 open class PropertyWidget<T : Property<*>>(
@@ -79,11 +83,15 @@ open class PropertyWidget<T : Property<*>>(
         val colorScheme = InfiniteClient.theme.colorScheme
         val usePalette = Minecraft.getInstance().screen is FeatureScreen<*>
         val translationKey = property.translationKey()
-        val translated = translationKey?.let { Component.translatable(it).string }
-        val name = if (translated != null && translated != translationKey) translated else property.name
-        val description = ""
-        val nameSize = 10f
-        val descriptionSize = 8f
+        val rawDescription = translationKey
+            ?.let { Component.translatable(it).string }
+            ?.takeIf { it != translationKey }
+            ?: ""
+        val description = buildDescription(rawDescription, property)
+        val name = property.name
+        val lineHeight = Minecraft.getInstance().font.lineHeight.toFloat()
+        val nameSize = lineHeight
+        val descriptionSize = lineHeight
         val padding = 2f
         g2d.textStyle.size = nameSize
         g2d.textStyle.shadow = false
@@ -101,4 +109,32 @@ open class PropertyWidget<T : Property<*>>(
     override fun updateWidgetNarration(narrationElementOutput: NarrationElementOutput) {
         this.defaultButtonNarrationText(narrationElementOutput)
     }
+
+    private fun buildDescription(raw: String, property: Property<*>): String {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return ""
+        if (trimmed.any { it == '.' || it == '!' || it == '?' }) return trimmed
+        val suffix = if (trimmed.endsWith(".")) "" else "."
+        return when (property) {
+            is BooleanProperty -> {
+                val verbPrefixes = listOf(
+                    "Allow ",
+                    "Show ",
+                    "Keep ",
+                    "Ignore ",
+                    "Release ",
+                    "Pause ",
+                    "Target ",
+                    "Use ",
+                )
+                val base = if (verbPrefixes.any { trimmed.startsWith(it) }) trimmed else "Toggle $trimmed"
+                base + suffix
+            }
+            is SelectionProperty<*> -> "Select $trimmed$suffix"
+            is NumberProperty<*> -> "Adjust $trimmed$suffix"
+            is ListProperty<*> -> "Edit $trimmed$suffix"
+            else -> "Set $trimmed$suffix"
+        }
+    }
+
 }

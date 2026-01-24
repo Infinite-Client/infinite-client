@@ -9,7 +9,6 @@ import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.utils.alpha
-import org.infinite.utils.fillRoundedRect
 import org.infinite.utils.mix
 
 class FeatureResetButton(x: Int, y: Int, width: Int, height: Int, feature: Feature) :
@@ -49,3 +48,4 @@ class FeatureResetButton(x: Int, y: Int, width: Int, height: Int, feature: Featu
         graphics2D.fillRoundedRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat(), radius)
     }
 }
+

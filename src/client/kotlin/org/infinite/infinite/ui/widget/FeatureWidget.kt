@@ -9,7 +9,6 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.utils.alpha
-import org.infinite.utils.fillRoundedRect
 import org.infinite.utils.mix
 
 /**
@@ -151,6 +150,20 @@ abstract class FeatureWidget<T : Feature>(
             (this.y + PADDING + 1).toFloat(),
         )
 
+        val description = featureDescription()
+        if (description.isNotBlank()) {
+            graphics2DRenderer.textStyle.apply {
+                font = "infinite_regular"
+                size = (FONT_SIZE - 3).toFloat().coerceAtLeast(9f)
+            }
+            graphics2DRenderer.fillStyle = colorScheme.secondaryColor
+            graphics2DRenderer.text(
+                description,
+                (badgeX + badgeSize + PADDING.toFloat()),
+                (this.y + PADDING + FONT_SIZE + 2).toFloat(),
+            )
+        }
+
         // ボタンのレンダリング
         renderButtons(graphics2DRenderer)
 
@@ -171,6 +184,12 @@ abstract class FeatureWidget<T : Feature>(
      */
     protected open fun getDisplayName(): String = feature.name
 
+    protected open fun featureDescription(): String {
+        val key = feature.translation()
+        val translated = Component.translatable(key).string
+        return if (translated != key && translated != feature.name) translated else ""
+    }
+
     override fun children(): List<GuiEventListener> =
         listOf(widgetComponents.resetButton, widgetComponents.settingButton, widgetComponents.toggleButton)
 
@@ -180,3 +199,4 @@ abstract class FeatureWidget<T : Feature>(
         this.defaultButtonNarrationText(narrationElementOutput)
     }
 }
+
