@@ -6,12 +6,19 @@ import org.infinite.libs.core.TickInterface
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.Graphics3D
+import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
+import org.infinite.libs.graphics.graphics3d.structs.RenderCommand3D
 import org.lwjgl.glfw.GLFW
 
 open class LocalFeature :
     Feature(),
     TickInterface {
     open val defaultToggleKey: Int = GLFW.GLFW_KEY_UNKNOWN
+
+    enum class RenderUiTiming {
+        Start,
+        End,
+    }
 
     data class KeyAction(
         val name: String, // アクション名（翻訳キー等に使用）
@@ -80,8 +87,23 @@ open class LocalFeature :
     override fun onEndTick() = Unit
     data class RenderPriority(var start: Int, var end: Int)
 
+    fun handleRender2D(timing: RenderUiTiming): List<RenderCommand2D> {
+        graphics2D.clear()
+        when (timing) {
+            RenderUiTiming.Start -> onStartUiRendering(graphics2D)
+            RenderUiTiming.End -> onEndUiRendering(graphics2D)
+        }
+        return graphics2D.commands()
+    }
+    fun handleRender3D(): List<RenderCommand3D> {
+        graphics3D.clear()
+        onLevelRendering(graphics3D)
+        return graphics3D.commands()
+    }
+    private val graphics3D = Graphics3D()
+    private val graphics2D = Graphics2D()
     val renderPriority = RenderPriority(0, 0)
-    open fun onStartUiRendering(graphics2D: Graphics2D) = Unit
-    open fun onEndUiRendering(graphics2D: Graphics2D) = Unit
-    open fun onLevelRendering(graphics3D: Graphics3D) = Unit
+    protected open fun onStartUiRendering(graphics2D: Graphics2D) = Unit
+    protected open fun onEndUiRendering(graphics2D: Graphics2D) = Unit
+    protected open fun onLevelRendering(graphics3D: Graphics3D) = Unit
 }

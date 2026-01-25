@@ -1,6 +1,7 @@
 package org.infinite.libs.graphics
 
 import net.minecraft.client.DeltaTracker
+import net.minecraft.client.Minecraft
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.phys.Vec3
@@ -22,10 +23,12 @@ import kotlin.math.min
  */
 @Suppress("Unused")
 open class Graphics2D(
-    deltaTracker: DeltaTracker,
+    private val deltaTracker: DeltaTracker = Minecraft.getInstance().deltaTracker,
 ) : MinecraftInterface() {
-    val gameDelta: Float = deltaTracker.gameTimeDeltaTicks
-    val realDelta: Float = deltaTracker.realtimeDeltaTicks // Corrected typo here
+    val gameDelta: Float
+        get() = deltaTracker.gameTimeDeltaTicks
+    val realDelta: Float
+        get() = deltaTracker.realtimeDeltaTicks // Corrected typo here
     open val width: Int = minecraft.window.guiScaledWidth
     open val height: Int = minecraft.window.guiScaledHeight
     var strokeStyle: StrokeStyle = StrokeStyle()
@@ -429,5 +432,6 @@ open class Graphics2D(
     /**
      * 登録された順にコマンドを取り出します
      */
+    fun clear() = commandQueue.clear()
     open fun commands(): List<RenderCommand2D> = commandQueue.toList()
 }

@@ -5,10 +5,12 @@ import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
 
 class Image(
-    val identifier: Identifier,
+    path: String,
     customWidth: Int? = null,
     customHeight: Int? = null,
 ) {
+    val identifier: Identifier = Identifier.parse(path)
+
     // 読み込み済みのサイズを保持するプロパティを lazy で定義
     private val dimensions: Pair<Int, Int> by lazy {
         if (customWidth != null && customHeight != null) {

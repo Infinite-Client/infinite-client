@@ -2,7 +2,6 @@ package org.infinite.infinite.features.global.rendering.loading
 
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
-import net.minecraft.resources.Identifier
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.GlobalFeature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
@@ -51,7 +50,7 @@ class InfiniteLoadingFeature : GlobalFeature() {
         // 例: frameが5なら "0005" になる
         val frameString = frame.toString().padStart(4, '0')
         val imagePath = "infinite:textures/gui/loading_animations/animation-$frameString.png"
-        val image = Image(Identifier.parse(imagePath))
+        val image = Image(imagePath)
         val centerX = ctx.centerX.toFloat()
         val centerY = ctx.centerY.toFloat()
         val radius = 40f
