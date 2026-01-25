@@ -178,7 +178,7 @@ class HelloFeature : LocalFeature() {
         graphics2D.projectWorldToScreen(pos)?.let { (screenX, screenY) ->
             graphics2D.push()
             graphics2D.fillStyle = 0xFF00FF00.toInt()
-            graphics2D.textCentered("YOU", screenX.toFloat(), screenY.toFloat() - 10f)
+            graphics2D.textCentered("YOU", screenX, screenY - 10f)
             graphics2D.pop()
         }
         graphics2D.push()

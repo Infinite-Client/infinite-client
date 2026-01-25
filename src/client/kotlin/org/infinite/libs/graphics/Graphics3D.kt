@@ -1,16 +1,26 @@
 package org.infinite.libs.graphics
 
+import net.minecraft.client.DeltaTracker
 import net.minecraft.resources.Identifier
 import net.minecraft.world.phys.Vec3
 import org.infinite.libs.core.tick.RenderTicks
 import org.infinite.libs.graphics.graphics3d.RenderSystem3D
 import org.infinite.libs.graphics.graphics3d.structs.RenderCommand3D
 import org.infinite.libs.graphics.graphics3d.structs.TexturedVertex
+import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import java.util.LinkedList
 
-class Graphics3D {
+@Suppress("unused")
+class Graphics3D : MinecraftInterface() {
     // スナップショット（行列やカメラ位置）へのアクセス
+    private val deltaTracker: DeltaTracker by lazy {
+        minecraft.deltaTracker
+    }
+    val gameDelta: Float
+        get() = deltaTracker.gameTimeDeltaTicks
+    val realDelta: Float
+        get() = deltaTracker.realtimeDeltaTicks
     private val snapshot: RenderSystem3D.RenderSnapshot
         get() = RenderTicks.renderSnapShot ?: throw IllegalStateException("RenderSnapshot is not available.")
 
