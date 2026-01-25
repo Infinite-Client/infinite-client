@@ -1,6 +1,12 @@
-
 import net.ltgt.gradle.errorprone.errorprone
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.net.URI
+
+buildscript {
+    dependencies {
+        classpath("com.guardsquare:proguard-gradle:${property("proguard_version")}")
+    }
+}
 
 plugins {
     kotlin("jvm")
@@ -11,6 +17,7 @@ plugins {
     id("com.diffplug.spotless")
     id("net.ltgt.errorprone") version "4.3.0"
 }
+
 group = property("maven_group")!!
 version = property("mod_version")!!
 
@@ -52,7 +59,7 @@ dependencies {
 //    implementation("org.lwjgl:lwjgl-stb:${property("lwjgl_version")}")
     implementation("com.squareup.okhttp3:okhttp:${property("ok_http_version")}")
     implementation("org.apache.maven:maven-artifact:${property("maven_artifact_version")}")
-
+    implementation("io.github.classgraph:classgraph:4.8.184")
     // テスト依存関係
     testImplementation(kotlin("test"))
     testImplementation("io.mockk:mockk:1.12.0") // Mockkの最新安定版
@@ -60,20 +67,200 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1") // JUnit Jupiter Engine
     errorprone("com.google.errorprone:error_prone_core:2.45.0")
 }
+// 1. 環境設定の定義
+val rustProjectDir = file("rust/infinite-client")
+val generatedJavaDir: Directory = layout.projectDirectory.dir("src/main/java-generated") // jextractの出力先を分けるのがおすすめ
+
+// 2. cbindgen タスク (Rustからヘッダー生成)
+val generateRustHeaders = tasks.register<Exec>("generateRustHeaders") {
+    group = "build"
+    workingDir = rustProjectDir
+    // cbindgen がインストールされている前提
+    commandLine(
+        "cbindgen",
+        "--config",
+        "cbindgen.toml",
+        "--crate",
+        "infinite-client",
+        "--output",
+        "../../build/rust/infinite_client.h",
+    )
+    outputs.file(file("build/rust/infinite_client.h"))
+}
+
+val jextractVersion = "25"
+val jextractInstallDir: Provider<Directory> = layout.buildDirectory.dir("jextract-$jextractVersion")
+val jextractBin: Provider<RegularFile> = jextractInstallDir.map {
+    it.file(if (System.getProperty("os.name").lowercase().contains("win")) "bin/jextract.exe" else "bin/jextract")
+}
+
+val setupJextract: Provider<Task> = tasks.register("setupJextract") {
+    group = "setup"
+    val os = System.getProperty("os.name").lowercase()
+    val arch = System.getProperty("os.arch").lowercase()
+    val isWindows = os.contains("win")
+    val isMac = os.contains("mac")
+    val isLinux = os.contains("nix") || os.contains("nux")
+    val isArm64 = arch.contains("aarch64") || arch.contains("arm64")
+    // 見つけていただいたURLに基づき、プラットフォーム名を決定
+    val platformTag = when {
+        isWindows -> if (isArm64) "windows-aarch64" else "windows-x64"
+        isMac -> if (isArm64) "macos-aarch64" else "macos-x64"
+        isLinux -> if (isArm64) "linux-aarch64" else "linux-x64"
+        else -> throw GradleException("Unsupported OS: $os")
+    }
+
+    // 基本URL (Java 25 EA 2-4)
+    val downloadUrl =
+        "https://download.java.net/java/early_access/jextract/25/2/openjdk-25-jextract+2-4_${platformTag}_bin." +
+            (if (isWindows) "zip" else "tar.gz")
+
+    val archiveFile = layout.buildDirectory.file("jextract-archive." + (if (isWindows) "zip" else "tar.gz"))
+
+    // 入出力の定義を明確にすることで、GradleのUP-TO-DATEチェックを機能させる
+    outputs.dir(jextractInstallDir)
+
+    onlyIf {
+        // 既に実行ファイルが存在する場合は実行しない
+        !jextractBin.get().asFile.exists()
+    }
+    outputs.file(jextractBin)
+
+    doLast {
+        if (!jextractBin.get().asFile.exists()) {
+            println("Downloading jextract 25 EA from $downloadUrl...")
+            // 既存の古いディレクトリがあれば一度消去（権限エラー対策）
+            if (jextractInstallDir.get().asFile.exists()) {
+                jextractInstallDir.get().asFile.deleteRecursively()
+            }
+            URI(downloadUrl).toURL().openStream().use { input ->
+                archiveFile.get().asFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            copy {
+                val tree = if (isWindows) zipTree(archiveFile) else tarTree(resources.gzip(archiveFile))
+                from(tree)
+                into(jextractInstallDir)
+                // 展開された最上位フォルダをスキップする処理
+                eachFile { path = path.substringAfter("/") }
+                includeEmptyDirs = false
+            }
+
+            if (!isWindows) {
+                jextractBin.get().asFile.setExecutable(true)
+            }
+        }
+    }
+}
+// 3. jextract タスク (ヘッダーからJavaバインディング生成)
+val runJextract = tasks.register<Exec>("runJextract") {
+    group = "build"
+    // Rustヘッダー生成と、jextract本体のセットアップ両方に依存させる
+    dependsOn(generateRustHeaders, setupJextract)
+
+    val headerFile = file("build/rust/infinite_client.h")
+    // doFirstの中で実行ファイルを確定させる
+    doFirst {
+        val jextractExecutable = when {
+            // setupJextractでダウンロードされたファイルを最優先
+            jextractBin.get().asFile.exists() -> jextractBin.get().asFile.absolutePath
+            // 環境変数があればそれを使用
+            System.getenv("JEXTRACT_HOME") != null -> "${System.getenv("JEXTRACT_HOME")}/bin/jextract"
+            // どちらもなければシステムのパスに期待
+            else -> "jextract"
+        }
+
+        println("Using jextract from: $jextractExecutable")
+
+        // ExecタスクのcommandLineを上書き設定
+        commandLine(
+            jextractExecutable,
+            "--output",
+            generatedJavaDir,
+            "--target-package",
+            "org.infinite.nativebind",
+            headerFile.absolutePath,
+        )
+    }
+    // キャッシュを有効にするための入力・出力定義
+    inputs.file(headerFile)
+    outputs.dir(generatedJavaDir)
+}
+
+// 4. zigbuild タスク (クロスコンパイル対応)
+// OSごとにターゲットを定義
+val rustTargets = mapOf(
+    "windows-x64" to "x86_64-pc-windows-gnu",
+    "windows-arm64" to "aarch64-pc-windows-gnullvm",
+    "linux-x64" to "x86_64-unknown-linux-gnu",
+    "linux-arm64" to "aarch64-unknown-linux-gnu",
+    "macos-x64" to "x86_64-apple-darwin",
+    "macos-arm64" to "aarch64-apple-darwin",
+)
+
+// 各ターゲット向けのビルドタスクを個別に登録
+rustTargets.forEach { (id, targetTriple) ->
+    tasks.register<Exec>("rustBuild_$id") {
+        group = "build"
+        description = "Build Rust library for $id ($targetTriple) using zigbuild"
+        workingDir = rustProjectDir
+
+        // 開発環境に cargo-zigbuild がインストールされている必要があります
+        commandLine("cargo", "zigbuild", "--release", "--target", targetTriple)
+
+        // 出力ファイルのヒント（ビルドのスキップ判定用）
+        outputs.dir(rustProjectDir.resolve("target/$targetTriple/release"))
+    }
+}
+
+// 全プラットフォームのRustビルドをまとめるタスク
+val buildRustAll: TaskProvider<Task> = tasks.register("buildRustAll") {
+    group = "build"
+    description = "Triggers Rust builds for all supported platforms"
+    dependsOn(rustTargets.keys.map { "rustBuild_$it" })
+    dependsOn(runJextract) // Rustの変更がヘッダー経由でJavaに反映されるように
+}
+sourceSets {
+    main {
+        // jextractで生成されたJavaコードをソースセットに含める
+        java.srcDir(generatedJavaDir)
+    }
+}
+
 tasks {
     test {
         useJUnitPlatform()
     }
-
     processResources {
-        inputs.property("version", project.version)
+        dependsOn(buildRustAll)
+        // 各プラットフォームのバイナリを適切なディレクトリに配置
+        rustTargets.forEach { (id, target) ->
+            from("$rustProjectDir/target/$target/release") {
+                include("*.so", "*.dll", "*.dylib")
+                into("natives/$id")
+            }
+        }
+        val expandProps = mapOf(
+            "version" to project.version,
+        )
+        inputs.properties(expandProps) // キャッシュの整合性のために追加推奨
+
         filesMatching("fabric.mod.json") {
-            expand(getProperties())
-            expand(mutableMapOf("version" to project.version))
+            expand(expandProps)
         }
     }
 
     loom {
+        runs {
+            configureEach {
+                vmArg("--enable-native-access=ALL-UNNAMED")
+                vmArg("-Dforeign.restricted=permit")
+                vmArg("-XX:+UnlockDiagnosticVMOptions")
+                vmArg("-XX:+AlwaysCompileLoopMethods")
+            }
+        }
         splitEnvironmentSourceSets()
         accessWidenerPath = file("src/main/resources/infinite.accesswidener")
     }
@@ -83,25 +270,38 @@ tasks {
             client = true
         }
     }
+    compileJava {
+        dependsOn(buildRustAll)
+    }
+    compileKotlin {
+        dependsOn(buildRustAll)
+    }
     java {
         // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
         // if it is present.
         // If you remove this line, sources will not be generated.
         withSourcesJar()
-
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(25))
+        }
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
     }
 
     jar {
+        // 重複エラーの解決策
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
         val archiveName = project.base.archivesName
         inputs.property("archivesName", archiveName)
-        from(sourceSets["client"].output)
-        from("LICENSE") {
-            rename { fileName -> "${fileName}_$archiveName" }
-        }
-    }
 
+        // clientソースセットが存在する場合のみ含める
+        if (project.sourceSets.findByName("client") != null) {
+            from(sourceSets["client"].output)
+        }
+
+        from("LICENSE")
+    }
     publishing {
         publications {
             create<MavenPublication>("mavenJava") {
@@ -121,25 +321,34 @@ tasks {
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
         compilerOptions {
-            jvmTarget = JvmTarget.JVM_21
+            jvmTarget = JvmTarget.JVM_25
         }
     }
     compileKotlin {
         compilerOptions {
-            jvmTarget = JvmTarget.JVM_21
+            jvmTarget = JvmTarget.JVM_25
         }
     }
+}
+tasks.named<Jar>("sourcesJar") {
+    dependsOn(runJextract)
+}
+
+tasks.withType<com.diffplug.gradle.spotless.SpotlessTask>().configureEach {
+    mustRunAfter(buildRustAll)
+    mustRunAfter(runJextract)
 }
 
 spotless {
     java {
         target("src/**/*.java")
+        targetExclude("src/main/java-generated/**/*.java")
         googleJavaFormat()
     }
     kotlin {
         target("src/**/*.kt")
         // ここに設定を追加
-        ktlint("0.50.0").editorConfigOverride(
+        ktlint("1.8.0").editorConfigOverride(
             mapOf(
                 "ktlint_standard_no-wildcard-imports" to "disabled",
                 "ij_kotlin_allow_trailing_comma" to "true",
@@ -147,7 +356,7 @@ spotless {
         )
     }
     groovyGradle {
-        target("**/build.gradle")
+        target("build.gradle")
         greclipse()
     }
     kotlinGradle {
@@ -164,7 +373,7 @@ tasks.withType<JavaCompile>().configureEach {
     options.errorprone {
         isEnabled.set(true)
 
-        excludedPaths.set(".*/org/infinite/mixin/.*")
+        excludedPaths.set(".*/org/infinite/mixin/.*|.*/src/main/java-generated/.*")
         // 頻出するMixinアノテーションをリストアップ
         val mixinAnnotations = listOf(
             "org.spongepowered.asm.mixin.injection.Inject",
@@ -181,12 +390,57 @@ tasks.withType<JavaCompile>().configureEach {
 
         option("UnusedMethod:ExemptAnnotations", mixinAnnotations)
         option("UnusedVariable:ExemptAnnotations", mixinAnnotations)
+        options.compilerArgs.addAll(
+            listOf(
+                "--add-modules",
+                "jdk.incubator.vector", // ベクトル演算
+                "-Xlint:-options",
+                "-parameters", // リフレクションを利用する場合の高速化
+            ),
+        )
     }
 }
 tasks.register<JavaExec>("docs") {
     description = "Generate Documents"
     group = "application"
     classpath = sourceSets["client"].runtimeClasspath
-    mainClass.set("org.infinite.docs.Main")
+    mainClass.set("org.infinite.docs.Infinite")
     args(project.rootDir.absolutePath)
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+    options.compilerArgs.addAll(
+        listOf(
+            "-Xlint:unchecked",
+            "-Xlint:deprecation",
+            "--release",
+            "25",
+            // パフォーマンスのためのプレビュー機能やインライン化のヒント（必要に応じて）
+        ),
+    )
+}
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_25
+        freeCompilerArgs.addAll(
+            "-jvm-default=enable", // インターフェースのデフォルトメソッドをJVMネイティブに
+            "-Xbackend-threads=0", // 並列コンパイルでビルド速度向上
+            "-opt-in=kotlin.RequiresOptIn",
+        )
+    }
+}
+
+// プラグインではなくタスクとして定義
+tasks.register<proguard.gradle.ProGuardTask>("optimizeJar") {
+    injars(tasks.jar.get().archiveFile)
+    // 最適化後のファイル名
+    outjars(layout.buildDirectory.file("libs/${project.name}-${project.version}-optimized.jar"))
+
+    // Java 25 のランタイムをライブラリとして指定
+    val javaHome = System.getProperty("java.home")
+    libraryjars("$javaHome/jmods")
+
+    // 設定ファイルの読み込み
+    configuration("proguard-rules.pro")
 }

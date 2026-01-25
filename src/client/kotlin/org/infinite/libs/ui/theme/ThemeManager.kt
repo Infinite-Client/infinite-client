@@ -36,7 +36,5 @@ class ThemeManager(defaultTheme: Theme) {
      * 現在登録されている全テーマのクラス名（識別子）リストを返す
      * StringSelectionProperty の options に渡すために使用
      */
-    fun getRegisteredThemeNames(): List<String> {
-        return themes.keys.toList()
-    }
+    fun getRegisteredThemeNames(): List<String> = themes.keys.toList()
 }

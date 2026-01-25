@@ -30,15 +30,13 @@ class BlockListProperty(default: List<String>) : StringListProperty(default) {
         width: Int,
         initialValue: String?,
         onComplete: (String?) -> Unit,
-    ): AbstractWidget {
-        return SuggestInputWidget(
-            x,
-            y,
-            width,
-            initialValue ?: "",
-            // ブロックのレジストリキーを提案リストとして提供
-            suggestions = { BuiltInRegistries.BLOCK.keySet().map { it.toString() } },
-            onComplete = onComplete,
-        )
-    }
+    ): AbstractWidget = SuggestInputWidget(
+        x,
+        y,
+        width,
+        initialValue ?: "",
+        // ブロックのレジストリキーを提案リストとして提供
+        suggestions = { BuiltInRegistries.BLOCK.keySet().map { it.toString() } },
+        onComplete = onComplete,
+    )
 }

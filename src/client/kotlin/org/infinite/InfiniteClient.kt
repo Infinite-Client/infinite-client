@@ -6,12 +6,18 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.client.KeyMapping
+import net.minecraft.client.gui.screens.Screen
 import org.infinite.InfiniteClient.feature
-import org.infinite.infinite.InfiniteGlobalFeatures
-import org.infinite.infinite.InfiniteLocalFeatures
+import org.infinite.infinite.command.InfiniteCommand
+import org.infinite.infinite.features.global.InfiniteGlobalFeatures
+import org.infinite.infinite.features.local.InfiniteLocalFeatures
 import org.infinite.infinite.theme.default.DefaultTheme
 import org.infinite.infinite.theme.infinite.InfiniteTheme
-import org.infinite.infinite.ui.screen.LocalFeatureCategoriesScreen
+import org.infinite.infinite.theme.stylish.StylishTheme
+import org.infinite.infinite.ui.screen.GlobalCarouselFeatureCategoriesScreen
+import org.infinite.infinite.ui.screen.GlobalListFeatureCategoriesScreen
+import org.infinite.infinite.ui.screen.LocalCarouselFeatureCategoriesScreen
+import org.infinite.infinite.ui.screen.LocalListFeatureCategoriesScreen
 import org.infinite.libs.config.ConfigManager
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.Feature
@@ -23,7 +29,9 @@ import org.infinite.libs.core.tick.GameTicks
 import org.infinite.libs.core.tick.SystemTicks
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
+import org.infinite.libs.rust.LibInfiniteClient
 import org.infinite.libs.translation.TranslationChecker
+import org.infinite.libs.ui.style.UiStyle
 import org.infinite.libs.ui.theme.Theme
 import org.infinite.libs.ui.theme.ThemeManager
 import org.lwjgl.glfw.GLFW
@@ -43,7 +51,15 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             ),
         ) {
             minecraft.execute {
-                minecraft.setScreen(LocalFeatureCategoriesScreen())
+                // 現時点での要望: 直接 Carousel を開く
+                // もし「設定に従いたい」場合は dev 側のロジック（後述）を使用してください
+                val screen = when (uiStyle) {
+                    UiStyle.Simple -> LocalListFeatureCategoriesScreen()
+                    UiStyle.Carousel -> LocalCarouselFeatureCategoriesScreen()
+                }
+                minecraft.setScreen(
+                    screen,
+                )
             }
         }
     }
@@ -55,28 +71,26 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
      * @throws IllegalArgumentException カテゴリが登録されていない場合
      */
     @Suppress("UNCHECKED_CAST")
-    fun <C : Category<*, *>, F : Feature> feature(category: KClass<C>, feature: KClass<out F>): F? {
-        return when {
-            GlobalCategory::class.java.isAssignableFrom(category.java) -> {
-                val globalCategory = globalFeatures.getCategory(category as KClass<out GlobalCategory>)
-                if (GlobalFeature::class.java.isAssignableFrom(feature.java)) {
-                    globalCategory?.getFeature(feature as KClass<out GlobalFeature>) as? F
-                } else {
-                    null
-                }
+    fun <C : Category<*, *>, F : Feature> feature(category: KClass<C>, feature: KClass<out F>): F? = when {
+        GlobalCategory::class.java.isAssignableFrom(category.java) -> {
+            val globalCategory = globalFeatures.getCategory(category as KClass<out GlobalCategory>)
+            if (GlobalFeature::class.java.isAssignableFrom(feature.java)) {
+                globalCategory?.getFeature(feature as KClass<out GlobalFeature>) as? F
+            } else {
+                null
             }
-
-            LocalCategory::class.java.isAssignableFrom(category.java) -> {
-                val localCategory = localFeatures.getCategory(category as KClass<out LocalCategory>)
-                if (LocalFeature::class.java.isAssignableFrom(feature.java)) {
-                    localCategory?.getFeature(feature as KClass<out LocalFeature>) as? F
-                } else {
-                    null
-                }
-            }
-
-            else -> null
         }
+
+        LocalCategory::class.java.isAssignableFrom(category.java) -> {
+            val localCategory = localFeatures.getCategory(category as KClass<out LocalCategory>)
+            if (LocalFeature::class.java.isAssignableFrom(feature.java)) {
+                localCategory?.getFeature(feature as KClass<out LocalFeature>) as? F
+            } else {
+                null
+            }
+        }
+
+        else -> null
     }
 
     val worldTicks = GameTicks(localFeatures)
@@ -86,12 +100,19 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             val themeName = globalFeatures.rendering.themeFeature.currentTheme.value
             return themeManager.getTheme(themeName)
         }
+    val uiStyle: UiStyle
+        get() = globalFeatures.rendering.themeFeature.style.value
 
     override fun onInitializeClient() {
         LogSystem.init()
+        LibInfiniteClient.loadNativeLibrary()
+        InfiniteCommand.register()
         themeManager.register(InfiniteTheme())
+        themeManager.register(StylishTheme())
         // 1. グローバル設定のロード
         ConfigManager.loadGlobal()
+        globalFeatures.rendering.themeFeature.enable()
+        globalFeatures.rendering.infiniteLoadingFeature.enable()
         globalFeatures.onInitialized()
         TranslationChecker.register()
         localFeatures.registerAllActions()
@@ -128,5 +149,13 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             globalFeatures.onShutdown()
             localFeatures.onShutdown()
         }
+    }
+
+    fun handleOpenGlobalSettingScreen(parent: Screen) {
+        val screen = when (uiStyle) {
+            UiStyle.Simple -> GlobalListFeatureCategoriesScreen(parent)
+            UiStyle.Carousel -> GlobalCarouselFeatureCategoriesScreen(parent)
+        }
+        minecraft.setScreen(screen)
     }
 }

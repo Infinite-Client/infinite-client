@@ -12,7 +12,9 @@ import kotlin.math.sin
 
 class SuperFlyFeature : LocalFeature() {
     enum class FlyMethod {
-        Acceleration, Rocket, CreativeFlight,
+        Acceleration,
+        Rocket,
+        CreativeFlight,
     }
 
     override val featureType: FeatureLevel = FeatureLevel.Cheat

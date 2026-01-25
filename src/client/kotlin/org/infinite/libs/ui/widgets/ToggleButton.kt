@@ -6,7 +6,9 @@ import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
+import org.infinite.utils.alpha
 import org.infinite.utils.mix
+import kotlin.math.PI
 import kotlin.math.sin
 
 abstract class ToggleButton(
@@ -23,39 +25,42 @@ abstract class ToggleButton(
     { button ->
         val tb = button as ToggleButton
         tb.value = !tb.value
-        tb.animationStartTime = System.currentTimeMillis()
     },
     DEFAULT_NARRATION,
 ) {
     protected abstract var value: Boolean
+
     private var animationStartTime: Long = -1L
-    private val animationDuration = 200L
-    private var beforeValue: Boolean? = null
-    private fun renewCheck() {
-        // 初回（nullの場合）または値が変化した瞬間を検知
-        if (beforeValue == null) {
-            beforeValue = value
-            // 初回はアニメーションさせないならStartTimeは更新しない
-        } else if (beforeValue != value) {
-            beforeValue = value
+    private val animationDuration = 220L // わずかにゆったりさせて高級感を出す
+    private var lastValue: Boolean? = null
+
+    // テーマ取得
+    private val themeScheme get() = InfiniteClient.theme.colorScheme
+
+    private fun updateAnimation() {
+        if (lastValue == null) {
+            lastValue = value
+        } else if (lastValue != value) {
+            lastValue = value
             animationStartTime = System.currentTimeMillis()
         }
     }
 
     fun render(graphics2D: Graphics2D) {
-        renewCheck()
-        val colorScheme = InfiniteClient.theme.colorScheme
+        updateAnimation()
 
-        // --- サイズ計算 ---
-        val margin = height * 0.1f
-        val knobSize = height - (margin * 2)
-        val toggleAreaWidth = width.toFloat().coerceAtMost(height * 2f)
-        val toggleAreaX = x + (width - toggleAreaWidth) / 2f
-        val barHeight = height * 0.4f
-        val barY = y + (height - barHeight) / 2f
-        val barWidth = toggleAreaWidth - margin
+        // --- レイアウト計算 ---
+        val margin = height * 0.18f
+        val knobRadius = (height - (margin * 2)) / 2f
 
-        // --- アニメーション・進捗計算 ---
+        // トグルの土台（カプセル形状）のサイズ
+        val toggleAreaWidth = 34f // 固定幅にするとリスト内で揃って綺麗
+        val toggleAreaX = x + width - toggleAreaWidth - 2f // 右寄せ
+        val toggleAreaY = y + (height - (height * 0.8f)) / 2f
+        val toggleH = height * 0.8f
+        val cornerRadius = toggleH / 2f
+
+        // --- アニメーション進捗 (0.0 -> 1.0) ---
         val currentTime = System.currentTimeMillis()
         val rawProgress = if (animationStartTime == -1L) {
             1f
@@ -63,56 +68,45 @@ abstract class ToggleButton(
             ((currentTime - animationStartTime).toFloat() / animationDuration).coerceIn(0f, 1f)
         }
 
-        // サインカーブによるイージング (0.0 -> 1.0)
-        val easedProgress = sin(rawProgress * Math.PI / 2).toFloat()
-
-        // 移動位置の計算 (valueがtrueに向かっているなら 0->1、falseに向かっているなら 1->0 になるよう調整)
-        // 現在の value に基づいて、補間係数 (mixFactor) を決定
+        // イージング適用
+        val easedProgress = sin(rawProgress * PI / 2).toFloat()
         val mixFactor = if (value) easedProgress else 1f - easedProgress
 
-        val minKnobX = toggleAreaX + margin
-        val maxKnobX = toggleAreaX + toggleAreaWidth - knobSize - margin
-        val currentKnobX = minKnobX + (maxKnobX - minKnobX) * mixFactor
+        // --- 描画 ---
 
-        // --- 色の計算 (mix関数の活用) ---
-        // 状態ごとの色を定義
-        val colorOff = if (isHovered) colorScheme.secondaryColor else colorScheme.backgroundColor
-        val colorOn = if (isHovered) colorScheme.greenColor else colorScheme.accentColor
+        // 1. 背景（ベース）
+        // OFF: surfaceColor, ON: accentColor
+        val colorOff = themeScheme.surfaceColor.mix(themeScheme.backgroundColor, 0.3f)
+        val colorOn = themeScheme.accentColor
 
-        // 背景バーの色をミックス
-        val currentBarColor = colorOff.mix(colorOn, mixFactor)
+        var bg = colorOff.mix(colorOn, mixFactor)
+        if (isHovered && active) bg = themeScheme.getHoverColor(bg)
 
-        // 背景バーの描画
-        graphics2D.fillStyle = if (active) currentBarColor else colorScheme.backgroundColor
-        graphics2D.fillRect(toggleAreaX + (margin / 2), barY, barWidth, barHeight)
+        graphics2D.fillStyle = bg.alpha(if (active) 255 else 100)
+        graphics2D.fillRoundedRect(toggleAreaX, toggleAreaY, toggleAreaWidth, toggleH, cornerRadius)
 
-        // --- ノブの描画 ---
-        val knobY = y + margin
-        val knobBorder = knobSize * 0.15f
+        // 2. ノブの移動計算
+        val minX = toggleAreaX + margin + knobRadius
+        val maxX = toggleAreaX + toggleAreaWidth - margin - knobRadius
+        val currentKnobX = minX + (maxX - minX) * mixFactor
+        val knobY = toggleAreaY + toggleH / 2f
 
-        // ノブの枠線の色をミックス
-        val strokeColorOff = colorScheme.secondaryColor
-        val strokeColorOn = colorScheme.accentColor
-        val currentStrokeColor = strokeColorOff.mix(strokeColorOn, mixFactor)
+        // ノブ本体 (常に明るい色)
+        graphics2D.fillStyle = themeScheme.foregroundColor
+        graphics2D.fillCircle(currentKnobX, knobY, knobRadius)
 
-        // 内側ノブ
-        graphics2D.fillStyle = if (isHovered) colorScheme.accentColor else colorScheme.foregroundColor
-        graphics2D.fillRect(
-            currentKnobX + knobBorder / 2f,
-            knobY + knobBorder / 2f,
-            knobSize - knobBorder, // サイズ計算の微調整
-            knobSize - knobBorder,
-        )
+        graphics2D.strokeStyle.color = themeScheme.accentColor.alpha((60 * mixFactor).toInt())
+        graphics2D.strokeStyle.width = 1f
+        graphics2D.strokeCircle(currentKnobX, knobY, knobRadius)
 
-        // 外枠ノブ
-        graphics2D.strokeStyle.width = knobBorder
-        graphics2D.strokeStyle.color = currentStrokeColor
-        graphics2D.strokeRect(currentKnobX, knobY, knobSize, knobSize)
-
-        // アニメーション終了判定
-        if (rawProgress >= 1f) {
-            animationStartTime = -1L
+        // ノブの縁取り
+        graphics2D.strokeStyle.apply {
+            width = 1f
+            color = themeScheme.backgroundColor.alpha(80)
         }
+        graphics2D.strokeCircle(currentKnobX, knobY, knobRadius)
+
+        if (rawProgress >= 1f) animationStartTime = -1L
     }
 
     override fun renderContents(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {

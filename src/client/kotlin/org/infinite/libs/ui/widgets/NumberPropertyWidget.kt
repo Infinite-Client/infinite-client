@@ -1,5 +1,6 @@
 package org.infinite.libs.ui.widgets
 
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.events.GuiEventListener
 import org.infinite.InfiniteClient
@@ -36,17 +37,15 @@ class NumberPropertyWidget<T>(
             }
 
         @Suppress("UNCHECKED_CAST")
-        override fun convertToType(v: Double): T {
-            return when (property.value) {
-                is Int -> v.toInt()
-                is Float -> v.toFloat()
-                is Long -> v.toLong()
-                is Byte -> v.toInt().toByte()
-                is Short -> v.toInt().toShort()
-                is Double -> v
-                else -> v as Any // 基本的にはここに来ない
-            } as T
-        }
+        override fun convertToType(v: Double): T = when (property.value) {
+            is Int -> v.toInt()
+            is Float -> v.toFloat()
+            is Long -> v.toLong()
+            is Byte -> v.toInt().toByte()
+            is Short -> v.toInt().toShort()
+            is Double -> v
+            else -> v as Any // 基本的にはここに来ない
+        } as T
     }
 
     // スライダー本体。初期位置は relocate() で制御
@@ -62,15 +61,15 @@ class NumberPropertyWidget<T>(
         propertySliderWidget.y = y + height - propertySliderWidget.height
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
-        super.renderWidget(guiGraphics, i, j, f)
-        propertySliderWidget.render(guiGraphics, i, j, f)
+    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
+        propertySliderWidget.render(guiGraphics, mouseX, mouseY, delta)
         val colorScheme = InfiniteClient.theme.colorScheme
         val displayText = property.display()
         val g2d = Graphics2DRenderer(guiGraphics)
         g2d.fillStyle = colorScheme.foregroundColor
         g2d.textStyle.font = "infinite_regular"
-        g2d.textStyle.size = 8f
+        g2d.textStyle.size = Minecraft.getInstance().font.lineHeight.toFloat()
         g2d.textStyle.shadow = true
         g2d.textRight(displayText, x + width, y)
         g2d.flush()

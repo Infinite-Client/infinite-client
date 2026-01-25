@@ -27,7 +27,7 @@ sealed class AimTarget : MinecraftInterface() {
         e: Entity,
         val anchor: EntityAnchor = EntityAnchor.Chest, // デフォルトを胸あたりに設定
     ) : AimTarget() {
-        open val entity = e
+        open val entity: Entity = e
 
         enum class EntityAnchor {
             Eyes, // 目（頭）
@@ -72,7 +72,7 @@ sealed class AimTarget : MinecraftInterface() {
     open class WaypointTarget(
         p: Vec3,
     ) : AimTarget() {
-        open val pos = p
+        open val pos: Vec3 = p
     }
 
     open class RollTarget(
@@ -90,32 +90,36 @@ sealed class AimTarget : MinecraftInterface() {
      * AimTargetのワールド内位置を計算して返します。
      * RollTargetなど、位置を持たない場合は null を返します。
      */
-    fun pos(): Vec3? =
-        when (this) { // when式の対象を 'this' に変更し、スマートキャストを有効化
-            is EntityTarget -> {
-                val basePos = this.entity.getPosition(minecraft.deltaTracker.gameTimeDeltaTicks)
-                val height = this.entity.bbHeight
+    fun pos(): Vec3? = when (this) { // when式の対象を 'this' に変更し、スマートキャストを有効化
+        is EntityTarget -> {
+            val basePos = this.entity.getPosition(minecraft.deltaTracker.gameTimeDeltaTicks)
+            val height = this.entity.bbHeight
 
-                val yOffset = when (this.anchor) {
-                    EntityTarget.EntityAnchor.Eyes -> this.entity.getEyeHeight(this.entity.pose).toDouble()
-                    EntityTarget.EntityAnchor.Chest -> height * 0.7 // 身長の7割（胸付近）
-                    EntityTarget.EntityAnchor.Center -> height * 0.5 // 身長の半分
-                    EntityTarget.EntityAnchor.Feet -> 0.0
-                }
+            val yOffset = when (this.anchor) {
+                EntityTarget.EntityAnchor.Eyes -> this.entity.getEyeHeight(this.entity.pose).toDouble()
 
-                basePos.add(0.0, yOffset, 0.0)
+                EntityTarget.EntityAnchor.Chest -> height * 0.7
+
+                // 身長の7割（胸付近）
+                EntityTarget.EntityAnchor.Center -> height * 0.5
+
+                // 身長の半分
+                EntityTarget.EntityAnchor.Feet -> 0.0
             }
 
-            is BlockTarget -> {
-                this.pos()
-            }
-
-            is WaypointTarget -> {
-                this.pos()
-            }
-
-            is RollTarget -> {
-                null
-            }
+            basePos.add(0.0, yOffset, 0.0)
         }
+
+        is BlockTarget -> {
+            this.pos()
+        }
+
+        is WaypointTarget -> {
+            this.pos()
+        }
+
+        is RollTarget -> {
+            null
+        }
+    }
 }

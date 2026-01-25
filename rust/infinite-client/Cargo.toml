@@ -1,0 +1,17 @@
+[package]
+name = "infinite-client"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+# 共有ライブラリとしてビルド
+crate-type = ["cdylib"]
+
+[dependencies]
+
+[profile.release]
+opt-level = 3          # 最大限の最適化
+lto = "fat"            # Link Time Optimization (リンク時最適化)
+codegen-units = 1      # コンパイル単位を1に制限して最適化を強化
+panic = "abort"        # パニック時のスタックトレースを省きサイズと速度を優先
+strip = true           # デバッグシンボルの削除

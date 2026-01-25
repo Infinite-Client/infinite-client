@@ -8,7 +8,7 @@ class TextureRenderer(private val gui: GuiGraphics) {
 
     fun drawTexture(cmd: RenderCommand2D.DrawTexture) {
         val pose = gui.pose()
-        val image = cmd.image
+        val image = cmd.image!!
         val identifier = image.identifier
 
         pose.pushMatrix()

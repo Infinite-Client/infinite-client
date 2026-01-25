@@ -9,8 +9,6 @@ import kotlinx.coroutines.launch
 import net.minecraft.client.DeltaTracker
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.feature.LocalFeature
-import org.infinite.libs.graphics.Graphics2D
-import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 import org.infinite.libs.graphics.graphics3d.structs.RenderCommand3D
 import java.util.*
@@ -43,49 +41,44 @@ abstract class LocalCategory : Category<KClass<out LocalFeature>, LocalFeature>(
 
     // --- Rendering Logic ---
 
-    open suspend fun onStartUiRendering(deltaTracker: DeltaTracker): LinkedList<Pair<Int, List<RenderCommand2D>>> {
-        return collectAndGroupRenderCommands(deltaTracker) { feature, graphics ->
-            feature.onStartUiRendering(graphics)
-            feature.renderPriority.start
-        }
-    }
+    open suspend fun onStartUiRendering(deltaTracker: DeltaTracker): LinkedList<Pair<Int, List<RenderCommand2D>>> = collectAndGroupRenderCommands(LocalFeature.RenderUiTiming.Start)
 
-    open suspend fun onEndUiRendering(deltaTracker: DeltaTracker): LinkedList<Pair<Int, List<RenderCommand2D>>> {
-        return collectAndGroupRenderCommands(deltaTracker) { feature, graphics ->
-            feature.onEndUiRendering(graphics)
-            feature.renderPriority.end
-        }
-    }
+    open suspend fun onEndUiRendering(deltaTracker: DeltaTracker): LinkedList<Pair<Int, List<RenderCommand2D>>> = collectAndGroupRenderCommands(LocalFeature.RenderUiTiming.End)
+
     open suspend fun onLevelRendering(): List<RenderCommand3D> = coroutineScope {
-        // 有効な Feature ごとに並列でコマンドを生成
+        // 各FeatureのhandleRender3Dを並列実行
         val deferredCommands = enabledFeatures().map { feature ->
             async(Dispatchers.Default) {
-                val graphics3D = Graphics3D()
-                feature.onLevelRendering(graphics3D)
-                graphics3D.commands()
+                feature.handleRender3D()
             }
         }
-        // 全ての Feature からの結果を待ち、一つのリストに統合して返す
+        // 全ての結果をマージ
         deferredCommands.awaitAll().flatten()
     }
 
     private suspend fun collectAndGroupRenderCommands(
-        deltaTracker: DeltaTracker,
-        block: (LocalFeature, Graphics2D) -> Int,
+        timing: LocalFeature.RenderUiTiming,
     ): LinkedList<Pair<Int, List<RenderCommand2D>>> = coroutineScope {
         val tempQueue = PriorityBlockingQueue<InternalCommandWrapper>(256, compareBy { it.priority })
 
         enabledFeatures().map { feature ->
             async(Dispatchers.Default) {
-                val graphics2D = Graphics2D(deltaTracker)
-                val priority = block(feature, graphics2D)
-                val cmd = graphics2D.commands()
+                // Feature側の新しいメソッドを利用
+                val cmd = feature.handleRender2D(timing)
+
                 if (cmd.isNotEmpty()) {
-                    tempQueue.add(InternalCommandWrapper(priority, cmd.toList()))
+                    val priority = if (timing == LocalFeature.RenderUiTiming.Start) {
+                        feature.renderPriority.start
+                    } else {
+                        feature.renderPriority.end
+                    }
+
+                    tempQueue.add(InternalCommandWrapper(priority, cmd))
                 }
             }
         }.awaitAll()
 
+        // 優先度順にグルーピング
         val result = LinkedList<Pair<Int, List<RenderCommand2D>>>()
         while (tempQueue.isNotEmpty()) {
             val wrapper = tempQueue.poll() ?: break
@@ -99,13 +92,7 @@ abstract class LocalCategory : Category<KClass<out LocalFeature>, LocalFeature>(
         result
     }
 
-    fun registerAllActions(): List<LocalFeature.BindingPair> {
-        val result = mutableListOf<LocalFeature.BindingPair>()
-        features.values.forEach {
-            result.addAll(it.registerAllActions())
-        }
-        return result.toList()
-    }
+    fun registerAllActions(): List<LocalFeature.BindingPair> = features.values.flatMap { it.registerAllActions() }
 
     private data class InternalCommandWrapper(val priority: Int, val commands: List<RenderCommand2D>)
 }

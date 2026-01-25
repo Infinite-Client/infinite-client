@@ -31,14 +31,18 @@ sealed class InventoryIndex : MinecraftInterface() {
         override fun toContainerSlot(): Int = index + 9
     }
 
-    data class Armor(val slot: ArmorSlot) : InventoryIndex() {
-        enum class ArmorSlot { Head, Chest, Legs, Feet }
-
-        override fun toContainerSlot(): Int = when (slot) {
-            ArmorSlot.Head -> 5
-            ArmorSlot.Chest -> 6
-            ArmorSlot.Legs -> 7
-            ArmorSlot.Feet -> 8
+    sealed class Armor : InventoryIndex() {
+        object Head : Armor() {
+            override fun toContainerSlot(): Int = 5
+        }
+        object Chest : Armor() {
+            override fun toContainerSlot(): Int = 6
+        }
+        object Legs : Armor() {
+            override fun toContainerSlot(): Int = 7
+        }
+        object Foots : Armor() {
+            override fun toContainerSlot(): Int = 8
         }
     }
 }

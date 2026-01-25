@@ -72,7 +72,7 @@ object ConfigManager : MinecraftInterface() {
     }
 
     // --- Save ---
-    private fun ensureGlobal() {
+    fun ensureGlobal() {
         InfiniteClient.globalFeatures.categories.values.forEach { category ->
             category.features.values.forEach { feature ->
                 feature.ensureAllPropertiesRegistered()
@@ -80,7 +80,7 @@ object ConfigManager : MinecraftInterface() {
         }
     }
 
-    private fun ensureLocal() {
+    fun ensureLocal() {
         InfiniteClient.localFeatures.categories.values.forEach { category ->
             category.features.values.forEach { feature ->
                 feature.ensureAllPropertiesRegistered()
@@ -118,31 +118,32 @@ object ConfigManager : MinecraftInterface() {
      * あらゆる階層の FeatureData やネストした Map を、
      * シリアライザーが解釈できる Map<String, Any?> に再帰的に変換します。
      */
-    private fun deepConvert(data: Any?): Any? {
-        return when (data) {
-            // FeatureData クラスをプレーンな Map に変換
-            is Feature.FeatureData -> mapOf(
-                "enabled" to data.enabled,
-                "properties" to deepConvert(data.properties),
-            )
+    private fun deepConvert(data: Any?): Any? = when (data) {
+        // FeatureData クラスをプレーンな Map に変換
+        is Feature.FeatureData -> mapOf(
+            "enabled" to data.enabled,
+            "properties" to deepConvert(data.properties),
+        )
 
-            // Map の場合は中身を再帰的に変換
-            is Map<*, *> -> data.entries.associate {
-                it.key.toString() to deepConvert(it.value)
-            }
-
-            // リスト等の場合は各要素を再帰的に変換
-            is Iterable<*> -> data.map { deepConvert(it) }
-
-            // それ以外（String, Number, Boolean, null）はそのまま返す
-            else -> data
+        // Map の場合は中身を再帰的に変換
+        is Map<*, *> -> data.entries.associate {
+            it.key.toString() to deepConvert(it.value)
         }
+
+        // リスト等の場合は各要素を再帰的に変換
+        is Iterable<*> -> data.map { deepConvert(it) }
+
+        // それ以外（String, Number, Boolean, null）はそのまま返す
+        else -> data
     }
 
     private fun Any?.toJsonElement(): JsonElement = when (this) {
         null -> JsonNull
+
         is String -> JsonPrimitive(this)
+
         is Number -> JsonPrimitive(this)
+
         is Boolean -> JsonPrimitive(this)
 
         // FeatureData が直接渡された場合のハンドリング
@@ -171,15 +172,17 @@ object ConfigManager : MinecraftInterface() {
         ensureGlobal()
         val file = File(baseDir, "global.json")
         if (file.exists()) applyData(InfiniteClient.globalFeatures, load(file))
+        saveGlobal()
     }
 
     fun loadLocal() {
-        ensureLocal()
         InfiniteClient.localFeatures.reset()
+        ensureLocal()
         getLocalPath()?.let { path ->
             val file = File(baseDir, "local/$path/local.json")
             if (file.exists()) applyData(InfiniteClient.localFeatures, load(file))
         }
+        saveLocal()
     }
 
     private fun load(file: File): Map<String, Any?> = try {

@@ -116,7 +116,14 @@ class QuickMoveFeature : LocalFeature() {
 
     // 移動モードを定義し、処理の優先順位と状態を明確にする
     private enum class MoveMode {
-        None, Ground, Swimming, Water, Lava, Air, Gliding, Vehicle,
+        None,
+        Ground,
+        Swimming,
+        Water,
+        Lava,
+        Air,
+        Gliding,
+        Vehicle,
     }
 
     private val accelerationConstant by property(

@@ -9,12 +9,13 @@ import kotlin.reflect.KClass
 /**
  * Global（クライアント起動から終了まで生存）なカテゴリー管理の基底クラス
  */
-abstract class GlobalFeatureCategories : FeatureCategories<
-    KClass<out GlobalFeature>,
-    GlobalFeature,
-    KClass<out GlobalCategory>,
-    GlobalCategory,
-    >() {
+abstract class GlobalFeatureCategories :
+    FeatureCategories<
+        KClass<out GlobalFeature>,
+        GlobalFeature,
+        KClass<out GlobalCategory>,
+        GlobalCategory,
+        >() {
 
     // ライフサイクル管理用のスコープ
     protected val lifecycleScope = CoroutineScope(Dispatchers.Default + SupervisorJob())

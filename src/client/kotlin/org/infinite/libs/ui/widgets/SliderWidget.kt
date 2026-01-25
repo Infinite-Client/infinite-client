@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
+import org.infinite.utils.alpha
 import org.infinite.utils.mix
 
 abstract class SliderWidget<T>(
@@ -21,20 +22,19 @@ abstract class SliderWidget<T>(
     protected abstract val maxValue: T
     protected abstract var value: T
 
-    // T型をDoubleに変換するロジック（描画・計算用）
     protected fun T.toDoubleValue(): Double = this.toDouble()
-
-    // DoubleをT型に変換するロジック（値更新用）
-    // 具体的な型変換（v.toInt() 等）は継承先（NumberPropertyWidget等）で実装させる
     protected abstract fun convertToType(v: Double): T
 
     private var isDragging = false
 
+    // テーマと共通のアニメーション用に進捗を管理（任意でLerpを挟むとより滑らかになります）
     private val progress: Double
         get() = (
             (value.toDoubleValue() - minValue.toDoubleValue()) /
                 (maxValue.toDoubleValue() - minValue.toDoubleValue())
             ).coerceIn(0.0, 1.0)
+
+    private val themeScheme get() = InfiniteClient.theme.colorScheme
 
     override fun onClick(mouseButtonEvent: MouseButtonEvent, bl: Boolean) {
         isDragging = true
@@ -52,62 +52,74 @@ abstract class SliderWidget<T>(
     }
 
     private fun updateValueFromMouse(mouseX: Double) {
-        // --- レイアウト計算で定義した margin と knobSize を考慮 ---
-        val margin = height * 0.15f
-        val knobSize = height * 0.7f
-        val trackWidth = width - (margin * 2) - knobSize
-
-        // マウス位置から進捗率を計算（ノブの中心がマウスに来るように調整）
-        val relativeMouseX = mouseX - (x + margin + knobSize / 2f)
-        val nextProgress = (relativeMouseX / trackWidth).coerceIn(0.0, 1.0)
-
-        // 進捗から実数値を計算し、抽象メソッド経由で型変換して代入
+        val trackX = x + 4f
+        val trackWidth = width - 8f
+        val nextProgress = ((mouseX - trackX) / trackWidth).coerceIn(0.0, 1.0)
         val nextDoubleValue =
             minValue.toDoubleValue() + (maxValue.toDoubleValue() - minValue.toDoubleValue()) * nextProgress
         value = convertToType(nextDoubleValue)
     }
 
     fun render(graphics2D: Graphics2D) {
-        val colorScheme = InfiniteClient.theme.colorScheme
-
-        val margin = height * 0.15f
-        val barHeight = height * 0.2f
-        val barY = y + (height - barHeight) / 2f
-        val knobSize = height * 0.7f
-        val knobY = y + (height - knobSize) / 2f
+        val trackX = x + 2f
+        val trackY = y + height / 2f - 2f
+        val trackW = width - 4f
+        val trackH = 4f
+        val trackRadius = trackH / 2f
 
         val currentProgress = progress.toFloat()
-        val trackWidth = width - (margin * 2) - knobSize
-        val currentKnobX = (x + margin) + trackWidth * currentProgress
+        val knobX = trackX + (trackW * currentProgress)
+        val knobY = y + height / 2f
+        val knobRadius = (
+            if (isDragging) {
+                6f
+            } else if (isHovered) {
+                5f
+            } else {
+                4f
+            }
+            )
 
-        // --- 背景バーの描画 ---
-        val barStartX = x + margin
-        val barEndX = x + width - margin
-        val knobCenter = currentKnobX + (knobSize / 2f)
+        // --- 1. トラック（背景）の描画 ---
+        // 背景より少し明るい色で溝を表現
+        graphics2D.fillStyle = themeScheme.surfaceColor.mix(themeScheme.backgroundColor, 0.5f)
+        graphics2D.fillRoundedRect(trackX, trackY, trackW, trackH, trackRadius)
 
-        graphics2D.fillStyle = if (isHovered || isDragging) colorScheme.accentColor else colorScheme.secondaryColor
-        graphics2D.fillRect(barStartX, barY, knobCenter - barStartX, barHeight)
+        // --- 2. 塗りつぶし部分（アクセント色） ---
+        // 有効ならアクセントカラー、無効ならセカンダリカラー
+        val barColor = if (active) themeScheme.accentColor else themeScheme.secondaryColor
+        graphics2D.fillStyle = barColor.alpha(if (isDragging) 255 else 200)
+        graphics2D.fillRoundedRect(trackX, trackY, trackW * currentProgress, trackH, trackRadius)
 
-        graphics2D.fillStyle = colorScheme.backgroundColor
-        graphics2D.fillRect(knobCenter, barY, barEndX - knobCenter, barHeight)
+        // --- 3. ノブ（つまみ）とグローエフェクト ---
+        val hoverAlpha = if (isDragging) {
+            1.0f
+        } else if (isHovered) {
+            0.6f
+        } else {
+            0.0f
+        }
 
-        // --- ノブの描画 ---
-        val knobBorder = knobSize * 0.15f
-        val mixFactor = if (isDragging) 1f else if (isHovered) 0.5f else 0f
-        val currentKnobColor = colorScheme.foregroundColor.mix(colorScheme.accentColor, mixFactor)
-        val currentStrokeColor = colorScheme.secondaryColor.mix(colorScheme.accentColor, mixFactor)
+        graphics2D.fillStyle = barColor.alpha((60 * hoverAlpha).toInt())
+        graphics2D.fillCircle(knobX, knobY, knobRadius + 3f)
 
-        graphics2D.strokeStyle.width = knobBorder
-        graphics2D.strokeStyle.color = currentStrokeColor
-        graphics2D.strokeRect(currentKnobX, knobY, knobSize, knobSize)
+        // ノブ本体
+        // ドラッグ中はアクセントカラー、それ以外は文字色に近い色で描画
+        val knobColor = if (isDragging) {
+            themeScheme.accentColor
+        } else {
+            themeScheme.foregroundColor.mix(themeScheme.accentColor, hoverAlpha * 0.3f)
+        }
 
-        graphics2D.fillStyle = currentKnobColor
-        graphics2D.fillRect(
-            currentKnobX + knobBorder / 2f,
-            knobY + knobBorder / 2f,
-            knobSize - knobBorder,
-            knobSize - knobBorder,
-        )
+        graphics2D.fillStyle = knobColor
+        graphics2D.fillCircle(knobX, knobY, knobRadius)
+
+        // ノブの縁取り
+        graphics2D.strokeStyle.apply {
+            width = 1f
+            color = themeScheme.backgroundColor.alpha(100)
+        }
+        graphics2D.strokeCircle(knobX, knobY, knobRadius)
     }
 
     override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
@@ -116,5 +128,7 @@ abstract class SliderWidget<T>(
         renderer.flush()
     }
 
-    override fun updateWidgetNarration(output: NarrationElementOutput) = defaultButtonNarrationText(output)
+    override fun updateWidgetNarration(output: NarrationElementOutput) {
+        defaultButtonNarrationText(output)
+    }
 }

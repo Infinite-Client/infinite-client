@@ -78,8 +78,10 @@ open class Feature : MinecraftInterface() {
             if (isEnabled) {
                 resolveDependencies()
                 onEnabled()
+                onToggle()
             } else {
                 onDisabled()
+                onToggle()
             }
         }
     }
@@ -95,27 +97,27 @@ open class Feature : MinecraftInterface() {
     }
 
     private var propertiesInitialized = false // 初期化済みフラグ
+
     fun ensureAllPropertiesRegistered() {
         if (propertiesInitialized) return
         propertiesInitialized = true
-
-        // memberProperties の各要素は KProperty1<out Feature, *> 型
+        // Feature クラスのすべてのプロパティを走査
         this::class.memberProperties.forEach { prop ->
             try {
                 prop.isAccessible = true
-
-                // 'out projection' による制限を回避するため、
-                // 敢えて抽象的な型 (KProperty1<Any, *>) にキャストしてから get を呼ぶ
+                // KProperty1<Feature, *> であることを確認して get(this) を呼ぶ
+                // これにより Delegate.getValue() が走り、内部で register() が実行される
                 @Suppress("UNCHECKED_CAST")
-                val callableProp = prop as? kotlin.reflect.KProperty1<Any, *>
-                callableProp?.get(this)
+                (prop as kotlin.reflect.KProperty1<Any, *>).get(this)
             } catch (_: Exception) {
+                // Globalについては、何も起こらない。
             }
         }
     }
 
     open fun onEnabled() {}
     open fun onDisabled() {}
+    open fun onToggle() {}
     fun enable() {
         if (isEnabled()) return
         startResolver()
@@ -183,12 +185,10 @@ open class Feature : MinecraftInterface() {
     }
 
     fun translation(): String = translationKey
-    fun translation(p: String): String? {
-        return if (_properties[p] == null) {
-            null
-        } else {
-            translationKey + "." + p.toLowerSnakeCase()
-        }
+    fun translation(p: String): String? = if (_properties[p] == null) {
+        null
+    } else {
+        translationKey + "." + p.toLowerSnakeCase()
     }
 
     @Suppress("UNCHECKED_CAST")

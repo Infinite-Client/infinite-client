@@ -2,7 +2,8 @@ package org.infinite.libs.ui.theme
 
 open class ColorScheme {
     enum class SchemeType {
-        Dark, Light
+        Dark,
+        Light,
     }
 
     open val backgroundColor: Int
@@ -17,7 +18,9 @@ open class ColorScheme {
         }
     open val surfaceColor: Int
         get() = when (schemeType) {
-            SchemeType.Dark -> color(0f, 0f, 0.15f, 1f) // 少し明るい黒
+            SchemeType.Dark -> color(0f, 0f, 0.15f, 1f)
+
+            // 少し明るい黒
             SchemeType.Light -> color(0f, 0f, 0.95f, 1f) // 少し暗い白
         }
 
@@ -32,9 +35,7 @@ open class ColorScheme {
     // --- 追加: 状態変化用ヘルパー ---
 
     /** 指定した色をマウスホバー用に少し明るく/強調する */
-    fun getHoverColor(baseColor: Int): Int {
-        return interpolate(baseColor, whiteColor, 0.2f)
-    }
+    fun getHoverColor(baseColor: Int): Int = interpolate(baseColor, whiteColor, 0.2f)
 
     open val schemeType = SchemeType.Dark
     open val redColor: Int = 0xFFFF0000.toInt()
@@ -92,11 +93,9 @@ open class ColorScheme {
         return (resA shl 24) or (resR shl 16) or (resG shl 8) or resB
     }
 
-    private fun adjustLightness(color: Int, l: Float): Int {
-        return if (l < 0.5f) {
-            interpolate(blackColor, color, l * 2f)
-        } else {
-            interpolate(color, whiteColor, (l - 0.5f) * 2f)
-        }
+    private fun adjustLightness(color: Int, l: Float): Int = if (l < 0.5f) {
+        interpolate(blackColor, color, l * 2f)
+    } else {
+        interpolate(color, whiteColor, (l - 0.5f) * 2f)
     }
 }

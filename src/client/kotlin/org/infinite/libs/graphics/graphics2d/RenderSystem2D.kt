@@ -2,13 +2,7 @@ package org.infinite.libs.graphics.graphics2d
 
 import net.minecraft.client.gui.GuiGraphics
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
-import org.infinite.libs.graphics.graphics2d.system.BlockRenderer
-import org.infinite.libs.graphics.graphics2d.system.ItemRenderer
-import org.infinite.libs.graphics.graphics2d.system.QuadRenderer
-import org.infinite.libs.graphics.graphics2d.system.RectRenderer
-import org.infinite.libs.graphics.graphics2d.system.TextRenderer
-import org.infinite.libs.graphics.graphics2d.system.TextureRenderer
-import org.infinite.libs.graphics.graphics2d.system.TriangleRenderer
+import org.infinite.libs.graphics.graphics2d.system.*
 
 class RenderSystem2D(
     private val gui: GuiGraphics,
@@ -22,7 +16,10 @@ class RenderSystem2D(
     private val blockRenderer = BlockRenderer(gui)
 
     fun render(commands: List<RenderCommand2D>) {
-        commands.forEach { executeCommand(it) }
+        for (i in 0 until commands.size) {
+            val command = commands[i]
+            executeCommand(command)
+        }
     }
 
     private fun executeCommand(command: RenderCommand2D) {
@@ -49,7 +46,7 @@ class RenderSystem2D(
             }
 
             is RenderCommand2D.Transform -> {
-//                gui.pose().transform(command.m00, command.m10, command.m01, command.m11, command.m02, command.m12)
+                gui.pose().transform(command.vec)
             }
 
             is RenderCommand2D.ResetTransform -> {
@@ -68,6 +65,7 @@ class RenderSystem2D(
 
             // --- 移譲 (Delegation) ---
             is RenderCommand2D.DrawTexture -> textureRenderer.drawTexture(command)
+
             is RenderCommand2D.RenderItem -> itemRenderer.drawItem(command)
 
             is RenderCommand2D.FillRect -> {
@@ -122,44 +120,48 @@ class RenderSystem2D(
                 }
             }
 
-            is RenderCommand2D.Text -> {
-                textRenderer.text(
-                    command.font,
-                    command.text,
-                    command.x,
-                    command.y,
-                    command.color,
-                    command.size,
-                    command.shadow,
-                )
-            }
+            is RenderCommand2D.AbstractText -> {
+                when (command) {
+                    is RenderCommand2D.Text -> {
+                        textRenderer.text(
+                            command.font,
+                            command.text,
+                            command.x,
+                            command.y,
+                            command.color,
+                            command.size,
+                            command.shadow,
+                        )
+                    }
 
-            is RenderCommand2D.TextCentered -> {
-                textRenderer.textCentered(
-                    command.font,
-                    command.text,
-                    command.x,
-                    command.y,
-                    command.color,
-                    command.size,
-                    command.shadow,
-                )
-            }
+                    is RenderCommand2D.TextCentered -> {
+                        textRenderer.textCentered(
+                            command.font,
+                            command.text,
+                            command.x,
+                            command.y,
+                            command.color,
+                            command.size,
+                            command.shadow,
+                        )
+                    }
 
-            is RenderCommand2D.TextRight -> {
-                textRenderer.textRight(
-                    command.font,
-                    command.text,
-                    command.x,
-                    command.y,
-                    command.color,
-                    command.size,
-                    command.shadow,
-                )
+                    is RenderCommand2D.TextRight -> {
+                        textRenderer.textRight(
+                            command.font,
+                            command.text,
+                            command.x,
+                            command.y,
+                            command.color,
+                            command.size,
+                            command.shadow,
+                        )
+                    }
+                }
             }
 
             is RenderCommand2D.RenderBlock -> {
-                blockRenderer.block(command.block, command.x, command.y, command.size)
+                blockRenderer.block(command.block!!, command.x, command.y, command.size)
             }
         }
     }

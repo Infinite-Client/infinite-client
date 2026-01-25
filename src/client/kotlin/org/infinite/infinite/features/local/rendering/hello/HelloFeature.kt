@@ -43,7 +43,10 @@ class HelloFeature : LocalFeature() {
 
     @Suppress("Unused")
     enum class TestEnum {
-        A, B, C, D
+        A,
+        B,
+        C,
+        D,
     }
 
     @Suppress("Unused")
@@ -175,7 +178,7 @@ class HelloFeature : LocalFeature() {
         graphics2D.projectWorldToScreen(pos)?.let { (screenX, screenY) ->
             graphics2D.push()
             graphics2D.fillStyle = 0xFF00FF00.toInt()
-            graphics2D.textCentered("YOU", screenX.toFloat(), screenY.toFloat() - 10f)
+            graphics2D.textCentered("YOU", screenX, screenY - 10f)
             graphics2D.pop()
         }
         graphics2D.push()
@@ -197,8 +200,8 @@ class HelloFeature : LocalFeature() {
         }
     }
 
-    override fun onLevelRendering(graphics3D: Graphics3D): Graphics3D {
-        val currentPlayer = player ?: return graphics3D
+    override fun onLevelRendering(graphics3D: Graphics3D) {
+        val currentPlayer = player ?: return
         val eyePos = currentPlayer.getEyePosition(1.0f)
         val forward = currentPlayer.lookAngle.normalize().scale(2.0)
         val base = eyePos.add(forward)
@@ -254,6 +257,5 @@ class HelloFeature : LocalFeature() {
         val texC = TexturedVertex(base.add(0.25, 0.25, 1.1), 1f, 1f, 0xFFFFFFFF.toInt())
         val texD = TexturedVertex(base.add(-0.25, 0.25, 1.1), 0f, 1f, 0xFFFFFFFF.toInt())
         graphics3D.rectangleTexture(texA, texB, texC, texD, texture, false)
-        return graphics3D
     }
 }

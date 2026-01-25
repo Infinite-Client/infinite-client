@@ -40,20 +40,23 @@ object InventorySystem : MinecraftInterface() {
      * 内部配列(Inventoryクラス)のインデックスに変換するヘルパー
      * ※toContainerSlot(メニュー用)とは番号が異なります
      */
-    private fun indexToInventoryArray(index: InventoryIndex): Int {
-        return when (index) {
-            is InventoryIndex.Hotbar -> index.index
-            is InventoryIndex.Backpack -> index.index + 9
-            is InventoryIndex.Armor -> when (index.slot) {
-                InventoryIndex.Armor.ArmorSlot.Feet -> 0
-                InventoryIndex.Armor.ArmorSlot.Legs -> 1
-                InventoryIndex.Armor.ArmorSlot.Chest -> 2
-                InventoryIndex.Armor.ArmorSlot.Head -> 3
-            }
+    private fun indexToInventoryArray(index: InventoryIndex): Int = when (index) {
+        is InventoryIndex.Hotbar -> index.index
 
-            is InventoryIndex.OffHand -> 0 // offhandは別の配列(offhandList)のため、使用箇所で注意が必要
-            is InventoryIndex.MainHand -> player?.inventory?.selectedSlot ?: 0
-        }
+        is InventoryIndex.Backpack -> index.index + 9
+
+        is InventoryIndex.Armor.Foots -> 0
+
+        is InventoryIndex.Armor.Legs -> 1
+
+        is InventoryIndex.Armor.Chest -> 2
+
+        is InventoryIndex.Armor.Head -> 3
+
+        is InventoryIndex.OffHand -> 0
+
+        // offhandは別の配列(offhandList)のため、使用箇所で注意が必要
+        is InventoryIndex.MainHand -> player?.inventory?.selectedSlot ?: 0
     }
 
     // --- 以下、以前の実装と同様 ---
@@ -109,6 +112,8 @@ object InventorySystem : MinecraftInterface() {
         if (getItem(InventoryIndex.OffHand).`is`(item)) return InventoryIndex.OffHand
         return null
     }
+
+    fun cursorItem(): ItemStack = minecraft.player?.containerMenu?.carried ?: ItemStack.EMPTY
 
     /**
      * 空きスロットの総数

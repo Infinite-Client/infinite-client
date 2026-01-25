@@ -18,7 +18,10 @@ class XRayFeature : LocalFeature() {
     override val defaultToggleKey: Int = GLFW.GLFW_KEY_X
 
     enum class Method {
-        OnlyExposed, Full, TransparencyExposed, TransparencyFull,
+        OnlyExposed,
+        Full,
+        TransparencyExposed,
+        TransparencyFull,
     }
 
     val method by property(EnumSelectionProperty(Method.Full))
@@ -176,9 +179,7 @@ class XRayFeature : LocalFeature() {
         minecraft.levelRenderer.allChanged()
     }
 
-    fun getBlockId(state: BlockState): String {
-        return BuiltInRegistries.BLOCK.getKey(state.block).toString()
-    }
+    fun getBlockId(state: BlockState): String = BuiltInRegistries.BLOCK.getKey(state.block).toString()
 
     fun getNeighborBlockId(world: BlockGetter, pos: BlockPos, direction: Direction): String {
         val neighborPos = pos.relative(direction)
@@ -189,9 +190,7 @@ class XRayFeature : LocalFeature() {
     /**
      * 指定された FluidState から ID (例: "minecraft:water") を抽出します。
      */
-    fun getFluidId(state: FluidState): String {
-        return BuiltInRegistries.FLUID.getKey(state.type).toString()
-    }
+    fun getFluidId(state: FluidState): String = BuiltInRegistries.FLUID.getKey(state.type).toString()
 
     /**
      * LiquidBlockRenderer 用の X-Ray 判定ロジック
@@ -244,7 +243,7 @@ class XRayFeature : LocalFeature() {
         }
 
         return when (method.value) {
-            Method.OnlyExposed -> isOreCurrent && isExposedAnywhere || isThroughCurrent
+            Method.OnlyExposed -> (isOreCurrent && isExposedAnywhere) || isThroughCurrent
             Method.TransparencyExposed -> (isOreCurrent && isExposedAnywhere) || original || isThroughCurrent
             Method.Full -> isOreCurrent || isThroughCurrent
             Method.TransparencyFull -> isOreCurrent || isThroughCurrent || original

@@ -1,5 +1,5 @@
 # gradle
-
+.kotlin/
 .gradle/
 build/
 out/
@@ -38,3 +38,8 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+
+# Infinite Client
+
+/src/main/java-generated/

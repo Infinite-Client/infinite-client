@@ -20,13 +20,11 @@ class EspFeature : LocalFeature() {
     private val mobEsp by property(BooleanProperty(true))
     private val itemEsp by property(BooleanProperty(true))
 
-    fun isShouldApply(entity: Entity): Boolean {
-        return when (entity) {
-            is Player -> playerEsp.value
-            is ItemEntity, is ExperienceOrb -> itemEsp.value
-            is LivingEntity -> mobEsp.value
-            else -> false
-        }
+    fun isShouldApply(entity: Entity): Boolean = when (entity) {
+        is Player -> playerEsp.value
+        is ItemEntity, is ExperienceOrb -> itemEsp.value
+        is LivingEntity -> mobEsp.value
+        else -> false
     }
 
     /**
@@ -39,6 +37,7 @@ class EspFeature : LocalFeature() {
             // ベースとなる色の決定
             return when (entity) {
                 is Player -> colorScheme.accentColor
+
                 is ItemEntity -> {
                     when (entity.item.rarity) {
                         Rarity.COMMON -> colorScheme.whiteColor
@@ -49,7 +48,9 @@ class EspFeature : LocalFeature() {
                 }
 
                 is Enemy -> colorScheme.redColor
+
                 is Animal, is Npc -> colorScheme.greenColor
+
                 else -> colorScheme.yellowColor
             }
         }

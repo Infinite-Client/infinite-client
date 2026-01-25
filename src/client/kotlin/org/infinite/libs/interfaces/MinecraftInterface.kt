@@ -9,7 +9,7 @@ import net.minecraft.client.player.LocalPlayer
 
 open class MinecraftInterface {
     protected val minecraft: Minecraft
-        get() = Minecraft.getInstance()
+        by lazy { Minecraft.getInstance() }
     protected val player: LocalPlayer?
         get() = minecraft.player
     protected val input: ClientInput?
@@ -17,7 +17,7 @@ open class MinecraftInterface {
     protected val level: ClientLevel?
         get() = minecraft.level
     protected val options: Options
-        get() = minecraft.options
+        by lazy { minecraft.options }
     protected val connection: ClientPacketListener?
         get() = minecraft.connection
 }

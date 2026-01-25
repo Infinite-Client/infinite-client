@@ -5,34 +5,53 @@ import net.minecraft.core.Direction
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket
 import net.minecraft.world.item.Items
 import org.infinite.libs.core.features.feature.LocalFeature
+import org.infinite.libs.core.features.property.number.IntProperty
 
 class QuickShotFeature : LocalFeature() {
     override val featureType = FeatureLevel.Utils
+
+    // チャージ完了からのオフセット (正の値で遅延、負の値で早期発射)
+    private val intervalShift by property(IntProperty(0, -20, 20))
+
     override fun onStartTick() {
         val player = player ?: return
 
-        // 1. プレイヤーがアイテムを使用中（右クリック押しっぱなし）か確認
+        // 1. プレイヤーがアイテムを使用中か確認
         if (!player.isUsingItem) return
 
-        // 2. 使用中のアイテムが「弓」であることを確認
         val itemStack = player.useItem
-        val shootableItems = listOf(Items.BOW, Items.TRIDENT)
-        if (shootableItems.contains(itemStack.item)) {
-            // 3. チャージ時間を取得 (弓の最大チャージは通常20 ticks)
-            val useDuration = player.ticksUsingItem
+        val useDuration = itemStack.getUseDuration(player)
 
-            // 20ティック以上チャージされていたら即座に放つ
-            // ※ラグを考慮して19〜20で調整するとよりスムーズになる場合があります
-            if (useDuration >= 20) {
-                releaseBow()
+        // 2. 現在のチャージ経過時間を取得
+        val currentDuration = useDuration - player.useItemRemainingTicks
+
+        // 3. 各アイテムの目標チャージ時間に intervalShift を適用して判定
+        val shouldRelease = when (itemStack.item) {
+            Items.BOW -> {
+                val target = 20 + intervalShift.value
+                currentDuration >= target
             }
+
+            Items.TRIDENT -> {
+                val target = 10 + intervalShift.value
+                currentDuration >= target
+            }
+
+            else -> false
+        }
+
+        // 4. 条件を満たしたら実行
+        if (shouldRelease) {
+            releaseBow()
         }
     }
 
     private fun releaseBow() {
-        // サーバー側に「右クリックを離した」ことを通知するパケットを送信
-        // これにより、クライアント側で指を離さなくても矢が放たれます
-        connection?.send(
+        val player = player ?: return
+        val connection = connection ?: return
+
+        // サーバーに「手を離した」ことを通知
+        connection.send(
             ServerboundPlayerActionPacket(
                 ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM,
                 BlockPos.ZERO,
@@ -40,7 +59,7 @@ class QuickShotFeature : LocalFeature() {
             ),
         )
 
-        // クライアント側の内部状態もリセット（アニメーションの同期など）
-        player?.stopUsingItem()
+        // クライアント側の使用状態を停止
+        player.stopUsingItem()
     }
 }

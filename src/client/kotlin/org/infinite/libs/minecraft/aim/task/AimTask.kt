@@ -22,8 +22,7 @@ open class AimTask(
     val onSuccess: () -> Unit = {},
     val onFailure: () -> Unit = {},
 ) : MinecraftInterface() {
-    private fun mouseSensitivity(): Double =
-        options.sensitivity().get()
+    private fun mouseSensitivity(): Double = options.sensitivity().get()
     private var rollVelocity = CameraRoll(0.0, 0.0)
     private var duration = (1000 / 30).toLong()
     private var time = System.currentTimeMillis()
@@ -88,7 +87,7 @@ open class AimTask(
         val scaledSensitivity = (mouseSensitivity().coerceAtLeast(0.1)) * multiply
 
         // 【修正】すべてのMethodで基準となる最大移動速度を定義する（Linearのscaler=10を基準とする）
-        val baseMaxSpeed = (duration * scaledSensitivity / 10)
+        val baseMaxSpeed = duration * scaledSensitivity
 
         val result =
             when (calcMethod) {
@@ -152,6 +151,7 @@ open class AimTask(
         val xRot = player.xRot
         setAim(player, CameraRoll(yRot + roll.yRot, xRot + roll.xRot))
     }
+
     companion object : MinecraftInterface() {
         fun calcLookAt(target: Vec3): CameraRoll {
             val player = player ?: return CameraRoll.Zero
@@ -181,8 +181,7 @@ open class AimTask(
         return (t - c).diffNormalize()
     }
 
-    private fun playerRoll(player: LocalPlayer): CameraRoll =
-        // 【修正】引数の順序を (Yaw, Pitch) に統一
+    private fun playerRoll(player: LocalPlayer): CameraRoll = // 【修正】引数の順序を (Yaw, Pitch) に統一
         CameraRoll(player.yRot.toDouble(), player.xRot.toDouble())
 
     private fun setAim(player: LocalPlayer, roll: CameraRoll) {
