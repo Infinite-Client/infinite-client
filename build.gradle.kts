@@ -206,7 +206,8 @@ rustTargets.forEach { (id, targetTriple) ->
         group = "build"
         description = "Build Rust library for $id ($targetTriple) using zigbuild"
         workingDir = rustProjectDir
-
+        // 追加: Rustのソースコード全体を監視対象にする
+        inputs.dir(rustProjectDir.resolve("rust/infinite-client/"))
         // 開発環境に cargo-zigbuild がインストールされている必要があります
         commandLine("cargo", "zigbuild", "--release", "--target", targetTriple)
 
