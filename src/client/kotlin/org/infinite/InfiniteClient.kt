@@ -18,6 +18,7 @@ import org.infinite.infinite.ui.screen.GlobalCarouselFeatureCategoriesScreen
 import org.infinite.infinite.ui.screen.GlobalListFeatureCategoriesScreen
 import org.infinite.infinite.ui.screen.LocalCarouselFeatureCategoriesScreen
 import org.infinite.infinite.ui.screen.LocalListFeatureCategoriesScreen
+import org.infinite.libs.addon.InfiniteAddon
 import org.infinite.libs.config.ConfigManager
 import org.infinite.libs.core.features.Category
 import org.infinite.libs.core.features.Feature
@@ -64,6 +65,22 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
         }
     }
 
+    private fun loadAddons() {
+        val loader = net.fabricmc.loader.api.FabricLoader.getInstance()
+        // fabric.mod.json の "entrypoint" -> "infinite_addon" を探す
+        val containers = loader.getEntrypointContainers("infinite_addon", InfiniteAddon::class.java)
+        for (container in containers) {
+            val modId = container.provider.metadata.id
+            try {
+                val addon = container.entrypoint
+                addon.onInitializeAddon(this)
+                LogSystem.info("Successfully loaded Infinite addon from: $modId")
+            } catch (e: Exception) {
+                LogSystem.error("Failed to load Infinite addon from mod: $modId, $e")
+            }
+        }
+    }
+
     /**
      * ハッシュマップを使用して $O(1)$ でFeatureインスタンスを取得します。
      * * @param category 検索対象のカテゴリクラス (Key)
@@ -106,6 +123,7 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
     override fun onInitializeClient() {
         LogSystem.init()
         LibInfiniteClient.loadNativeLibrary()
+        loadAddons()
         InfiniteCommand.register()
         themeManager.register(InfiniteTheme())
         themeManager.register(StylishTheme())
