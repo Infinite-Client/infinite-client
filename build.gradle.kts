@@ -2,11 +2,11 @@ import net.ltgt.gradle.errorprone.errorprone
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
 
-buildscript {
-    dependencies {
-        classpath("com.guardsquare:proguard-gradle:${property("proguard_version")}")
-    }
-}
+// buildscript {
+//    dependencies {
+//        classpath("com.guardsquare:proguard-gradle:${property("proguard_version")}")
+//    }
+// }
 
 plugins {
     kotlin("jvm")
@@ -429,34 +429,4 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
             "-opt-in=kotlin.RequiresOptIn",
         )
     }
-}
-
-// build.gradle.kts の末尾付近、または optimizeJar 定義箇所を修正
-tasks.register<proguard.gradle.ProGuardTask>("optimizeJar") {
-    group = "build"
-    description = "Optimizes the remapped mod jar using ProGuard"
-
-    // 1. remapJar が完了してから実行する
-    dependsOn(tasks.remapJar)
-
-    // 2. 入力は Fabric の remapJar (配布可能な形式) を指定
-    injars(tasks.remapJar.get().archiveFile)
-
-    // 3. 出力ファイルの設定
-    val optimizedFile = layout.buildDirectory.file("libs/${project.name}-${project.version}-optimized.jar")
-    outjars(optimizedFile)
-
-    // 4. ライブラリジャ（Java 25 runtime + 依存関係）
-    val javaHome = System.getProperty("java.home")
-    libraryjars("$javaHome/jmods")
-
-    // 依存ライブラリも ProGuard に知らせる必要がある場合（必要に応じて追加）
-    // configurations.runtimeClasspath.get().files.forEach { libraryjars(it) }
-
-    // 5. 設定ファイルの読み込み
-    configuration("proguard-rules.pro")
-
-    // GradleのUP-TO-DATEチェック用
-    inputs.files(tasks.remapJar.get().archiveFile)
-    outputs.file(optimizedFile)
 }
