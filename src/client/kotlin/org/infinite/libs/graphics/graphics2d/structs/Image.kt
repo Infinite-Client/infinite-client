@@ -3,32 +3,35 @@ package org.infinite.libs.graphics.graphics2d.structs
 import com.mojang.blaze3d.platform.NativeImage
 import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
-import net.minecraft.server.packs.resources.ResourceManager
 
 class Image(
     val identifier: Identifier,
     customWidth: Int? = null,
     customHeight: Int? = null,
 ) {
-    val width: Int
-    val height: Int
-
-    init {
+    // 読み込み済みのサイズを保持するプロパティを lazy で定義
+    private val dimensions: Pair<Int, Int> by lazy {
         if (customWidth != null && customHeight != null) {
-            width = customWidth
-            height = customHeight
+            customWidth to customHeight
         } else {
-            val mc: Minecraft = Minecraft.getInstance()
-            val resourceManager: ResourceManager = mc.resourceManager
+            val mc = Minecraft.getInstance()
+            val resourceManager = mc.resourceManager
             val resource = resourceManager.getResource(identifier)
+
             if (resource.isPresent) {
-                val iconResource = resource.get()
-                val image = NativeImage.read(iconResource.open())
-                width = image.width
-                height = image.height
+                // use で確実にストリームを閉じる
+                resource.get().open().use { inputStream ->
+                    NativeImage.read(inputStream).use { image ->
+                        image.width to image.height
+                    }
+                }
             } else {
+                // エラー時のフォールバック（0,0 を返すか例外を投げるかはお好みで）
                 throw IllegalArgumentException("Image not found: $identifier")
             }
         }
     }
+
+    val width: Int get() = dimensions.first
+    val height: Int get() = dimensions.second
 }

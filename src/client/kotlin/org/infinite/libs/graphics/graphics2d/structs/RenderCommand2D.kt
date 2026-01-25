@@ -128,8 +128,4 @@ sealed interface RenderCommand2D {
         val y: Float,
         val size: Float,
     ) : RenderCommand2D
-    object BeginStencil : RenderCommand2D
-    object StartMasking : RenderCommand2D
-    object StopMasking : RenderCommand2D
-    object DisableStencil : RenderCommand2D
 }

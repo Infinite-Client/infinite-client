@@ -19,7 +19,6 @@ import kotlin.math.min
 
 /**
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
- * zIndex を排除し、呼び出し順（画家のアルゴリズム）に従って描画コマンドを保持します。
  */
 @Suppress("Unused")
 open class Graphics2D(

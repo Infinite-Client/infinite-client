@@ -1,6 +1,5 @@
 package org.infinite.libs.graphics.graphics2d
 
-import com.mojang.blaze3d.opengl.GlStateManager
 import net.minecraft.client.gui.GuiGraphics
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 import org.infinite.libs.graphics.graphics2d.system.*
@@ -156,19 +155,6 @@ class RenderSystem2D(
 
             is RenderCommand2D.RenderBlock -> {
                 blockRenderer.block(command.block, command.x, command.y, command.size)
-            }
-
-            is RenderCommand2D.BeginStencil -> {
-                GlStateManager._enableScissorTest()
-            }
-
-            is RenderCommand2D.StartMasking -> {
-            }
-
-            is RenderCommand2D.StopMasking -> {
-            }
-
-            is RenderCommand2D.DisableStencil -> {
             }
         }
     }
