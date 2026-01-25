@@ -95,13 +95,15 @@ open class LocalFeature :
         }
         return graphics2D.commands()
     }
+
     fun handleRender3D(): List<RenderCommand3D> {
         graphics3D.clear()
         onLevelRendering(graphics3D)
         return graphics3D.commands()
     }
-    private val graphics3D = Graphics3D()
-    private val graphics2D = Graphics2D()
+
+    private val graphics3D by lazy { Graphics3D() }
+    private val graphics2D by lazy { Graphics2D() }
     val renderPriority = RenderPriority(0, 0)
     protected open fun onStartUiRendering(graphics2D: Graphics2D) = Unit
     protected open fun onEndUiRendering(graphics2D: Graphics2D) = Unit

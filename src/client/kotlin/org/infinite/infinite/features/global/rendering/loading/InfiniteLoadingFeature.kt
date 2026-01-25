@@ -1,6 +1,5 @@
 package org.infinite.infinite.features.global.rendering.loading
 
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.GlobalFeature
@@ -32,7 +31,7 @@ class InfiniteLoadingFeature : GlobalFeature() {
         get() = frame.toFloat() / totalFrame.toFloat()
 
     fun handleRender(ctx: LoadingRenderContext) {
-        val g2d = Graphics2DRenderer(ctx.guiGraphics, Minecraft.getInstance().deltaTracker)
+        val g2d = Graphics2DRenderer(ctx.guiGraphics)
 
         // 背景塗りつぶし
         g2d.fillStyle = 0xFF000000.toInt()

@@ -1,6 +1,5 @@
 package org.infinite.mixin.infinite.features.global.rendering.theme;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -27,8 +26,7 @@ public abstract class ButtonBackgroundMixin extends AbstractWidget.WithInactiveM
         InfiniteClient.INSTANCE.getGlobalFeatures().getRendering().getThemeFeature();
     if (!themeFeature.isEnabled()) return;
 
-    Graphics2DRenderer renderer =
-        new Graphics2DRenderer(guiGraphics, Minecraft.getInstance().getDeltaTracker());
+    Graphics2DRenderer renderer = new Graphics2DRenderer(guiGraphics);
 
     WidgetRenderUtils.INSTANCE.renderCustomBackground(this, renderer);
 

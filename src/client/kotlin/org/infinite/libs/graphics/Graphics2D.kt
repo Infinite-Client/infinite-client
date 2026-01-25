@@ -22,9 +22,8 @@ import kotlin.math.min
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
  */
 @Suppress("Unused")
-open class Graphics2D(
-    private val deltaTracker: DeltaTracker = Minecraft.getInstance().deltaTracker,
-) : MinecraftInterface() {
+open class Graphics2D : MinecraftInterface() {
+    private val deltaTracker: DeltaTracker by lazy { Minecraft.getInstance().deltaTracker }
     val gameDelta: Float
         get() = deltaTracker.gameTimeDeltaTicks
     val realDelta: Float
