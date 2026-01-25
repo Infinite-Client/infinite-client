@@ -239,5 +239,7 @@
   "infinite.features.global.control": "Global Control Features",
   "infinite.features.global.control.ime_input_feature": "IME Input Support Feature",
   "key.infinite.features.local.movement.better_sneak_feature.toggle": "Toggle Better Sneak Feature",
-  "key.infinite.features.local.movement.fast_descent_feature.toggle": "Toggle Fast Descent Feature"
+  "key.infinite.features.local.movement.fast_descent_feature.toggle": "Toggle Fast Descent Feature",
+  "infinite.features.local.movement.keep_walk_feature": "Easy Keep Walking feature",
+  "key.infinite.features.local.movement.keep_walk_feature.toggle": "Toggle Keep Walk Feature"
 }

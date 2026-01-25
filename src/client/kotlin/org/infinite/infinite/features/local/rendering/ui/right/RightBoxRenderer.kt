@@ -9,6 +9,7 @@ import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature.Companio
 import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature.Companion.renderUltraBar
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.interfaces.MinecraftInterface
+import org.infinite.utils.Quadruple
 import org.infinite.utils.alpha
 import org.infinite.utils.mix
 
@@ -19,30 +20,33 @@ class RightBoxRenderer :
         get() = InfiniteClient.localFeatures.rendering.ultraUiFeature
 
     private var animatedFood = 0f
+    private var animatedSaturation = 0f
     private var animatedVehicle = 0f
     private var animatedAir = 0f
 
     // 幅のアニメーション用
     private var animatedWidthFactor = 1.0f
 
-    private fun updateAnimation(): Triple<Float, Float, Float> {
-        val player = player ?: return Triple(0f, 0f, 0f)
+    private fun updateAnimation(): Quadruple<Float, Float, Float, Float> {
+        val player = player ?: return Quadruple(0f, 0f, 0f, 0f)
 
         val actualFood = (player.foodData.foodLevel / 20f).coerceIn(0f, 1f)
+        val actualSaturation = (player.foodData.saturationLevel / 20f).coerceIn(0f, 1f)
         val vehicle = player.vehicle
         val actualVehicle = if (vehicle is LivingEntity) (vehicle.health / vehicle.maxHealth).coerceIn(0f, 1f) else 0f
         val actualAir = (player.airSupply.toFloat() / player.maxAirSupply.toFloat()).coerceIn(0f, 1f)
-
-        animatedFood += (actualFood - animatedFood) * 0.1f
-        animatedVehicle += (actualVehicle - animatedVehicle) * 0.1f
-        animatedAir += (actualAir - animatedAir) * 0.1f
+        val animateSpeed = 0.2f
+        animatedFood += (actualFood - animatedFood) * animateSpeed
+        animatedSaturation += (actualSaturation - animatedSaturation) * animateSpeed
+        animatedVehicle += (actualVehicle - animatedVehicle) * animateSpeed
+        animatedAir += (actualAir - animatedAir) * animateSpeed
 
         // オフハンド所持かつ利き手が左（オフハンドが右）の場合、幅を狭める
         val isOffhandOnRight = player.mainArm == HumanoidArm.LEFT && !player.offhandItem.isEmpty
         val targetFactor = if (isOffhandOnRight) 0.85f else 1.0f
         animatedWidthFactor += (targetFactor - animatedWidthFactor) * 0.5f
 
-        return Triple(actualFood, actualVehicle, actualAir)
+        return Quadruple(actualFood, actualSaturation, actualVehicle, actualAir)
     }
 
     override fun render(graphics2D: Graphics2D) {
@@ -55,7 +59,7 @@ class RightBoxRenderer :
         val bottomY = graphics2D.height.toFloat()
         val startX = graphics2D.width.toFloat()
 
-        val (actualFood, actualVehicle, actualAir) = updateAnimation()
+        val (actualFood, actualSaturation, actualVehicle, actualAir) = updateAnimation()
         val baseColor =
             colorScheme.backgroundColor.mix(colorScheme.accentColor, 0.1f)
         val baseAlpha = ultraUiFeature.alpha.value
@@ -93,7 +97,8 @@ class RightBoxRenderer :
             )
         }
 
-        draw(cH, animatedFood, actualFood, 60f, 120f)
+        draw(cH, animatedFood, actualFood, 30f, 60f)
+        draw(cH, animatedSaturation, actualSaturation, 60f, 90f)
         if (actualVehicle > 0 || animatedVehicle > 0) draw(cH * 0.6f, animatedVehicle, actualVehicle, 30f, 90f)
         if (actualAir < 1f || animatedAir > 0.01f) {
             // 1.0 (100%) で 0, 0.8 (80%) 以下で 1.0 (255) になるよう計算
