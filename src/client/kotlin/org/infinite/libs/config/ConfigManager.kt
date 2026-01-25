@@ -172,6 +172,7 @@ object ConfigManager : MinecraftInterface() {
         ensureGlobal()
         val file = File(baseDir, "global.json")
         if (file.exists()) applyData(InfiniteClient.globalFeatures, load(file))
+        saveGlobal()
     }
 
     fun loadLocal() {

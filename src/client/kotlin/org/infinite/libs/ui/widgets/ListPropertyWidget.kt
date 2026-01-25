@@ -103,9 +103,9 @@ class ListPropertyWidget<T : Any>(
         return false
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
+    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
         // 1. 背景とタイトルの描画 (PropertyWidget の基本描画)
-        super.renderWidget(guiGraphics, i, j, f)
+        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
 
         val g2d = Graphics2DRenderer(guiGraphics)
         val theme = InfiniteClient.theme
@@ -125,20 +125,20 @@ class ListPropertyWidget<T : Any>(
             } else {
                 // 通常の要素描画
                 val isHover =
-                    i >= x && i <= x + width - 10 && j >= itemY && j <= itemY + itemHeight && j >= y + headerHeight
+                    mouseX >= x && mouseX <= x + width - 10 && mouseY >= itemY && mouseY <= itemY + itemHeight && mouseY >= y + headerHeight
                 if (isHover) {
                     g2d.fillStyle = theme.colorScheme.secondaryColor.mix(theme.colorScheme.backgroundColor, 0.4f)
                     g2d.fillRect(x.toFloat(), itemY, width.toFloat() - 6f, itemHeight)
                 }
                 property.renderElement(g2d, item, x + 4, itemY.toInt() + 2, width - 35, itemHeight.toInt() - 4)
-                renderRemoveButton(g2d, itemY, i, j)
+                renderRemoveButton(g2d, itemY, mouseX, mouseY)
             }
             currentY += itemHeight
         }
 
         // 追加ボタン (編集中でない、または既存アイテムの編集中のみ表示)
         if (editingIndex != -1 || activeInputWidget == null) {
-            renderAddButton(g2d, currentY, i, j)
+            renderAddButton(g2d, currentY, mouseX, mouseY)
         } else {
             // 新規追加ボタンの入力中
             activeInputWidget?.y = currentY.toInt() + 1
@@ -149,7 +149,7 @@ class ListPropertyWidget<T : Any>(
 
         // 3. アクティブな入力ウィジェットを最前面に描画 (Scissor 外)
         g2d.flush()
-        activeInputWidget?.render(guiGraphics, i, j, f)
+        activeInputWidget?.render(guiGraphics, mouseX, mouseY, delta)
     }
 
     private fun renderScrollbar(g2d: Graphics2DRenderer) {

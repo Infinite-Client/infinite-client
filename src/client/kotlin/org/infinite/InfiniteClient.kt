@@ -13,6 +13,7 @@ import org.infinite.infinite.features.global.InfiniteGlobalFeatures
 import org.infinite.infinite.features.local.InfiniteLocalFeatures
 import org.infinite.infinite.theme.default.DefaultTheme
 import org.infinite.infinite.theme.infinite.InfiniteTheme
+import org.infinite.infinite.theme.stylish.StylishTheme
 import org.infinite.infinite.ui.screen.GlobalCarouselFeatureCategoriesScreen
 import org.infinite.infinite.ui.screen.GlobalListFeatureCategoriesScreen
 import org.infinite.infinite.ui.screen.LocalCarouselFeatureCategoriesScreen
@@ -100,13 +101,14 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
             return themeManager.getTheme(themeName)
         }
     val uiStyle: UiStyle
-        get() = globalFeatures.rendering.uiStyleFeature.style.value
+        get() = globalFeatures.rendering.themeFeature.style.value
 
     override fun onInitializeClient() {
         LogSystem.init()
         LibInfiniteClient.loadNativeLibrary()
         InfiniteCommand.register()
         themeManager.register(InfiniteTheme())
+        themeManager.register(StylishTheme())
         // 1. グローバル設定のロード
         ConfigManager.loadGlobal()
         globalFeatures.rendering.themeFeature.enable()

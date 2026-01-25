@@ -1,6 +1,7 @@
 package org.infinite.libs.graphics
 
 import net.minecraft.client.DeltaTracker
+import net.minecraft.client.Minecraft
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.phys.Vec3
@@ -13,228 +14,230 @@ import org.infinite.libs.graphics.graphics2d.structs.*
 import org.infinite.libs.graphics.graphics2d.system.Path2D
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
-import java.util.*
 import kotlin.math.PI
 import kotlin.math.min
 
 /**
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
- * zIndex を排除し、呼び出し順（画家のアルゴリズム）に従って描画コマンドを保持します。
+ * 座標指定を Float に統一し、Number 型を受け取ることで直感的なコーディングを可能にしています。
  */
 @Suppress("Unused")
-open class Graphics2D(
-    deltaTracker: DeltaTracker,
-) : MinecraftInterface() {
-    val gameDelta: Float = deltaTracker.gameTimeDeltaTicks
-    val realDelta: Float = deltaTracker.realtimeDeltaTicks // Corrected typo here
-    open val width: Int = minecraft.window.guiScaledWidth
-    open val height: Int = minecraft.window.guiScaledHeight
+open class Graphics2D : MinecraftInterface() {
+    private val deltaTracker: DeltaTracker by lazy { Minecraft.getInstance().deltaTracker }
+    val gameDelta: Float get() = deltaTracker.gameTimeDeltaTicks
+    val realDelta: Float get() = deltaTracker.realtimeDeltaTicks
+
+    open val width: Int get() = minecraft.window.guiScaledWidth
+    open val height: Int get() = minecraft.window.guiScaledHeight
+
+    // --- State ---
     var strokeStyle: StrokeStyle = StrokeStyle()
     var fillStyle: Int = 0xFFFFFFFF.toInt()
     var fillRule: FillRule = FillRule.EvenOdd
     var textStyle: TextStyle = TextStyle()
-    var enablePathGradient: Boolean = false // New property for gradient control
+    var enablePathGradient: Boolean = false
+
     val fovFactor: Float
         get() {
             val gameRenderer = minecraft.gameRenderer
             val camera = gameRenderer.mainCamera
-            val shouldAnimate = true
-            val fov = gameRenderer.getFov(camera, realDelta, shouldAnimate)
+            val fov = gameRenderer.getFov(camera, realDelta, true)
             val base = options.fov().get().toFloat()
             return fov / base
         }
-    private val commandQueue = LinkedList<RenderCommand2D>()
 
-    // Path2Dのインスタンスを追加
+    // --- Provider & Operations ---
+    private val provider = RenderCommand2DProvider()
+    private val transformations = Graphics2DTransformations(provider)
+    private val fillOperations = Graphics2DPrimitivesFill(provider, { fillStyle }, { fillRule })
+    private val strokeOperations = Graphics2DPrimitivesStroke(provider, { strokeStyle }, { enablePathGradient })
+    private val textureOperations = Graphics2DPrimitivesTexture(provider) { textStyle }
     private val path2D = Path2D()
 
-    private val transformations: Graphics2DTransformations = Graphics2DTransformations(commandQueue)
+    // --- Transformations ---
+    fun push() = transformations.push()
+    fun pop() = transformations.pop()
+    fun translate(x: Number, y: Number) = transformations.translate(x.toFloat(), y.toFloat())
+    fun rotate(angle: Number) = transformations.rotate(angle.toFloat())
+    fun rotateDegrees(degrees: Number) = rotate(Math.toRadians(degrees.toDouble()).toFloat())
+    fun scale(x: Number, y: Number) = transformations.scale(x.toFloat(), y.toFloat())
+    fun transform(x: Number, y: Number, z: Number) = transformations.transform(x.toFloat(), y.toFloat(), z.toFloat())
+    fun setTransform(m00: Number, m10: Number, m01: Number, m11: Number, m02: Number, m12: Number) = transformations.setTransform(
+        m00.toFloat(),
+        m10.toFloat(),
+        m01.toFloat(),
+        m11.toFloat(),
+        m02.toFloat(),
+        m12.toFloat(),
+    )
 
-    fun push() {
-        transformations.push()
-    }
-
-    fun pop() {
-        transformations.pop()
-    }
-
-    fun translate(x: Float, y: Float) {
-        transformations.translate(x, y)
-    }
-
-    fun rotate(angle: Float) {
-        transformations.rotate(angle)
-    }
-
-    fun rotateDegrees(degrees: Float) {
-        rotate(Math.toRadians(degrees.toDouble()).toFloat())
-    }
-
-    fun scale(x: Float, y: Float) {
-        transformations.scale(x, y)
-    }
-
-    fun transform(x: Float, y: Float, z: Float) {
-        transformations.transform(x, y, z)
-    }
-
-    fun setTransform(m00: Float, m10: Float, m01: Float, m11: Float, m02: Float, m12: Float) {
-        transformations.setTransform(m00, m10, m01, m11, m02, m12)
-    }
-
-    fun resetTransform() {
-        transformations.resetTransform()
-    }
-
-    /**
-     * 指定した座標を中心に回転させるユーティリティ
-     */
-    fun rotateAt(angle: Float, px: Float, py: Float) {
+    fun resetTransform() = transformations.resetTransform()
+    fun rotateAt(angle: Number, px: Number, py: Number) {
         translate(px, py)
         rotate(angle)
-        translate(-px, -py)
+        translate(-px.toFloat(), -py.toFloat())
     }
 
-    // 新しい描画および変換機能のインスタンス
-    private val fillOperations: Graphics2DPrimitivesFill =
-        Graphics2DPrimitivesFill(commandQueue, { fillStyle }, { fillRule })
-    private val strokeOperations: Graphics2DPrimitivesStroke =
-        Graphics2DPrimitivesStroke(commandQueue, { strokeStyle }, { enablePathGradient })
-    private val textureOperations: Graphics2DPrimitivesTexture = Graphics2DPrimitivesTexture(commandQueue) { textStyle }
+    // --- Primitives (Fill) ---
+    fun fillRect(x: Number, y: Number, w: Number, h: Number) = fillOperations.fillRect(x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat())
 
-    // --- fillRect ---
-    fun fillRect(x: Int, y: Int, width: Int, height: Int) = fillRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat())
+    fun fillRect(x: Number, y: Number, w: Number, h: Number, c0: Int, c1: Int, c2: Int, c3: Int) = fillOperations.fillRect(x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat(), c0, c1, c2, c3)
 
-    fun fillRect(x: Float, y: Float, width: Float, height: Float) {
-        fillOperations.fillRect(x, y, width, height)
-    }
-    // --- fillQuad ---
-
-    fun fillQuad(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
-        fillOperations.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3)
-    }
+    fun fillQuad(x0: Number, y0: Number, x1: Number, y1: Number, x2: Number, y2: Number, x3: Number, y3: Number) = fillOperations.fillQuad(
+        x0.toFloat(),
+        y0.toFloat(),
+        x1.toFloat(),
+        y1.toFloat(),
+        x2.toFloat(),
+        y2.toFloat(),
+        x3.toFloat(),
+        y3.toFloat(),
+    )
 
     fun fillQuad(
-        x0: Float,
-        y0: Float,
-        x1: Float,
-        y1: Float,
-        x2: Float,
-        y2: Float,
-        x3: Float,
-        y3: Float,
-        col0: Int,
-        col1: Int,
-        col2: Int,
-        col3: Int,
-    ) {
-        fillOperations.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, col0, col1, col2, col3)
-    }
+        x0: Number,
+        y0: Number,
+        x1: Number,
+        y1: Number,
+        x2: Number,
+        y2: Number,
+        x3: Number,
+        y3: Number,
+        c0: Int,
+        c1: Int,
+        c2: Int,
+        c3: Int,
+    ) = fillOperations.fillQuad(
+        x0.toFloat(),
+        y0.toFloat(),
+        x1.toFloat(),
+        y1.toFloat(),
+        x2.toFloat(),
+        y2.toFloat(),
+        x3.toFloat(),
+        y3.toFloat(),
+        c0,
+        c1,
+        c2,
+        c3,
+    )
 
-    // --- fillTriangle ---
-
-    fun fillTriangle(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float) {
-        fillOperations.fillTriangle(x0, y0, x1, y1, x2, y2)
-    }
+    fun fillTriangle(x0: Number, y0: Number, x1: Number, y1: Number, x2: Number, y2: Number) = fillOperations.fillTriangle(
+        x0.toFloat(),
+        y0.toFloat(),
+        x1.toFloat(),
+        y1.toFloat(),
+        x2.toFloat(),
+        y2.toFloat(),
+        fillStyle,
+        fillStyle,
+        fillStyle,
+    )
 
     fun fillTriangle(
-        x0: Float,
-        y0: Float,
-        x1: Float,
-        y1: Float,
-        x2: Float,
-        y2: Float,
-        col0: Int,
-        col1: Int,
-        col2: Int,
-    ) {
-        fillOperations.fillTriangle(x0, y0, x1, y1, x2, y2, col0, col1, col2)
-    }
+        x0: Number,
+        y0: Number,
+        x1: Number,
+        y1: Number,
+        x2: Number,
+        y2: Number,
+        c0: Int,
+        c1: Int,
+        c2: Int,
+    ) = fillOperations.fillTriangle(
+        x0.toFloat(),
+        y0.toFloat(),
+        x1.toFloat(),
+        y1.toFloat(),
+        x2.toFloat(),
+        y2.toFloat(),
+        c0,
+        c1,
+        c2,
+    )
 
-    fun strokeRect(x: Int, y: Int, width: Int, height: Int) = strokeRect(x.toFloat(), y.toFloat(), width.toFloat(), height.toFloat())
+    // --- Primitives (Stroke) ---
+    fun strokeRect(x: Number, y: Number, w: Number, h: Number) = strokeOperations.strokeRect(x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat())
 
-    fun strokeRect(x: Float, y: Float, width: Float, height: Float) {
-        strokeOperations.strokeRect(x, y, width, height)
-    }
+    fun strokeRect(x: Number, y: Number, w: Number, h: Number, c0: Int, c1: Int, c2: Int, c3: Int) = strokeOperations.strokeRect(x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat(), c0, c1, c2, c3)
 
-    fun strokeRect(
-        x: Float,
-        y: Float,
-        w: Float,
-        h: Float,
-        col0: Int, // 左上
-        col1: Int, // 右上
-        col2: Int, // 右下
-        col3: Int, // 左下
-    ) {
-        strokeOperations.strokeRect(x, y, w, h, col0, col1, col2, col3)
-    }
-
-    // --- strokeQuad ---
-    fun strokeQuad(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
-        strokeOperations.strokeQuad(x0, y0, x1, y1, x2, y2, x3, y3)
-    }
+    fun strokeQuad(x0: Number, y0: Number, x1: Number, y1: Number, x2: Number, y2: Number, x3: Number, y3: Number) = strokeOperations.strokeQuad(
+        x0.toFloat(),
+        y0.toFloat(),
+        x1.toFloat(),
+        y1.toFloat(),
+        x2.toFloat(),
+        y2.toFloat(),
+        x3.toFloat(),
+        y3.toFloat(),
+    )
 
     fun strokeQuad(
-        ix0: Float,
-        iy0: Float,
-        ix1: Float,
-        iy1: Float,
-        ix2: Float,
-        iy2: Float,
-        ix3: Float,
-        iy3: Float,
-        color0: Int,
-        color1: Int,
-        color2: Int,
-        color3: Int,
-    ) {
-        strokeOperations.strokeQuad(ix0, iy0, ix1, iy1, ix2, iy2, ix3, iy3, color0, color1, color2, color3)
-    }
+        x0: Number,
+        y0: Number,
+        x1: Number,
+        y1: Number,
+        x2: Number,
+        y2: Number,
+        x3: Number,
+        y3: Number,
+        c0: Int,
+        c1: Int,
+        c2: Int,
+        c3: Int,
+    ) = strokeOperations.strokeQuad(
+        x0.toFloat(),
+        y0.toFloat(),
+        x1.toFloat(),
+        y1.toFloat(),
+        x2.toFloat(),
+        y2.toFloat(),
+        x3.toFloat(),
+        y3.toFloat(),
+        c0,
+        c1,
+        c2,
+        c3,
+    )
 
-    // --- strokeTriangle ---
-    fun strokeTriangle(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float) {
-        strokeOperations.strokeTriangle(x0, y0, x1, y1, x2, y2)
-    }
+    fun strokeTriangle(x0: Number, y0: Number, x1: Number, y1: Number, x2: Number, y2: Number) = strokeOperations.strokeTriangle(
+        x0.toFloat(),
+        y0.toFloat(),
+        x1.toFloat(),
+        y1.toFloat(),
+        x2.toFloat(),
+        y2.toFloat(),
+    )
 
     fun strokeTriangle(
-        x0: Float,
-        y0: Float,
-        x1: Float,
-        y1: Float,
-        x2: Float,
-        y2: Float,
-        col0: Int,
-        col1: Int,
-        col2: Int,
-    ) {
-        strokeOperations.strokeTriangle(x0, y0, x1, y1, x2, y2, col0, col1, col2)
-    }
+        x0: Number,
+        y0: Number,
+        x1: Number,
+        y1: Number,
+        x2: Number,
+        y2: Number,
+        c0: Int,
+        c1: Int,
+        c2: Int,
+    ) = strokeOperations.strokeTriangle(
+        x0.toFloat(),
+        y0.toFloat(),
+        x1.toFloat(),
+        y1.toFloat(),
+        x2.toFloat(),
+        y2.toFloat(),
+        c0,
+        c1,
+        c2,
+    )
 
     // --- Path API ---
-
-    fun beginPath() {
-        path2D.beginPath()
-    }
-
-    fun moveTo(x: Float, y: Float) {
-        path2D.moveTo(x, y)
-    }
-
-    fun lineTo(x: Float, y: Float) {
-        val style = strokeStyle
-        path2D.lineTo(x, y, style)
-    }
-
-    fun closePath() {
-        val style = strokeStyle
-        path2D.closePath(style)
-    }
-
+    fun beginPath() = path2D.beginPath()
+    fun moveTo(x: Number, y: Number) = path2D.moveTo(x.toFloat(), y.toFloat())
+    fun lineTo(x: Number, y: Number) = path2D.lineTo(x.toFloat(), y.toFloat(), strokeStyle)
+    fun closePath() = path2D.closePath(strokeStyle)
     fun strokePath() {
-        // 蓄積されたサブパス（Segments）をすべて描画
         strokeOperations.strokePath(path2D)
-        // 描画後にデータをクリア
         path2D.clearSegments()
     }
 
@@ -243,139 +246,19 @@ open class Graphics2D(
         path2D.clearSegments()
     }
 
-    fun arc(x: Float, y: Float, radius: Float, startAngle: Float, endAngle: Float, counterclockwise: Boolean = false) {
-        val style = strokeStyle
-        path2D.arc(x, y, radius, startAngle, endAngle, counterclockwise, style)
-    }
+    fun arc(x: Number, y: Number, r: Number, s: Number, e: Number, ccw: Boolean = false) = path2D.arc(x.toFloat(), y.toFloat(), r.toFloat(), s.toFloat(), e.toFloat(), ccw, strokeStyle)
 
-    fun arcTo(x1: Float, y1: Float, x2: Float, y2: Float, radius: Float) {
-        val style = strokeStyle
-        path2D.arcTo(x1, y1, x2, y2, radius, style)
-    }
+    fun arcTo(x1: Number, y1: Number, x2: Number, y2: Number, r: Number) = path2D.arcTo(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), r.toFloat(), strokeStyle)
 
-    fun bezierCurveTo(cp1x: Float, cp1y: Float, cp2x: Float, cp2y: Float, x: Float, y: Float) {
-        val style = strokeStyle
-        path2D.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y, style)
-    }
-
-    fun text(text: String, x: Int, y: Int) = text(text, x.toFloat(), y.toFloat())
-    fun text(text: String, x: Float, y: Float) {
-        val shadow = textStyle.shadow
-        val size = textStyle.size
-        val font = textStyle.font
-        commandQueue.add(RenderCommand2D.Text(font, text, x, y, fillStyle, shadow, size))
-    }
-
-    fun textRight(text: String, x: Int, y: Int) = textRight(text, x.toFloat(), y.toFloat())
-    fun textRight(text: String, x: Float, y: Float) {
-        val shadow = textStyle.shadow
-        val size = textStyle.size
-        val font = textStyle.font
-        commandQueue.add(RenderCommand2D.TextRight(font, text, x, y, fillStyle, shadow, size))
-    }
-
-    fun textCentered(text: String, x: Float, y: Float) {
-        val shadow = textStyle.shadow
-        val size = textStyle.size
-        val font = textStyle.font
-        commandQueue.add(RenderCommand2D.TextCentered(font, text, x, y, fillStyle, shadow, size))
-    }
-
-    // --- クリッピング (GuiGraphics.enableScissor 準拠) ---
-    fun enableScissor(x: Int, y: Int, width: Int, height: Int) {
-        commandQueue.add(RenderCommand2D.EnableScissor(x, y, width, height))
-    }
-
-    fun disableScissor() {
-        commandQueue.add(RenderCommand2D.DisableScissor)
-    }
-
-    fun item(stack: ItemStack, x: Int, y: Int, size: Float = 16f) = item(stack, x.toFloat(), y.toFloat(), size)
-    fun item(stack: ItemStack, x: Float, y: Float, size: Float = 16f) {
-        textureOperations.drawItem(stack, x, y, size)
-    }
-
-    fun itemCentered(stack: ItemStack, x: Float, y: Float, size: Float) {
-        textureOperations.drawItem(stack, x - size / 2, y - size / 2, size)
-    }
-
-    fun image(
-        image: Image,
-        x: Float,
-        y: Float,
-        width: Float = image.width.toFloat(),
-        height: Float = image.height.toFloat(),
-        u: Int = 0,
-        v: Int = 0,
-        uWidth: Int = image.width,
-        vHeight: Int = image.height,
-        color: Int = 0xFFFFFFFF.toInt(),
-    ) {
-        textureOperations.drawTexture(
-            image, x, y, width, height, u, v, uWidth, vHeight, color,
-        )
-    }
-
-    fun imageCentered(
-        image: Image,
-        x: Float,
-        y: Float,
-        width: Float = image.width.toFloat(),
-        height: Float = image.height.toFloat(),
-    ) = image(image, x - width / 2f, y - height / 2f, width, height)
-
-    fun projectWorldToScreen(worldPos: Vec3): Pair<Double, Double>? {
-        val data = RenderTicks.latestProjectionData ?: return null
-
-        val relX = (worldPos.x - data.cameraPos.x).toFloat()
-        val relY = (worldPos.y - data.cameraPos.y).toFloat()
-        val relZ = (worldPos.z - data.cameraPos.z).toFloat()
-
-        val targetVector = org.joml.Vector4f(relX, relY, relZ, 1.0f)
-
-        // ViewProjection行列の合成
-        val viewProjectionMatrix = Matrix4f(data.projectionMatrix).mul(data.modelViewMatrix)
-        targetVector.mul(viewProjectionMatrix)
-        val w = targetVector.w
-        if (w <= 0.05f) return null
-
-        val ndcX = targetVector.x / w
-        val ndcY = targetVector.y / w
-
-        if (ndcX < -1.0f || ndcX > 1.0f || ndcY < -1.0f || ndcY > 1.0f) return null
-
-        val x = (ndcX + 1.0) * 0.5 * data.scaledWidth
-        val y = (1.0 - ndcY) * 0.5 * data.scaledHeight
-
-        return x to y
-    }
-
-    // Graphics2D.kt 内
-    fun block(block: Block, x: Float, y: Float, size: Float = 16f) {
-        commandQueue.add(RenderCommand2D.RenderBlock(block, x, y, size))
-    }
-
-    fun blockCentered(block: Block, x: Float, y: Float, size: Float) {
-        block(block, x - size / 2f, y - size / 2f, size)
-    }
-
-    /**
-     * 現在のパスを一時保存し、ブロック内の処理（独自パスの構築・描画）を実行した後、
-     * 元のパス状態を復元するユーティリティ。
-     */
-    private inline fun withTemporaryPath(block: () -> Unit) {
-        // 現在の状態を退避
-        val snapshot = path2D.snapshot()
-        val last = path2D.lastPointData
-        val first = path2D.firstPointData
-
-        // 独立した描画処理を実行
-        path2D.beginPath()
-        block()
-
-        // 状態を復元
-        path2D.restore(snapshot, last, first)
-    }
+    fun bezierCurveTo(cp1x: Number, cp1y: Number, cp2x: Number, cp2y: Number, x: Number, y: Number) = path2D.bezierCurveTo(
+        cp1x.toFloat(),
+        cp1y.toFloat(),
+        cp2x.toFloat(),
+        cp2y.toFloat(),
+        x.toFloat(),
+        y.toFloat(),
+        strokeStyle,
+    )
 
     fun fillRoundedRect(x: Float, y: Float, width: Float, height: Float, radius: Float) {
         withTemporaryPath {
@@ -387,18 +270,104 @@ open class Graphics2D(
         }
     }
 
-    fun strokeRoundedRect(x: Float, y: Float, width: Float, height: Float, radius: Float) {
-        withTemporaryPath {
-            roundedRectPath(x, y, width, height, radius)
-            strokePath()
-        }
+    fun strokeRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) = withTemporaryPath {
+        roundedRectPath(
+            x.toFloat(),
+            y.toFloat(),
+            w.toFloat(),
+            h.toFloat(),
+            r.toFloat(),
+        )
+        strokePath()
     }
 
-    /**
-     * 共通の角丸パス生成ロジック
-     */
+    fun fillCircle(cx: Number, cy: Number, radius: Number) = withTemporaryPath {
+        val ss = strokeStyle.color
+        strokeStyle.color = fillStyle
+        arc(cx, cy, radius, 0, PI * 2)
+        fillPath()
+        fillPath()
+        strokeStyle.color = ss
+    }
+
+    fun strokeCircle(cx: Number, cy: Number, radius: Number) = withTemporaryPath {
+        arc(cx, cy, radius, 0, PI * 2)
+        strokePath()
+    }
+
+    // --- Text ---
+    fun text(text: String, x: Number, y: Number) = provider.getText()
+        .set(textStyle.font, text, x.toFloat(), y.toFloat(), fillStyle, textStyle.shadow, textStyle.size)
+
+    fun textCentered(text: String, x: Number, y: Number) = provider.getTextCentered()
+        .set(textStyle.font, text, x.toFloat(), y.toFloat(), fillStyle, textStyle.shadow, textStyle.size)
+
+    fun textRight(text: String, x: Number, y: Number) = provider.getTextRight()
+        .set(textStyle.font, text, x.toFloat(), y.toFloat(), fillStyle, textStyle.shadow, textStyle.size)
+
+    // --- Utilities & Scissor ---
+    fun enableScissor(x: Number, y: Number, w: Number, h: Number) = provider.getEnableScissor().set(x.toInt(), y.toInt(), w.toInt(), h.toInt())
+
+    fun disableScissor() = provider.addStatic(RenderCommand2D.DisableScissor)
+
+    // --- Texture (Image, Item, Block) ---
+    fun item(stack: ItemStack, x: Number, y: Number, size: Number = 16f) = textureOperations.drawItem(stack, x.toFloat(), y.toFloat(), size.toFloat())
+
+    fun itemCentered(stack: ItemStack, cx: Number, cy: Number, size: Number = 16f) = item(stack, cx.toFloat() - size.toFloat() / 2f, cy.toFloat() - size.toFloat() / 2f, size)
+
+    fun block(block: Block, x: Number, y: Number, size: Number = 16f) = provider.getRenderBlock().set(block, x.toFloat(), y.toFloat(), size.toFloat())
+
+    fun blockCentered(block: Block, cx: Number, cy: Number, size: Number = 16f) = block(block, cx.toFloat() - size.toFloat() / 2f, cy.toFloat() - size.toFloat() / 2f, size)
+
+    fun image(
+        image: Image,
+        x: Number,
+        y: Number,
+        w: Number = image.width,
+        h: Number = image.height,
+        u: Int = 0,
+        v: Int = 0,
+        uw: Int = image.width,
+        vh: Int = image.height,
+        color: Int = -1,
+    ) = textureOperations.drawTexture(image, x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat(), u, v, uw, vh, color)
+
+    fun imageCentered(
+        image: Image,
+        cx: Number,
+        cy: Number,
+        w: Number = image.width,
+        h: Number = image.height,
+        color: Int = -1,
+    ) = image(
+        image,
+        cx.toFloat() - w.toFloat() / 2f,
+        cy.toFloat() - h.toFloat() / 2f,
+        w,
+        h,
+        0,
+        0,
+        image.width,
+        image.height,
+        color,
+    )
+
+    // --- World Projection ---
+    fun projectWorldToScreen(worldPos: Vec3): Pair<Float, Float>? {
+        val data = RenderTicks.latestProjectionData ?: return null
+        val relX = (worldPos.x - data.cameraPos.x).toFloat()
+        val relY = (worldPos.y - data.cameraPos.y).toFloat()
+        val relZ = (worldPos.z - data.cameraPos.z).toFloat()
+        val vec = org.joml.Vector4f(relX, relY, relZ, 1f).mul(Matrix4f(data.projectionMatrix).mul(data.modelViewMatrix))
+        if (vec.w <= 0.05f) return null
+        val x = (vec.x / vec.w + 1f) * 0.5f * data.scaledWidth.toFloat()
+        val y = (1f - vec.y / vec.w) * 0.5f * data.scaledHeight.toFloat()
+        return x to y
+    }
+
+    // --- Private Helpers ---
     private fun roundedRectPath(x: Float, y: Float, w: Float, h: Float, r: Float) {
-        val radius = r.coerceAtMost(min(w, h) / 2f)
+        val radius = min(r, min(w / 2f, h / 2f))
         moveTo(x + radius, y)
         lineTo(x + w - radius, y)
         arcTo(x + w, y, x + w, y + radius, radius)
@@ -411,24 +380,16 @@ open class Graphics2D(
         closePath()
     }
 
-    fun fillCircle(x: Float, y: Float, radius: Float) {
-        withTemporaryPath {
-            arc(x, y, radius, 0f, (PI * 2).toFloat())
-            closePath()
-            fillPath()
-        }
+    private inline fun withTemporaryPath(block: () -> Unit) {
+        val snapshot = path2D.snapshot()
+        val last = path2D.lastPointData
+        val first = path2D.firstPointData
+        path2D.beginPath()
+        block()
+        path2D.restore(snapshot, last, first)
     }
 
-    fun strokeCircle(x: Float, y: Float, radius: Float) {
-        withTemporaryPath {
-            arc(x, y, radius, 0f, (PI * 2).toFloat())
-            closePath()
-            strokePath()
-        }
-    }
-
-    /**
-     * 登録された順にコマンドを取り出します
-     */
-    open fun commands(): List<RenderCommand2D> = commandQueue.toList()
+    // --- System ---
+    fun clear() = provider.clear()
+    open fun commands(): List<RenderCommand2D> = provider.commands()
 }

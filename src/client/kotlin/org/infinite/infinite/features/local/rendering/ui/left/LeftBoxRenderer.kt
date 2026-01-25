@@ -26,11 +26,17 @@ class LeftBoxRenderer :
 
     private fun updateAnimation(): Triple<Float, Float, Float> {
         val player = player ?: return Triple(0f, 0f, 0f)
-
+        val maxArmor = 20f
+        val maxToughness = 8f
         val actualHealth = (player.health / player.maxHealth).coerceIn(0f, 1f)
-        val actualArmor = (player.armorValue / 20f).coerceIn(0f, 1f)
+        val actualArmor = (player.armorValue / maxArmor).coerceIn(0f, 1f)
         val actualToughness =
-            ((player.attributes.getInstance(Attributes.ARMOR_TOUGHNESS)?.value?.toFloat() ?: 0f) / 20f).coerceIn(0f, 1f)
+            (
+                (
+                    player.attributes.getInstance(Attributes.ARMOR_TOUGHNESS)?.value?.toFloat()
+                        ?: 0f
+                    ) / maxToughness
+                ).coerceIn(0f, 1f)
 
         animatedHealth += (actualHealth - animatedHealth) * 0.1f
         animatedArmor += (actualArmor - animatedArmor) * 0.1f
@@ -49,10 +55,10 @@ class LeftBoxRenderer :
         val alphaValue = ultraUiFeature.alpha.value
 
         val bH = ultraUiFeature.barHeight.value.toFloat()
-        // アニメーション後の幅を計算
         val sM = ultraUiFeature.sideMargin.toFloat() * animatedWidthFactor
         val bottomY = graphics2D.height.toFloat()
         val (actualHealth, actualArmor, actualToughness) = updateAnimation()
+
         val alphaInt = (alphaValue * 255).toInt()
         graphics2D.renderUltraBar(0f, bottomY - bH, sM, bH, 1f, 1f, colorScheme.backgroundColor.alpha(alphaInt))
 
@@ -62,24 +68,21 @@ class LeftBoxRenderer :
         val sat = 0.8f
         val bri = 0.5f
 
+        // アルファ値を考慮した描画関数
         fun draw(h: Float, cur: Float, tar: Float, sH: Float, eH: Float) {
+            val finalAlphaInt = (255 * alphaValue).toInt()
+
             graphics2D.renderLayeredBar(
                 0f, bottomY - h, cW, h, cur, tar,
-                colorScheme.color(sH, sat, bri), colorScheme.color(eH, sat, bri),
+                colorScheme.color(sH, sat, bri).alpha(finalAlphaInt),
+                colorScheme.color(eH, sat, bri).alpha(finalAlphaInt),
                 alphaValue, false, colorScheme.whiteColor, colorScheme.blackColor,
             )
         }
 
+        // 体力は常に表示 (1.0)
         draw(cH, animatedHealth, actualHealth, 0f, 60f)
-        if (actualArmor > 0 || animatedArmor > 0) draw(cH * 0.5f, animatedArmor, actualArmor, 120f, 180f)
-        if (actualToughness > 0 || animatedToughness > 0) {
-            draw(
-                cH * 0.4f,
-                animatedToughness,
-                actualToughness,
-                210f,
-                270f,
-            )
-        }
+        draw(cH * 0.4f, animatedArmor, actualArmor, 120f, 180f)
+        draw(cH * 0.4f, animatedToughness, actualToughness, 210f, 270f)
     }
 }

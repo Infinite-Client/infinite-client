@@ -39,8 +39,8 @@ class BooleanPropertyWidget(
             }
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
-        super.renderWidget(guiGraphics, i, j, f)
-        propertyToggleButton.render(guiGraphics, i, j, f)
+    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
+        propertyToggleButton.render(guiGraphics, mouseX, mouseY, delta)
     }
 }

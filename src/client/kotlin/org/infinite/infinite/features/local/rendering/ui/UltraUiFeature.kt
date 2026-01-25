@@ -15,6 +15,8 @@ import org.infinite.utils.mix
 import kotlin.math.absoluteValue
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.min
 
 class UltraUiFeature : LocalFeature() {
     val crosshairRenderer = CrosshairRenderer()
@@ -131,15 +133,16 @@ class UltraUiFeature : LocalFeature() {
             val mixColor = if (isInc) whiteColor else blackColor
 
             // 色の合成とアルファ適用
-            val sColor = startColor.mix(mixColor, 0.5f).alpha((255 * alpha).toInt())
-            val eColor = endColor.mix(mixColor, 0.5f).alpha((255 * alpha).toInt())
+            val sColor = startColor.mix(mixColor, 0.5f).alpha((127.5 * alpha).toInt())
+            val eColor = endColor.mix(mixColor, 0.5f).alpha((127.5 * alpha).toInt())
             val sMain = startColor.alpha((255 * alpha).toInt())
             val eMain = endColor.alpha((255 * alpha).toInt())
-
+            val pColor = max(target, current)
+            val pMain = min(target, current)
             // 背面レイヤー
-            renderUltraBar(x, y, width, height, current, 1f, sColor, eColor, isRightToLeft)
+            renderUltraBar(x, y, width, height, pColor, 1f, sColor, eColor, isRightToLeft)
             // 前面レイヤー
-            renderUltraBar(x, y, width, height, target, 1f, sMain, eMain, isRightToLeft)
+            renderUltraBar(x, y, width, height, pMain, 1f, sMain, eMain, isRightToLeft)
         }
     }
 

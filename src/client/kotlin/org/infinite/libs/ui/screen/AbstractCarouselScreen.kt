@@ -1,6 +1,5 @@
 package org.infinite.libs.ui.screen
 
-import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
@@ -95,11 +94,10 @@ abstract class AbstractCarouselScreen<T>(title: Component, private val parent: S
     }
 
     class WidgetGraphics2D(
-        deltaTracker: DeltaTracker,
         data: WidgetFrameData,
         screenWidth: Float,
         screenHeight: Float,
-    ) : Graphics2D(deltaTracker) {
+    ) : Graphics2D() {
         override val width: Int = data.widgetWidth.roundToInt()
         override val height: Int = data.widgetHeight.roundToInt()
 
@@ -149,7 +147,7 @@ abstract class AbstractCarouselScreen<T>(title: Component, private val parent: S
             widget.height = scaledHeight
 
             // Widget固有の描画コマンド生成
-            val g2d = WidgetGraphics2D(minecraft.deltaTracker, frame, screenWidth, screenHeight)
+            val g2d = WidgetGraphics2D(frame, screenWidth, screenHeight)
             val resultG2d = widget.render(g2d)
 
             // Z値, コマンド, Widget本体を保持

@@ -96,19 +96,28 @@ class ContainerUtilFeature : LocalFeature() {
 
         lastSelectedSlot = currentSlot
     }
+
     private fun rotateSlot(inv: InventorySystem, slotIdx: Int) {
         val hotbar = InventoryIndex.Hotbar(slotIdx)
-        val bp0 = InventoryIndex.Backpack(slotIdx) // 上段
-        val bp1 = InventoryIndex.Backpack(slotIdx + 9) // 中段
-        val bp2 = InventoryIndex.Backpack(slotIdx + 18) // 下段
+        val bp0 = InventoryIndex.Backpack(slotIdx + 18)
+        val bp1 = InventoryIndex.Backpack(slotIdx + 9)
+        val bp2 = InventoryIndex.Backpack(slotIdx)
 
-        // 空のスロットであっても強制的に入れ替える
-        // 順序: Hotbar <-> BP0 <-> BP1 <-> BP2
-        // これにより、Hotbarにあったものが上から順に下に落ちていきます
         inv.swapItems(hotbar, bp0)
         inv.swapItems(hotbar, bp1)
         inv.swapItems(hotbar, bp2)
-        InfiniteClient.localFeatures.inventory.itemRelocateFeature.updateTargetSlots(inv)
+
+        // --- 追加：補充機能の「記憶」を最新の状態に更新する ---
+        // これにより、補充機能が「アイテムが減った」と勘違いするのを防ぎます
+        val restockFeature = InfiniteClient.localFeatures.inventory.itemRestockFeature
+        if (restockFeature.isEnabled()) {
+            // 現在のホットバーのアイテムを取得して記憶を上書き
+            // (ItemRestockFeature内のlastKnownItemsを更新するメソッドを呼び出すか、直接代入)
+            restockFeature.updateLastKnownItems()
+        }
+        // --------------------------------------------------
+
+        InfiniteClient.localFeatures.inventory.itemRelocateFeature.updateHotbar()
     }
 
     /**
@@ -137,7 +146,7 @@ class ContainerUtilFeature : LocalFeature() {
                 val stack = inv.getItem(InventoryIndex.Backpack(i + (row * 9)))
                 if (stack.isEmpty) continue
 
-                val distance = (row + 1) - (1.0f - easedProgress)
+                val distance = (3 - row) + easedProgress - 1.0f
                 val offsetY = -20f * distance
 
                 // UltraUiが有効ならスケールは常に1.0f、無効なら距離に応じて縮小

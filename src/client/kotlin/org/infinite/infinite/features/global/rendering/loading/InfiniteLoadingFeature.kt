@@ -1,8 +1,6 @@
 package org.infinite.infinite.features.global.rendering.loading
 
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
-import net.minecraft.resources.Identifier
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.GlobalFeature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
@@ -11,10 +9,6 @@ import org.infinite.utils.alpha
 import kotlin.math.PI
 
 class InfiniteLoadingFeature : GlobalFeature() {
-    init {
-        enabled.value = true
-    }
-
     data class LoadingRenderContext(
         val guiGraphics: GuiGraphics,
         val mouseX: Int,
@@ -37,7 +31,7 @@ class InfiniteLoadingFeature : GlobalFeature() {
         get() = frame.toFloat() / totalFrame.toFloat()
 
     fun handleRender(ctx: LoadingRenderContext) {
-        val g2d = Graphics2DRenderer(ctx.guiGraphics, Minecraft.getInstance().deltaTracker)
+        val g2d = Graphics2DRenderer(ctx.guiGraphics)
 
         // 背景塗りつぶし
         g2d.fillStyle = 0xFF000000.toInt()
@@ -55,7 +49,7 @@ class InfiniteLoadingFeature : GlobalFeature() {
         // 例: frameが5なら "0005" になる
         val frameString = frame.toString().padStart(4, '0')
         val imagePath = "infinite:textures/gui/loading_animations/animation-$frameString.png"
-        val image = Image(Identifier.parse(imagePath))
+        val image = Image(imagePath)
         val centerX = ctx.centerX.toFloat()
         val centerY = ctx.centerY.toFloat()
         val radius = 40f

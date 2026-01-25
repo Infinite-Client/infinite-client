@@ -32,7 +32,7 @@ class StringPropertyWidget(
         Component.empty(),
     ).apply {
         setMaxLength(256)
-        setBordered(false)
+        isBordered = false
         value = property.value
         setResponder { newValue ->
             property.value = newValue
@@ -52,12 +52,12 @@ class StringPropertyWidget(
         // 高さやその他のスタイル調整が必要な場合はここで行う
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
+    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
         // PropertyWidget の基本描画（タイトル/ラベル）
-        super.renderWidget(guiGraphics, i, j, f)
+        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
 
         // テキストボックスの描画
-        editBox.render(guiGraphics, i, j, f)
+        editBox.render(guiGraphics, mouseX, mouseY, delta)
     }
 
     override fun charTyped(characterEvent: CharacterEvent): Boolean = editBox.charTyped(characterEvent) || super.charTyped(characterEvent)

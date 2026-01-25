@@ -1,32 +1,39 @@
 package org.infinite.libs.graphics.graphics2d
 
 import org.infinite.libs.graphics.graphics2d.structs.FillRule
-import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
+import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2DProvider
 import org.infinite.libs.graphics.graphics2d.system.Path2D
-import java.util.LinkedList
 import kotlin.math.abs
 import kotlin.math.atan2
 
 class Graphics2DPrimitivesFill(
-    private val commandQueue: LinkedList<RenderCommand2D>,
+    private val provider: RenderCommand2DProvider,
     private val getFillStyle: () -> Int,
     private val getFillRule: () -> FillRule,
 ) {
     private val fillStyle: Int get() = getFillStyle()
     private val fillRule: FillRule get() = getFillRule()
 
-    data class Vec2Color(
-        val x: Float,
-        val y: Float,
-        val color: Int,
-    )
+    // --- 再利用のための一時バッファ群 (Alloc回避) ---
+    private val tempVertices = ArrayList<Vertex>(16)
+    private val pathVerticesBuffer = ArrayList<Vec2Color>(64)
+    private val triangleBuffer = ArrayList<Array<Vec2Color>>(128)
+    private val intersectionResultBuffer = ArrayList<Vec2Color>(128)
+
+    data class Vec2Color(var x: Float = 0f, var y: Float = 0f, var color: Int = 0)
+    data class Vertex(val x: Float, val y: Float, val color: Int)
 
     fun fillRect(x: Float, y: Float, width: Float, height: Float) {
-        commandQueue.add(RenderCommand2D.FillRect(x, y, width, height, fillStyle))
+        provider.getFillRect().set(x, y, width, height, fillStyle, fillStyle, fillStyle, fillStyle)
+    }
+
+    fun fillRect(x: Float, y: Float, width: Float, height: Float, color0: Int, color1: Int, color2: Int, color3: Int) {
+        provider.getFillRect()
+            .set(x, y, width, height, color0, color1, color2, color3)
     }
 
     fun fillQuad(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) {
-        commandQueue.add(RenderCommand2D.FillQuad(x0, y0, x1, y1, x2, y2, x3, y3, fillStyle))
+        provider.getFillQuad().set(x0, y0, x1, y1, x2, y2, x3, y3, fillStyle, fillStyle, fillStyle, fillStyle)
     }
 
     fun fillQuad(
@@ -43,114 +50,68 @@ class Graphics2DPrimitivesFill(
         col2: Int,
         col3: Int,
     ) {
-        // 頂点データと色のペアをリスト化
-        val vertices = mutableListOf(
-            Vertex(x0, y0, col0),
-            Vertex(x1, y1, col1),
-            Vertex(x2, y2, col2),
-            Vertex(x3, y3, col3),
-        )
+        tempVertices.clear()
+        tempVertices.add(Vertex(x0, y0, col0))
+        tempVertices.add(Vertex(x1, y1, col1))
+        tempVertices.add(Vertex(x2, y2, col2))
+        tempVertices.add(Vertex(x3, y3, col3))
 
-        // 重心を計算
-        val centerX = vertices.map { it.x }.average().toFloat()
-        val centerY = vertices.map { it.y }.average().toFloat()
+        val cx = (x0 + x1 + x2 + x3) / 4f
+        val cy = (y0 + y1 + y2 + y3) / 4f
 
-        // 重心からの角度でソート (時計回り)
-        // Math.atan2(y, x) は反時計回りなので、マイナスを付けてソート
-        vertices.sortBy { atan2((it.y - centerY).toDouble(), (it.x - centerX).toDouble()) }
+        tempVertices.sortBy { atan2((it.y - cy).toDouble(), (it.x - cx).toDouble()) }
 
-        commandQueue.add(
-            RenderCommand2D.FillQuad(
-                vertices[0].x, vertices[0].y,
-                vertices[1].x, vertices[1].y,
-                vertices[2].x, vertices[2].y,
-                vertices[3].x, vertices[3].y,
-                vertices[0].color, vertices[1].color, vertices[2].color, vertices[3].color,
-            ),
+        provider.getFillQuad().set(
+            tempVertices[0].x, tempVertices[0].y,
+            tempVertices[1].x, tempVertices[1].y,
+            tempVertices[2].x, tempVertices[2].y,
+            tempVertices[3].x, tempVertices[3].y,
+            tempVertices[0].color, tempVertices[1].color, tempVertices[2].color, tempVertices[3].color,
         )
     }
 
-    fun fillTriangle(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float) {
-        fillTriangle(x0, y0, x1, y1, x2, y2, fillStyle, fillStyle, fillStyle)
-    }
-
-    fun fillTriangle(
-        x0: Float,
-        y0: Float,
-        x1: Float,
-        y1: Float,
-        x2: Float,
-        y2: Float,
-        col0: Int,
-        col1: Int,
-        col2: Int,
-    ) {
-        // 外積 (Vector Cross Product) を利用して回転方向を判定
-        // (x1-x0)*(y2-y0) - (y1-y0)*(x2-x0)
+    fun fillTriangle(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, c0: Int, c1: Int, c2: Int) {
         val crossProduct = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0)
-
-        // crossProduct > 0 なら反時計回りなので、頂点1と2を入れ替えて時計回りにする
         if (crossProduct > 0) {
-            addFillTriangle(x0, y0, x2, y2, x1, y1, col0, col2, col1)
+            provider.getFillTriangle().set(x0, y0, x2, y2, x1, y1, c0, c2, c1)
         } else {
-            addFillTriangle(x0, y0, x1, y1, x2, y2, col0, col1, col2)
+            provider.getFillTriangle().set(x0, y0, x1, y1, x2, y2, c0, c1, c2)
         }
     }
 
-    private fun addFillTriangle(
-        x0: Float,
-        y0: Float,
-        x1: Float,
-        y1: Float,
-        x2: Float,
-        y2: Float,
-        c0: Int,
-        c1: Int,
-        c2: Int,
-    ) {
-        commandQueue.add(RenderCommand2D.FillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2))
-    }
-
-    // Graphics2DPrimitivesFill.kt 内に追加
-
     fun fillPath(path: Path2D) {
-        val allTriangles = mutableListOf<Array<Vec2Color>>()
+        triangleBuffer.clear()
 
         for (subPath in path.getSubPaths()) {
-            val points = subPath.points
-            if (points.size < 3) continue
+            val pts = subPath.points
+            if (pts.size < 3) continue
 
-            val rawVertices = points.map { Vec2Color(it.x, it.y, it.style.color) }.toMutableList()
-            if (rawVertices.first() != rawVertices.last()) {
-                rawVertices.add(rawVertices.first())
+            pathVerticesBuffer.clear()
+            for (p in pts) {
+                pathVerticesBuffer.add(Vec2Color(p.x, p.y, p.style.color))
             }
 
-            // 1. 自己交差を解決したパスを取得
-            val resolvedPath = resolveSelfIntersections(rawVertices)
+            if (pathVerticesBuffer.first() != pathVerticesBuffer.last()) {
+                val f = pathVerticesBuffer.first()
+                pathVerticesBuffer.add(Vec2Color(f.x, f.y, f.color))
+            }
 
-            // 2. 耳切法で三角形分割
-            val tris = earClipping(resolvedPath)
+            val resolved = resolveSelfIntersections(pathVerticesBuffer)
+            val tris = earClipping(resolved)
 
-            // 3. FillRuleに基づいてフィルタリング (Even-Odd / Non-Zero)
-            // 自己交差解決済みパスの場合、耳切された各三角形の中心点で内外判定を行う
             for (tri in tris) {
                 val midX = (tri[0].x + tri[1].x + tri[2].x) / 3f
                 val midY = (tri[0].y + tri[1].y + tri[2].y) / 3f
-
                 if (isInside(midX, midY, path)) {
-                    allTriangles.add(tri)
+                    triangleBuffer.add(tri)
                 }
             }
         }
-
-        // 4. 三角形を Quad に結合して最適化描画
-        renderOptimizedTriangles(allTriangles)
+        renderOptimizedTriangles(triangleBuffer)
     }
 
-    /**
-     * 隣接する三角形を Quad に結合して描画回数を減らします。
-     */
-    private fun renderOptimizedTriangles(triangles: MutableList<Array<Vec2Color>>) {
+    private fun renderOptimizedTriangles(triangles: ArrayList<Array<Vec2Color>>) {
+        if (triangles.isEmpty()) return
         val used = BooleanArray(triangles.size)
 
         for (i in triangles.indices) {
@@ -161,15 +122,9 @@ class Graphics2DPrimitivesFill(
             for (j in i + 1 until triangles.size) {
                 if (used[j]) continue
                 val triB = triangles[j]
-
-                // 共有エッジを探す
-                val sharedIndices = findSharedEdge(triA, triB)
-                if (sharedIndices != null) {
-                    // 共有エッジが見つかったら Quad として描画
-                    val (idxA1, idxA2, idxBex) = sharedIndices
-
-                    // Quadの4頂点を構成 (triAの3点 + triBの残りの1点)
-                    // 頂点順序: triA[idxA1] -> triA[非共有点] -> triA[idxA2] -> triB[idxB_extra]
+                val shared = findSharedEdge(triA, triB)
+                if (shared != null) {
+                    val (idxA1, idxA2, idxBex) = shared
                     val otherA = (0..2).first { it != idxA1 && it != idxA2 }
 
                     fillQuad(
@@ -188,13 +143,55 @@ class Graphics2DPrimitivesFill(
             }
 
             if (!merged) {
-                addFillTriangle(
+                fillTriangle(
                     triA[0].x, triA[0].y, triA[1].x, triA[1].y, triA[2].x, triA[2].y,
                     triA[0].color, triA[1].color, triA[2].color,
                 )
                 used[i] = true
             }
         }
+    }
+
+    private fun resolveSelfIntersections(path: List<Vec2Color>): List<Vec2Color> {
+        intersectionResultBuffer.clear()
+        intersectionResultBuffer.addAll(path)
+
+        var iterations = 0
+        val maxIterations = intersectionResultBuffer.size * 2
+
+        var i = 0
+        while (i < intersectionResultBuffer.size - 1 && iterations < maxIterations) {
+            var j = i + 2
+            while (j < intersectionResultBuffer.size - 1) {
+                val p1 = intersectionResultBuffer[i]
+                val p2 = intersectionResultBuffer[i + 1]
+                val p3 = intersectionResultBuffer[j]
+                val p4 = intersectionResultBuffer[j + 1]
+
+                if (p1 == p3 || p1 == p4 || p2 == p3 || p2 == p4) {
+                    j++
+                    continue
+                }
+
+                val intersect = findIntersection(p1, p2, p3, p4)
+                if (intersect != null) {
+                    if (isNear(intersect, p1) || isNear(intersect, p2) ||
+                        isNear(intersect, p3) || isNear(intersect, p4)
+                    ) {
+                        j++
+                        continue
+                    }
+
+                    intersectionResultBuffer.add(i + 1, intersect)
+                    intersectionResultBuffer.add(j + 2, intersect)
+                    iterations++
+                    break
+                }
+                j++
+            }
+            i++
+        }
+        return intersectionResultBuffer
     }
 
     private fun findSharedEdge(a: Array<Vec2Color>, b: Array<Vec2Color>): Triple<Int, Int, Int>? {
@@ -236,9 +233,23 @@ class Graphics2DPrimitivesFill(
 
                 // Non-Zero (Winding Number)
                 if (p1.y <= y) {
-                    if (p2.y > y && crossProduct(Vec2Color(p1.x, p1.y, 0), Vec2Color(p2.x, p2.y, 0), Vec2Color(x, y, 0)) > 0) windingNumber++
+                    if (p2.y > y && crossProduct(
+                            Vec2Color(p1.x, p1.y, 0),
+                            Vec2Color(p2.x, p2.y, 0),
+                            Vec2Color(x, y, 0),
+                        ) > 0
+                    ) {
+                        windingNumber++
+                    }
                 } else {
-                    if (p2.y <= y && crossProduct(Vec2Color(p1.x, p1.y, 0), Vec2Color(p2.x, p2.y, 0), Vec2Color(x, y, 0)) < 0) windingNumber--
+                    if (p2.y <= y && crossProduct(
+                            Vec2Color(p1.x, p1.y, 0),
+                            Vec2Color(p2.x, p2.y, 0),
+                            Vec2Color(x, y, 0),
+                        ) < 0
+                    ) {
+                        windingNumber--
+                    }
                 }
             }
         }
@@ -247,49 +258,6 @@ class Graphics2DPrimitivesFill(
             FillRule.EvenOdd -> (crossingCount % 2 != 0)
             FillRule.NonZero -> (windingNumber != 0)
         }
-    }
-
-    private fun resolveSelfIntersections(path: List<Vec2Color>): List<Vec2Color> {
-        val result = path.toMutableList()
-        var iterations = 0
-        val maxIterations = result.size * 2 // 安全装置
-
-        var i = 0
-        while (i < result.size - 1 && iterations < maxIterations) {
-            var j = i + 2
-            while (j < result.size - 1) {
-                val p1 = result[i]
-                val p2 = result[i + 1]
-                val p3 = result[j]
-                val p4 = result[j + 1]
-
-                // 隣接する線分はスキップ
-                if (p1 == p3 || p1 == p4 || p2 == p3 || p2 == p4) {
-                    j++
-                    continue
-                }
-
-                val intersect = findIntersection(p1, p2, p3, p4)
-                if (intersect != null) {
-                    // 既存の頂点と近すぎる場合は挿入しない（誤差対策）
-                    if (isNear(intersect, p1) || isNear(intersect, p2) ||
-                        isNear(intersect, p3) || isNear(intersect, p4)
-                    ) {
-                        j++
-                        continue
-                    }
-
-                    result.add(i + 1, intersect)
-                    result.add(j + 2, intersect)
-                    iterations++
-                    // 交点が見つかったら、安全のためこの線分のスキャンを一度リセット
-                    break
-                }
-                j++
-            }
-            i++
-        }
-        return result
     }
 
     private fun isNear(v1: Vec2Color, v2: Vec2Color): Boolean = abs(v1.x - v2.x) < 0.01f && abs(v1.y - v2.y) < 0.01f

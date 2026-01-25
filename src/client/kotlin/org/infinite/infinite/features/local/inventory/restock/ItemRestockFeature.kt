@@ -40,7 +40,7 @@ class ItemRestockFeature : LocalFeature() {
 
         // 1. メインハンドを優先
         checkAndRestock(inv, selectedSlot)
-        itemRelocateFeature.updateTargetSlots(inv)
+        itemRelocateFeature.updateHotbar()
     }
 
     private fun checkAndRestock(inv: InventorySystem, slotIndex: Int) {
@@ -87,7 +87,7 @@ class ItemRestockFeature : LocalFeature() {
         return null
     }
 
-    private fun updateLastKnownItems() {
+    fun updateLastKnownItems() {
         val inv = InventorySystem
         for (i in 0..8) {
             lastKnownItems[i] = inv.getItem(InventoryIndex.Hotbar(i)).item
