@@ -207,7 +207,6 @@ rustTargets.forEach { (id, targetTriple) ->
         description = "Build Rust library for $id ($targetTriple) using zigbuild"
         workingDir = rustProjectDir
         // 追加: Rustのソースコード全体を監視対象にする
-        inputs.dir(rustProjectDir.resolve("rust/infinite-client/"))
         // 開発環境に cargo-zigbuild がインストールされている必要があります
         commandLine("cargo", "zigbuild", "--release", "--target", targetTriple)
 
@@ -220,6 +219,7 @@ rustTargets.forEach { (id, targetTriple) ->
 val buildRustAll: TaskProvider<Task> = tasks.register("buildRustAll") {
     group = "build"
     description = "Triggers Rust builds for all supported platforms"
+    inputs.dir(rustProjectDir)
     dependsOn(rustTargets.keys.map { "rustBuild_$it" })
     dependsOn(runJextract) // Rustの変更がヘッダー経由でJavaに反映されるように
 }
