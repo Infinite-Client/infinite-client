@@ -1,5 +1,6 @@
 package org.infinite.infinite.features.local.inventory.relocate
 
+import net.minecraft.world.item.ItemStack
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.minecraft.multiplayer.inventory.InventorySystem
@@ -24,7 +25,7 @@ class ItemRelocateFeature : LocalFeature() {
         }
 
         if (wasScreenOpen) {
-            updateTargetSlots(inv)
+            updateHotbar()
             wasScreenOpen = false
             return
         }
@@ -51,7 +52,7 @@ class ItemRelocateFeature : LocalFeature() {
                 }
             }
         }
-        updateTargetSlots(inv)
+        updateHotbar()
     }
 
     private fun processRelocation(inv: InventorySystem, fromIdx: InventoryIndex): Boolean {
@@ -81,7 +82,8 @@ class ItemRelocateFeature : LocalFeature() {
         return false
     }
 
-    fun updateTargetSlots(inv: InventorySystem) {
+    fun updateHotbar() {
+        val inv = InventorySystem
         targetSlots.clear()
         for (i in 0..8) {
             if (inv.getItem(InventoryIndex.Hotbar(i)).isEmpty) {
@@ -90,8 +92,20 @@ class ItemRelocateFeature : LocalFeature() {
         }
     }
 
+    fun updateHotbar(idx: Int, item: ItemStack) {
+        updateHotbar(idx, item.isEmpty)
+    }
+
+    fun updateHotbar(idx: Int, isEmpty: Boolean) {
+        if (isEmpty) {
+            targetSlots.add(idx)
+        } else {
+            targetSlots.remove(idx)
+        }
+    }
+
     override fun onEnabled() {
-        updateTargetSlots(InventorySystem)
+        updateHotbar()
         wasScreenOpen = false
     }
 }

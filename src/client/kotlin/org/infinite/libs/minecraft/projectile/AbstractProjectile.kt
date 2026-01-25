@@ -183,8 +183,8 @@ abstract class AbstractProjectile : MinecraftInterface() {
         val screenPos = graphics2D.projectWorldToScreen(analysis.hitPos) ?: return graphics2D
         val colorScheme = InfiniteClient.theme.colorScheme
 
-        val x = screenPos.first.toFloat()
-        val y = screenPos.second.toFloat()
+        val x = screenPos.first
+        val y = screenPos.second
         val distance = player.eyePosition.distanceTo(analysis.hitPos)
 
         val baseRadius = (distance.toFloat() * 0.15f / graphics2D.fovFactor).coerceIn(3f, 100f)

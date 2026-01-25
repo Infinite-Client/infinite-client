@@ -145,13 +145,13 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
         g2d.fillStyle = themeScheme.foregroundColor.alpha((255 * openEase).toInt())
         g2d.text(
             "Categories",
-            (padding + 8).toInt(),
-            (panelTop + textYOffset).toInt(),
+            padding + 8,
+            panelTop + textYOffset,
         )
         g2d.text(
             title.string,
-            (contentX + 8).toInt(),
-            (panelTop + textYOffset).toInt(),
+            contentX + 8,
+            panelTop + textYOffset,
         )
         // スクロール更新
         updateScrollTargets()
@@ -219,7 +219,7 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
             g2d.textStyle.font = "infinite_regular"
             g2d.textStyle.shadow = true
             g2d.textStyle.size = 9f
-            g2d.text(category.name, (x + 8).toInt(), (rowTop + (rowHeight - 8) / 2).toInt())
+            g2d.text(category.name, x + 8, rowTop + (rowHeight - 8) / 2f)
         }
     }
 
@@ -281,7 +281,7 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
             g2d.textStyle.font = "infinite_regular"
             g2d.textStyle.shadow = true
             g2d.textStyle.size = 9f
-            g2d.text(displayName, (x + 8).toInt(), (rowTop + (rowHeight - 8) / 2).toInt())
+            g2d.text(displayName, x + 8, rowTop + (rowHeight - 8) / 2f)
         }
     }
 

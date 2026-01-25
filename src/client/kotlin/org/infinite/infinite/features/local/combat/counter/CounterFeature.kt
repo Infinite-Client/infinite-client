@@ -98,7 +98,7 @@ class CounterFeature : LocalFeature() {
     override fun onStartUiRendering(graphics2D: Graphics2D) {
         val target = target?.getPosition(graphics2D.gameDelta) ?: return
         val pos2d = graphics2D.projectWorldToScreen(target) ?: return
-        val pos2f = pos2d.first.toFloat() to pos2d.second.toFloat()
+        val pos2f = pos2d.first to pos2d.second
         graphics2D.beginPath()
         val size = 12f
         graphics2D.arc(pos2f.first, pos2f.second, size * 0.75f, 0f, (2 * PI).toFloat())
