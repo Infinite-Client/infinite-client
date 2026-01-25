@@ -431,16 +431,32 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
-// プラグインではなくタスクとして定義
+// build.gradle.kts の末尾付近、または optimizeJar 定義箇所を修正
 tasks.register<proguard.gradle.ProGuardTask>("optimizeJar") {
-    injars(tasks.jar.get().archiveFile)
-    // 最適化後のファイル名
-    outjars(layout.buildDirectory.file("libs/${project.name}-${project.version}-optimized.jar"))
+    group = "build"
+    description = "Optimizes the remapped mod jar using ProGuard"
 
-    // Java 25 のランタイムをライブラリとして指定
+    // 1. remapJar が完了してから実行する
+    dependsOn(tasks.remapJar)
+
+    // 2. 入力は Fabric の remapJar (配布可能な形式) を指定
+    injars(tasks.remapJar.get().archiveFile)
+
+    // 3. 出力ファイルの設定
+    val optimizedFile = layout.buildDirectory.file("libs/${project.name}-${project.version}-optimized.jar")
+    outjars(optimizedFile)
+
+    // 4. ライブラリジャ（Java 25 runtime + 依存関係）
     val javaHome = System.getProperty("java.home")
     libraryjars("$javaHome/jmods")
 
-    // 設定ファイルの読み込み
+    // 依存ライブラリも ProGuard に知らせる必要がある場合（必要に応じて追加）
+    // configurations.runtimeClasspath.get().files.forEach { libraryjars(it) }
+
+    // 5. 設定ファイルの読み込み
     configuration("proguard-rules.pro")
+
+    // GradleのUP-TO-DATEチェック用
+    inputs.files(tasks.remapJar.get().archiveFile)
+    outputs.file(optimizedFile)
 }
