@@ -86,18 +86,27 @@ class AutoArmorFeature : LocalFeature() {
         }
     }
 
+    private var outOfWaterTick = 0 // 水から出た後のカウント
+
     private fun handleElytraSwitch(inv: InventorySystem): Boolean {
         val player = player ?: return false
         val currentChest = inv.getItem(InventoryIndex.Armor.Chest)
         val isPressedJump = options.keyJump.isDown
-
-        // 飛行中かどうかを判定
         val isFlying = player.isFallFlying
 
-        // 1. エリトラを脱ぐ条件:
-        // 特徴によって装備された状態で、(接地 or 水中 or 飛行が停止した)
+        // 水中ならカウントを増やす、出たら減らしていく（猶予を作る）
+        if (player.isInWater) {
+            outOfWaterTick = 10 // 水から出た後 0.5秒間は「脱出中」とみなす
+        } else if (outOfWaterTick > 0) {
+            outOfWaterTick--
+        }
+
+        // 1. エリトラを脱ぐ条件
         if (isElytraEquippedByFeature) {
-            val shouldUnequip = player.onGround() || player.isInWater || (!isFlying && floatTick > 10)
+            // 水中に入ってから少し経ったか、着地した場合のみ脱ぐ
+            // (入った瞬間に脱ぐと、水面ジャンプでまた装備してチャタリングするため)
+            val shouldUnequip =
+                player.onGround() || (player.isInWater && outOfWaterTick < 5) || (!isFlying && floatTick > 20)
 
             if (shouldUnequip) {
                 if (equipBackOriginalChest(inv)) {
@@ -108,13 +117,19 @@ class AutoArmorFeature : LocalFeature() {
             }
         }
 
-        // 空中浮遊時間をカウント
-        floatTick = if (player.onGround()) 0 else floatTick + 1
+        floatTick = if (player.onGround() || player.isInWater) 0 else floatTick + 1
 
-        // 2. エリトラを装備する条件:
-        // 空中でジャンプが「新しく」押された瞬間、かつ長押しではない
-        val canEquipElytra = !isElytraEquippedByFeature && !player.onGround() && floatTick > 2 &&
-            isPressedJump && !wasJumpKeyPressed && currentChest.item != Items.ELYTRA
+        // 2. エリトラを装備する条件
+        // 「空中である」かつ「(水中にいない OR 水から出た直後である)」
+        val isExitingWater = outOfWaterTick > 0 && !player.onGround()
+
+        val canEquipElytra = !isElytraEquippedByFeature &&
+            !player.onGround() &&
+            (isExitingWater || !player.isInWater) && // 水中脱出中なら許可
+            (floatTick > 5 || isExitingWater) && // 脱出中は即座に許可
+            isPressedJump &&
+            !wasJumpKeyPressed &&
+            currentChest.item != Items.ELYTRA
 
         if (canEquipElytra) {
             val elytraIdx = findBestElytra(inv)
@@ -122,7 +137,7 @@ class AutoArmorFeature : LocalFeature() {
                 previousChestplate = currentChest.copy()
                 inv.swapItems(InventoryIndex.Armor.Chest, elytraIdx)
 
-                // 【重要】装備した瞬間に飛行開始パケットを送信
+                // 飛行開始パケット
                 minecraft.connection?.send(
                     ServerboundPlayerCommandPacket(
                         player,
@@ -132,7 +147,7 @@ class AutoArmorFeature : LocalFeature() {
 
                 isElytraEquippedByFeature = true
                 tickDelay = delay.value
-                wasJumpKeyPressed = true // このティックで処理済みとしてマーク
+                wasJumpKeyPressed = true
                 return true
             }
         }
