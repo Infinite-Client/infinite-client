@@ -1,5 +1,6 @@
 package org.infinite.libs.graphics.graphics2d.system
 
+import org.infinite.libs.core.tick.RenderTicks
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
 import kotlin.math.*
 
@@ -100,46 +101,6 @@ class Path2D {
         current.isClosed = true
     }
 
-    /**
-     * 円弧を追加します。
-     */
-    fun arc(
-        x: Float,
-        y: Float,
-        radius: Float,
-        startAngle: Float,
-        endAngle: Float,
-        counterclockwise: Boolean = false,
-        style: StrokeStyle,
-    ) {
-        if (lastPoint == null) moveTo(x + cos(startAngle) * radius, y + sin(startAngle) * radius)
-
-        val twoPi = 2 * PI.toFloat()
-        var diff = endAngle - startAngle
-
-        if (!counterclockwise) {
-            while (diff <= 0) diff += twoPi
-        } else {
-            while (diff >= 0) diff -= twoPi
-        }
-
-        // --- 修正ポイント：半径に基づいた動的分割 ---
-        // 半径が小さい（例: 4px）なら分割を少なく、大きいなら多くする
-        // 目安として「1ピクセルあたりの弦の長さ」が一定になるようにします
-        val circumference = abs(diff) * radius
-        val segmentsCount = (circumference / 2.0f).toInt().coerceIn(4, 64)
-
-        val step = diff / segmentsCount
-
-        for (i in 1..segmentsCount) {
-            val a = startAngle + step * i
-            lineTo(x + cos(a) * radius, y + sin(a) * radius, style)
-        }
-    }
-
-    /**
-     * 接線を利用した円弧を追加します。
-     */
     fun arcTo(x1: Float, y1: Float, x2: Float, y2: Float, radius: Float, style: StrokeStyle) {
         val p0 = lastPoint ?: return
         val (p0x, p0y) = p0
@@ -204,41 +165,78 @@ class Path2D {
         arc(cx, cy, radius, startA, endA, !isClockwise, style)
     }
 
+    // Path2D.kt 内の getQualityScale
+    private fun getQualityScale(): Float {
+        val currentFps = RenderTicks.fps
+        return when {
+            currentFps >= 50f -> 1.0f
+
+            currentFps <= 5f -> 0.5f
+
+            // 最低でも 0.5f は維持（0.3fだと画像のようにカクカクになります）
+            else -> (currentFps / 60f).coerceIn(0.5f, 1.0f)
+        }
+    }
+
     /**
-     * ベジェ曲線を追加します。
+     * 長さと品質係数から、最適な分割数を計算します。
      */
+    // Path2D.kt 内の calculateResolution
+    private fun calculateResolution(length: Float, min: Int = 8, max: Int = 64): Int {
+        val scale = getQualityScale()
+        // 基本の分割密度を少し上げつつ (length / 1.5f)、最小分割数(min)を 8 程度に引き上げる
+        return (length / 1.5f * scale).toInt().coerceIn(min, max)
+    }
+
+    fun arc(
+        x: Float,
+        y: Float,
+        radius: Float,
+        startAngle: Float,
+        endAngle: Float,
+        counterclockwise: Boolean = false,
+        style: StrokeStyle,
+    ) {
+        if (lastPoint == null) moveTo(x + cos(startAngle) * radius, y + sin(startAngle) * radius)
+
+        val diff = if (!counterclockwise) {
+            var d = endAngle - startAngle
+            while (d <= 0) d += (2 * PI).toFloat()
+            d
+        } else {
+            var d = endAngle - startAngle
+            while (d >= 0) d -= (2 * PI).toFloat()
+            d
+        }
+
+        val circumference = abs(diff) * radius
+        // 動的な分割数計算を適用
+        val segmentsCount = calculateResolution(circumference)
+
+        val step = diff / segmentsCount
+        for (i in 1..segmentsCount) {
+            val a = startAngle + step * i
+            lineTo(x + cos(a) * radius, y + sin(a) * radius, style)
+        }
+    }
+
     fun bezierCurveTo(cp1x: Float, cp1y: Float, cp2x: Float, cp2y: Float, x: Float, y: Float, style: StrokeStyle) {
         val p0 = lastPoint ?: return
         val (p0x, p0y) = p0
 
-        // 1. 曲線の「概算長さ」を計算（コントロールポイント間の直線距離の合計）
-        // 厳密な積分は重いため、L1ノルム（マンハッタン距離）に近い近似で十分です
         val d01 = abs(cp1x - p0x) + abs(cp1y - p0y)
         val d12 = abs(cp2x - cp1x) + abs(cp2y - cp1y)
         val d23 = abs(x - cp2x) + abs(y - cp2y)
         val estimatedLength = d01 + d12 + d23
 
-        // 2. 長さに応じて分割数を決定
-        // 2ピクセルごとに1分割を基準にし、最低4、最大64分割程度に制限します
-        val resolution = (estimatedLength / 2.0f).toInt().coerceIn(4, 64)
+        // 動的な分割数計算を適用
+        val resolution = calculateResolution(estimatedLength)
 
         for (i in 1..resolution) {
             val t = i.toFloat() / resolution
             val it = 1f - t
-
-            // 3次ベジェ曲線の数式: (1-t)^3*P0 + 3(1-t)^2*t*P1 + 3(1-t)*t^2*P2 + t^3*P3
-            val ptx = it * it * it * p0x +
-                3 * it * it * t * cp1x +
-                3 * it * t * t * cp2x +
-                t * t * t * x
-
-            val pty = it * it * it * p0y +
-                3 * it * it * t * cp1y +
-                3 * it * t * t * cp2y +
-                t * t * t * y
-
-            // lineTo 内部ですでに「近すぎる点のスキップ」が実装されているため、
-            // ここで生成された点も自動的に最適化されます
+            val ptx = it * it * it * p0x + 3 * it * it * t * cp1x + 3 * it * t * t * cp2x + t * t * t * x
+            val pty = it * it * it * p0y + 3 * it * it * t * cp1y + 3 * it * t * t * cp2y + t * t * t * y
             lineTo(ptx, pty, style)
         }
     }

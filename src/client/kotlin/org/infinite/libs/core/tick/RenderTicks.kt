@@ -23,11 +23,21 @@ object RenderTicks : MinecraftInterface() {
     @Volatile
     private var _renderSnapShot: RenderSystem3D.RenderSnapshot? = null
     val renderSnapShot: RenderSystem3D.RenderSnapshot? get() = _renderSnapShot
+    var fps: Float = 30f
+        private set
+    private var lastTime: Long = System.currentTimeMillis()
+    private fun updateFps() {
+        val currentTime = System.currentTimeMillis()
+        val msDelta = currentTime - lastTime
+        fps = 1000f / msDelta
+        lastTime = currentTime
+    }
 
     fun onStartUiRendering(
         guiGraphics: GuiGraphics,
         deltaTracker: DeltaTracker,
     ) {
+        updateFps()
         aimSystem()
         val commands =
             runBlocking {
