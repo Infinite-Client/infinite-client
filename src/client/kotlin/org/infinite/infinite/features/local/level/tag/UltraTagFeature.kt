@@ -71,7 +71,7 @@ class UltraTagFeature : LocalFeature() {
             val scale = (1.0f - (dist / range.value.toFloat() * 0.4f)).coerceIn(0.6f, 1.0f)
 
             graphics2D.push()
-            graphics2D.translate(pos.first.toFloat(), pos.second.toFloat())
+            graphics2D.translate(pos.first, pos.second)
             graphics2D.scale(scale, scale)
 
             renderTag(graphics2D, entity, alpha)

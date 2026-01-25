@@ -41,7 +41,7 @@ class CrosshairRenderer :
 
             // ワールド座標をスクリーン座標に投影
             val screenPos = graphics2D.projectWorldToScreen(worldPos) ?: return
-            screenPos.first.toFloat() to screenPos.second.toFloat()
+            screenPos.first to screenPos.second
         }
 
         // 2. メインの描画処理を呼び出し

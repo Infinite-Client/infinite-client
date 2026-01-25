@@ -279,8 +279,8 @@ class LockOnFeature : LocalFeature() {
         val pos = target.getPosition(graphics2D.gameDelta).add(0.0, target.eyeHeight.toDouble(), 0.0)
         val screenPos = graphics2D.projectWorldToScreen(pos) ?: return
 
-        val x = screenPos.first.toFloat()
-        val y = screenPos.second.toFloat() + 20f // マークの下に表示
+        val x = screenPos.first
+        val y = screenPos.second + 20f // マークの下に表示
 
         val text = "$current / $total"
         graphics2D.textStyle.size = 10f
@@ -294,8 +294,8 @@ class LockOnFeature : LocalFeature() {
         val targetPos = target.getPosition(graphics2D.gameDelta).add(0.0, target.eyeHeight.toDouble(), 0.0)
         val screenPos = graphics2D.projectWorldToScreen(targetPos) ?: return
 
-        val x = screenPos.first.toFloat()
-        val y = screenPos.second.toFloat()
+        val x = screenPos.first
+        val y = screenPos.second
 
         // 状態に応じたサイズと色の決定
         val baseSize = 12f
