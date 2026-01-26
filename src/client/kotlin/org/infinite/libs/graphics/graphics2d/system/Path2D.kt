@@ -1,6 +1,8 @@
 package org.infinite.libs.graphics.graphics2d.system
 
 import org.infinite.libs.graphics.graphics2d.structs.FillRule
+import org.infinite.libs.graphics.graphics2d.structs.LineCap
+import org.infinite.libs.graphics.graphics2d.structs.LineJoin
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
 import org.infinite.nativebind.infinite_client_h
 import java.lang.foreign.MemorySegment
@@ -15,8 +17,11 @@ class Path2D : AutoCloseable {
 
     fun lineTo(x: Float, y: Float, style: StrokeStyle) = infinite_client_h.graphics2d_path2d_add_point(nativePtr, x, y, style.color, style.width, 1)
 
-    fun closePath(style: StrokeStyle) = infinite_client_h.graphics2d_path2d_add_point(nativePtr, 0f, 0f, style.color, style.width, 2)
-
+    fun closePath(style: StrokeStyle) {
+        // 現在のサブパスの開始点を探す
+        // Rust側で計算しても良いが、一貫性のため情報を送る
+        infinite_client_h.graphics2d_path2d_close_path(nativePtr, style.color, style.width)
+    }
     fun fillPath(
         fillRule: FillRule,
         fillTriangle: (Float, Float, Float, Float, Float, Float, Int, Int, Int) -> Unit,
@@ -26,13 +31,35 @@ class Path2D : AutoCloseable {
         processBuffer(fillTriangle, fillQuad)
     }
 
-    fun strokePath(
-        fillQuad: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit,
-    ) {
-        infinite_client_h.graphics2d_path2d_tessellate_stroke(nativePtr)
-        processBuffer({ _, _, _, _, _, _, _, _, _ -> }, fillQuad)
-    }
+    // Path2D.kt
+    fun strokePath(enableGradient: Boolean, cap: LineCap, join: LineJoin, draw: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit) {
+        // Rust 側の tessellate_stroke に引数を渡す
+        infinite_client_h.graphics2d_path2d_tessellate_stroke(nativePtr, cap.ordinal, join.ordinal, enableGradient)
 
+        val ptr = infinite_client_h.graphics2d_path2d_get_buffer_ptr(nativePtr)
+        val size = infinite_client_h.graphics2d_path2d_get_buffer_size(nativePtr)
+        val segment = ptr.reinterpret(size.toLong() * 4)
+
+        var cursor = 0
+        while (cursor < size) {
+            val type = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
+            if (type == 4.0f) {
+                val x0 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
+                val y0 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
+                val x1 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
+                val y1 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
+                val x2 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
+                val y2 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
+                val x3 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
+                val y3 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
+                val c0 = segment.get(ValueLayout.JAVA_INT, (cursor++ * 4).toLong())
+                val c1 = segment.get(ValueLayout.JAVA_INT, (cursor++ * 4).toLong())
+                val c2 = segment.get(ValueLayout.JAVA_INT, (cursor++ * 4).toLong())
+                val c3 = segment.get(ValueLayout.JAVA_INT, (cursor++ * 4).toLong())
+                draw(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+            }
+        }
+    }
     private fun processBuffer(
         fillTriangle: (Float, Float, Float, Float, Float, Float, Int, Int, Int) -> Unit,
         fillQuad: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit,

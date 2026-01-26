@@ -34,6 +34,8 @@ open class Graphics2D : MinecraftInterface() {
     var strokeStyle: StrokeStyle = StrokeStyle()
     var fillStyle: Int = 0xFFFFFFFF.toInt()
     var fillRule: FillRule = FillRule.EvenOdd
+    var lineCap: LineCap = LineCap.Butt
+    var lineJoin: LineJoin = LineJoin.Miter
     var textStyle: TextStyle = TextStyle()
     var enablePathGradient: Boolean = false
 
@@ -238,13 +240,12 @@ open class Graphics2D : MinecraftInterface() {
     fun closePath() = path2D.closePath(strokeStyle)
     fun arc(x: Number, y: Number, r: Number, s: Number, e: Number, ccw: Boolean = false) = path2D.arc(x.toFloat(), y.toFloat(), r.toFloat(), s.toFloat(), e.toFloat(), ccw, strokeStyle)
 
+    // Graphics2D.kt の strokePath 修正
     fun strokePath() {
-        // Rust 側で計算された Quad ストリップを一括で描画
-        path2D.strokePath { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+        // lineCap.ordinal, lineJoin.ordinal をそのまま渡す
+        path2D.strokePath(enablePathGradient, lineCap, lineJoin) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
             this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
         }
-        // Rust 側の clear 処理は strokePath 内部か、別途メソッドで行う
-        path2D.beginPath()
     }
 
     fun fillPath() {
@@ -380,11 +381,18 @@ open class Graphics2D : MinecraftInterface() {
 
     private val internalPath2D = Path2D() // 内部計算用に追加
 
-    // 共通ヘルパー: ユーザーのパスを汚さずにパスベースの描画を行う
     private inline fun withInternalPath(block: Path2D.() -> Unit) {
         internalPath2D.beginPath()
+        // strokeStyle の現在の値を確実に渡せるようにする
         internalPath2D.block()
-        internalPath2D.strokePath { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+
+        // 重要な変更: FFI を通じてテセレーションを実行
+        internalPath2D.strokePath(
+            enablePathGradient,
+            lineCap,
+            lineJoin,
+        ) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+            // 内部で fillQuad を呼び出すことで、テセレーションされた三角形/四角形を描画
             this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
         }
     }
@@ -401,17 +409,29 @@ open class Graphics2D : MinecraftInterface() {
         val hf = h.toFloat()
         val rf = min(r.toFloat(), min(wf / 2f, hf / 2f))
 
-        // パスを構築
+        val halfPi = (PI / 2.0).toFloat()
+        val pi = PI.toFloat()
+
+        // 1. 最初の arc の「開始座標」を計算する
+        val startAngle = -halfPi
+        val startX = (xf + wf - rf) + rf * kotlin.math.cos(startAngle.toDouble()).toFloat()
+        val startY = (yf + rf) + rf * kotlin.math.sin(startAngle.toDouble()).toFloat()
+
+        // 2. 最初に moveTo を行い、その直後に arc を呼ぶ
+        // ※ Rust側の arc の最初の点(i=0)が (startX, startY) と一致すれば、
+        // 長さ0の lineTo になるため、0,0 への飛び出しは消えるはずです。
         moveTo(xf + rf, yf)
-        lineTo(xf + wf - rf, yf)
-        arcTo(xf + wf, yf, xf + wf, yf + rf, rf)
-        lineTo(xf + wf, yf + hf - rf)
-        arcTo(xf + wf, yf + hf, xf + wf - rf, yf + hf, rf)
-        lineTo(xf + rf, yf + hf)
-        arcTo(xf, yf + hf, xf, yf + hf - rf, rf)
-        lineTo(xf, yf + rf)
-        arcTo(xf, yf, xf + rf, yf, rf)
-        closePath()
+        lineTo(startX, startY)
+        // 右上
+        arc(xf + wf - rf, yf + rf, rf, -halfPi, 0f, false, strokeStyle)
+        // 右下
+        arc(xf + wf - rf, yf + hf - rf, rf, 0f, halfPi, false, strokeStyle)
+        // 左下
+        arc(xf + rf, yf + hf - rf, rf, halfPi, pi, false, strokeStyle)
+        // 左上
+        arc(xf + rf, yf + rf, rf, pi, pi + halfPi, false, strokeStyle)
+
+        closePath(strokeStyle)
     }
 
     // --- Text ---

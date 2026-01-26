@@ -1,4 +1,18 @@
 use std::f32::consts::PI;
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub enum LineJoin {
+    Miter,
+    Round,
+    Bevel,
+}
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub enum LineCap {
+    Butt,
+    Round,
+    Square,
+}
 
 pub struct Path2D {
     points: Vec<f32>,        // [x, y, color, width, mode]
@@ -13,6 +27,308 @@ impl Path2D {
         }
     }
 
+    fn add_point_internal(&mut self, x: f32, y: f32, color: i32, width: f32, mode: i32) {
+        // 状態リセット直後の最初の点は、何が何でも moveTo (0.0) にする
+        let actual_mode = if self.points.is_empty() {
+            0.0
+        } else {
+            mode as f32
+        };
+
+        self.points
+            .extend_from_slice(&[x, y, f32::from_bits(color as u32), width, actual_mode]);
+    }
+
+    pub fn tessellate_stroke(&mut self, cap: LineCap, join: LineJoin, enable_gradient: bool) {
+        self.render_buffer.clear();
+
+        let num_points = self.points.len() / 5;
+        if num_points < 2 {
+            return;
+        }
+
+        // 1. 各サブパスの開始インデックスを特定する
+        let mut subpath_starts = Vec::new();
+        for i in 0..num_points {
+            // mode (5番目の要素) が 0.0 (moveTo) の位置を記録
+            if self.points[i * 5 + 4] == 0.0 {
+                subpath_starts.push(i);
+            }
+        }
+
+        // 最初の点が moveTo でない場合（通常はないはずですが念のため）のケア
+        if subpath_starts.is_empty() || subpath_starts[0] != 0 {
+            subpath_starts.insert(0, 0);
+        }
+
+        // 2. 特定した範囲ごとに処理を実行
+        for i in 0..subpath_starts.len() {
+            let start = subpath_starts[i];
+            let end = if i + 1 < subpath_starts.len() {
+                subpath_starts[i + 1]
+            } else {
+                num_points
+            };
+
+            // この時点では self.points への不変参照は残っていないので
+            // self.process_stroke_subpath (&mut self) を安全に呼べる
+            self.process_stroke_range(start, end, cap, join, enable_gradient);
+        }
+    }
+    fn process_stroke_range(
+        &mut self,
+        start: usize,
+        end: usize,
+        cap: LineCap,
+        join: LineJoin,
+        grad: bool,
+    ) {
+        let len = end - start;
+        if len < 2 {
+            return;
+        }
+
+        // --- 重要: 色の基準となる「パス全体の末尾」をサブパス内で特定 ---
+        let last_point_idx = (end - 1) * 5;
+        let last_color_f = self.points[last_point_idx + 2];
+
+        let mut total_len = 0.0;
+        if grad {
+            for i in start..end - 1 {
+                total_len += self.dist_by_idx(i * 5, (i + 1) * 5);
+            }
+        }
+        // 長さが0の場合のゼロ除算防止
+        let total_len = if total_len < 1e-4 { 1.0 } else { total_len };
+
+        let mut current_dist = 0.0;
+        for i in start..end - 1 {
+            let p1_idx = i * 5;
+            let p2_idx = (i + 1) * 5;
+
+            let x1 = self.points[p1_idx];
+            let y1 = self.points[p1_idx + 1];
+            let c1_f = self.points[p1_idx + 2]; // ポイント自体の色（lerpの始点用）
+            let w1 = self.points[p1_idx + 3];
+
+            let x2 = self.points[p2_idx];
+            let y2 = self.points[p2_idx + 1];
+            let w2 = self.points[p2_idx + 3];
+
+            let d = self.dist_by_idx(p1_idx, p2_idx);
+            let (nx, ny) = self.normal_at(x1, y1, x2, y2, d);
+
+            // --- 色の計算 ---
+            // パスの開始点の色 (self.points[start*5 + 2]) から
+            // パスの終了点の色 (last_color_f) へ、現在の距離で補間
+            let start_color_f = self.points[start * 5 + 2];
+            let c1 = if grad {
+                self.lerp_color_bits(start_color_f, last_color_f, current_dist / total_len)
+            } else {
+                c1_f.to_bits() as i32
+            };
+
+            current_dist += d;
+
+            let c2 = if grad {
+                self.lerp_color_bits(start_color_f, last_color_f, current_dist / total_len)
+            } else {
+                c1_f.to_bits() as i32
+            }; // 単色の場合は始点の色を維持
+            // 本体の Quad 描画
+            let hw1 = w1 / 2.0;
+            let hw2 = w2 / 2.0;
+            self.push_quad(
+                (x1 - nx * hw1, y1 - ny * hw1, c1),
+                (x2 - nx * hw2, y2 - ny * hw2, c2),
+                (x2 + nx * hw2, y2 + ny * hw2, c2),
+                (x1 + nx * hw1, y1 + ny * hw1, c1),
+            );
+
+            // Cap & Join ロジックへ続く (同様にインデックスから座標を取得して呼び出し)
+
+            if i == start {
+                self.draw_cap(x1, y1, -nx, -ny, hw1, c1, cap);
+            }
+            if i == end - 2 {
+                self.draw_cap(x2, y2, nx, ny, hw2, c2, cap);
+            }
+
+            if i < end - 2 {
+                let p3_idx = (i + 2) * 5;
+                let x3 = self.points[p3_idx];
+                let y3 = self.points[p3_idx + 1];
+                let d2 = ((x3 - x2).powi(2) + (y3 - y2).powi(2)).sqrt().max(1e-4);
+                let nx2 = -(y3 - y2) / d2;
+                let ny2 = (x3 - x2) / d2;
+                self.draw_join(x2, y2, nx, ny, nx2, ny2, hw2, c2, join);
+            }
+        }
+    }
+
+    // 補助関数
+    fn dist_by_idx(&self, i1: usize, i2: usize) -> f32 {
+        let dx = self.points[i2] - self.points[i1];
+        let dy = self.points[i2 + 1] - self.points[i1 + 1];
+        (dx * dx + dy * dy).sqrt()
+    }
+    fn draw_cap(&mut self, x: f32, y: f32, dx: f32, dy: f32, r: f32, c: i32, cap: LineCap) {
+        let (nx, ny) = (-dy, dx); // 進行方向の垂線
+        match cap {
+            LineCap::Square => {
+                self.push_quad(
+                    (x + nx * r, y + ny * r, c),
+                    (x + nx * r + dx * r, y + ny * r + dy * r, c),
+                    (x - nx * r + dx * r, y - ny * r + dy * r, c),
+                    (x - nx * r, y - ny * r, c),
+                );
+            }
+            LineCap::Round => {
+                let steps = 8;
+                for i in 0..steps {
+                    let a1 = (i as f32 / steps as f32) * PI;
+                    let a2 = ((i + 1) as f32 / steps as f32) * PI;
+                    // 回転行列で方向ベクトル dx, dy を基準に扇形を生成
+                    let v1x = nx * a1.cos() - dx * a1.sin();
+                    let v1y = ny * a1.cos() - dy * a1.sin();
+                    let v2x = nx * a2.cos() - dx * a2.sin();
+                    let v2y = ny * a2.cos() - dy * a2.sin();
+                    self.push_tri(
+                        (x, y, c),
+                        (x + v1x * r, y + v1y * r, c),
+                        (x + v2x * r, y + v2y * r, c),
+                    );
+                }
+            }
+            LineCap::Butt => {}
+        }
+    }
+
+    fn draw_join(
+        &mut self,
+        x: f32,
+        y: f32,
+        n1x: f32,
+        n1y: f32,
+        n2x: f32,
+        n2y: f32,
+        r: f32,
+        c: i32,
+        join: LineJoin,
+    ) {
+        let cross = n1x * n2y - n1y * n2x;
+        let is_outer_side = cross > 0.0; // 曲がり角の外側を判定
+
+        match join {
+            LineJoin::Bevel => {
+                if is_outer_side {
+                    self.push_tri(
+                        (x, y, c),
+                        (x + n1x * r, y + n1y * r, c),
+                        (x + n2x * r, y + n2y * r, c),
+                    );
+                } else {
+                    self.push_tri(
+                        (x, y, c),
+                        (x - n1x * r, y - n1y * r, c),
+                        (x - n2x * r, y - n2y * r, c),
+                    );
+                }
+            }
+            LineJoin::Miter => {
+                let mx = n1x + n2x;
+                let my = n1y + n2y;
+                let m_len_sq = mx * mx + my * my;
+                if m_len_sq > 0.001 {
+                    let miter_dist = 2.0 / m_len_sq;
+                    if miter_dist <= 10.0 {
+                        // Miter Limit = 10.0
+                        let ox = mx * miter_dist * r;
+                        let oy = my * miter_dist * r;
+                        if is_outer_side {
+                            self.push_quad(
+                                (x, y, c),
+                                (x + n1x * r, y + n1y * r, c),
+                                (x + ox, y + oy, c),
+                                (x + n2x * r, y + n2y * r, c),
+                            );
+                        } else {
+                            self.push_quad(
+                                (x, y, c),
+                                (x - n1x * r, y - n1y * r, c),
+                                (x - ox, y - oy, c),
+                                (x - n2x * r, y - n2y * r, c),
+                            );
+                        }
+                        return;
+                    }
+                }
+                self.draw_join(x, y, n1x, n1y, n2x, n2y, r, c, LineJoin::Bevel);
+            }
+            LineJoin::Round => {
+                let steps = 8;
+                let start_ang = n1y.atan2(n1x);
+                let mut diff = n2y.atan2(n2x) - start_ang;
+                while diff > PI {
+                    diff -= 2.0 * PI;
+                }
+                while diff < -PI {
+                    diff += 2.0 * PI;
+                }
+                for i in 0..steps {
+                    let a1 = start_ang + diff * (i as f32 / steps as f32);
+                    let a2 = start_ang + diff * ((i + 1) as f32 / steps as f32);
+                    self.push_tri(
+                        (x, y, c),
+                        (x + a1.cos() * r, y + a1.sin() * r, c),
+                        (x + a2.cos() * r, y + a2.sin() * r, c),
+                    );
+                }
+            }
+        }
+    }
+
+    fn lerp_color_bits(&self, c1_f: f32, c2_f: f32, t: f32) -> i32 {
+        let c1 = c1_f.to_bits();
+        let c2 = c2_f.to_bits();
+        let t = t.clamp(0.0, 1.0);
+        let a = self.lerp_p(c1 >> 24, c2 >> 24, t);
+        let r = self.lerp_p(c1 >> 16, c2 >> 16, t);
+        let g = self.lerp_p(c1 >> 8, c2 >> 8, t);
+        let b = self.lerp_p(c1, c2, t);
+        ((a << 24) | (r << 16) | (g << 8) | b) as i32
+    }
+
+    fn lerp_p(&self, v1: u32, v2: u32, t: f32) -> u32 {
+        let v1 = (v1 & 0xFF) as f32;
+        let v2 = (v2 & 0xFF) as f32;
+        (v1 + (v2 - v1) * t) as u32
+    }
+    pub fn move_to(&mut self, x: f32, y: f32, color: i32, width: f32) {
+        self.add_point_internal(x, y, color, width, 0);
+    }
+
+    pub fn close_path(&mut self) {
+        if let Some((x, y, c, w)) = self.get_first_point_of_current_subpath() {
+            self.add_point_internal(x, y, c, w, 2);
+        }
+    }
+
+    fn get_first_point_of_current_subpath(&self) -> Option<(f32, f32, i32, f32)> {
+        // 最後に現れた mode=0 (moveTo) のポイントを探す
+        for chunk in self.points.chunks_exact(5).rev() {
+            if chunk[4] == 0.0 {
+                return Some((chunk[0], chunk[1], chunk[2].to_bits() as i32, chunk[3]));
+            }
+        }
+        None
+    }
+    fn normal_at(&self, x1: f32, y1: f32, x2: f32, y2: f32, len: f32) -> (f32, f32) {
+        if len < 1e-4 {
+            return (0.0, 0.0); // 距離が短すぎる場合は描画しない
+        }
+        (-(y2 - y1) / len, (x2 - x1) / len)
+    }
     fn push_tri(&mut self, p1: (f32, f32, i32), p2: (f32, f32, i32), p3: (f32, f32, i32)) {
         self.render_buffer.push(3.0); // Type
         // まず座標を一気に送る
@@ -51,15 +367,16 @@ impl Path2D {
         self.render_buffer.push(f32::from_bits(p3.2 as u32));
         self.render_buffer.push(f32::from_bits(p4.2 as u32));
     }
-    // ユーティリティ: 最後の点と品質スケールを取得
+    // Path2D.rs 内
     fn get_last_pos(&self) -> (f32, f32) {
         if self.points.is_empty() {
-            return (0.0, 0.0);
+            return (200.0, 200.0);
         }
         let len = self.points.len();
+        // ここで points[len-1] (mode) が 2.0 (close) などの場合、
+        // 次の arc の開始時に座標がリセットされていないか確認が必要
         (self.points[len - 5], self.points[len - 4])
     }
-
     pub fn arc(
         &mut self,
         cx: f32,
@@ -82,18 +399,17 @@ impl Path2D {
             }
         }
 
-        // 分割数は角度と半径からRust側で動的に決定
         let res = ((diff.abs() * r) / 1.5).max(8.0).min(64.0) as i32;
 
         for i in 0..=res {
             let angle = start_a + (diff * i as f32 / res as f32);
             let x = cx + angle.cos() * r;
             let y = cy + angle.sin() * r;
-            // mode 1 = lineTo
+
+            // ここで add_point_internal を呼べば、自動的に最初の点が moveTo になる
             self.add_point_internal(x, y, color, width, 1);
         }
     }
-
     pub fn bezier_curve_to(
         &mut self,
         cp1: (f32, f32),
@@ -192,10 +508,6 @@ impl Path2D {
         // 既存の arc 関数を再利用して分割
         self.arc(cx, cy, radius, start_angle, end_angle, !is_cw, color, width);
     }
-    fn add_point_internal(&mut self, x: f32, y: f32, color: i32, width: f32, mode: i32) {
-        self.points
-            .extend_from_slice(&[x, y, color as f32, width, mode as f32]);
-    }
 }
 
 #[unsafe(no_mangle)]
@@ -273,64 +585,6 @@ pub unsafe extern "C" fn graphics2d_path2d_tessellate_fill(ptr: *mut Path2D, _fi
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn graphics2d_path2d_tessellate_stroke(ptr: *mut Path2D) {
-    let path = unsafe { &mut *ptr };
-    path.render_buffer.clear();
-
-    // 先に長さを計算（5要素で1ポイント）
-    let num_points = path.points.len() / 5;
-    if num_points < 2 {
-        return;
-    }
-
-    for i in 0..num_points - 1 {
-        // インデックス計算で直接値を取得することで、pointsへの借用を最小限にする
-        let idx1 = i * 5;
-        let idx2 = (i + 1) * 5;
-
-        // 不変借用はこのブロック内で完結
-        let (x1, y1, c1_f, w1) = (
-            path.points[idx1],
-            path.points[idx1 + 1],
-            path.points[idx1 + 2],
-            path.points[idx1 + 3],
-        );
-        let (x2, y2, c2_f, w2) = (
-            path.points[idx2],
-            path.points[idx2 + 1],
-            path.points[idx2 + 2],
-            path.points[idx2 + 3],
-        );
-
-        // mode（5番目の要素）が 0 (moveTo) の場合はスキップするなどの処理が必要ならここに追加
-        if path.points[idx2 + 4] == 0.0 {
-            continue;
-        }
-
-        let c1 = c1_f.to_bits() as i32;
-        let c2 = c2_f.to_bits() as i32;
-
-        let dx = x2 - x1;
-        let dy = y2 - y1;
-        let len = (dx * dx + dy * dy).sqrt().max(1e-4);
-        let nx = -dy / len;
-        let ny = dx / len;
-
-        let hw1 = w1 / 2.0;
-        let hw2 = w2 / 2.0;
-
-        // ここで path.push_quad (可変借用) を呼んでも、
-        // 上記の points への不変借用は既に終わっているので安全
-        path.push_quad(
-            (x1 - nx * hw1, y1 - ny * hw1, c1),
-            (x2 - nx * hw2, y2 - ny * hw2, c2),
-            (x2 + nx * hw2, y2 + ny * hw2, c2),
-            (x1 + nx * hw1, y1 + ny * hw1, c1),
-        );
-    }
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn graphics2d_path2d_get_buffer_ptr(ptr: *mut Path2D) -> *const f32 {
     unsafe { (*ptr).render_buffer.as_ptr() }
 }
@@ -387,5 +641,41 @@ pub unsafe extern "C" fn graphics2d_path2d_arc_to(
 ) {
     unsafe {
         (*ptr).arc_to(x1, y1, x2, y2, radius, color, width);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn graphics2d_path2d_tessellate_stroke(
+    ptr: *mut Path2D,
+    cap: i32,
+    join: i32,
+    enable_gradient: bool,
+) {
+    unsafe {
+        (*ptr).tessellate_stroke(
+            match cap {
+                0 => LineCap::Butt,
+                1 => LineCap::Round,
+                2 => LineCap::Square,
+                _ => LineCap::Butt,
+            },
+            match join {
+                0 => LineJoin::Miter,
+                1 => LineJoin::Round,
+                2 => LineJoin::Bevel,
+                _ => LineJoin::Miter,
+            },
+            enable_gradient,
+        );
+    }
+}
+
+// path2d.rs に追加
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn graphics2d_path2d_close_path(ptr: *mut Path2D, color: i32, width: f32) {
+    let path = unsafe { &mut *ptr };
+    if let Some((x, y, _, _)) = path.get_first_point_of_current_subpath() {
+        // 元の色の代わりに StrokeStyle の色を使えるように引数で受け取る
+        path.add_point_internal(x, y, color, width, 2);
     }
 }
