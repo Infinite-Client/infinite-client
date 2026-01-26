@@ -1,272 +1,333 @@
 package org.infinite.libs.graphics.graphics2d.system
 
 import org.infinite.libs.core.tick.RenderTicks
+import org.infinite.libs.graphics.graphics2d.structs.FillRule
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
+import org.infinite.nativebind.infinite_client_h
+import java.lang.AutoCloseable
+import java.lang.foreign.MemorySegment
 import kotlin.math.*
 
-class Path2D {
-    /**
-     * 座標、その点に適用されるスタイル、および接続属性を保持するデータクラス
-     */
-    data class PathPoint(
-        val x: Float,
-        val y: Float,
-        val style: StrokeStyle,
-        val smooth: Boolean = true,
-    )
+class Path2D : AutoCloseable {
+    // --- Native Resource ---
+    private var path2d = infinite_client_h.graphics2d_path2d_new()
 
-    /**
-     * 一続きの線（サブパス）の集合を保持するクラス
-     */
-    class Segments {
-        val points = mutableListOf<PathPoint>()
-        var isClosed: Boolean = false
-
-        fun isEmpty() = points.isEmpty()
+    override fun close() {
+        if (path2d != MemorySegment.NULL) {
+            infinite_client_h.graphics2d_path2d_drop(path2d)
+            path2d = MemorySegment.NULL
+        }
     }
+
+    // --- Path States ---
+    data class PathPoint(val x: Float, val y: Float, val style: StrokeStyle, val smooth: Boolean = true)
+    class Segments(val points: MutableList<PathPoint> = mutableListOf(), var isClosed: Boolean = false)
 
     private val subPathList = mutableListOf<Segments>()
     private var lastPoint: Pair<Float, Float>? = null
     private var firstPointOfSubPath: Pair<Float, Float>? = null
 
-    /**
-     * 現在編集中のサブパスを取得。存在しない場合は新規作成。
-     */
+    // --- Buffers (Alloc回避) ---
+    data class Vec2Color(var x: Float, var y: Float, var color: Int)
+    private val pathVerticesBuffer = ArrayList<Vec2Color>(128)
+    private val triangleBuffer = ArrayList<Array<Vec2Color>>(256)
+    private val intersectionResultBuffer = ArrayList<Vec2Color>(256)
+
+    // --- Basic Path Operations ---
     private fun getCurrentSubPath(): Segments {
-        if (subPathList.isEmpty()) {
-            subPathList.add(Segments())
-        }
+        if (subPathList.isEmpty()) subPathList.add(Segments())
         return subPathList.last()
     }
 
-    /**
-     * パスを完全に初期化します。
-     */
     fun beginPath() {
         subPathList.clear()
         lastPoint = null
         firstPointOfSubPath = null
     }
 
-    /**
-     * 新しいサブパスを開始し、ペンを指定した座標に移動させます。
-     */
     fun moveTo(x: Float, y: Float) {
-        // 現在のサブパスが空でないなら、新しいサブパスを追加して切り分ける
-        if (subPathList.isNotEmpty() && !subPathList.last().isEmpty()) {
+        if (subPathList.isNotEmpty() && subPathList.last().points.isNotEmpty()) {
             subPathList.add(Segments())
         }
         lastPoint = x to y
         firstPointOfSubPath = x to y
     }
 
-    /**
-     * 現在のペン位置から指定した座標まで直線を追加します。
-     */
     fun lineTo(x: Float, y: Float, style: StrokeStyle) {
         val current = getCurrentSubPath()
-
-        // 1. 始点の処理
         if (current.points.isEmpty()) {
             val startX = lastPoint?.first ?: x
             val startY = lastPoint?.second ?: y
-            current.points.add(PathPoint(startX, startY, style, smooth = false))
+            current.points.add(PathPoint(startX, startY, style, false))
             firstPointOfSubPath = startX to startY
-            lastPoint = startX to startY
         }
 
-        // 2. --- 重要：近すぎる点をスキップ ---
-        // 前の点との距離が 0.05ピクセル 以下の場合は無視する
-        // これにより、PointPair でのゼロ除算や数値破綻を根本から防ぎます
-        val (lx, ly) = lastPoint!!
-        val distSq = (x - lx) * (x - lx) + (y - ly) * (y - ly)
-        if (distSq < 0.0025f) return // 0.05 * 0.05 = 0.0025
+        val lx = lastPoint?.first ?: x
+        val ly = lastPoint?.second ?: y
+        if ((x - lx).pow(2) + (y - ly).pow(2) < 0.0025f) return
 
-        current.points.add(PathPoint(x, y, style, smooth = true))
+        current.points.add(PathPoint(x, y, style, true))
         lastPoint = x to y
     }
 
-    /**
-     * 現在のサブパスを閉じ、始点と終点を結合します。
-     */
     fun closePath(style: StrokeStyle) {
         val current = getCurrentSubPath()
         val start = firstPointOfSubPath ?: return
         val last = lastPoint ?: return
-
-        // 終点が始点と重なっていない場合は、線を繋ぐ
         if (abs(last.first - start.first) > 1e-4f || abs(last.second - start.second) > 1e-4f) {
             lineTo(start.first, start.second, style)
         }
         current.isClosed = true
     }
 
+    // --- Advanced Path Curves ---
     fun arcTo(x1: Float, y1: Float, x2: Float, y2: Float, radius: Float, style: StrokeStyle) {
-        val p0 = lastPoint ?: return
-        val (p0x, p0y) = p0
-
-        // ベクトル p0->p1 と p1->p2
+        val (p0x, p0y) = lastPoint ?: return
         val dx1 = x1 - p0x
         val dy1 = y1 - p0y
         val dx2 = x2 - x1
         val dy2 = y2 - y1
-
         val len1 = sqrt(dx1 * dx1 + dy1 * dy1)
         val len2 = sqrt(dx2 * dx2 + dy2 * dy2)
 
-        // 直線上の場合やサイズゼロの場合は単純な直線として処理
         if (len1 < 1e-6f || len2 < 1e-6f || radius <= 0f) {
             lineTo(x1, y1, style)
             return
         }
 
-        // 単位ベクトル
         val u1x = dx1 / len1
         val u1y = dy1 / len1
         val u2x = dx2 / len2
         val u2y = dy2 / len2
-
-        // 外積で回転方向を判定 (Canvas座標系はY軸下向き)
         val cross = u1x * u2y - u1y * u2x
-        if (abs(cross) < 1e-6f) { // 直線状
+        if (abs(cross) < 1e-6f) {
             lineTo(x1, y1, style)
             return
         }
 
-        // 内角 theta の計算
-        val cosTheta = -(u1x * u2x + u1y * u2y) // 反対向きのベクトルとの内積
-        val angle = acos(cosTheta.coerceIn(-1f, 1f))
+        val angle = acos(-(u1x * u2x + u1y * u2y).coerceIn(-1f, 1f))
         val tangentDist = radius / tan(angle / 2f)
-
-        // 接点 T1, T2
         val t1x = x1 - u1x * tangentDist
         val t1y = y1 - u1y * tangentDist
         val t2x = x1 + u2x * tangentDist
         val t2y = y1 + u2y * tangentDist
 
-        // 中心点 C
-        // 接点 T1 からの法線方向を求める
         val isClockwise = cross > 0
         val nx = if (isClockwise) -u1y else u1y
         val ny = if (isClockwise) u1x else -u1x
-
         val cx = t1x + nx * radius
         val cy = t1y + ny * radius
 
-        // arc() に渡すための角度算出
-        val startA = atan2(t1y - cy, t1x - cx)
-        val endA = atan2(t2y - cy, t2x - cx)
-
-        // 1. 始点から最初の接点まで直線
         lineTo(t1x, t1y, style)
-
-        // 2. 円弧部分
-        // arc内部で counterclockwise を正しく扱う
-        arc(cx, cy, radius, startA, endA, !isClockwise, style)
+        arc(cx, cy, radius, atan2(t1y - cy, t1x - cx), atan2(t2y - cy, t2x - cx), !isClockwise, style)
     }
 
-    // Path2D.kt 内の getQualityScale
-    private fun getQualityScale(): Float {
-        val currentFps = RenderTicks.fps
-        return when {
-            currentFps >= 50f -> 1.0f
-
-            currentFps <= 5f -> 0.5f
-
-            // 最低でも 0.5f は維持（0.3fだと画像のようにカクカクになります）
-            else -> (currentFps / 60f).coerceIn(0.5f, 1.0f)
-        }
-    }
-
-    /**
-     * 長さと品質係数から、最適な分割数を計算します。
-     */
-    // Path2D.kt 内の calculateResolution
-    private fun calculateResolution(length: Float, min: Int = 8, max: Int = 64): Int {
-        val scale = getQualityScale()
-        // 基本の分割密度を少し上げつつ (length / 1.5f)、最小分割数(min)を 8 程度に引き上げる
-        return (length / 1.5f * scale).toInt().coerceIn(min, max)
-    }
-
-    fun arc(
-        x: Float,
-        y: Float,
-        radius: Float,
-        startAngle: Float,
-        endAngle: Float,
-        counterclockwise: Boolean = false,
-        style: StrokeStyle,
-    ) {
-        if (lastPoint == null) moveTo(x + cos(startAngle) * radius, y + sin(startAngle) * radius)
-
-        val diff = if (!counterclockwise) {
-            var d = endAngle - startAngle
-            while (d <= 0) d += (2 * PI).toFloat()
-            d
+    fun arc(x: Float, y: Float, radius: Float, startA: Float, endA: Float, ccw: Boolean, style: StrokeStyle) {
+        if (lastPoint == null) moveTo(x + cos(startA) * radius, y + sin(startA) * radius)
+        var diff = endA - startA
+        if (!ccw) {
+            while (diff <= 0) diff += (2 * PI).toFloat()
         } else {
-            var d = endAngle - startAngle
-            while (d >= 0) d -= (2 * PI).toFloat()
-            d
+            while (diff >= 0) diff -= (2 * PI).toFloat()
         }
 
-        val circumference = abs(diff) * radius
-        // 動的な分割数計算を適用
-        val segmentsCount = calculateResolution(circumference)
-
-        val step = diff / segmentsCount
-        for (i in 1..segmentsCount) {
-            val a = startAngle + step * i
+        val res = (abs(diff) * radius / 1.5f * getQualityScale()).toInt().coerceIn(8, 64)
+        for (i in 1..res) {
+            val a = startA + (diff * i / res)
             lineTo(x + cos(a) * radius, y + sin(a) * radius, style)
         }
     }
 
     fun bezierCurveTo(cp1x: Float, cp1y: Float, cp2x: Float, cp2y: Float, x: Float, y: Float, style: StrokeStyle) {
-        val p0 = lastPoint ?: return
-        val (p0x, p0y) = p0
-
-        val d01 = abs(cp1x - p0x) + abs(cp1y - p0y)
-        val d12 = abs(cp2x - cp1x) + abs(cp2y - cp1y)
-        val d23 = abs(x - cp2x) + abs(y - cp2y)
-        val estimatedLength = d01 + d12 + d23
-
-        // 動的な分割数計算を適用
-        val resolution = calculateResolution(estimatedLength)
-
-        for (i in 1..resolution) {
-            val t = i.toFloat() / resolution
+        val (p0x, p0y) = lastPoint ?: return
+        val res = (
+            (abs(cp1x - p0x) + abs(cp2x - cp1x) + abs(x - cp2x) + abs(cp1y - p0y) + abs(cp2y - cp1y) + abs(y - cp2y)) /
+                1.5f * getQualityScale()
+            ).toInt().coerceIn(8, 64)
+        for (i in 1..res) {
+            val t = i.toFloat() / res
             val it = 1f - t
-            val ptx = it * it * it * p0x + 3 * it * it * t * cp1x + 3 * it * t * t * cp2x + t * t * t * x
-            val pty = it * it * it * p0y + 3 * it * it * t * cp1y + 3 * it * t * t * cp2y + t * t * t * y
-            lineTo(ptx, pty, style)
+            val px = it.pow(3) * p0x + 3 * it.pow(2) * t * cp1x + 3 * it * t.pow(2) * cp2x + t.pow(3) * x
+            val py = it.pow(3) * p0y + 3 * it.pow(2) * t * cp1y + 3 * it * t.pow(2) * cp2y + t.pow(3) * y
+            lineTo(px, py, style)
         }
     }
 
-    fun getSubPaths(): List<Segments> = subPathList
+    // --- Rendering (Fill Logic) ---
+    fun fillPath(
+        fillRule: FillRule,
+        fillTriangle: (Number, Number, Number, Number, Number, Number, Int, Int, Int) -> Unit,
+        fillQuad: (Number, Number, Number, Number, Number, Number, Number, Number, Int, Int, Int, Int) -> Unit,
+    ) {
+        triangleBuffer.clear()
+        for (sub in subPathList) {
+            if (sub.points.size < 3) continue
+            pathVerticesBuffer.clear()
+            sub.points.forEach { pathVerticesBuffer.add(Vec2Color(it.x, it.y, it.style.color)) }
 
+            // 自己交差解決 & 耳切法
+            val resolved = resolveSelfIntersections(pathVerticesBuffer)
+            val tris = earClipping(resolved)
+
+            tris.forEach { tri ->
+                val mx = (tri[0].x + tri[1].x + tri[2].x) / 3f
+                val my = (tri[0].y + tri[1].y + tri[2].y) / 3f
+                if (isInside(mx, my, fillRule)) triangleBuffer.add(tri)
+            }
+        }
+        renderOptimized(triangleBuffer, fillTriangle, fillQuad)
+    }
+
+    private fun renderOptimized(
+        tris: ArrayList<Array<Vec2Color>>,
+        fTri: (Float, Float, Float, Float, Float, Float, Int, Int, Int) -> Unit,
+        fQuad: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit,
+    ) {
+        val used = BooleanArray(tris.size)
+        for (i in tris.indices) {
+            if (used[i]) continue
+            val triA = tris[i]
+            var merged = false
+            for (j in i + 1 until tris.size) {
+                if (used[j]) continue
+                val triB = tris[j]
+                val shared = findSharedEdge(triA, triB)
+                if (shared != null) {
+                    val (a1, a2, be) = shared
+                    val ae = (0..2).first { it != a1 && it != a2 }
+                    fQuad(
+                        triA[a1].x, triA[a1].y, triA[ae].x, triA[ae].y, triA[a2].x, triA[a2].y, triB[be].x, triB[be].y,
+                        triA[a1].color, triA[ae].color, triA[a2].color, triB[be].color,
+                    )
+                    used[i] = true
+                    used[j] = true
+                    merged = true
+                    break
+                }
+            }
+            if (!merged) {
+                fTri(triA[0].x, triA[0].y, triA[1].x, triA[1].y, triA[2].x, triA[2].y, triA[0].color, triA[1].color, triA[2].color)
+                used[i] = true
+            }
+        }
+    }
+
+    // --- Math Utilities (Self-Intersection, Ear Clipping, Winding) ---
+    private fun resolveSelfIntersections(path: List<Vec2Color>): List<Vec2Color> {
+        intersectionResultBuffer.clear()
+        intersectionResultBuffer.addAll(path)
+        // 自己交差を検出し頂点を挿入するロジック（簡略化版を想定）
+        return intersectionResultBuffer
+    }
+
+    private fun earClipping(vertices: List<Vec2Color>): List<Array<Vec2Color>> {
+        val tris = mutableListOf<Array<Vec2Color>>()
+        val work = vertices.distinct().toMutableList()
+        if (work.size < 3) return tris
+        var watchdog = work.size * 3
+        while (work.size > 3 && watchdog-- > 0) {
+            for (i in work.indices) {
+                val p = work[(i + work.size - 1) % work.size]
+                val c = work[i]
+                val n = work[(i + 1) % work.size]
+                if ((c.x - p.x) * (n.y - p.y) - (c.y - p.y) * (n.x - p.x) > 0) { // 凸判定
+                    tris.add(arrayOf(p, c, n))
+                    work.removeAt(i)
+                    break
+                }
+            }
+        }
+        if (work.size == 3) tris.add(arrayOf(work[0], work[1], work[2]))
+        return tris
+    }
+
+    private fun isInside(x: Float, y: Float, rule: FillRule): Boolean {
+        var cc = 0
+        subPathList.forEach { sub ->
+            for (i in sub.points.indices) {
+                val p1 = sub.points[i]
+                val p2 = sub.points[(i + 1) % sub.points.size]
+                if (((p1.y <= y && y < p2.y) || (p2.y <= y && y < p1.y)) && (x < (p2.x - p1.x) * (y - p1.y) / (p2.y - p1.y) + p1.x)) cc++
+            }
+        }
+        return if (rule == FillRule.EvenOdd) cc % 2 != 0 else false
+    }
+
+    private fun findSharedEdge(a: Array<Vec2Color>, b: Array<Vec2Color>): Triple<Int, Int, Int>? {
+        val shared = mutableListOf<Pair<Int, Int>>()
+        for (i in 0..2) for (j in 0..2) if (abs(a[i].x - b[j].x) < 1e-4f && abs(a[i].y - b[j].y) < 1e-4f) shared.add(i to j)
+        return if (shared.size == 2) Triple(shared[0].first, shared[1].first, (0..2).first { it !in shared.map { s -> s.second } }) else null
+    }
+    fun strokePath(
+        isPathGradientEnabled: Boolean,
+        drawEdge: (PointPair, PointPair, Int, Int, Int, Int) -> Unit,
+    ) {
+        for (subPath in subPathList) {
+            val points = subPath.points
+            if (points.size < 2) continue
+
+            miteredPairsBuffer.clear()
+            val isClosed = subPath.isClosed
+
+            // 1. 各点のマイタージョイント（角の座標）を一括計算
+            for (i in points.indices) {
+                val curr = points[i]
+                val hw = curr.style.width / 2f
+
+                val pair = if (isClosed) {
+                    val prevIdx = if (i == 0) points.size - 2 else i - 1
+                    val nextIdx = if (i == points.size - 1) 1 else i + 1
+                    PointPair.calculateForMiter(curr.x, curr.y, points[prevIdx].x, points[prevIdx].y, points[nextIdx].x, points[nextIdx].y, hw)
+                } else {
+                    when (i) {
+                        0 -> calculateCap(curr, points[1], true)
+                        points.size - 1 -> calculateCap(curr, points[i - 1], false)
+                        else -> PointPair.calculateForMiter(curr.x, curr.y, points[i - 1].x, points[i - 1].y, points[i + 1].x, points[i + 1].y, hw)
+                    }
+                }
+                miteredPairsBuffer.add(pair)
+            }
+
+            // 2. セグメントごとに描画（コールバックを実行）
+            for (i in 0 until points.size - 1) {
+                val startPair = miteredPairsBuffer[i]
+                val endPair = miteredPairsBuffer[i + 1]
+
+                val startCol = points[i].style.color
+                val endCol = if (isPathGradientEnabled) points[i + 1].style.color else startCol
+
+                // 線の中と外で色が同じ（基本）として描画
+                drawEdge(startPair, endPair, startCol, endCol, startCol, endCol)
+            }
+        }
+    }
+    private val miteredPairsBuffer = ArrayList<PointPair>(256)
+    private fun calculateCap(curr: PathPoint, adj: PathPoint, isStart: Boolean): PointPair {
+        val dx = adj.x - curr.x
+        val dy = adj.y - curr.y
+        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(1e-4f)
+        val nx = -dy / len
+        val ny = dx / len
+        val hw = curr.style.width / 2f
+
+        return if (isStart) {
+            PointPair(curr.x - nx * hw, curr.y - ny * hw, curr.x + nx * hw, curr.y + ny * hw)
+        } else {
+            PointPair(curr.x + nx * hw, curr.y + ny * hw, curr.x - nx * hw, curr.y - ny * hw)
+        }
+    }
+
+    fun getSubPaths() = subPathList
     fun clearSegments() = beginPath()
-    // Path2D.kt 内
 
-    /**
-     * 現在のパス状態を複製します
-     */
-    fun snapshot(): List<Segments> = subPathList.map { seg ->
-        Segments().apply {
-            this.points.addAll(seg.points)
-            this.isClosed = seg.isClosed
+    companion object {
+        fun getQualityScale(): Float {
+            val fps = RenderTicks.fps
+            return when {
+                fps >= 50f -> 1.0f
+                fps <= 5f -> 0.5f
+                else -> (fps / 60f).coerceIn(0.5f, 1.0f)
+            }
         }
     }
-
-    /**
-     * 保存されたパス状態を復元します
-     */
-    fun restore(snapshot: List<Segments>, last: Pair<Float, Float>?, first: Pair<Float, Float>?) {
-        subPathList.clear()
-        subPathList.addAll(snapshot)
-        this.lastPoint = last
-        this.firstPointOfSubPath = first
-    }
-
-    // 内部変数へのアクセス用（snapshot時に必要）
-    val lastPointData get() = lastPoint
-    val firstPointData get() = firstPointOfSubPath
 }

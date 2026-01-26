@@ -16,12 +16,12 @@ import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import kotlin.math.PI
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
  * 座標指定を Float に統一し、Number 型を受け取ることで直感的なコーディングを可能にしています。
  */
-@Suppress("Unused")
 open class Graphics2D : MinecraftInterface() {
     private val deltaTracker: DeltaTracker by lazy { Minecraft.getInstance().deltaTracker }
     val gameDelta: Float get() = deltaTracker.gameTimeDeltaTicks
@@ -49,8 +49,8 @@ open class Graphics2D : MinecraftInterface() {
     // --- Provider & Operations ---
     private val provider = RenderCommand2DProvider()
     private val transformations = Graphics2DTransformations(provider)
-    private val fillOperations = Graphics2DPrimitivesFill(provider, { fillStyle }, { fillRule })
-    private val strokeOperations = Graphics2DPrimitivesStroke(provider, { strokeStyle }, { enablePathGradient })
+    private val fillOperations = Graphics2DPrimitivesFill(provider) { fillStyle }
+    private val strokeOperations = Graphics2DPrimitivesStroke(provider) { strokeStyle }
     private val textureOperations = Graphics2DPrimitivesTexture(provider) { textStyle }
     private val path2D = Path2D()
 
@@ -237,12 +237,25 @@ open class Graphics2D : MinecraftInterface() {
     fun lineTo(x: Number, y: Number) = path2D.lineTo(x.toFloat(), y.toFloat(), strokeStyle)
     fun closePath() = path2D.closePath(strokeStyle)
     fun strokePath() {
-        strokeOperations.strokePath(path2D)
+        path2D.strokePath(enablePathGradient) { start, end, outS, outE, inS, inE ->
+            strokeOperations.drawColoredEdge(start, end, outS, outE, inS, inE)
+        }
         path2D.clearSegments()
     }
 
     fun fillPath() {
-        fillOperations.fillPath(path2D)
+        // Path2D内部で計算されたポリゴンデータを、Graphics2Dの描画命令へ転送する
+        path2D.fillPath(
+            fillRule = this.fillRule,
+            fillTriangle = { x0, y0, x1, y1, x2, y2, c0, c1, c2 ->
+                // fillOperations のメソッドを直接呼ぶ、または自身の fillTriangle を呼ぶ
+                this.fillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2)
+            },
+            fillQuad = { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+                this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+            },
+        )
+        // 描画が終わったらパスをクリアして、次の beginPath に備える
         path2D.clearSegments()
     }
 
@@ -260,39 +273,142 @@ open class Graphics2D : MinecraftInterface() {
         strokeStyle,
     )
 
-    fun fillRoundedRect(x: Float, y: Float, width: Float, height: Float, radius: Float) {
-        withTemporaryPath {
-            val ss = strokeStyle.color
-            strokeStyle.color = fillStyle
-            roundedRectPath(x, y, width, height, radius)
-            fillPath()
-            strokeStyle.color = ss
+    fun fillRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) {
+        val xf = x.toFloat()
+        val yf = y.toFloat()
+        val wf = w.toFloat()
+        val hf = h.toFloat()
+        val rf = min(r.toFloat(), min(wf / 2f, hf / 2f))
+
+        if (rf <= 1e-3f) {
+            fillRect(xf, yf, wf, hf)
+            return
+        }
+
+        // 1. 中央の大きな長方形（上下の角丸を除いた胴体部分）
+        // 左右に突き出す部分は含めず、完全に中央のブロックを描画
+        fillRect(xf, yf + rf, wf, hf - 2 * rf)
+
+        // 2. 上部と下部の角丸を含む水平ストリップの描画
+        // これにより、角の扇形と、その間の水平な長方形を「一続きの台形」として描画できる
+        val segments = (rf / 1.5f * Path2D.getQualityScale()).toInt().coerceIn(4, 32)
+
+        for (i in 0 until segments) {
+            val yStartRel = i.toFloat() / segments * rf
+            val yEndRel = (i + 1).toFloat() / segments * rf
+
+            // 円の方程式 x^2 + y^2 = r^2 から、中心からの水平距離を導出
+            // 上の段のy座標に対するxのオフセット
+            val hUpper = rf - yStartRel
+            val wUpper = sqrt((rf * rf - hUpper * hUpper).coerceAtLeast(0f))
+
+            // 下の段のy座標に対するxのオフセット
+            val hLower = rf - yEndRel
+            val wLower = sqrt((rf * rf - hLower * hLower).coerceAtLeast(0f))
+
+            // --- 上側の角丸ストリップ ---
+            // 左上の角、中央の隙間、右上の角を一つの Quad Strip として描画
+            fillQuad(
+                xf + rf - wUpper,
+                yf + yStartRel, // 上左
+                xf + wf - rf + wUpper,
+                yf + yStartRel, // 上右
+                xf + wf - rf + wLower,
+                yf + yEndRel, // 下右
+                xf + rf - wLower,
+                yf + yEndRel, // 下左
+            )
+
+            // --- 下側の角丸ストリップ ---
+            // 同様に、左下、中央、右下を繋いで描画
+            fillQuad(
+                xf + rf - wLower,
+                yf + hf - yEndRel, // 上左
+                xf + wf - rf + wLower,
+                yf + hf - yEndRel, // 上右
+                xf + wf - rf + wUpper,
+                yf + hf - yStartRel, // 下右
+                xf + rf - wUpper,
+                yf + hf - yStartRel, // 下左
+            )
         }
     }
 
-    fun strokeRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) = withTemporaryPath {
-        roundedRectPath(
-            x.toFloat(),
-            y.toFloat(),
-            w.toFloat(),
-            h.toFloat(),
-            r.toFloat(),
-        )
-        strokePath()
+    fun fillCircle(cx: Number, cy: Number, radius: Number) {
+        val x0 = cx.toFloat()
+        val y0 = cy.toFloat()
+        val r = radius.toFloat()
+        if (r <= 0f) return
+
+        // 品質に基づく分割数（垂直方向の分割数）
+        // 円の高さ(2r)に対して適切な解像度を決定
+        val segments = (r * 2f / 1.5f * Path2D.getQualityScale()).toInt().coerceIn(8, 64)
+
+        var lastY = -r
+        var lastWidth = 0f
+
+        for (i in 1..segments) {
+            // -r から r まで垂直に走査
+            val currentY = -r + (i.toFloat() / segments) * 2 * r
+
+            // 円の方程式 x^2 + y^2 = r^2 より、各高さでの水平方向の幅(x)を求める
+            // x = sqrt(r^2 - y^2)
+            val currentWidth = sqrt((r * r - currentY * currentY).coerceAtLeast(0f))
+
+            // 前のステップの点と現在のステップの点で4点(Quad)を構成
+            // 矩形ではなく、左右が対称に窄まった「台形」として描画される
+            fillQuad(
+                x0 - lastWidth,
+                y0 + lastY, // 上左
+                x0 + lastWidth,
+                y0 + lastY, // 上右
+                x0 + currentWidth,
+                y0 + currentY, // 下右
+                x0 - currentWidth,
+                y0 + currentY, // 下左
+            )
+
+            lastY = currentY
+            lastWidth = currentWidth
+        }
     }
 
-    fun fillCircle(cx: Number, cy: Number, radius: Number) = withTemporaryPath {
-        val ss = strokeStyle.color
-        strokeStyle.color = fillStyle
-        arc(cx, cy, radius, 0, PI * 2)
-        fillPath()
-        fillPath()
-        strokeStyle.color = ss
+    private val internalPath2D = Path2D() // 内部計算用に追加
+
+    // 共通ヘルパー: ユーザーのパスを汚さずにパスベースの描画を行う
+    private inline fun withInternalPath(block: Path2D.() -> Unit) {
+        internalPath2D.beginPath()
+        internalPath2D.block()
+        // strokePath(enablePathGradient) { ... } のロジックをここで実行
+        internalPath2D.strokePath(enablePathGradient) { start, end, outS, outE, inS, inE ->
+            strokeOperations.drawColoredEdge(start, end, outS, outE, inS, inE)
+        }
+        internalPath2D.clearSegments()
     }
 
-    fun strokeCircle(cx: Number, cy: Number, radius: Number) = withTemporaryPath {
-        arc(cx, cy, radius, 0, PI * 2)
-        strokePath()
+    fun strokeCircle(cx: Number, cy: Number, radius: Number) = withInternalPath {
+        arc(cx.toFloat(), cy.toFloat(), radius.toFloat(), 0f, (PI * 2).toFloat(), false, strokeStyle)
+        closePath(strokeStyle)
+    }
+
+    fun strokeRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) = withInternalPath {
+        val xf = x.toFloat()
+        val yf = y.toFloat()
+        val wf = w.toFloat()
+        val hf = h.toFloat()
+        val rf = min(r.toFloat(), min(wf / 2f, hf / 2f))
+
+        // パスを構築
+        moveTo(xf + rf, yf)
+        lineTo(xf + wf - rf, yf, strokeStyle)
+        arcTo(xf + wf, yf, xf + wf, yf + rf, rf, strokeStyle)
+        lineTo(xf + wf, yf + hf - rf, strokeStyle)
+        arcTo(xf + wf, yf + hf, xf + wf - rf, yf + hf, rf, strokeStyle)
+        lineTo(xf + rf, yf + hf, strokeStyle)
+        arcTo(xf, yf + hf, xf, yf + hf - rf, rf, strokeStyle)
+        lineTo(xf, yf + rf, strokeStyle)
+        arcTo(xf, yf, xf + rf, yf, rf, strokeStyle)
+        closePath(strokeStyle)
     }
 
     // --- Text ---
@@ -363,30 +479,6 @@ open class Graphics2D : MinecraftInterface() {
         val x = (vec.x / vec.w + 1f) * 0.5f * data.scaledWidth.toFloat()
         val y = (1f - vec.y / vec.w) * 0.5f * data.scaledHeight.toFloat()
         return x to y
-    }
-
-    // --- Private Helpers ---
-    private fun roundedRectPath(x: Float, y: Float, w: Float, h: Float, r: Float) {
-        val radius = min(r, min(w / 2f, h / 2f))
-        moveTo(x + radius, y)
-        lineTo(x + w - radius, y)
-        arcTo(x + w, y, x + w, y + radius, radius)
-        lineTo(x + w, y + h - radius)
-        arcTo(x + w, y + h, x + w - radius, y + h, radius)
-        lineTo(x + radius, y + h)
-        arcTo(x, y + h, x, y + h - radius, radius)
-        lineTo(x, y + radius)
-        arcTo(x, y, x + radius, y, radius)
-        closePath()
-    }
-
-    private inline fun withTemporaryPath(block: () -> Unit) {
-        val snapshot = path2D.snapshot()
-        val last = path2D.lastPointData
-        val first = path2D.firstPointData
-        path2D.beginPath()
-        block()
-        path2D.restore(snapshot, last, first)
     }
 
     // --- System ---
