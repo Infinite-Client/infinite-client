@@ -236,42 +236,47 @@ open class Graphics2D : MinecraftInterface() {
     fun moveTo(x: Number, y: Number) = path2D.moveTo(x.toFloat(), y.toFloat())
     fun lineTo(x: Number, y: Number) = path2D.lineTo(x.toFloat(), y.toFloat(), strokeStyle)
     fun closePath() = path2D.closePath(strokeStyle)
+    fun arc(x: Number, y: Number, r: Number, s: Number, e: Number, ccw: Boolean = false) = path2D.arc(x.toFloat(), y.toFloat(), r.toFloat(), s.toFloat(), e.toFloat(), ccw, strokeStyle)
+
     fun strokePath() {
-        path2D.strokePath(enablePathGradient) { start, end, outS, outE, inS, inE ->
-            strokeOperations.drawColoredEdge(start, end, outS, outE, inS, inE)
+        // Rust 側で計算された Quad ストリップを一括で描画
+        path2D.strokePath { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+            this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
         }
-        path2D.clearSegments()
+        // Rust 側の clear 処理は strokePath 内部か、別途メソッドで行う
+        path2D.beginPath()
     }
 
     fun fillPath() {
-        // Path2D内部で計算されたポリゴンデータを、Graphics2Dの描画命令へ転送する
         path2D.fillPath(
             fillRule = this.fillRule,
             fillTriangle = { x0, y0, x1, y1, x2, y2, c0, c1, c2 ->
-                // fillOperations のメソッドを直接呼ぶ、または自身の fillTriangle を呼ぶ
                 this.fillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2)
             },
             fillQuad = { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
                 this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
             },
         )
-        // 描画が終わったらパスをクリアして、次の beginPath に備える
-        path2D.clearSegments()
+        path2D.beginPath()
     }
 
-    fun arc(x: Number, y: Number, r: Number, s: Number, e: Number, ccw: Boolean = false) = path2D.arc(x.toFloat(), y.toFloat(), r.toFloat(), s.toFloat(), e.toFloat(), ccw, strokeStyle)
+    // 既存のメソッドを Rust 側の新しい FFI に紐付け
+    fun arcTo(x1: Number, y1: Number, x2: Number, y2: Number, r: Number) {
+        path2D.arcTo(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), r.toFloat(), strokeStyle)
+    }
 
-    fun arcTo(x1: Number, y1: Number, x2: Number, y2: Number, r: Number) = path2D.arcTo(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), r.toFloat(), strokeStyle)
-
-    fun bezierCurveTo(cp1x: Number, cp1y: Number, cp2x: Number, cp2y: Number, x: Number, y: Number) = path2D.bezierCurveTo(
-        cp1x.toFloat(),
-        cp1y.toFloat(),
-        cp2x.toFloat(),
-        cp2y.toFloat(),
-        x.toFloat(),
-        y.toFloat(),
-        strokeStyle,
-    )
+    // Rust 側で処理するため、Kotlin 側の計算ロジックを削除して Path2D に委譲
+    fun bezierCurveTo(cp1x: Number, cp1y: Number, cp2x: Number, cp2y: Number, x: Number, y: Number) {
+        path2D.bezierCurveTo(
+            cp1x.toFloat(),
+            cp1y.toFloat(),
+            cp2x.toFloat(),
+            cp2y.toFloat(),
+            x.toFloat(),
+            y.toFloat(),
+            strokeStyle,
+        )
+    }
 
     fun fillRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) {
         val xf = x.toFloat()
@@ -291,7 +296,7 @@ open class Graphics2D : MinecraftInterface() {
 
         // 2. 上部と下部の角丸を含む水平ストリップの描画
         // これにより、角の扇形と、その間の水平な長方形を「一続きの台形」として描画できる
-        val segments = (rf / 1.5f * Path2D.getQualityScale()).toInt().coerceIn(4, 32)
+        val segments = (rf / 1.5f * getQualityScale()).toInt().coerceIn(4, 32)
 
         for (i in 0 until segments) {
             val yStartRel = i.toFloat() / segments * rf
@@ -342,7 +347,7 @@ open class Graphics2D : MinecraftInterface() {
 
         // 品質に基づく分割数（垂直方向の分割数）
         // 円の高さ(2r)に対して適切な解像度を決定
-        val segments = (r * 2f / 1.5f * Path2D.getQualityScale()).toInt().coerceIn(8, 64)
+        val segments = (r * 2f / 1.5f * getQualityScale()).toInt().coerceIn(8, 64)
 
         var lastY = -r
         var lastWidth = 0f
@@ -379,16 +384,14 @@ open class Graphics2D : MinecraftInterface() {
     private inline fun withInternalPath(block: Path2D.() -> Unit) {
         internalPath2D.beginPath()
         internalPath2D.block()
-        // strokePath(enablePathGradient) { ... } のロジックをここで実行
-        internalPath2D.strokePath(enablePathGradient) { start, end, outS, outE, inS, inE ->
-            strokeOperations.drawColoredEdge(start, end, outS, outE, inS, inE)
+        internalPath2D.strokePath { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+            this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
         }
-        internalPath2D.clearSegments()
     }
 
     fun strokeCircle(cx: Number, cy: Number, radius: Number) = withInternalPath {
         arc(cx.toFloat(), cy.toFloat(), radius.toFloat(), 0f, (PI * 2).toFloat(), false, strokeStyle)
-        closePath(strokeStyle)
+        closePath()
     }
 
     fun strokeRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) = withInternalPath {
@@ -400,15 +403,15 @@ open class Graphics2D : MinecraftInterface() {
 
         // パスを構築
         moveTo(xf + rf, yf)
-        lineTo(xf + wf - rf, yf, strokeStyle)
-        arcTo(xf + wf, yf, xf + wf, yf + rf, rf, strokeStyle)
-        lineTo(xf + wf, yf + hf - rf, strokeStyle)
-        arcTo(xf + wf, yf + hf, xf + wf - rf, yf + hf, rf, strokeStyle)
-        lineTo(xf + rf, yf + hf, strokeStyle)
-        arcTo(xf, yf + hf, xf, yf + hf - rf, rf, strokeStyle)
-        lineTo(xf, yf + rf, strokeStyle)
-        arcTo(xf, yf, xf + rf, yf, rf, strokeStyle)
-        closePath(strokeStyle)
+        lineTo(xf + wf - rf, yf)
+        arcTo(xf + wf, yf, xf + wf, yf + rf, rf)
+        lineTo(xf + wf, yf + hf - rf)
+        arcTo(xf + wf, yf + hf, xf + wf - rf, yf + hf, rf)
+        lineTo(xf + rf, yf + hf)
+        arcTo(xf, yf + hf, xf, yf + hf - rf, rf)
+        lineTo(xf, yf + rf)
+        arcTo(xf, yf, xf + rf, yf, rf)
+        closePath()
     }
 
     // --- Text ---
@@ -484,4 +487,27 @@ open class Graphics2D : MinecraftInterface() {
     // --- System ---
     fun clear() = provider.clear()
     open fun commands(): List<RenderCommand2D> = provider.commands()
+
+    // --- Companion ---
+    companion object {
+        // Graphics2D.kt 内で参照できるように移動、または Path2D から参照
+        fun getQualityScale(): Float {
+            val fps = RenderTicks.fps
+            return when {
+                fps >= 50f -> 1.0f
+                fps <= 5f -> 0.5f
+                else -> (fps / 60f).coerceIn(0.5f, 1.0f)
+            }
+        }
+    }
+
+    /**
+     * パス描画のためのDSLスコープ。
+     * 自動的に beginPath() を呼び出し、スコープ終了時の状態管理を容易にします。
+     */
+    inline fun path(block: Graphics2D.() -> Unit) {
+        this.beginPath()
+        this.block()
+        // パス自体は保持し、ユーザーが明示的に fillPath() や strokePath() を呼ぶのを待つ
+    }
 }
