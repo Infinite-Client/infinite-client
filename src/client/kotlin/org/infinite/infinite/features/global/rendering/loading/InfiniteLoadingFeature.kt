@@ -22,18 +22,25 @@ class InfiniteLoadingFeature : GlobalFeature() {
         val logoHeight: Int,
     )
 
+    // スプライトシートを保持（512x256 の画像が 20x18 枚並んでいる前提）
+    private val spriteSheet = Image("infinite:textures/gui/loading_animations/animation.png")
+
     private var frame: Int = 0
         set(value) {
             field = value % totalFrame
         }
+
     private val totalFrame = 360
-    private val frameProgress: Float
-        get() = frame.toFloat() / totalFrame.toFloat()
+    private val columns = 20
+
+    // 1コマあたりのソース画像サイズ
+    private val frameSrcWidth = 512
+    private val frameSrcHeight = 256
 
     fun handleRender(ctx: LoadingRenderContext) {
         val g2d = Graphics2DRenderer(ctx.guiGraphics)
 
-        // 背景塗りつぶし
+        // 背景描画
         g2d.fillStyle = 0xFF000000.toInt()
         g2d.fillRect(0, 0, g2d.width, g2d.height)
 
@@ -41,32 +48,60 @@ class InfiniteLoadingFeature : GlobalFeature() {
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme
 
-        // 背景レンダリング
+        // テーマ固有の背景装飾
         val bgAlpha = ctx.fadeOpacity * 0.25f
         theme.renderBackGround(0, 0, g2d.width, g2d.height, g2d, bgAlpha)
 
-        // --- フレーム番号の4桁ゼロ埋め処理 ---
-        // 例: frameが5なら "0005" になる
-        val frameString = frame.toString().padStart(4, '0')
-        val imagePath = "infinite:textures/gui/loading_animations/animation-$frameString.png"
-        val image = Image(imagePath)
         val centerX = ctx.centerX.toFloat()
         val centerY = ctx.centerY.toFloat()
-        val radius = 40f
-        val size = radius * 1.5f
         val diffY = 30f
-        val imageDiff = size / 4f
-        g2d.imageCentered(image, centerX, centerY - diffY + imageDiff, size, size)
 
-        // 円形のプログレスバー
+        // --- スプライトシートのピクセル座標計算 ---
+        val col = frame % columns
+        val row = frame / columns
+
+        // UVをピクセル単位で指定 (Int)
+        val u = col * frameSrcWidth
+        val v = row * frameSrcHeight
+
+        // 表示サイズ（2:1のアスペクト比を維持）
+        val drawWidth = 60f
+        val drawHeight = drawWidth / 2f
+
+        // フェード不透明度を色に適用
+        val renderColor = 0xFFFFFF.alpha(alphaInt)
+
+        // imageCenteredをラップした内部的なUV対応版、
+        // あるいは image メソッドを直接呼び出して中心座標を調整
+        // image メソッドは引数 u, v, uw, vh に Int を取るため、計算したピクセル値を渡す
+        g2d.image(
+            image = spriteSheet,
+            x = centerX - drawWidth / 2f,
+            y = centerY - diffY - drawHeight / 2f,
+            w = drawWidth,
+            h = drawHeight,
+            u = u,
+            v = v,
+            uw = frameSrcWidth,
+            vh = frameSrcHeight,
+            color = renderColor,
+        )
+
+        // --- 無限マークの軌道プログレス演出 ---
+        val radius = 55f
+        val frameProgress = frame.toFloat() / totalFrame.toFloat()
+
         val startAngle = frameProgress * 2f * PI.toFloat()
-        val endAngle = startAngle + (PI.toFloat() * 2f * ctx.progress)
+        val sweepAngle = (PI.toFloat() * 2f * ctx.progress).coerceAtLeast(0.05f)
+
         g2d.beginPath()
         g2d.strokeStyle.color = colorScheme.accentColor.alpha(alphaInt)
         g2d.strokeStyle.width = 4f
-        g2d.arc(centerX, centerY - diffY, radius, startAngle, endAngle)
+        g2d.arc(centerX, centerY - diffY, radius, startAngle, startAngle + sweepAngle)
         g2d.strokePath()
+
         g2d.flush()
+
         frame++
     }
 }
