@@ -407,30 +407,28 @@ open class Graphics2D : MinecraftInterface() {
         val yf = y.toFloat()
         val wf = w.toFloat()
         val hf = h.toFloat()
+
+        // 半径が幅や高さの半分を超えないように制限
         val rf = min(r.toFloat(), min(wf / 2f, hf / 2f))
 
         val halfPi = (PI / 2.0).toFloat()
         val pi = PI.toFloat()
 
-        // 1. 最初の arc の「開始座標」を計算する
-        val startAngle = -halfPi
-        val startX = (xf + wf - rf) + rf * kotlin.math.cos(startAngle.toDouble()).toFloat()
-        val startY = (yf + rf) + rf * kotlin.math.sin(startAngle.toDouble()).toFloat()
+        // 1. 最初の円弧（右上）の開始点に移動
+        // 右上の弧は -90度(12時方向)から開始するため、x = 中心 + 0, y = 中心 - r
+        moveTo(xf + wf - rf, yf)
 
-        // 2. 最初に moveTo を行い、その直後に arc を呼ぶ
-        // ※ Rust側の arc の最初の点(i=0)が (startX, startY) と一致すれば、
-        // 長さ0の lineTo になるため、0,0 への飛び出しは消えるはずです。
-        moveTo(xf + rf, yf)
-        lineTo(startX, startY)
-        // 右上
+        // 2. 時計回りに各角を描画
+        // 右上: -90° to 0°
         arc(xf + wf - rf, yf + rf, rf, -halfPi, 0f, false, strokeStyle)
-        // 右下
+        // 右下: 0° to 90°
         arc(xf + wf - rf, yf + hf - rf, rf, 0f, halfPi, false, strokeStyle)
-        // 左下
+        // 左下: 90° to 180°
         arc(xf + rf, yf + hf - rf, rf, halfPi, pi, false, strokeStyle)
-        // 左上
+        // 左上: 180° to 270°
         arc(xf + rf, yf + rf, rf, pi, pi + halfPi, false, strokeStyle)
 
+        // 3. パスを閉じる。これで左上から右上への直線が自動的に補完されます。
         closePath(strokeStyle)
     }
 
