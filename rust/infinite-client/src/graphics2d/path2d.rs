@@ -28,7 +28,8 @@ impl Path2D {
     }
 
     fn add_point_internal(&mut self, x: f32, y: f32, color: i32, width: f32, mode: i32) {
-        // 状態リセット直後の最初の点は、何が何でも moveTo (0.0) にする
+        // 最初の1点目だけは、強制的に moveTo (0.0) にするが、
+        // 既に点がある場合は、指定された mode を尊重する
         let actual_mode = if self.points.is_empty() {
             0.0
         } else {
@@ -42,26 +43,21 @@ impl Path2D {
     pub fn tessellate_stroke(&mut self, cap: LineCap, join: LineJoin, enable_gradient: bool) {
         self.render_buffer.clear();
 
-        let num_points = self.points.len() / 5;
+        let total_floats = self.points.len();
+        let num_points = total_floats / 5;
         if num_points < 2 {
             return;
         }
 
-        // 1. 各サブパスの開始インデックスを特定する
+        // 1. 各サブパスの開始位置を特定
         let mut subpath_starts = Vec::new();
         for i in 0..num_points {
-            // mode (5番目の要素) が 0.0 (moveTo) の位置を記録
             if self.points[i * 5 + 4] == 0.0 {
                 subpath_starts.push(i);
             }
         }
 
-        // 最初の点が moveTo でない場合（通常はないはずですが念のため）のケア
-        if subpath_starts.is_empty() || subpath_starts[0] != 0 {
-            subpath_starts.insert(0, 0);
-        }
-
-        // 2. 特定した範囲ごとに処理を実行
+        // 2. サブパスごとに処理。最後の一つも確実に処理する。
         for i in 0..subpath_starts.len() {
             let start = subpath_starts[i];
             let end = if i + 1 < subpath_starts.len() {
@@ -70,9 +66,10 @@ impl Path2D {
                 num_points
             };
 
-            // この時点では self.points への不変参照は残っていないので
-            // self.process_stroke_subpath (&mut self) を安全に呼べる
-            self.process_stroke_range(start, end, cap, join, enable_gradient);
+            // 2点以上ないと線は引けない
+            if end - start >= 2 {
+                self.process_stroke_range(start, end, cap, join, enable_gradient);
+            }
         }
     }
     fn process_stroke_range(
@@ -89,6 +86,7 @@ impl Path2D {
         }
 
         // --- 重要: 色の基準となる「パス全体の末尾」をサブパス内で特定 ---
+        let start_color_f = self.points[start * 5 + 2]; // raw bits as f32
         let last_point_idx = (end - 1) * 5;
         let last_color_f = self.points[last_point_idx + 2];
 
@@ -102,42 +100,43 @@ impl Path2D {
         let total_len = if total_len < 1e-4 { 1.0 } else { total_len };
 
         let mut current_dist = 0.0;
-        for i in start..end - 1 {
+        for i in start..end-1 {
             let p1_idx = i * 5;
             let p2_idx = (i + 1) * 5;
 
             let x1 = self.points[p1_idx];
             let y1 = self.points[p1_idx + 1];
-            let c1_f = self.points[p1_idx + 2]; // ポイント自体の色（lerpの始点用）
             let w1 = self.points[p1_idx + 3];
+            let c1_raw = self.get_color_at(p1_idx);
 
             let x2 = self.points[p2_idx];
             let y2 = self.points[p2_idx + 1];
             let w2 = self.points[p2_idx + 3];
 
             let d = self.dist_by_idx(p1_idx, p2_idx);
+            if d < 1e-4 {
+                continue;
+            }
+
             let (nx, ny) = self.normal_at(x1, y1, x2, y2, d);
 
-            // --- 色の計算 ---
-            // パスの開始点の色 (self.points[start*5 + 2]) から
-            // パスの終了点の色 (last_color_f) へ、現在の距離で補間
-            let start_color_f = self.points[start * 5 + 2];
+            // 色の決定
             let c1 = if grad {
                 self.lerp_color_bits(start_color_f, last_color_f, current_dist / total_len)
             } else {
-                c1_f.to_bits() as i32
+                c1_raw
             };
-
             current_dist += d;
-
             let c2 = if grad {
                 self.lerp_color_bits(start_color_f, last_color_f, current_dist / total_len)
             } else {
-                c1_f.to_bits() as i32
-            }; // 単色の場合は始点の色を維持
-            // 本体の Quad 描画
+                c1_raw
+            };
+
             let hw1 = w1 / 2.0;
             let hw2 = w2 / 2.0;
+
+            // 本体 Quad
             self.push_quad(
                 (x1 - nx * hw1, y1 - ny * hw1, c1),
                 (x2 - nx * hw2, y2 - ny * hw2, c2),
@@ -145,15 +144,16 @@ impl Path2D {
                 (x1 + nx * hw1, y1 + ny * hw1, c1),
             );
 
-            // Cap & Join ロジックへ続く (同様にインデックスから座標を取得して呼び出し)
-
+            // Cap判定: サブパスの本当の開始点
             if i == start {
                 self.draw_cap(x1, y1, -nx, -ny, hw1, c1, cap);
             }
+            // Cap判定: サブパスの本当の終了点
             if i == end - 2 {
                 self.draw_cap(x2, y2, nx, ny, hw2, c2, cap);
             }
 
+            // Join判定
             if i < end - 2 {
                 let p3_idx = (i + 2) * 5;
                 let x3 = self.points[p3_idx];
@@ -307,7 +307,10 @@ impl Path2D {
     pub fn move_to(&mut self, x: f32, y: f32, color: i32, width: f32) {
         self.add_point_internal(x, y, color, width, 0);
     }
-
+    fn get_color_at(&self, idx: usize) -> i32 {
+        // points[idx+2] には f32::from_bits で入っている想定
+        self.points[idx + 2].to_bits() as i32
+    }
     pub fn close_path(&mut self) {
         if let Some((x, y, c, w)) = self.get_first_point_of_current_subpath() {
             self.add_point_internal(x, y, c, w, 2);
@@ -539,8 +542,9 @@ pub unsafe extern "C" fn graphics2d_path2d_add_point(
     mode: i32,
 ) {
     let path = unsafe { &mut *ptr };
+    let color_f = f32::from_bits(color as u32);
     path.points
-        .extend_from_slice(&[x, y, color as f32, width, mode as f32]);
+        .extend_from_slice(&[x, y, color_f, width, mode as f32]);
 }
 
 #[unsafe(no_mangle)]

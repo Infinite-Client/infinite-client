@@ -313,21 +313,13 @@ class LockOnFeature : LocalFeature() {
         }
 
         // --- 描画処理 ---
-        graphics2D.beginPath()
         graphics2D.strokeStyle.color = color
         graphics2D.strokeStyle.width = if (active) 2f else 1f
-
+        graphics2D.beginPath()
         // 円の描画 (アクティブ時のみ 0.75倍)
         graphics2D.arc(x, y, currentSize * 0.75f, 0f, (PI * 2).toFloat())
-        graphics2D.strokePath()
-
-        // X印の描画
-        graphics2D.beginPath()
         graphics2D.moveTo(x - currentSize, y - currentSize)
         graphics2D.lineTo(x + currentSize, y + currentSize)
-        graphics2D.strokePath()
-
-        graphics2D.beginPath()
         graphics2D.moveTo(x + currentSize, y - currentSize)
         graphics2D.lineTo(x - currentSize, y + currentSize)
         graphics2D.strokePath()
