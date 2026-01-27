@@ -241,5 +241,20 @@
   "key.infinite.features.local.movement.better_sneak_feature.toggle": "Toggle Better Sneak Feature",
   "key.infinite.features.local.movement.fast_descent_feature.toggle": "Toggle Fast Descent Feature",
   "infinite.features.local.movement.keep_walk_feature": "Easy Keep Walking feature",
-  "key.infinite.features.local.movement.keep_walk_feature.toggle": "Toggle Keep Walk Feature"
+  "key.infinite.features.local.movement.keep_walk_feature.toggle": "Toggle Keep Walk Feature",
+  "infinite.features.local.combat.instant_use_feature": "Instant Use",
+  "infinite.features.local.combat.instant_use_feature.mode": "Mode",
+  "infinite.features.local.combat.instant_use_feature.custom_delay": "Custom Delay",
+  "infinite.features.local.combat.instant_use_feature.fast_place_speed": "Fast Place Speed",
+  "infinite.features.local.combat.instant_use_feature.allow_crystals": "Allow Crystals",
+  "infinite.features.local.combat.instant_use_feature.allow_exp_bottles": "Allow XP Bottles",
+  "infinite.features.local.combat.instant_use_feature.allow_blocks": "Allow Blocks",
+  "infinite.features.local.combat.instant_use_feature.allow_throwables": "Allow Throwables",
+  "infinite.features.local.combat.instant_use_feature.allow_food": "Allow Food",
+  "infinite.features.local.combat.instant_use_feature.allow_all": "Allow All Items",
+  "infinite.features.local.combat.instant_use_feature.custom_items": "Custom Items",
+  "infinite.features.local.combat.instant_use_feature.only_when_lock_on": "Only When Lock-On",
+  "infinite.features.local.combat.instant_use_feature.check_offhand": "Check Offhand",
+  "key.infinite.features.local.combat.instant_use_feature.toggle": "Toggle Instant Use",
+  "key.infinite.features.local.combat.instant_use_feature.cycle_mode": "Cycle Instant Use Mode"
 }
