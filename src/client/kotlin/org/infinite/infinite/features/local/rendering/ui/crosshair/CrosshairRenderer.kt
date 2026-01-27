@@ -183,7 +183,7 @@ class CrosshairRenderer :
             }
             graphics2D.strokePath()
             val blockPos = minecraft.gameMode?.destroyBlockPos ?: return
-            val block = level.getBlockState(blockPos) ?: return
+            val block = level.getBlockState(blockPos)
             val progressPerTick = player.getDestroySpeed(block) / (
                 block.getDestroySpeed(
                     level,

@@ -1,0 +1,44 @@
+{
+  "languages": {
+    "Java": {
+      "format_on_save": "on",
+      "tab_size": 4,
+      "enable_language_server": true,
+    },
+    "Kotlin": {
+      "format_on_save": "on",
+      "tab_size": 4,
+      "enable_language_server": true,
+    },
+    "Rust": {
+      "format_on_save": "on",
+      "enable_language_server": true,
+    },
+  },
+  "lsp": {
+    "java": {
+      "initialization_options": {
+        "settings": {
+          "java": {
+            "import": {
+              "gradle": { "enabled": true },
+              "kotlin": { "enabled": true },
+            },
+          },
+        },
+      },
+    },
+    "rust-analyzer": {
+      "initialization_options": {
+        "checkOnSave": true,
+        // 重要: Rustのプロジェクトルートを指定
+        "linkedProjects": ["rust/infinite-client/Cargo.toml"],
+        "cargo": {
+          "buildScripts": {
+            "enable": true,
+          },
+        },
+      },
+    },
+  },
+}

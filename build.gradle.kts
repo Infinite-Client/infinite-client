@@ -225,7 +225,6 @@ val buildRustAll: TaskProvider<Task> = tasks.register("buildRustAll") {
 }
 sourceSets {
     main {
-        // jextractで生成されたJavaコードをソースセットに含める
         java.srcDir(generatedJavaDir)
     }
 }
