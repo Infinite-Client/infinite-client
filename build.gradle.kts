@@ -91,7 +91,7 @@ val generateRustHeaders = tasks.register<Exec>("generateRustHeaders") {
 val jextractVersion = "25"
 val jextractInstallDir: Provider<Directory> = layout.buildDirectory.dir("jextract-$jextractVersion")
 val jextractBin: Provider<RegularFile> = jextractInstallDir.map {
-    it.file(if (System.getProperty("os.name").lowercase().contains("win")) "bin/jextract.exe" else "bin/jextract")
+    it.file(if (System.getProperty("os.name").lowercase().contains("win")) "bin/jextract.bat" else "bin/jextract")
 }
 
 val setupJextract: Provider<Task> = tasks.register("setupJextract") {
@@ -111,11 +111,12 @@ val setupJextract: Provider<Task> = tasks.register("setupJextract") {
     }
 
     // 基本URL (Java 25 EA 2-4)
+    // Note: The official EA builds are packaged as tar.gz even on Windows.
+    val archiveExt = "tar.gz"
     val downloadUrl =
-        "https://download.java.net/java/early_access/jextract/25/2/openjdk-25-jextract+2-4_${platformTag}_bin." +
-            (if (isWindows) "zip" else "tar.gz")
+        "https://download.java.net/java/early_access/jextract/25/2/openjdk-25-jextract+2-4_${platformTag}_bin.$archiveExt"
 
-    val archiveFile = layout.buildDirectory.file("jextract-archive." + (if (isWindows) "zip" else "tar.gz"))
+    val archiveFile = layout.buildDirectory.file("jextract-archive.$archiveExt")
 
     // 入出力の定義を明確にすることで、GradleのUP-TO-DATEチェックを機能させる
     outputs.dir(jextractInstallDir)
@@ -140,7 +141,7 @@ val setupJextract: Provider<Task> = tasks.register("setupJextract") {
             }
 
             copy {
-                val tree = if (isWindows) zipTree(archiveFile) else tarTree(resources.gzip(archiveFile))
+                val tree = tarTree(resources.gzip(archiveFile))
                 from(tree)
                 into(jextractInstallDir)
                 // 展開された最上位フォルダをスキップする処理
@@ -200,18 +201,42 @@ val rustTargets = mapOf(
     "macos-arm64" to "aarch64-apple-darwin",
 )
 
+// ホスト環境に対応するターゲットを選ぶ（通常の runClient ではこれだけをビルドする）
+val hostOs = System.getProperty("os.name").lowercase()
+val hostArch = System.getProperty("os.arch").lowercase()
+val hostIsArm64 = hostArch.contains("aarch64") || hostArch.contains("arm64")
+val hostRustTargetId = when {
+    hostOs.contains("win") -> if (hostIsArm64) "windows-arm64" else "windows-x64"
+    hostOs.contains("mac") -> if (hostIsArm64) "macos-arm64" else "macos-x64"
+    hostOs.contains("nix") || hostOs.contains("nux") -> if (hostIsArm64) "linux-arm64" else "linux-x64"
+    else -> throw GradleException("Unsupported host OS for Rust build: $hostOs")
+}
+
+// 明示的に全ターゲットをビルドしたい場合のみ有効化（例: -PbuildRustAllTargets=true）
+val buildAllRustTargets = providers.gradleProperty("buildRustAllTargets").orNull == "true"
+
 // 各ターゲット向けのビルドタスクを個別に登録
 rustTargets.forEach { (id, targetTriple) ->
     tasks.register<Exec>("rustBuild_$id") {
         group = "build"
         description = "Build Rust library for $id ($targetTriple) using zigbuild"
         workingDir = rustProjectDir
+        val useZigbuild = buildAllRustTargets || id != hostRustTargetId || providers.gradleProperty("useZigbuild").orNull == "true"
         // 追加: Rustのソースコード全体を監視対象にする
         // 開発環境に cargo-zigbuild がインストールされている必要があります
-        commandLine("cargo", "zigbuild", "--release", "--target", targetTriple)
+        if (useZigbuild) {
+            commandLine("cargo", "zigbuild", "--release", "--target", targetTriple)
+        } else {
+            commandLine("cargo", "build", "--release")
+        }
 
         // 出力ファイルのヒント（ビルドのスキップ判定用）
-        outputs.dir(rustProjectDir.resolve("target/$targetTriple/release"))
+        val outputDir = if (useZigbuild) {
+            rustProjectDir.resolve("target/$targetTriple/release")
+        } else {
+            rustProjectDir.resolve("target/release")
+        }
+        outputs.dir(outputDir)
     }
 }
 
@@ -220,7 +245,12 @@ val buildRustAll: TaskProvider<Task> = tasks.register("buildRustAll") {
     group = "build"
     description = "Triggers Rust builds for all supported platforms"
     inputs.dir(rustProjectDir)
-    dependsOn(rustTargets.keys.map { "rustBuild_$it" })
+    val rustBuildTasks = if (buildAllRustTargets) {
+        rustTargets.keys.map { "rustBuild_$it" }
+    } else {
+        listOf("rustBuild_$hostRustTargetId")
+    }
+    dependsOn(rustBuildTasks)
     dependsOn(runJextract) // Rustの変更がヘッダー経由でJavaに反映されるように
 }
 sourceSets {
@@ -237,7 +267,13 @@ tasks {
         dependsOn(buildRustAll)
         // 各プラットフォームのバイナリを適切なディレクトリに配置
         rustTargets.forEach { (id, target) ->
-            from("$rustProjectDir/target/$target/release") {
+            val hostUsesZigbuild = buildAllRustTargets || providers.gradleProperty("useZigbuild").orNull == "true"
+            val sourceDir = if (id == hostRustTargetId && !hostUsesZigbuild) {
+                "$rustProjectDir/target/release"
+            } else {
+                "$rustProjectDir/target/$target/release"
+            }
+            from(sourceDir) {
                 include("*.so", "*.dll", "*.dylib")
                 into("natives/$id")
             }
