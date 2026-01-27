@@ -192,46 +192,58 @@ impl Path2D {
         self.segments.last()?.points.last()
     }
 
-    // ユーティリティ: 点を追加し、必要に応じて色を補間する
-    fn push_interpolated_point(&mut self, x: f64, y: f64, t: f32, start_color: Color) {
+    fn push_interpolated_point(
+        &mut self,
+        x: f64,
+        y: f64,
+        t: f32,
+        start_color: Color,
+        start_width: f64,
+    ) {
         let mut p = self.point(x, y);
         if self.pen.is_gradient_enabled {
-            // 始点の色(start_color)から現在のペンの色(self.pen.color)へ補間
+            // 色の補間
             p.color = start_color.mix(self.pen.color, t);
+            // 太さの補間 (start_width から現在の self.pen.width へ)
+            p.width = start_width + (self.pen.width - start_width) * (t as f64);
+        } else {
+            // グラデーション無効でも、現在の太さを維持させる
+            p.width = self.pen.width;
         }
         self.push_point(p);
     }
 
-    // --- 新規実装関数 ---
-
     /// 3次ベジェ曲線
     pub fn bezier_curve_to(&mut self, cp1x: f64, cp1y: f64, cp2x: f64, cp2y: f64, x: f64, y: f64) {
-        let start = self.last_point().map(|p| (p.x, p.y)).unwrap_or((0.0, 0.0));
-        let start_color = self.last_point().map(|p| p.color).unwrap_or(self.pen.color);
+        let last = self.last_point();
+        let start_pos = last.map(|p| (p.x, p.y)).unwrap_or((0.0, 0.0));
+        let start_color = last.map(|p| p.color).unwrap_or(self.pen.color);
+        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width); // ここを追加
 
-        let steps = 20; // 分割数（必要に応じて精度を調整）
+        let steps = 20;
         for i in 1..=steps {
             let t = i as f64 / steps as f64;
             let inv_t = 1.0 - t;
 
-            // Bernstein多項式による計算
-            let px = inv_t.powi(3) * start.0
+            let px = inv_t.powi(3) * start_pos.0
                 + 3.0 * inv_t.powi(2) * t * cp1x
                 + 3.0 * inv_t * t.powi(2) * cp2x
                 + t.powi(3) * x;
-            let py = inv_t.powi(3) * start.1
+            let py = inv_t.powi(3) * start_pos.1
                 + 3.0 * inv_t.powi(2) * t * cp1y
                 + 3.0 * inv_t * t.powi(2) * cp2y
                 + t.powi(3) * y;
 
-            self.push_interpolated_point(px, py, t as f32, start_color);
+            // start_width を渡す
+            self.push_interpolated_point(px, py, t as f32, start_color, start_width);
         }
     }
-
     /// 2次ベジェ曲線
     pub fn quadratic_curve_to(&mut self, cpx: f64, cpy: f64, x: f64, y: f64) {
+        let last = self.last_point();
         let start = self.last_point().map(|p| (p.x, p.y)).unwrap_or((0.0, 0.0));
         let start_color = self.last_point().map(|p| p.color).unwrap_or(self.pen.color);
+        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width); // ここを追加
 
         let steps = 15;
         for i in 1..=steps {
@@ -241,7 +253,7 @@ impl Path2D {
             let px = inv_t.powi(2) * start.0 + 2.0 * inv_t * t * cpx + t.powi(2) * x;
             let py = inv_t.powi(2) * start.1 + 2.0 * inv_t * t * cpy + t.powi(2) * y;
 
-            self.push_interpolated_point(px, py, t as f32, start_color);
+            self.push_interpolated_point(px, py, t as f32, start_color, start_width);
         }
     }
 
@@ -272,6 +284,8 @@ impl Path2D {
             }
         }
 
+        let last = self.last_point();
+        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width); // ここを追加
         let steps = (diff.abs() / (PI / 18.0)).ceil().max(10.0) as i32; // 約10度ごとに分割
         let start_color = self.last_point().map(|p| p.color).unwrap_or(self.pen.color);
 
@@ -280,10 +294,18 @@ impl Path2D {
             let angle = start_angle + diff * t;
             let px = x + radius * angle.cos();
             let py = y + radius * angle.sin();
-            self.push_point_in_sequence(i, px, py, t as f32, start_color);
+            self.push_point_in_sequence(i, px, py, t as f32, start_color, start_width);
         }
     }
-    fn push_point_in_sequence(&mut self, i: i32, x: f64, y: f64, t: f32, start_color: Color) {
+    fn push_point_in_sequence(
+        &mut self,
+        i: i32,
+        x: f64,
+        y: f64,
+        t: f32,
+        start_color: Color,
+        start_width: f64,
+    ) {
         if i == 0 {
             if self.segments.is_empty() {
                 // パスが空ならここを起点にする
@@ -295,7 +317,7 @@ impl Path2D {
             }
         } else {
             // 2点目以降はグラデーションを考慮して追加
-            self.push_interpolated_point(x, y, t, start_color);
+            self.push_interpolated_point(x, y, t, start_color, start_width);
         }
     }
 
@@ -378,6 +400,8 @@ impl Path2D {
         let start_color = self.last_point().map(|p| p.color).unwrap_or(self.pen.color);
         let cos_rot = rotation.cos();
         let sin_rot = rotation.sin();
+        let last = self.last_point();
+        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width); // ここを追加
 
         for i in 0..=steps {
             let t = i as f64 / steps as f64;
@@ -391,7 +415,7 @@ impl Path2D {
             let px = x + lx * cos_rot - ly * sin_rot;
             let py = y + lx * sin_rot + ly * cos_rot;
 
-            self.push_point_in_sequence(i, px, py, t as f32, start_color);
+            self.push_point_in_sequence(i, px, py, t as f32, start_color, start_width);
         }
     }
     /// 塗りつぶしのテッセレーションを実行
@@ -442,33 +466,46 @@ impl Path2D {
     }
 
     pub fn tessellate_stroke(&mut self, cap: LineCap, join: LineJoin, enable_gradient: bool) {
-        // 1. 借用競合を避けるため、一旦出力用のバッファをローカルで作成
         let mut output_buffer = Vec::new();
 
-        // 2. 必要なデータ(segments)だけをイテレート
         for segment in &self.segments {
             let n = segment.points.len();
             if n < 2 {
                 continue;
             }
 
-            for i in 0..n - 1 {
+            let is_closed = segment.is_closed;
+
+            // 1. 各点における「進行方向ベクトル」と「法線ベクトル」を計算
+            let mut dirs = Vec::with_capacity(n);
+            for i in 0..n {
                 let p0 = &segment.points[i];
-                let p1 = &segment.points[i + 1];
+                let p1 = &segment.points[(i + 1) % n];
+                dirs.push(normalize(p1.x - p0.x, p1.y - p0.y));
+            }
+
+            // 2. 各線分を描画
+            let loop_limit = if is_closed { n } else { n - 1 };
+            for i in 0..loop_limit {
+                let i_curr = i % n;
+                let i_next = (i + 1) % n;
+
+                let p0 = &segment.points[i_curr];
+                let p1 = &segment.points[i_next];
+                let v_curr = dirs[i_curr];
+
+                if v_curr == (0.0, 0.0) {
+                    continue;
+                }
 
                 let half_w0 = p0.width / 2.0;
                 let half_w1 = p1.width / 2.0;
 
-                let v = normalize(p1.x - p0.x, p1.y - p0.y);
-                let n0 = (-v.1 * half_w0, v.0 * half_w0);
-                let n1 = (-v.1 * half_w1, v.0 * half_w1);
+                // --- 基本となる法線 ---
+                let n_curr = (-v_curr.1, v_curr.0);
 
-                // --- Cap (始点) ---
-                if i == 0 {
-                    Self::static_push_cap(&mut output_buffer, p0, v, n0, cap, true);
-                }
-
-                // --- Main Segment ---
+                // --- 線分本体の Quad ---
+                // ※ここでは単純な法線を使いますが、Join側で隙間を埋めます
                 let colors = if enable_gradient {
                     [
                         p0.color.to_raw(),
@@ -483,31 +520,47 @@ impl Path2D {
 
                 Self::static_push_quad(
                     &mut output_buffer,
-                    (p0.x + n0.0, p0.y + n0.1),
-                    (p0.x - n0.0, p0.y - n0.1),
-                    (p1.x - n1.0, p1.y - n1.1),
-                    (p1.x + n1.0, p1.y + n1.1),
+                    (p0.x + n_curr.0 * half_w0, p0.y + n_curr.1 * half_w0),
+                    (p0.x - n_curr.0 * half_w0, p0.y - n_curr.1 * half_w0),
+                    (p1.x - n_curr.0 * half_w1, p1.y - n_curr.1 * half_w1),
+                    (p1.x + n_curr.0 * half_w1, p1.y + n_curr.1 * half_w1),
                     colors,
                 );
 
-                // --- Join ---
-                if i < n - 2 {
-                    let p2 = &segment.points[i + 2];
-                    let v_next = normalize(p2.x - p1.x, p2.y - p1.y);
-                    Self::static_push_join(&mut output_buffer, p1, v, v_next, join);
+                // --- Join の処理 ---
+                // 閉じている場合は全ポイント、開いている場合は最後を除いたポイントで実行
+                if is_closed || i < n - 2 {
+                    let v_next = dirs[i_next];
+                    Self::static_push_join(&mut output_buffer, p1, v_curr, v_next, join);
                 }
 
-                // --- Cap (終点) ---
-                if i == n - 2 {
-                    Self::static_push_cap(&mut output_buffer, p1, v, n1, cap, false);
+                // --- Cap の処理 (開いたパスのみ) ---
+                if !is_closed {
+                    if i == 0 {
+                        Self::static_push_cap(
+                            &mut output_buffer,
+                            p0,
+                            v_curr,
+                            (n_curr.0 * half_w0, n_curr.1 * half_w0),
+                            cap,
+                            true,
+                        );
+                    }
+                    if i == n - 2 {
+                        Self::static_push_cap(
+                            &mut output_buffer,
+                            p1,
+                            v_curr,
+                            (n_curr.0 * half_w1, n_curr.1 * half_w1),
+                            cap,
+                            false,
+                        );
+                    }
                 }
             }
         }
-
-        // 3. 最後にメインバッファに結合
         self.buffer = output_buffer;
     }
-
     // self を借用しないスタティックメソッドとして分離
     fn static_push_quad(
         buffer: &mut Vec<f32>,

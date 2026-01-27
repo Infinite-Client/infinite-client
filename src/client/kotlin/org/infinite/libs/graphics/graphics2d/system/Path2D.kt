@@ -1,8 +1,6 @@
 package org.infinite.libs.graphics.graphics2d.system
 
 import org.infinite.libs.graphics.graphics2d.structs.FillRule
-import org.infinite.libs.graphics.graphics2d.structs.LineCap
-import org.infinite.libs.graphics.graphics2d.structs.LineJoin
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
 import org.infinite.nativebind.infinite_client_h
 import java.lang.foreign.MemorySegment
@@ -15,18 +13,19 @@ class Path2D : AutoCloseable {
     fun beginPath() = infinite_client_h.graphics2d_path2d_begin(nativePtr)
 
     // ペンの状態（太さ、色、キャップ、ジョイン、グラデーション）をRust側に同期
-    private fun syncPen(style: StrokeStyle, cap: LineCap = LineCap.Butt, join: LineJoin = LineJoin.Miter, enableGradient: Boolean = false) {
+    private fun syncPen(style: StrokeStyle) {
         infinite_client_h.graphics2d_path2d_set_pen(
             nativePtr,
             style.width.toDouble(),
             style.color,
-            cap.ordinal,
-            join.ordinal,
-            enableGradient,
+            style.lineCap.ordinal,
+            style.lineJoin.ordinal,
+            style.enabledGradient,
         )
     }
 
-    fun moveTo(x: Float, y: Float) {
+    fun moveTo(x: Float, y: Float, style: StrokeStyle) {
+        syncPen(style)
         infinite_client_h.graphics2d_path2d_move_to(nativePtr, x.toDouble(), y.toDouble())
     }
 
@@ -50,17 +49,38 @@ class Path2D : AutoCloseable {
 
     fun quadraticCurveTo(cpx: Float, cpy: Float, x: Float, y: Float, style: StrokeStyle) {
         syncPen(style)
-        infinite_client_h.graphics2d_path2d_quadratic_curve_to(nativePtr, cpx.toDouble(), cpy.toDouble(), x.toDouble(), y.toDouble())
+        infinite_client_h.graphics2d_path2d_quadratic_curve_to(
+            nativePtr,
+            cpx.toDouble(),
+            cpy.toDouble(),
+            x.toDouble(),
+            y.toDouble(),
+        )
     }
 
     fun arc(x: Float, y: Float, r: Float, startA: Float, endA: Float, ccw: Boolean, style: StrokeStyle) {
         syncPen(style)
-        infinite_client_h.graphics2d_path2d_arc(nativePtr, x.toDouble(), y.toDouble(), r.toDouble(), startA.toDouble(), endA.toDouble(), ccw)
+        infinite_client_h.graphics2d_path2d_arc(
+            nativePtr,
+            x.toDouble(),
+            y.toDouble(),
+            r.toDouble(),
+            startA.toDouble(),
+            endA.toDouble(),
+            ccw,
+        )
     }
 
     fun arcTo(x1: Float, y1: Float, x2: Float, y2: Float, radius: Float, style: StrokeStyle) {
         syncPen(style)
-        infinite_client_h.graphics2d_path2d_arc_to(nativePtr, x1.toDouble(), y1.toDouble(), x2.toDouble(), y2.toDouble(), radius.toDouble())
+        infinite_client_h.graphics2d_path2d_arc_to(
+            nativePtr,
+            x1.toDouble(),
+            y1.toDouble(),
+            x2.toDouble(),
+            y2.toDouble(),
+            radius.toDouble(),
+        )
     }
 
     fun closePath() {
@@ -78,13 +98,10 @@ class Path2D : AutoCloseable {
 
     fun strokePath(
         style: StrokeStyle,
-        cap: LineCap,
-        join: LineJoin,
-        enableGradient: Boolean,
         draw: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit,
     ) {
         // 描画直前にペン設定を同期
-        syncPen(style, cap, join, enableGradient)
+        syncPen(style)
         infinite_client_h.graphics2d_path2d_tessellate_stroke(nativePtr)
 
         // 共通のバッファ処理を利用（StrokeはQuadのみだが、汎用的に処理）

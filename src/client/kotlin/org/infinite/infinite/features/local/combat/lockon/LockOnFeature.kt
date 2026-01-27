@@ -8,6 +8,7 @@ import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.number.DoubleProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics2D
+import org.infinite.libs.graphics.graphics2d.structs.LineCap
 import org.infinite.libs.minecraft.aim.AimSystem
 import org.infinite.libs.minecraft.aim.task.AimTask
 import org.infinite.libs.minecraft.aim.task.condition.AimTaskConditionInterface
@@ -17,7 +18,6 @@ import org.infinite.libs.minecraft.aim.task.config.AimPriority
 import org.infinite.libs.minecraft.aim.task.config.AimTarget
 import org.infinite.utils.alpha
 import org.lwjgl.glfw.GLFW
-import kotlin.math.PI
 import kotlin.math.acos
 import kotlin.math.atan2
 
@@ -315,9 +315,10 @@ class LockOnFeature : LocalFeature() {
         // --- 描画処理 ---
         graphics2D.strokeStyle.color = color
         graphics2D.strokeStyle.width = if (active) 2f else 1f
+        graphics2D.strokeStyle.lineCap = LineCap.Round
+        graphics2D.strokeCircle(x, y, currentSize * 0.75)
         graphics2D.beginPath()
         // 円の描画 (アクティブ時のみ 0.75倍)
-        graphics2D.arc(x, y, currentSize * 0.75f, 0f, (PI * 2).toFloat())
         graphics2D.moveTo(x - currentSize, y - currentSize)
         graphics2D.lineTo(x + currentSize, y + currentSize)
         graphics2D.moveTo(x + currentSize, y - currentSize)

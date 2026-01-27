@@ -34,8 +34,6 @@ open class Graphics2D : MinecraftInterface() {
     var strokeStyle: StrokeStyle = StrokeStyle()
     var fillStyle: Int = 0xFFFFFFFF.toInt()
     var fillRule: FillRule = FillRule.EvenOdd
-    var lineCap: LineCap = LineCap.Butt
-    var lineJoin: LineJoin = LineJoin.Miter
     var textStyle: TextStyle = TextStyle()
     var enablePathGradient: Boolean = false
 
@@ -451,7 +449,7 @@ open class Graphics2D : MinecraftInterface() {
 
     // --- Path API ---
     fun beginPath() = path2D.beginPath()
-    fun moveTo(x: Number, y: Number) = path2D.moveTo(x.toFloat(), y.toFloat())
+    fun moveTo(x: Number, y: Number) = path2D.moveTo(x.toFloat(), y.toFloat(), strokeStyle)
 
     // lineTo などの構築コマンドでは、現在の Graphics2D の状態 (strokeStyle 等) を反映させる
     fun lineTo(x: Number, y: Number) {
@@ -488,9 +486,6 @@ open class Graphics2D : MinecraftInterface() {
         // 現在の Graphics2D の状態を Path2D に同期させてテッセレーションを実行
         path2D.strokePath(
             style = strokeStyle,
-            cap = lineCap,
-            join = lineJoin,
-            enableGradient = enablePathGradient,
         ) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
             // テッセレーションされた Quad を描画コマンドとして送出
             this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
@@ -527,17 +522,15 @@ open class Graphics2D : MinecraftInterface() {
         // 内部パスのテッセレーション実行
         internalPath2D.strokePath(
             style = strokeStyle,
-            cap = lineCap,
-            join = lineJoin,
-            enableGradient = enablePathGradient,
         ) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
             this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
         }
     }
 
     fun strokeCircle(cx: Number, cy: Number, radius: Number) = withInternalPath {
-        arc(cx.toFloat(), cy.toFloat(), radius.toFloat(), 0f, (PI * 2).toFloat(), false, strokeStyle)
-        // closePath は arc(0, 2PI) の場合不要なこともあるが、明示的に呼ぶ
+        moveTo(cx, cy)
+        arc(cx.toFloat(), cy.toFloat(), radius.toFloat(), 0f, PI.toFloat(), true, strokeStyle)
+        arc(cx.toFloat(), cy.toFloat(), radius.toFloat(), PI.toFloat(), (2 * PI).toFloat(), true, strokeStyle)
         closePath()
     }
 
