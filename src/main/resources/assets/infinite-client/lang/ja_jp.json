@@ -241,5 +241,20 @@
   "key.infinite.features.local.movement.better_sneak_feature.toggle": "Toggle Better Sneak",
   "key.infinite.features.local.movement.fast_descent_feature.toggle": "Toggle Fast Descent",
   "infinite.features.local.movement.keep_walk_feature": "簡単に歩き続けられる",
-  "key.infinite.features.local.movement.keep_walk_feature.toggle": "Toggle Keep Walk Feature"
+  "key.infinite.features.local.movement.keep_walk_feature.toggle": "Toggle Keep Walk Feature",
+  "infinite.features.local.combat.instant_use_feature": "即時使用",
+  "infinite.features.local.combat.instant_use_feature.mode": "モード",
+  "infinite.features.local.combat.instant_use_feature.custom_delay": "カスタム遅延",
+  "infinite.features.local.combat.instant_use_feature.fast_place_speed": "高速設置速度",
+  "infinite.features.local.combat.instant_use_feature.allow_crystals": "クリスタルを許可",
+  "infinite.features.local.combat.instant_use_feature.allow_exp_bottles": "経験値ボトルを許可",
+  "infinite.features.local.combat.instant_use_feature.allow_blocks": "ブロックを許可",
+  "infinite.features.local.combat.instant_use_feature.allow_throwables": "投擲アイテムを許可",
+  "infinite.features.local.combat.instant_use_feature.allow_food": "食べ物を許可",
+  "infinite.features.local.combat.instant_use_feature.allow_all": "すべてのアイテムを許可",
+  "infinite.features.local.combat.instant_use_feature.custom_items": "カスタムアイテム",
+  "infinite.features.local.combat.instant_use_feature.only_when_lock_on": "ロックオン時のみ",
+  "infinite.features.local.combat.instant_use_feature.check_offhand": "オフハンドをチェック",
+  "key.infinite.features.local.combat.instant_use_feature.toggle": "即時使用を切り替え",
+  "key.infinite.features.local.combat.instant_use_feature.cycle_mode": "即時使用モードを切り替え"
 }
