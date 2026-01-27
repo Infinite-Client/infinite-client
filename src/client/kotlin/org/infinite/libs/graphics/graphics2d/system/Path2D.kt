@@ -11,17 +11,62 @@ import java.lang.foreign.ValueLayout
 class Path2D : AutoCloseable {
     private var nativePtr = infinite_client_h.graphics2d_path2d_new()
 
-    fun beginPath() = infinite_client_h.graphics2d_path2d_clear(nativePtr)
+    // パスのリセット
+    fun beginPath() = infinite_client_h.graphics2d_path2d_begin(nativePtr)
 
-    fun moveTo(x: Float, y: Float) = infinite_client_h.graphics2d_path2d_add_point(nativePtr, x, y, 0, 0f, 0)
-
-    fun lineTo(x: Float, y: Float, style: StrokeStyle) = infinite_client_h.graphics2d_path2d_add_point(nativePtr, x, y, style.color, style.width, 1)
-
-    fun closePath(style: StrokeStyle) {
-        // 現在のサブパスの開始点を探す
-        // Rust側で計算しても良いが、一貫性のため情報を送る
-        infinite_client_h.graphics2d_path2d_close_path(nativePtr, style.color, style.width)
+    // ペンの状態（太さ、色、キャップ、ジョイン、グラデーション）をRust側に同期
+    private fun syncPen(style: StrokeStyle, cap: LineCap = LineCap.Butt, join: LineJoin = LineJoin.Miter, enableGradient: Boolean = false) {
+        infinite_client_h.graphics2d_path2d_set_pen(
+            nativePtr,
+            style.width.toDouble(),
+            style.color,
+            cap.ordinal,
+            join.ordinal,
+            enableGradient,
+        )
     }
+
+    fun moveTo(x: Float, y: Float) {
+        infinite_client_h.graphics2d_path2d_move_to(nativePtr, x.toDouble(), y.toDouble())
+    }
+
+    fun lineTo(x: Float, y: Float, style: StrokeStyle) {
+        syncPen(style)
+        infinite_client_h.graphics2d_path2d_line_to(nativePtr, x.toDouble(), y.toDouble())
+    }
+
+    fun bezierCurveTo(cp1x: Float, cp1y: Float, cp2x: Float, cp2y: Float, x: Float, y: Float, style: StrokeStyle) {
+        syncPen(style)
+        infinite_client_h.graphics2d_path2d_bezier_curve_to(
+            nativePtr,
+            cp1x.toDouble(),
+            cp1y.toDouble(),
+            cp2x.toDouble(),
+            cp2y.toDouble(),
+            x.toDouble(),
+            y.toDouble(),
+        )
+    }
+
+    fun quadraticCurveTo(cpx: Float, cpy: Float, x: Float, y: Float, style: StrokeStyle) {
+        syncPen(style)
+        infinite_client_h.graphics2d_path2d_quadratic_curve_to(nativePtr, cpx.toDouble(), cpy.toDouble(), x.toDouble(), y.toDouble())
+    }
+
+    fun arc(x: Float, y: Float, r: Float, startA: Float, endA: Float, ccw: Boolean, style: StrokeStyle) {
+        syncPen(style)
+        infinite_client_h.graphics2d_path2d_arc(nativePtr, x.toDouble(), y.toDouble(), r.toDouble(), startA.toDouble(), endA.toDouble(), ccw)
+    }
+
+    fun arcTo(x1: Float, y1: Float, x2: Float, y2: Float, radius: Float, style: StrokeStyle) {
+        syncPen(style)
+        infinite_client_h.graphics2d_path2d_arc_to(nativePtr, x1.toDouble(), y1.toDouble(), x2.toDouble(), y2.toDouble(), radius.toDouble())
+    }
+
+    fun closePath() {
+        infinite_client_h.graphics2d_path2d_close(nativePtr)
+    }
+
     fun fillPath(
         fillRule: FillRule,
         fillTriangle: (Float, Float, Float, Float, Float, Float, Int, Int, Int) -> Unit,
@@ -31,79 +76,65 @@ class Path2D : AutoCloseable {
         processBuffer(fillTriangle, fillQuad)
     }
 
-    // Path2D.kt
-    fun strokePath(enableGradient: Boolean, cap: LineCap, join: LineJoin, draw: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit) {
-        // Rust 側の tessellate_stroke に引数を渡す
-        infinite_client_h.graphics2d_path2d_tessellate_stroke(nativePtr, cap.ordinal, join.ordinal, enableGradient)
+    fun strokePath(
+        style: StrokeStyle,
+        cap: LineCap,
+        join: LineJoin,
+        enableGradient: Boolean,
+        draw: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit,
+    ) {
+        // 描画直前にペン設定を同期
+        syncPen(style, cap, join, enableGradient)
+        infinite_client_h.graphics2d_path2d_tessellate_stroke(nativePtr)
 
-        val ptr = infinite_client_h.graphics2d_path2d_get_buffer_ptr(nativePtr)
-        val size = infinite_client_h.graphics2d_path2d_get_buffer_size(nativePtr)
-        val segment = ptr.reinterpret(size.toLong() * 4)
-
-        var cursor = 0
-        while (cursor < size) {
-            val type = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
-            if (type == 4.0f) {
-                val x0 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
-                val y0 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
-                val x1 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
-                val y1 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
-                val x2 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
-                val y2 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
-                val x3 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
-                val y3 = segment.get(ValueLayout.JAVA_FLOAT, (cursor++ * 4).toLong())
-                val c0 = segment.get(ValueLayout.JAVA_INT, (cursor++ * 4).toLong())
-                val c1 = segment.get(ValueLayout.JAVA_INT, (cursor++ * 4).toLong())
-                val c2 = segment.get(ValueLayout.JAVA_INT, (cursor++ * 4).toLong())
-                val c3 = segment.get(ValueLayout.JAVA_INT, (cursor++ * 4).toLong())
-                draw(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
-            }
-        }
+        // 共通のバッファ処理を利用（StrokeはQuadのみだが、汎用的に処理）
+        processBuffer({ _, _, _, _, _, _, _, _, _ -> }, draw)
     }
+
     private fun processBuffer(
         fillTriangle: (Float, Float, Float, Float, Float, Float, Int, Int, Int) -> Unit,
         fillQuad: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit,
     ) {
         val size = infinite_client_h.graphics2d_path2d_get_buffer_size(nativePtr)
-        if (size <= 0) return
+        if (size <= 0L) return
 
         val bufferPtr = infinite_client_h.graphics2d_path2d_get_buffer_ptr(nativePtr)
-        val segment = bufferPtr.reinterpret(size.toLong() * 4)
+        val segment = bufferPtr.reinterpret(size * 4)
 
         var cursor = 0L
         while (cursor < size) {
             val type = segment.get(ValueLayout.JAVA_FLOAT, cursor * 4).toInt()
             cursor++
 
-            if (type == 3) { // Triangle: [x0, y0, x1, y1, x2, y2, c0, c1, c2]
-                val x0 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val y0 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val x1 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val y1 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val x2 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val y2 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+            when (type) {
+                3 -> { // Triangle
+                    val x0 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val y0 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val x1 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val y1 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val x2 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val y2 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val c0 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
+                    val c1 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
+                    val c2 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
+                    fillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2)
+                }
 
-                val c0 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
-                val c1 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
-                val c2 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
-
-                fillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2)
-            } else if (type == 4) { // Quad: [x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3]
-                val x0 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val y0 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val x1 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val y1 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val x2 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val y2 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val x3 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-                val y3 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
-
-                val c0 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
-                val c1 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
-                val c2 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
-                val c3 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
-
-                fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+                4 -> { // Quad
+                    val x0 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val y0 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val x1 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val y1 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val x2 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val y2 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val x3 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val y3 = segment.get(ValueLayout.JAVA_FLOAT, cursor++ * 4)
+                    val c0 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
+                    val c1 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
+                    val c2 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
+                    val c3 = segment.get(ValueLayout.JAVA_INT, cursor++ * 4)
+                    fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+                }
             }
         }
     }
@@ -113,14 +144,5 @@ class Path2D : AutoCloseable {
             infinite_client_h.graphics2d_path2d_drop(nativePtr)
             nativePtr = MemorySegment.NULL
         }
-    }
-    fun arc(x: Float, y: Float, r: Float, startA: Float, endA: Float, ccw: Boolean, style: StrokeStyle) {
-        infinite_client_h.graphics2d_path2d_arc(nativePtr, x, y, r, startA, endA, ccw, style.color, style.width)
-    }
-    fun arcTo(x1: Float, y1: Float, x2: Float, y2: Float, radius: Float, style: StrokeStyle) {
-        infinite_client_h.graphics2d_path2d_arc_to(nativePtr, x1, y1, x2, y2, radius, style.color, style.width)
-    }
-    fun bezierCurveTo(cp1x: Float, cp1y: Float, cp2x: Float, cp2y: Float, x: Float, y: Float, style: StrokeStyle) {
-        infinite_client_h.graphics2d_path2d_bezier_to(nativePtr, cp1x, cp1y, cp2x, cp2y, x, y, style.color, style.width)
     }
 }

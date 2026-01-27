@@ -174,6 +174,23 @@ open class Graphics2D : MinecraftInterface() {
         y3.toFloat(),
     )
 
+    /**
+     * 現在のパスに2次ベジェ曲線を追加します。
+     * @param cpx 制御点のX座標
+     * @param cpy 制御点のY座標
+     * @param x 終点のX座標
+     * @param y 終点のY座標
+     */
+    fun quadraticCurveTo(cpx: Number, cpy: Number, x: Number, y: Number) {
+        path2D.quadraticCurveTo(
+            cpx.toFloat(),
+            cpy.toFloat(),
+            x.toFloat(),
+            y.toFloat(),
+            strokeStyle,
+        )
+    }
+
     fun strokeQuad(
         x0: Number,
         y0: Number,
@@ -234,50 +251,6 @@ open class Graphics2D : MinecraftInterface() {
     )
 
     // --- Path API ---
-    fun beginPath() = path2D.beginPath()
-    fun moveTo(x: Number, y: Number) = path2D.moveTo(x.toFloat(), y.toFloat())
-    fun lineTo(x: Number, y: Number) = path2D.lineTo(x.toFloat(), y.toFloat(), strokeStyle)
-    fun closePath() = path2D.closePath(strokeStyle)
-    fun arc(x: Number, y: Number, r: Number, s: Number, e: Number, ccw: Boolean = false) = path2D.arc(x.toFloat(), y.toFloat(), r.toFloat(), s.toFloat(), e.toFloat(), ccw, strokeStyle)
-
-    // Graphics2D.kt の strokePath 修正
-    fun strokePath() {
-        // lineCap.ordinal, lineJoin.ordinal をそのまま渡す
-        path2D.strokePath(enablePathGradient, lineCap, lineJoin) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
-            this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
-        }
-    }
-
-    fun fillPath() {
-        path2D.fillPath(
-            fillRule = this.fillRule,
-            fillTriangle = { x0, y0, x1, y1, x2, y2, c0, c1, c2 ->
-                this.fillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2)
-            },
-            fillQuad = { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
-                this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
-            },
-        )
-        path2D.beginPath()
-    }
-
-    // 既存のメソッドを Rust 側の新しい FFI に紐付け
-    fun arcTo(x1: Number, y1: Number, x2: Number, y2: Number, r: Number) {
-        path2D.arcTo(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), r.toFloat(), strokeStyle)
-    }
-
-    // Rust 側で処理するため、Kotlin 側の計算ロジックを削除して Path2D に委譲
-    fun bezierCurveTo(cp1x: Number, cp1y: Number, cp2x: Number, cp2y: Number, x: Number, y: Number) {
-        path2D.bezierCurveTo(
-            cp1x.toFloat(),
-            cp1y.toFloat(),
-            cp2x.toFloat(),
-            cp2y.toFloat(),
-            x.toFloat(),
-            y.toFloat(),
-            strokeStyle,
-        )
-    }
 
     fun fillRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) {
         val xf = x.toFloat()
@@ -379,59 +352,6 @@ open class Graphics2D : MinecraftInterface() {
         }
     }
 
-    private val internalPath2D = Path2D() // 内部計算用に追加
-
-    private inline fun withInternalPath(block: Path2D.() -> Unit) {
-        internalPath2D.beginPath()
-        // strokeStyle の現在の値を確実に渡せるようにする
-        internalPath2D.block()
-
-        // 重要な変更: FFI を通じてテセレーションを実行
-        internalPath2D.strokePath(
-            enablePathGradient,
-            lineCap,
-            lineJoin,
-        ) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
-            // 内部で fillQuad を呼び出すことで、テセレーションされた三角形/四角形を描画
-            this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
-        }
-    }
-
-    fun strokeCircle(cx: Number, cy: Number, radius: Number) = withInternalPath {
-        arc(cx.toFloat(), cy.toFloat(), radius.toFloat(), 0f, (PI * 2).toFloat(), false, strokeStyle)
-        closePath()
-    }
-
-    fun strokeRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) = withInternalPath {
-        val xf = x.toFloat()
-        val yf = y.toFloat()
-        val wf = w.toFloat()
-        val hf = h.toFloat()
-
-        // 半径が幅や高さの半分を超えないように制限
-        val rf = min(r.toFloat(), min(wf / 2f, hf / 2f))
-
-        val halfPi = (PI / 2.0).toFloat()
-        val pi = PI.toFloat()
-
-        // 1. 最初の円弧（右上）の開始点に移動
-        // 右上の弧は -90度(12時方向)から開始するため、x = 中心 + 0, y = 中心 - r
-        moveTo(xf + wf - rf, yf)
-
-        // 2. 時計回りに各角を描画
-        // 右上: -90° to 0°
-        arc(xf + wf - rf, yf + rf, rf, -halfPi, 0f, false, strokeStyle)
-        // 右下: 0° to 90°
-        arc(xf + wf - rf, yf + hf - rf, rf, 0f, halfPi, false, strokeStyle)
-        // 左下: 90° to 180°
-        arc(xf + rf, yf + hf - rf, rf, halfPi, pi, false, strokeStyle)
-        // 左上: 180° to 270°
-        arc(xf + rf, yf + rf, rf, pi, pi + halfPi, false, strokeStyle)
-
-        // 3. パスを閉じる。これで左上から右上への直線が自動的に補完されます。
-        closePath(strokeStyle)
-    }
-
     // --- Text ---
     fun text(text: String, x: Number, y: Number) = provider.getText()
         .set(textStyle.font, text, x.toFloat(), y.toFloat(), fillStyle, textStyle.shadow, textStyle.size)
@@ -527,5 +447,115 @@ open class Graphics2D : MinecraftInterface() {
         this.beginPath()
         this.block()
         // パス自体は保持し、ユーザーが明示的に fillPath() や strokePath() を呼ぶのを待つ
+    }
+
+    // --- Path API ---
+    fun beginPath() = path2D.beginPath()
+    fun moveTo(x: Number, y: Number) = path2D.moveTo(x.toFloat(), y.toFloat())
+
+    // lineTo などの構築コマンドでは、現在の Graphics2D の状態 (strokeStyle 等) を反映させる
+    fun lineTo(x: Number, y: Number) {
+        path2D.lineTo(x.toFloat(), y.toFloat(), strokeStyle)
+    }
+
+    fun closePath() = path2D.closePath()
+
+    fun arc(x: Number, y: Number, r: Number, s: Number, e: Number, ccw: Boolean = false) {
+        path2D.arc(x.toFloat(), y.toFloat(), r.toFloat(), s.toFloat(), e.toFloat(), ccw, strokeStyle)
+    }
+
+    // 既存のメソッドを Rust 側の新しい FFI に紐付け
+    fun arcTo(x1: Number, y1: Number, x2: Number, y2: Number, r: Number) {
+        path2D.arcTo(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), r.toFloat(), strokeStyle)
+    }
+
+    fun bezierCurveTo(cp1x: Number, cp1y: Number, cp2x: Number, cp2y: Number, x: Number, y: Number) {
+        path2D.bezierCurveTo(
+            cp1x.toFloat(),
+            cp1y.toFloat(),
+            cp2x.toFloat(),
+            cp2y.toFloat(),
+            x.toFloat(),
+            y.toFloat(),
+            strokeStyle,
+        )
+    }
+
+    /**
+     * 現在構築されているパスに外郭線を描画します。
+     */
+    fun strokePath() {
+        // 現在の Graphics2D の状態を Path2D に同期させてテッセレーションを実行
+        path2D.strokePath(
+            style = strokeStyle,
+            cap = lineCap,
+            join = lineJoin,
+            enableGradient = enablePathGradient,
+        ) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+            // テッセレーションされた Quad を描画コマンドとして送出
+            this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+        }
+    }
+
+    /**
+     * 現在構築されているパスを塗りつぶします。
+     */
+    fun fillPath() {
+        // fillPath を呼ぶ前に現在の fillStyle を反映させる必要があるため、
+        // 便宜上 StrokeStyle(width=0, color=fillStyle) として同期
+        path2D.fillPath(
+            fillRule = this.fillRule,
+            fillTriangle = { x0, y0, x1, y1, x2, y2, c0, c1, c2 ->
+                this.fillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2)
+            },
+            fillQuad = { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+                this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+            },
+        )
+        // Canvas API の仕様に基づき、描画後はパスをクリアしないのが一般的ですが、
+        // 現在の実装に合わせて必要なら beginPath() を呼ぶ
+        // path2D.beginPath()
+    }
+
+    // 内部計算用の strokeCircle / strokeRoundedRect の修正
+    private val internalPath2D = Path2D()
+
+    private inline fun withInternalPath(block: Path2D.() -> Unit) {
+        internalPath2D.beginPath()
+        internalPath2D.block()
+
+        // 内部パスのテッセレーション実行
+        internalPath2D.strokePath(
+            style = strokeStyle,
+            cap = lineCap,
+            join = lineJoin,
+            enableGradient = enablePathGradient,
+        ) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+            this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+        }
+    }
+
+    fun strokeCircle(cx: Number, cy: Number, radius: Number) = withInternalPath {
+        arc(cx.toFloat(), cy.toFloat(), radius.toFloat(), 0f, (PI * 2).toFloat(), false, strokeStyle)
+        // closePath は arc(0, 2PI) の場合不要なこともあるが、明示的に呼ぶ
+        closePath()
+    }
+
+    fun strokeRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) = withInternalPath {
+        val xf = x.toFloat()
+        val yf = y.toFloat()
+        val wf = w.toFloat()
+        val hf = h.toFloat()
+        val rf = min(r.toFloat(), min(wf / 2f, hf / 2f))
+
+        val halfPi = (PI / 2.0).toFloat()
+        val pi = PI.toFloat()
+
+        moveTo(xf + wf - rf, yf)
+        arc(xf + wf - rf, yf + rf, rf, -halfPi, 0f, false, strokeStyle)
+        arc(xf + wf - rf, yf + hf - rf, rf, 0f, halfPi, false, strokeStyle)
+        arc(xf + rf, yf + hf - rf, rf, halfPi, pi, false, strokeStyle)
+        arc(xf + rf, yf + rf, rf, pi, pi + halfPi, false, strokeStyle)
+        closePath()
     }
 }
