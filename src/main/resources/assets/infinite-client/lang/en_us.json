@@ -256,5 +256,8 @@
   "infinite.features.local.combat.instant_use_feature.only_when_lock_on": "Only When Lock-On",
   "infinite.features.local.combat.instant_use_feature.check_offhand": "Check Offhand",
   "key.infinite.features.local.combat.instant_use_feature.toggle": "Toggle Instant Use",
-  "key.infinite.features.local.combat.instant_use_feature.cycle_mode": "Cycle Instant Use Mode"
+  "key.infinite.features.local.combat.instant_use_feature.cycle_mode": "Cycle Instant Use Mode",
+  "infinite.features.local.combat.lock_on_feature.attack_target": "Auto Attack",
+  "infinite.features.local.combat.lock_on_feature.attack_strength": "Attack Strength",
+  "infinite.features.local.combat.lock_on_feature.attack_randomization": "Random Delay"
 }

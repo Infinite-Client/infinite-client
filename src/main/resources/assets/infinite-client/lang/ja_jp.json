@@ -256,5 +256,8 @@
   "infinite.features.local.combat.instant_use_feature.only_when_lock_on": "ロックオン時のみ",
   "infinite.features.local.combat.instant_use_feature.check_offhand": "オフハンドをチェック",
   "key.infinite.features.local.combat.instant_use_feature.toggle": "即時使用を切り替え",
-  "key.infinite.features.local.combat.instant_use_feature.cycle_mode": "即時使用モードを切り替え"
+  "key.infinite.features.local.combat.instant_use_feature.cycle_mode": "即時使用モードを切り替え",
+  "infinite.features.local.combat.lock_on_feature.attack_target": "自動攻撃",
+  "infinite.features.local.combat.lock_on_feature.attack_strength": "攻撃強度 (クールダウン)",
+  "infinite.features.local.combat.lock_on_feature.attack_randomization": "ランダムディレイ (Tick)"
 }

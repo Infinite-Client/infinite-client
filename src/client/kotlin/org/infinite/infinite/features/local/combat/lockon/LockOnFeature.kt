@@ -6,6 +6,8 @@ import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.number.DoubleProperty
+import org.infinite.libs.core.features.property.number.FloatProperty
+import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.graphics.graphics2d.structs.LineCap
@@ -53,6 +55,10 @@ class LockOnFeature : LocalFeature() {
     private val autoReselect by property(BooleanProperty(true))
     private val method by property(EnumSelectionProperty(AimCalculateMethod.Linear))
     private val aimBias by property(DoubleProperty(0.7, 0.0, 1.0, "Angle Bias"))
+
+    private val attackTarget by property(BooleanProperty(true))
+    private val attackStrength by property(FloatProperty(0.9f, 0.5f, 1.0f))
+    private val attackRandomization by property(IntProperty(2, 0, 10, "Tick"))
 
     init {
         // L: 新しいターゲットを追加
@@ -113,7 +119,6 @@ class LockOnFeature : LocalFeature() {
     }
 
     override fun onStartTick() {
-        if (!isEnabled()) return
         val player = this@LockOnFeature.player ?: return
 
         val currentFocus = selectedEntity
@@ -161,6 +166,7 @@ class LockOnFeature : LocalFeature() {
             currentIndex = targetList.indexOf(currentFocus).coerceAtLeast(-1)
             if (currentIndex == -1) currentTask = null
         }
+        tryAttack()
     }
 
     /**
@@ -372,5 +378,46 @@ class LockOnFeature : LocalFeature() {
         while (relativeYaw > 180.0) relativeYaw -= 360.0
 
         return relativeYaw
+    }
+
+    private var attackDelay = 0
+    private fun tryAttack() {
+        if (!attackTarget.value) return
+        val player = player ?: return
+        val target = lockedEntity ?: return // 現在ロックオン中のターゲット
+
+        // 1. 距離（射程）のチェック
+        // プレイヤーのリーチ（通常 3.0ブロック、クリエイティブ 4.5~5.0）
+        val maxRange = player.entityAttackRange().maxRange
+        val minRange = player.entityAttackRange().minRange
+        if (player.distanceTo(target) !in minRange..maxRange) return
+
+        // 2. 攻撃クールダウン（インターバル）のチェック
+        // getAttackStrengthScale(0.5f) が 1.0 ならフルチャージ状態
+        if (player.getAttackStrengthScale(0.0f) < attackStrength.value) return
+        // 3. 視認性（壁越しではないか）のチェック
+        // すでにターゲット選定時に行っている場合は省略可能
+        if (checkLineOfSight.value && !player.hasLineOfSight(target)) return
+
+        // 4. 無敵時間（ハーツ値）のチェック
+        // target.invulnerableTime はダメージを受けた直後の無敵フレーム
+        if (target.invulnerableTime > 10) return
+        if (attackDelay > 0) {
+            attackDelay--
+            return
+        }
+        // --- 攻撃の実行 ---
+        performAttack(target)
+    }
+
+    private fun performAttack(target: LivingEntity) {
+        val player = player ?: return
+        // クライアント側で腕を振るアニメーションを表示
+        player.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
+
+        // サーバーに攻撃パケットを送信
+        // Minecraftの内部処理: プレイヤーがエンティティを叩くパケットを送る
+        minecraft.gameMode?.attack(player, target)
+        attackDelay = (0..attackRandomization.value).random()
     }
 }
