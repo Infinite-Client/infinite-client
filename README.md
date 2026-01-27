@@ -1,3 +1,3 @@
 # minecraft.infinite-client
 
-Next of Infinite CLient
+Next of Infinite Client
