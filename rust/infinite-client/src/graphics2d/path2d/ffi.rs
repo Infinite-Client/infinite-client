@@ -18,4 +18,3 @@ pub unsafe extern "C" fn graphics2d_path2d_drop(ptr: *mut Path2D) {
     let path2d = unsafe { Box::from_raw(ptr) };
     drop(path2d);
 }
-

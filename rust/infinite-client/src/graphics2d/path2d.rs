@@ -7,10 +7,17 @@ pub struct Path2D {
     segments: Vec<SegmentData>,
     pub pen: Pen,
 }
-#[derive(Default)]
 pub struct SegmentData {
     points: Vec<PointData>,
     is_closed: bool,
+}
+impl Default for SegmentData {
+    fn default() -> Self {
+        Self {
+            points: Vec::new(),
+            is_closed: false,
+        }
+    }
 }
 pub struct PointData {
     pub x: f64,
@@ -127,17 +134,49 @@ impl Path2D {
         point.width = self.pen.width;
         point
     }
-    fn push_point(&mut self, point:PointData) {
+    pub fn line_to(&mut self, x: f64, y: f64) {
+        // 現在のセグメントが存在し、かつ既に閉じられているかチェック
+        let needs_new_segment = self.segments.last().map(|s| s.is_closed).unwrap_or(false);
+
+        if needs_new_segment {
+            // 閉じられた後の line_to は、前の終点（＝閉じられたパスの始点）を
+            // 起点とする新しいセグメントとして扱うのが一般的
+            let last_start_point = self
+                .segments
+                .last()
+                .and_then(|s| s.points.first())
+                .map(|p| (p.x, p.y));
+
+            if let Some((sx, sy)) = last_start_point {
+                self.move_to(sx, sy);
+            } else {
+                self.move_to(x, y); // 安全策：始点がなければ今ここを始点にする
+            }
+        }
+
+        let point = self.point(x, y);
+        self.push_point(point);
+    }
+
+    pub fn close(&mut self) {
         if let Some(current_segment) = self.segments.last_mut() {
+            // 既に点がある場合のみ閉じるフラグを立てる
+            if !current_segment.points.is_empty() {
+                current_segment.is_closed = true;
+            }
+        }
+    }
+
+    fn push_point(&mut self, point: PointData) {
+        if let Some(current_segment) = self.segments.last_mut() {
+            // ここで is_closed をチェックしても良いが、
+            // move_to / line_to 側で制御するほうが責務が明確
             current_segment.points.push(point);
-        }else{
-            let mut segment=SegmentData::default();
+        } else {
+            // セグメントがない場合は自動的に作成
+            let mut segment = SegmentData::default();
             segment.points.push(point);
             self.segments.push(segment);
         }
-    }
-    pub fn line_to(&mut self, x: f64, y: f64) {
-        let point = self.point(x, y);
-        self.push_point(point);
     }
 }
