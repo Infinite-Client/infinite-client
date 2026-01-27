@@ -3,6 +3,7 @@ package org.infinite.infinite.features.local.combat
 import org.infinite.infinite.features.local.combat.archery.ArcheryFeature
 import org.infinite.infinite.features.local.combat.attack.CriticalFeature
 import org.infinite.infinite.features.local.combat.counter.CounterFeature
+import org.infinite.infinite.features.local.combat.instantuse.InstantUseFeature
 import org.infinite.infinite.features.local.combat.lockon.LockOnFeature
 import org.infinite.infinite.features.local.combat.mace.MaceBoostFeature
 import org.infinite.infinite.features.local.combat.quickshot.QuickShotFeature
@@ -20,4 +21,5 @@ class LocalCombatCategory : LocalCategory() {
     val throwableFeature by feature(ThrowableFeature())
     val quickShotFeature by feature(QuickShotFeature())
     val swapShotFeature by feature(SwapShotFeature())
+    val instantUseFeature by feature(InstantUseFeature())
 }
