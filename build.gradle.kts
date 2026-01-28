@@ -12,6 +12,7 @@ plugins {
     kotlin("jvm")
     id("fabric-loom")
     id("maven-publish")
+    id("eclipse")
     id("org.jetbrains.kotlin.plugin.serialization")
     java
     id("com.diffplug.spotless")
@@ -43,6 +44,17 @@ repositories {
     // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html
     // for more information about repositories.
+}
+eclipse {
+    classpath {
+        // Kotlin DSLでの正しい書き方
+        plusConfigurations.add(configurations.getByName("kotlinCompilerClasspath"))
+    }
+}
+
+// Javaのコンパイル前にKotlinのコンパイルを完了させる
+tasks.named<JavaCompile>("compileJava") {
+    dependsOn("compileKotlin")
 }
 
 dependencies {
