@@ -116,11 +116,12 @@ class InstantUseFeature : LocalFeature() {
         }
 
         // Determine which hand is active
-        lastActiveHand = when {
-            mainHandActive -> InteractionHand.MAIN_HAND
-            offHandActive -> InteractionHand.OFF_HAND
-            else -> null
-        }
+        lastActiveHand =
+            if (mainHandActive) {
+                InteractionHand.MAIN_HAND
+            } else {
+                InteractionHand.OFF_HAND
+            }
 
         // Apply the instant use based on mode
         applyInstantUse()
@@ -246,7 +247,8 @@ class InstantUseFeature : LocalFeature() {
 
         graphics2D.textStyle.size = 8f
         graphics2D.textStyle.font = "infinite_regular"
-        graphics2D.fillStyle = if (isCurrentlyActive) colorScheme.accentColor else colorScheme.foregroundColor.alpha(150)
+        graphics2D.fillStyle =
+            if (isCurrentlyActive) colorScheme.accentColor else colorScheme.foregroundColor.alpha(150)
         graphics2D.textCentered(modeText, cx, indicatorY + indicatorRadius + 8f)
 
         // Show active hand indicator

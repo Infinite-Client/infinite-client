@@ -43,3 +43,4 @@ replay_*.log
 # Infinite Client
 
 /src/main/java-generated/
+tmp

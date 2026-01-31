@@ -2,6 +2,7 @@ package org.infinite.mixin.infinite.features.local.level.xray;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local; // 重要: Localを使用
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.Arrays;
@@ -15,21 +16,17 @@ import org.infinite.InfiniteClient;
 import org.infinite.infinite.features.local.level.xray.XRayFeature;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(ModelBlockRenderer.class)
 public class ModelBlockRendererMixin {
+
   @Unique
   private static XRayFeature xRayFeature() {
     return InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getXRayFeature();
   }
 
-  @Unique
-  private static boolean isEnabled() {
-    XRayFeature feature = xRayFeature();
-    return feature.isEnabled();
-  }
-
+  /** putQuadData へのフック 名前によるキャプチャを廃止し、@Local を使用して型で安全に取得します。 */
   @WrapOperation(
       method = "putQuadData",
       at =
@@ -37,7 +34,7 @@ public class ModelBlockRendererMixin {
               value = "INVOKE",
               target =
                   "Lcom/mojang/blaze3d/vertex/VertexConsumer;putBulkData(Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/minecraft/client/renderer/block/model/BakedQuad;[FFFFF[II)V"))
-  private static void onPuQuadData(
+  private static void onPutQuadData(
       VertexConsumer instance,
       PoseStack.Pose pose,
       BakedQuad bakedQuad,
@@ -49,26 +46,20 @@ public class ModelBlockRendererMixin {
       int[] is,
       int lightmap,
       Operation<Void> original,
-      BlockAndTintGetter world,
-      BlockState state,
-      BlockPos pos) {
+      // 引数から型で取得
+      @Local(argsOnly = true) BlockState state // 引数から型で取得
+      // 引数から型で取得
+      ) {
     XRayFeature xRay = xRayFeature();
 
     if (xRay.isEnabled()) {
       boolean isOre = xRay.getTargetBlocks().getValue().contains(xRay.getBlockId(state));
 
-      // 1. 透明度: 鉱石は不透明、石は透明
       float finalAlpha = isOre ? 1.0f : xRay.getTransparency().getValue();
-
-      // 2. 【重要】発光処理:
-      // 通常、r, g, b には AO (影) の係数が掛かっており、1.0F より小さい値になっています。
-      // これを 1.0F に書き換えることで、影を消し去り「発光」させます。
       float brightR = isOre ? 1.0f : r;
       float brightG = isOre ? 1.0f : g;
       float brightB = isOre ? 1.0f : b;
 
-      // 3. 配列内の明るさ (fs) も、もしあれば 1.0F で埋める
-      // 多くのバージョンで fs[0]〜fs[3] は各頂点の明るさ(brightness)です。
       if (isOre) {
         Arrays.fill(fs, 1.0f);
       }
@@ -80,6 +71,7 @@ public class ModelBlockRendererMixin {
     }
   }
 
+  /** shouldRenderFace へのフック */
   @WrapOperation(
       method = "shouldRenderFace",
       at =
@@ -92,18 +84,16 @@ public class ModelBlockRendererMixin {
       BlockState neighborState,
       Direction side,
       Operation<Boolean> original,
-      BlockAndTintGetter world,
-      BlockState stateButDuplicate,
-      boolean cull,
-      Direction sideButDuplicate,
-      BlockPos pos) {
-    if (!isEnabled()) {
+      @Local(argsOnly = true) BlockAndTintGetter world,
+      @Local(argsOnly = true) BlockPos pos,
+      @Local(ordinal = 0, argsOnly = true) boolean cull // ローカル変数のboolean(cull)を型と順序で取得
+      ) {
+    XRayFeature xRay = xRayFeature();
+    if (!xRay.isEnabled()) {
       return original.call(state, neighborState, side);
     }
 
-    // XRay有効時は、XRayFeature側のロジック（特定ブロックの表示/非表示）を優先
-    return xRayFeature()
-        .atModelBlockRenderer(
-            world, state, cull, side, pos, original.call(state, neighborState, side));
+    return xRay.atModelBlockRenderer(
+        world, state, cull, side, pos, original.call(state, neighborState, side));
   }
 }
