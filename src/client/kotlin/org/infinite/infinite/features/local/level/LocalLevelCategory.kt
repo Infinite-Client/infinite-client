@@ -10,4 +10,5 @@ class LocalLevelCategory : LocalCategory() {
     val xRayFeature by feature(XRayFeature())
     val espFeature by feature(EspFeature())
     val ultraTagFeature by feature(UltraTagFeature())
+    val blockHighlightFeature by feature(BlockHighlightFeature())
 }
