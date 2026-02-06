@@ -1,12 +1,12 @@
-package org.infinite.infinite.features.local.level
+package org.infinite.infinite.features.local.level.highlight
 
 import net.minecraft.core.BlockPos
 import net.minecraft.core.SectionPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.phys.Vec3
 import org.infinite.libs.core.features.feature.LocalFeature
-import org.infinite.libs.core.features.property.BlockAndColor
-import org.infinite.libs.core.features.property.BlockAndColorListProperty
+import org.infinite.libs.core.features.property.list.BlockAndColorListProperty
+import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics3D
@@ -67,7 +67,7 @@ class BlockHighlightFeature : LocalFeature() {
         val targetChunkZ = startChunkZ + targetChunkOffsetZ
 
         // 指定されたチャンクがロードされているか確認
-        val chunk = l.getChunk(targetChunkX, targetChunkZ) ?: return
+        val chunk = l.getChunk(targetChunkX, targetChunkZ)
 
         // チャンク内のすべてのセクションをスキャン (Y座標はLevelのminBuildHeightからmaxBuildHeightまで)
         // Minecraft 1.18+ ではY座標が負の領域も存在する

@@ -1,27 +1,14 @@
 package org.infinite.libs.config
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.descriptors.buildClassSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonDecoder
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.*
+import kotlinx.serialization.serializer
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.log.LogSystem
 import org.infinite.utils.toLowerSnakeCase
 import java.io.File
+import kotlin.reflect.full.createType
 
 object ConfigManager : MinecraftInterface() {
     private val baseDir = File(minecraft.run { gameDirectory }, "infinite/config")
@@ -32,61 +19,12 @@ object ConfigManager : MinecraftInterface() {
             isLenient = true
             encodeDefaults = true
             ignoreUnknownKeys = true
-        }
-    }
-
-    /**
-     * Map<String, Any?> を JsonElement と相互変換するシリアライザー
-     */
-    object GenericMapSerializer : KSerializer<Map<String, Any?>> {
-        override val descriptor: SerialDescriptor = buildClassSerialDescriptor("GenericMap")
-
-        override fun serialize(encoder: Encoder, value: Map<String, Any?>) {
-            val jsonObject = JsonObject(value.mapValues { it.value.toJsonElement() })
-            JsonObject.serializer().serialize(encoder, jsonObject)
-        }
-
-        override fun deserialize(decoder: Decoder): Map<String, Any?> {
-            val root = (decoder as? JsonDecoder)?.decodeJsonElement()
-            return if (root is JsonObject) root.toMap() else throw SerializationException("Nota JsonObject")
-        }
-
-        private fun Any?.toJsonElement(): JsonElement = when (this) {
-            null -> JsonNull
-            is String -> JsonPrimitive(this)
-            is Number -> JsonPrimitive(this)
-            is Boolean -> JsonPrimitive(this)
-            is Map<*, *> -> JsonObject(this.entries.associate { it.key.toString() to it.value.toJsonElement() })
-            is Iterable<*> -> JsonArray(this.map { it.toJsonElement() })
-            else -> JsonPrimitive(this.toString()) // 最終手段
-        }
-
-        private fun JsonObject.toMap(): Map<String, Any?> = entries.associate { it.key to it.value.toAnyValue() }
-
-        private fun JsonElement.toAnyValue(): Any? = when (this) {
-            is JsonNull -> null
-            is JsonPrimitive -> if (isString) content else (booleanOrNull ?: longOrNull ?: doubleOrNull ?: content)
-            is JsonObject -> toMap()
-            is JsonArray -> map { it.toAnyValue() }
+            // クラスの継承などがある場合に備えて
+            allowStructuredMapKeys = true
         }
     }
 
     // --- Save ---
-    fun ensureGlobal() {
-        InfiniteClient.globalFeatures.categories.values.forEach { category ->
-            category.features.values.forEach { feature ->
-                feature.ensureAllPropertiesRegistered()
-            }
-        }
-    }
-
-    fun ensureLocal() {
-        InfiniteClient.localFeatures.categories.values.forEach { category ->
-            category.features.values.forEach { feature ->
-                feature.ensureAllPropertiesRegistered()
-            }
-        }
-    }
 
     fun saveGlobal() {
         ensureGlobal()
@@ -105,73 +43,62 @@ object ConfigManager : MinecraftInterface() {
     private fun save(file: File, data: Map<String, *>) {
         try {
             if (!file.parentFile.exists()) file.parentFile.mkdirs()
-            @Suppress("UNCHECKED_CAST")
-            val plainMap = deepConvert(data) as Map<String, Any?>
-            val jsonString = json.encodeToString(GenericMapSerializer, plainMap)
+
+            // data (Map<CategoryName, Map<FeatureName, FeatureData>>) を JsonElement に変換
+            val jsonElement = encodeToElement(data)
+            val jsonString = json.encodeToString(JsonElement.serializer(), jsonElement)
+
             file.writeText(jsonString)
         } catch (e: Exception) {
-            LogSystem.error("Failed to save config: ${e.message}")
+            LogSystem.error("Failed to save config: ${e.stackTraceToString()}")
         }
     }
 
     /**
-     * あらゆる階層の FeatureData やネストした Map を、
-     * シリアライザーが解釈できる Map<String, Any?> に再帰的に変換します。
+     * @Serializable がついたオブジェクトを動的に JsonElement に変換する
      */
-    private fun deepConvert(data: Any?): Any? = when (data) {
-        // FeatureData クラスをプレーンな Map に変換
-        is Feature.FeatureData -> mapOf(
-            "enabled" to data.enabled,
-            "properties" to deepConvert(data.properties),
-        )
-
-        // Map の場合は中身を再帰的に変換
-        is Map<*, *> -> data.entries.associate {
-            it.key.toString() to deepConvert(it.value)
-        }
-
-        // リスト等の場合は各要素を再帰的に変換
-        is Iterable<*> -> data.map { deepConvert(it) }
-
-        // それ以外（String, Number, Boolean, null）はそのまま返す
-        else -> data
-    }
-
-    private fun Any?.toJsonElement(): JsonElement = when (this) {
+    private fun encodeToElement(value: Any?): JsonElement = when (value) {
         null -> JsonNull
 
-        is String -> JsonPrimitive(this)
+        is JsonElement -> value
 
-        is Number -> JsonPrimitive(this)
+        // --- プリミティブ型を encodeToJsonElement に通さず直接扱う ---
+        is String -> JsonPrimitive(value)
 
-        is Boolean -> JsonPrimitive(this)
+        is Number -> JsonPrimitive(value)
 
-        // FeatureData が直接渡された場合のハンドリング
-        is Feature.FeatureData -> JsonObject(
-            mapOf(
-                "enabled" to JsonPrimitive(this.enabled),
-                // this.properties は Map なので、再帰呼び出しにより下の Map 分岐に入る
-                "properties" to this.properties.toJsonElement(),
-            ),
-        )
+        is Boolean -> JsonPrimitive(value)
 
-        // Map: 各エントリーを JsonObject に変換
-        is Map<*, *> -> JsonObject(
-            this.entries.associate { it.key.toString() to it.value.toJsonElement() },
-        )
+        is Feature.FeatureData -> buildJsonObject {
+            put("enabled", JsonPrimitive(value.enabled))
+            put("properties", encodeToElement(value.properties))
+        }
 
-        // Iterable: JsonArray に変換
-        is Iterable<*> -> JsonArray(this.map { it.toJsonElement() })
+        is Map<*, *> -> buildJsonObject {
+            value.forEach { (k, v) -> put(k.toString(), encodeToElement(v)) }
+        }
 
-        // その他: 安全のために文字列として保持
-        else -> JsonPrimitive(this.toString())
+        is Iterable<*> -> buildJsonArray {
+            value.forEach { add(encodeToElement(it)) }
+        }
+
+        // カスタムクラス (BlockAndColor等) のみシリアライザーを使用
+        else -> try {
+            json.encodeToJsonElement(json.serializersModule.serializer(value::class.createType()), value)
+        } catch (e: Exception) {
+            LogSystem.error("Failed to encode custom class ${value::class.simpleName}: ${e.message}")
+            JsonPrimitive(value.toString())
+        }
     }
     // --- Load ---
 
     fun loadGlobal() {
         ensureGlobal()
         val file = File(baseDir, "global.json")
-        if (file.exists()) applyData(InfiniteClient.globalFeatures, load(file))
+        if (file.exists()) {
+            val jsonElement = loadJsonElement(file)
+            if (jsonElement is JsonObject) applyData(InfiniteClient.globalFeatures, jsonElement)
+        }
         saveGlobal()
     }
 
@@ -180,69 +107,69 @@ object ConfigManager : MinecraftInterface() {
         ensureLocal()
         getLocalPath()?.let { path ->
             val file = File(baseDir, "local/$path/local.json")
-            if (file.exists()) applyData(InfiniteClient.localFeatures, load(file))
+            if (file.exists()) {
+                val jsonElement = loadJsonElement(file)
+                if (jsonElement is JsonObject) applyData(InfiniteClient.localFeatures, jsonElement)
+            }
         }
         saveLocal()
     }
 
-    private fun load(file: File): Map<String, Any?> = try {
-        json.decodeFromString(GenericMapSerializer, file.readText())
+    private fun loadJsonElement(file: File): JsonElement = try {
+        json.parseToJsonElement(file.readText())
     } catch (e: Exception) {
-        LogSystem.error("Failed to load config: ${e.message}")
-        emptyMap()
+        LogSystem.error("Failed to parse config JSON: ${e.message}")
+        JsonObject(emptyMap())
     }
 
-    /**
-     * ロードしたデータを FeatureCategories 構造へ反映
-     */
     private fun applyData(
         categoriesObj: org.infinite.libs.core.features.FeatureCategories<*, *, *, *>,
-        data: Map<String, Any?>,
+        data: JsonObject,
     ) {
-        data.forEach { (categoryName, featuresMap) ->
-            if (featuresMap !is Map<*, *>) {
-                return@forEach
-            }
+        data.forEach { (categoryName, featuresElement) ->
+            if (featuresElement !is JsonObject) return@forEach
 
-            // 1. カテゴリの検索ログ
             val category = categoriesObj.categories.values.find { cat ->
                 val id = cat::class.qualifiedName?.split(".")?.let {
                     if (it.size >= 2) it[it.size - 2].toLowerSnakeCase() else null
                 }
                 id == categoryName
-            } ?: run {
-                return@forEach
-            }
+            } ?: return@forEach
 
-            featuresMap.forEach { (featureName, featureDataRaw) ->
-                val featureData = featureDataRaw as? Map<*, *> ?: return@forEach
-                // 2. 機能（Feature）の検索ログ
+            featuresElement.forEach { (featureName, featureDataElement) ->
+                if (featureDataElement !is JsonObject) return@forEach
+
                 val feature = category.features.values.find { feat ->
-                    val id = feat::class.simpleName?.toLowerSnakeCase()
-                    id == featureName.toString()
-                } ?: run {
-                    return@forEach
-                }
-                // --- Enabled の適用 ---
-                val isEnabled = featureData["enabled"] as? Boolean
-                isEnabled?.let { if (it) feature.enable() else feature.disable() }
+                    feat::class.simpleName?.toLowerSnakeCase() == featureName
+                } ?: return@forEach
 
-                // --- Properties の適用 ---
-                val props = featureData["properties"] as? Map<*, *> ?: return@forEach
-                props.forEach { (propName, value) ->
-                    if (propName is String && value != null) {
-                        applyPropertySafely(feature, propName, value)
-                    }
+                // --- Enabled ---
+                featureDataElement["enabled"]?.jsonPrimitive?.booleanOrNull?.let {
+                    if (it) feature.enable() else feature.disable()
+                }
+
+                // --- Properties ---
+                val props = featureDataElement["properties"]?.jsonObject ?: return@forEach
+                props.forEach { (propName, jsonValue) ->
+                    // jsonValue (JsonElement) をそのまま渡す
+                    // Feature側の tryApply 内で、プロパティの型に合わせて decodeFromJsonElement する必要がある
+                    applyPropertySafely(feature, propName, jsonValue)
                 }
             }
         }
     }
 
-    /**
-     * プロパティの型に合わせて値を安全にキャスト・変換して適用する
-     */
-    private fun applyPropertySafely(feature: Feature, propName: String, value: Any) {
+    private fun applyPropertySafely(feature: Feature, propName: String, value: JsonElement) {
         feature.tryApply(propName, value)
+    }
+
+    // --- Utilities ---
+    private fun ensureGlobal() {
+        InfiniteClient.globalFeatures.categories.values.forEach { it.features.values.forEach { f -> f.ensureAllPropertiesRegistered() } }
+    }
+
+    private fun ensureLocal() {
+        InfiniteClient.localFeatures.categories.values.forEach { it.features.values.forEach { f -> f.ensureAllPropertiesRegistered() } }
     }
 
     private fun getLocalPath(): String? {

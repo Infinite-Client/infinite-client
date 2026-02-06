@@ -13,7 +13,8 @@ import java.util.LinkedList
 class HighlightMeshEngine(private val graphics3D: Graphics3D) {
 
     enum class HighlightMode {
-        Lines, Faces
+        Lines,
+        Faces,
     }
 
     // ハイライトするキューブの情報を保持するデータクラス
