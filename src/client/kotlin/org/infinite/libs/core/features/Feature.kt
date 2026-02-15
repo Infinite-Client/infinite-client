@@ -97,9 +97,7 @@ open class Feature : MinecraftInterface() {
             return this
         }
 
-        operator fun getValue(thisRef: Feature, prop: KProperty<*>): P {
-            return property
-        }
+        operator fun getValue(thisRef: Feature, prop: KProperty<*>): P = property
     }
 
     private var propertiesInitialized = false // 初期化済みフラグ

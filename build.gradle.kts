@@ -49,9 +49,11 @@ tasks.named<JavaCompile>("compileJava") {
 
 dependencies {
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
-    mappings(loom.layered {
-        officialMojangMappings()
-    })
+    mappings(
+        loom.layered {
+            officialMojangMappings()
+        },
+    )
     modImplementation("net.fabricmc:fabric-loader:${property("loader_version")}")
     modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
     modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_version")}")
@@ -225,7 +227,7 @@ tasks {
         }
         from("LICENSE")
     }
-    
+
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
         compilerOptions {
             jvmTarget = JvmTarget.JVM_25
@@ -258,7 +260,7 @@ spotless {
     kotlinGradle {
         target("**/*.kts")
         ktlint().editorConfigOverride(
-            mapOf("ktlint_standard_no-wildcard-imports" to "disabled")
+            mapOf("ktlint_standard_no-wildcard-imports" to "disabled"),
         )
     }
 }
@@ -283,10 +285,11 @@ tasks.withType<JavaCompile>().configureEach {
         option("UnusedVariable:ExemptAnnotations", mixinAnnotations)
         options.compilerArgs.addAll(
             listOf(
-                "--add-modules", "jdk.incubator.vector",
+                "--add-modules",
+                "jdk.incubator.vector",
                 "-Xlint:-options",
                 "-parameters",
-            )
+            ),
         )
     }
 }
@@ -294,7 +297,7 @@ tasks.withType<JavaCompile>().configureEach {
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.compilerArgs.addAll(
-        listOf("-Xlint:unchecked", "-Xlint:deprecation", "--release", "25")
+        listOf("-Xlint:unchecked", "-Xlint:deprecation", "--release", "25"),
     )
 }
 

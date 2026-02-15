@@ -206,7 +206,6 @@ name = "xross-core"
 version = "2.0.1"
 dependencies = [
  "xross-macros",
- "xross-metadata",
 ]
 
 [[package]]

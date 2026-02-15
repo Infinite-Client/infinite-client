@@ -24,7 +24,7 @@ object ProjectileEmulator {
             target.x.toFloat(), target.y.toFloat(), target.z.toFloat(),
             vel.x.toFloat(), vel.y.toFloat(), vel.z.toFloat(),
             drag, grav, targetGrav,
-            prec, steps, iter
+            prec, steps, iter,
         )
 
         res.use { nativeRes ->

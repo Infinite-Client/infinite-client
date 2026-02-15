@@ -1,6 +1,6 @@
 pluginManagement {
     includeBuild("project-xross/xross-plugin")
-    
+
     repositories {
         maven {
             name = "Fabric"
@@ -18,11 +18,11 @@ pluginManagement {
         gradlePluginPortal()
     }
 
-    val loom_version: String by settings
+    val loomVersion: String by settings
     plugins {
-        id("fabric-loom") version loom_version
-        id("org.jetbrains.kotlin.jvm") version "2.3.0-Beta2"
-        id("org.jetbrains.kotlin.plugin.serialization") version "2.3.0-Beta2"
+        id("fabric-loom") version loomVersion
+        id("org.jetbrains.kotlin.jvm") version "2.3.10"
+        id("org.jetbrains.kotlin.plugin.serialization") version "2.3.10"
     }
 }
 

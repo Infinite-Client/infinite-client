@@ -19,7 +19,7 @@ class Path2D : AutoCloseable {
             style.color,
             XrossLineCap.entries[style.lineCap.ordinal],
             XrossLineJoin.entries[style.lineJoin.ordinal],
-            style.enabledGradient
+            style.enabledGradient,
         )
     }
 
