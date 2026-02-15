@@ -42,11 +42,13 @@ open class Feature : MinecraftInterface() {
         // 1. 既に登録されている場合は即時適用
         val prop = _properties[snakeName]
         if (prop != null) {
+            // org.infinite.libs.log.LogSystem.log("Feature(${this.name}) property '$snakeName' found, applying.")
             prop.tryApply(value)
             return
         }
 
         // 2. まだ登録されていない場合は「保留リスト」に入れる
+        org.infinite.libs.log.LogSystem.warn("Feature(${this.name}) property '$snakeName' NOT found, pending.")
         pendingProperties[snakeName] = value
     }
 
@@ -90,8 +92,12 @@ open class Feature : MinecraftInterface() {
     protected fun <T : Any, P : Property<T>> property(property: P): PropertyDelegate<T, P> = PropertyDelegate(property)
 
     protected inner class PropertyDelegate<T : Any, P : Property<T>>(val property: P) {
-        operator fun getValue(thisRef: Feature, prop: KProperty<*>): P {
+        operator fun provideDelegate(thisRef: Feature, prop: KProperty<*>): PropertyDelegate<T, P> {
             register(prop.name, property)
+            return this
+        }
+
+        operator fun getValue(thisRef: Feature, prop: KProperty<*>): P {
             return property
         }
     }
@@ -99,20 +105,10 @@ open class Feature : MinecraftInterface() {
     private var propertiesInitialized = false // 初期化済みフラグ
 
     fun ensureAllPropertiesRegistered() {
-        if (propertiesInitialized) return
+        // provideDelegate によって、インスタンス化時に既に登録されているはずだが、
+        // 念のため外部（ConfigManagerなど）からの呼び出し口として残しておく。
+        // リフレクションによる走査は不要になったため、フラグ管理のみ行う。
         propertiesInitialized = true
-        // Feature クラスのすべてのプロパティを走査
-        this::class.memberProperties.forEach { prop ->
-            try {
-                prop.isAccessible = true
-                // KProperty1<Feature, *> であることを確認して get(this) を呼ぶ
-                // これにより Delegate.getValue() が走り、内部で register() が実行される
-                @Suppress("UNCHECKED_CAST")
-                (prop as kotlin.reflect.KProperty1<Any, *>).get(this)
-            } catch (_: Exception) {
-                // Globalについては、何も起こらない。
-            }
-        }
     }
 
     open fun onEnabled() {}
@@ -173,6 +169,9 @@ open class Feature : MinecraftInterface() {
 
     fun data(): FeatureData {
         ensureAllPropertiesRegistered()
+        if (pendingProperties.isNotEmpty()) {
+            org.infinite.libs.log.LogSystem.warn("Feature($name) still has pending properties: ${pendingProperties.keys}")
+        }
         return FeatureData(
             enabled = isEnabled(),
             properties = _properties.mapKeys { it.key.toLowerSnakeCase() }.mapValues { it.value.value },

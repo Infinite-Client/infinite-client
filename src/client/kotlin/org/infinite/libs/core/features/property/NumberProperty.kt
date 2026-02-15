@@ -1,5 +1,8 @@
 package org.infinite.libs.core.features.property
 
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
 import org.infinite.libs.core.features.Property
 import org.infinite.libs.ui.widgets.NumberPropertyWidget
 import org.infinite.libs.ui.widgets.PropertyWidget
@@ -22,7 +25,8 @@ abstract class NumberProperty<T>(
         if (anyValue == null) return
 
         // 1. 入力が数値型か文字列型かを確認
-        val num = when (anyValue) {
+        val num: Number = when (anyValue) {
+            is JsonPrimitive -> anyValue.doubleOrNull ?: anyValue.longOrNull ?: return
             is Number -> anyValue
             is String -> anyValue.toDoubleOrNull() ?: anyValue.toLongOrNull() ?: return
             else -> return

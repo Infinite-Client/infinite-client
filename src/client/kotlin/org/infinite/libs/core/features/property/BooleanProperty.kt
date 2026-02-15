@@ -1,5 +1,8 @@
 package org.infinite.libs.core.features.property
 
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
 import org.infinite.libs.core.features.Property
 import org.infinite.libs.ui.widgets.BooleanPropertyWidget
 import org.infinite.libs.ui.widgets.PropertyWidget
@@ -15,13 +18,24 @@ class BooleanProperty(
         if (anyValue == null) return
 
         val converted: Boolean? = when (anyValue) {
-            // 1. 直接的な Boolean
+            // 1. JSON Primitive (ConfigManager からのロード時)
+            is JsonPrimitive -> {
+                anyValue.booleanOrNull ?: anyValue.contentOrNull?.let { s ->
+                    when (s.lowercase()) {
+                        "true", "on", "yes", "1" -> true
+                        "false", "off", "no", "0" -> false
+                        else -> s.toBooleanStrictOrNull()
+                    }
+                }
+            }
+
+            // 2. 直接的な Boolean
             is Boolean -> anyValue
 
-            // 2. 数値型 (0ならfalse, それ以外はtrue)
+            // 3. 数値型 (0ならfalse, それ以外はtrue)
             is Number -> anyValue.toLong() != 0L
 
-            // 3. 文字列型 ("true" "on" "yes" なら true)
+            // 4. 文字列型 ("true" "on" "yes" なら true)
             is String -> {
                 when (val s = anyValue.lowercase()) {
                     "true", "on", "yes", "1" -> true

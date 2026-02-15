@@ -1,5 +1,8 @@
 package org.infinite.libs.core.features.property.list
 
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.AbstractWidget
@@ -25,6 +28,11 @@ class BlockAndColorListProperty(default: List<BlockAndColor>) : ListProperty<Blo
 
     override fun convertElement(anyValue: Any): BlockAndColor? {
         if (anyValue is BlockAndColor) return anyValue
+        if (anyValue is JsonObject) {
+            val blockId = anyValue["blockId"]?.jsonPrimitive?.content ?: return null
+            val color = anyValue["color"]?.jsonPrimitive?.intOrNull ?: 0xFFFFFFFF.toInt()
+            return BlockAndColor(blockId, color)
+        }
         if (anyValue is String) {
             val parts = anyValue.split("#")
             val blockId = parts[0].trim()

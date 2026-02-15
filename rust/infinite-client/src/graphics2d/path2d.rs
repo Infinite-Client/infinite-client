@@ -1,17 +1,20 @@
-pub mod ffi;
-
 use lyon::lyon_tessellation::{FillVertex, GeometryBuilderError, VertexId};
 use lyon::math::point;
 use lyon::path::{FillRule, LineCap, LineJoin, Path};
 use lyon::tessellation::{FillGeometryBuilder, FillOptions, FillTessellator, GeometryBuilder};
 use std::f64::consts::PI;
+use xross_core::{XrossClass, xross_methods};
 
-#[derive(Default)]
+#[derive(XrossClass, Default, Clone)]
+#[xross(clonable)]
 pub struct Path2D {
     segments: Vec<SegmentData>,
+    // #[xross_field] を削除。メソッド経由でのみアクセスさせる。
     pub pen: Pen,
     buffer: Vec<f32>,
 }
+
+#[derive(Clone)]
 pub struct SegmentData {
     points: Vec<PointData>,
     is_closed: bool,
@@ -24,31 +27,32 @@ impl Default for SegmentData {
         }
     }
 }
+
+#[derive(XrossClass, Clone, Copy, Default, Debug)]
 pub struct PointData {
+    #[xross_field]
     pub x: f64,
+    #[xross_field]
     pub y: f64,
+    #[xross_field]
     pub color: Color,
+    #[xross_field]
     pub width: f64,
-    pub line_cap: LineCap,
-    pub line_join: LineJoin,
+    #[xross_field]
+    pub line_cap: XrossLineCap,
+    #[xross_field]
+    pub line_join: XrossLineJoin,
 }
-impl Default for PointData {
-    fn default() -> Self {
-        Self {
-            x: 0.0,
-            y: 0.0,
-            color: Color::default(),
-            width: 0.0,
-            line_cap: LineCap::Butt,
-            line_join: LineJoin::Miter,
-        }
-    }
-}
-#[derive(Copy, Clone, Debug, PartialEq)]
+
+#[derive(Copy, Clone, Debug, PartialEq, XrossClass)]
 pub struct Color {
+    #[xross_field]
     pub r: f32,
+    #[xross_field]
     pub g: f32,
+    #[xross_field]
     pub b: f32,
+    #[xross_field]
     pub a: f32,
 }
 
@@ -63,8 +67,90 @@ impl Default for Color {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, XrossClass)]
+pub enum XrossLineCap {
+    Butt,
+    Square,
+    Round,
+}
+
+impl From<LineCap> for XrossLineCap {
+    fn from(cap: LineCap) -> Self {
+        match cap {
+            LineCap::Butt => Self::Butt,
+            LineCap::Square => Self::Square,
+            LineCap::Round => Self::Round,
+        }
+    }
+}
+
+impl From<XrossLineCap> for LineCap {
+    fn from(cap: XrossLineCap) -> Self {
+        match cap {
+            XrossLineCap::Butt => Self::Butt,
+            XrossLineCap::Square => Self::Square,
+            XrossLineCap::Round => Self::Round,
+        }
+    }
+}
+
+impl Default for XrossLineCap {
+    fn default() -> Self {
+        Self::Butt
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, XrossClass)]
+pub enum XrossLineJoin {
+    Miter,
+    MiterClip,
+    Round,
+    Bevel,
+}
+
+impl From<LineJoin> for XrossLineJoin {
+    fn from(join: LineJoin) -> Self {
+        match join {
+            LineJoin::Miter => Self::Miter,
+            LineJoin::MiterClip => Self::MiterClip,
+            LineJoin::Round => Self::Round,
+            LineJoin::Bevel => Self::Bevel,
+        }
+    }
+}
+
+impl From<XrossLineJoin> for LineJoin {
+    fn from(join: XrossLineJoin) -> Self {
+        match join {
+            XrossLineJoin::Miter => Self::Miter,
+            XrossLineJoin::MiterClip => Self::MiterClip,
+            XrossLineJoin::Round => Self::Round,
+            XrossLineJoin::Bevel => Self::Bevel,
+        }
+    }
+}
+
+impl Default for XrossLineJoin {
+    fn default() -> Self {
+        Self::Miter
+    }
+}
+
+#[derive(XrossClass, Default, Clone, Copy, Debug)]
+pub struct Pen {
+    #[xross_field]
+    pub color: Color,
+    #[xross_field]
+    pub width: f64,
+    #[xross_field]
+    pub line_cap: XrossLineCap,
+    #[xross_field]
+    pub line_join: XrossLineJoin,
+    #[xross_field]
+    pub is_gradient_enabled: bool,
+}
+
 impl Color {
-    /// 0xAARRGGBB 形式の i32 から Color を作成
     pub fn from_raw(raw: i32) -> Self {
         let u = raw as u32;
         Self {
@@ -75,7 +161,6 @@ impl Color {
         }
     }
 
-    /// Color を 0xAARRGGBB 形式の i32 に変換
     pub fn to_raw(&self) -> i32 {
         let a = (self.a.clamp(0.0, 1.0) * 255.0) as u32;
         let r = (self.r.clamp(0.0, 1.0) * 255.0) as u32;
@@ -85,8 +170,6 @@ impl Color {
         ((a << 24) | (r << 16) | (g << 8) | b) as i32
     }
 
-    /// 二つの色を比率(t)で混ぜる (線形補間: lerp)
-    /// t=0.0 で self, t=1.0 で other になる
     pub fn mix(&self, other: Self, t: f32) -> Self {
         let t = t.clamp(0.0, 1.0);
         Self {
@@ -98,56 +181,64 @@ impl Color {
     }
 }
 
-pub struct Pen {
-    pub color: Color,
-    pub width: f64,
-    pub line_cap: LineCap,
-    pub line_join: LineJoin,
-    pub is_gradient_enabled: bool,
+#[derive(XrossClass)]
+pub enum XrossFillRule {
+    EvenOdd,
+    NonZero,
 }
 
-impl Default for Pen {
-    fn default() -> Self {
-        Self {
-            color: Color::default(),
-            width: 0.0,
-            line_cap: LineCap::Butt,
-            line_join: LineJoin::Miter,
-            is_gradient_enabled: false,
-        }
-    }
-}
-
+#[xross_methods]
 impl Path2D {
+    #[xross_new]
     pub fn new() -> Self {
         Self::default()
     }
+
+    #[xross_method]
     pub fn begin(&mut self) {
         self.segments.clear();
     }
+
+    #[xross_method]
+    pub fn set_pen(
+        &mut self,
+        width: f64,
+        color_raw: i32,
+        cap: XrossLineCap,
+        join: XrossLineJoin,
+        enable_gradient: bool,
+    ) {
+        self.pen.width = width;
+        self.pen.color = Color::from_raw(color_raw);
+        self.pen.line_cap = cap;
+        self.pen.line_join = join;
+        self.pen.is_gradient_enabled = enable_gradient;
+    }
+
+    #[xross_method]
     pub fn move_to(&mut self, x: f64, y: f64) {
         self.segments.push(SegmentData::default());
         let point = self.point(x, y);
         let current_segment = self.segments.last_mut().unwrap();
         current_segment.points.push(point);
     }
+
     fn point(&self, x: f64, y: f64) -> PointData {
-        let mut point = PointData::default();
-        point.x = x;
-        point.y = y;
-        point.color = self.pen.color;
-        point.line_cap = self.pen.line_cap;
-        point.line_join = self.pen.line_join;
-        point.width = self.pen.width;
-        point
+        PointData {
+            x,
+            y,
+            color: self.pen.color,
+            line_cap: self.pen.line_cap,
+            line_join: self.pen.line_join,
+            width: self.pen.width,
+        }
     }
+
+    #[xross_method]
     pub fn line_to(&mut self, x: f64, y: f64) {
-        // 現在のセグメントが存在し、かつ既に閉じられているかチェック
         let needs_new_segment = self.segments.last().map(|s| s.is_closed).unwrap_or(false);
 
         if needs_new_segment {
-            // 閉じられた後の line_to は、前の終点（＝閉じられたパスの始点）を
-            // 起点とする新しいセグメントとして扱うのが一般的
             let last_start_point = self
                 .segments
                 .last()
@@ -157,7 +248,7 @@ impl Path2D {
             if let Some((sx, sy)) = last_start_point {
                 self.move_to(sx, sy);
             } else {
-                self.move_to(x, y); // 安全策：始点がなければ今ここを始点にする
+                self.move_to(x, y);
             }
         }
 
@@ -165,9 +256,9 @@ impl Path2D {
         self.push_point(point);
     }
 
-    pub fn close(&mut self) {
+    #[xross_method]
+    pub fn close_path(&mut self) {
         if let Some(current_segment) = self.segments.last_mut() {
-            // 既に点がある場合のみ閉じるフラグを立てる
             if !current_segment.points.is_empty() {
                 current_segment.is_closed = true;
             }
@@ -176,18 +267,14 @@ impl Path2D {
 
     fn push_point(&mut self, point: PointData) {
         if let Some(current_segment) = self.segments.last_mut() {
-            // ここで is_closed をチェックしても良いが、
-            // move_to / line_to 側で制御するほうが責務が明確
             current_segment.points.push(point);
         } else {
-            // セグメントがない場合は自動的に作成
             let mut segment = SegmentData::default();
             segment.points.push(point);
             self.segments.push(segment);
         }
     }
 
-    // ユーティリティ: 現在の最新の点を取得する
     fn last_point(&self) -> Option<&PointData> {
         self.segments.last()?.points.last()
     }
@@ -202,23 +289,20 @@ impl Path2D {
     ) {
         let mut p = self.point(x, y);
         if self.pen.is_gradient_enabled {
-            // 色の補間
             p.color = start_color.mix(self.pen.color, t);
-            // 太さの補間 (start_width から現在の self.pen.width へ)
             p.width = start_width + (self.pen.width - start_width) * (t as f64);
         } else {
-            // グラデーション無効でも、現在の太さを維持させる
             p.width = self.pen.width;
         }
         self.push_point(p);
     }
 
-    /// 3次ベジェ曲線
+    #[xross_method]
     pub fn bezier_curve_to(&mut self, cp1x: f64, cp1y: f64, cp2x: f64, cp2y: f64, x: f64, y: f64) {
         let last = self.last_point();
         let start_pos = last.map(|p| (p.x, p.y)).unwrap_or((0.0, 0.0));
         let start_color = last.map(|p| p.color).unwrap_or(self.pen.color);
-        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width); // ここを追加
+        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width);
 
         let steps = 20;
         for i in 1..=steps {
@@ -234,16 +318,16 @@ impl Path2D {
                 + 3.0 * inv_t * t.powi(2) * cp2y
                 + t.powi(3) * y;
 
-            // start_width を渡す
             self.push_interpolated_point(px, py, t as f32, start_color, start_width);
         }
     }
-    /// 2次ベジェ曲線
+
+    #[xross_method]
     pub fn quadratic_curve_to(&mut self, cpx: f64, cpy: f64, x: f64, y: f64) {
         let last = self.last_point();
-        let start = self.last_point().map(|p| (p.x, p.y)).unwrap_or((0.0, 0.0));
-        let start_color = self.last_point().map(|p| p.color).unwrap_or(self.pen.color);
-        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width); // ここを追加
+        let start = last.map(|p| (p.x, p.y)).unwrap_or((0.0, 0.0));
+        let start_color = last.map(|p| p.color).unwrap_or(self.pen.color);
+        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width);
 
         let steps = 15;
         for i in 1..=steps {
@@ -257,7 +341,7 @@ impl Path2D {
         }
     }
 
-    /// 円弧 (arc)
+    #[xross_method]
     pub fn arc(
         &mut self,
         x: f64,
@@ -269,7 +353,6 @@ impl Path2D {
     ) {
         let mut diff = end_angle - start_angle;
 
-        // 角度の正規化
         if counterclockwise {
             if diff > 0.0 {
                 diff -= 2.0 * PI;
@@ -285,9 +368,9 @@ impl Path2D {
         }
 
         let last = self.last_point();
-        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width); // ここを追加
-        let steps = (diff.abs() / (PI / 18.0)).ceil().max(10.0) as i32; // 約10度ごとに分割
-        let start_color = self.last_point().map(|p| p.color).unwrap_or(self.pen.color);
+        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width);
+        let steps = (diff.abs() / (PI / 18.0)).ceil().max(10.0) as i32;
+        let start_color = last.map(|p| p.color).unwrap_or(self.pen.color);
 
         for i in 0..=steps {
             let t = i as f64 / steps as f64;
@@ -297,6 +380,7 @@ impl Path2D {
             self.push_point_in_sequence(i, px, py, t as f32, start_color, start_width);
         }
     }
+
     fn push_point_in_sequence(
         &mut self,
         i: i32,
@@ -308,30 +392,24 @@ impl Path2D {
     ) {
         if i == 0 {
             if self.segments.is_empty() {
-                // パスが空ならここを起点にする
                 self.move_to(x, y);
             } else {
-                // 既存のパスがあれば、そこからこの曲線の開始点まで直線を引く
-                // (Canvas API の arc や ellipse の標準仕様に準拠)
                 self.line_to(x, y);
             }
         } else {
-            // 2点目以降はグラデーションを考慮して追加
             self.push_interpolated_point(x, y, t, start_color, start_width);
         }
     }
 
-    /// 角丸接続 (arcTo)
+    #[xross_method]
     pub fn arc_to(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, radius: f64) {
         let start = self.last_point().map(|p| (p.x, p.y)).unwrap_or((x1, y1));
 
-        // ベクトル計算
         let v1 = (start.0 - x1, start.1 - y1);
         let v2 = (x2 - x1, y2 - y1);
         let len1 = (v1.0.powi(2) + v1.1.powi(2)).sqrt();
         let len2 = (v2.0.powi(2) + v2.1.powi(2)).sqrt();
 
-        // 直線上にある場合のフォールバック
         if len1 < 1e-6 || len2 < 1e-6 {
             self.line_to(x1, y1);
             return;
@@ -341,11 +419,9 @@ impl Path2D {
         let theta = cos_theta.acos();
         let dist = radius / (theta / 2.0).tan();
 
-        // 接点計算
         let p_start = (x1 + v1.0 / len1 * dist, y1 + v1.1 / len1 * dist);
         let p_end = (x1 + v2.0 / len2 * dist, y1 + v2.1 / len2 * dist);
 
-        // 中心点
         let v_bisect = (v1.0 / len1 + v2.0 / len2, v1.1 / len1 + v2.1 / len2);
         let len_b = (v_bisect.0.powi(2) + v_bisect.1.powi(2)).sqrt();
         let center_dist = radius / (theta / 2.0).sin();
@@ -354,14 +430,11 @@ impl Path2D {
             y1 + v_bisect.1 / len_b * center_dist,
         );
 
-        // 角度計算
         let start_angle = (p_start.1 - center.1).atan2(p_start.0 - center.0);
         let end_angle = (p_end.1 - center.1).atan2(p_end.0 - center.0);
 
-        // 最初の接点まで直線を引き、そこからarcを描画
         self.line_to(p_start.0, p_start.1);
 
-        // 外積で回転方向を判定
         let cross_product = v1.0 * v2.1 - v1.1 * v2.0;
         self.arc(
             center.0,
@@ -373,7 +446,7 @@ impl Path2D {
         );
     }
 
-    /// 楕円
+    #[xross_method]
     pub fn ellipse(
         &mut self,
         x: f64,
@@ -401,25 +474,24 @@ impl Path2D {
         let cos_rot = rotation.cos();
         let sin_rot = rotation.sin();
         let last = self.last_point();
-        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width); // ここを追加
+        let start_width = last.map(|p| p.width).unwrap_or(self.pen.width);
 
         for i in 0..=steps {
             let t = i as f64 / steps as f64;
             let angle = start_angle + diff * t;
 
-            // ローカル座標
             let lx = radius_x * angle.cos();
             let ly = radius_y * angle.sin();
 
-            // 回転適用
             let px = x + lx * cos_rot - ly * sin_rot;
             let py = y + lx * sin_rot + ly * cos_rot;
 
             self.push_point_in_sequence(i, px, py, t as f32, start_color, start_width);
         }
     }
-    /// 塗りつぶしのテッセレーションを実行
-    pub fn tessellate_fill(&mut self, rule: FillRule) {
+
+    #[xross_method]
+    pub fn tessellate_fill(&mut self, rule: XrossFillRule) {
         self.buffer.clear();
 
         let mut builder = Path::builder();
@@ -447,26 +519,23 @@ impl Path2D {
 
         let mut output = FillOutput {
             buffer: &mut self.buffer,
-            vertices: Vec::new(), // ここで一時頂点リストを初期化
-            current_pen_color: self.pen.color.to_raw(), // 現在のペンの色を渡す
+            vertices: Vec::new(),
+            current_pen_color: self.pen.color.to_raw(),
         };
-        let options = FillOptions::default().with_fill_rule(rule);
+        let options = FillOptions::default().with_fill_rule(match rule {
+            XrossFillRule::EvenOdd => FillRule::EvenOdd,
+            XrossFillRule::NonZero => FillRule::NonZero,
+        });
 
         let _ = tessellator.tessellate_path(&path, &options, &mut output);
     }
 
-    /// FFI用: バッファポインタの取得
-    pub fn get_buffer_ptr(&self) -> *const f32 {
-        self.buffer.as_ptr()
-    }
-
-    /// FFI用: バッファ要素数の取得
-    pub fn get_buffer_size(&self) -> usize {
-        self.buffer.len()
-    }
-
-    pub fn tessellate_stroke(&mut self, cap: LineCap, join: LineJoin, enable_gradient: bool) {
+    #[xross_method]
+    pub fn tessellate_stroke(&mut self) {
         let mut output_buffer = Vec::new();
+        let cap = self.pen.line_cap.into();
+        let join = self.pen.line_join.into();
+        let enable_gradient = self.pen.is_gradient_enabled;
 
         for segment in &self.segments {
             let n = segment.points.len();
@@ -476,7 +545,6 @@ impl Path2D {
 
             let is_closed = segment.is_closed;
 
-            // 1. 各点における「進行方向ベクトル」と「法線ベクトル」を計算
             let mut dirs = Vec::with_capacity(n);
             for i in 0..n {
                 let p0 = &segment.points[i];
@@ -484,7 +552,6 @@ impl Path2D {
                 dirs.push(normalize(p1.x - p0.x, p1.y - p0.y));
             }
 
-            // 2. 各線分を描画
             let loop_limit = if is_closed { n } else { n - 1 };
             for i in 0..loop_limit {
                 let i_curr = i % n;
@@ -501,11 +568,8 @@ impl Path2D {
                 let half_w0 = p0.width / 2.0;
                 let half_w1 = p1.width / 2.0;
 
-                // --- 基本となる法線 ---
                 let n_curr = (-v_curr.1, v_curr.0);
 
-                // --- 線分本体の Quad ---
-                // ※ここでは単純な法線を使いますが、Join側で隙間を埋めます
                 let colors = if enable_gradient {
                     [
                         p0.color.to_raw(),
@@ -527,14 +591,11 @@ impl Path2D {
                     colors,
                 );
 
-                // --- Join の処理 ---
-                // 閉じている場合は全ポイント、開いている場合は最後を除いたポイントで実行
                 if is_closed || i < n - 2 {
                     let v_next = dirs[i_next];
                     Self::static_push_join(&mut output_buffer, p1, v_curr, v_next, join);
                 }
 
-                // --- Cap の処理 (開いたパスのみ) ---
                 if !is_closed {
                     if i == 0 {
                         Self::static_push_cap(
@@ -561,7 +622,19 @@ impl Path2D {
         }
         self.buffer = output_buffer;
     }
-    // self を借用しないスタティックメソッドとして分離
+
+    #[xross_method]
+    pub fn get_buffer_ptr(&self) -> *const f32 {
+        self.buffer.as_ptr()
+    }
+
+    #[xross_method]
+    pub fn get_buffer_size(&self) -> usize {
+        self.buffer.len()
+    }
+}
+
+impl Path2D {
     fn static_push_quad(
         buffer: &mut Vec<f32>,
         q0: (f64, f64),
@@ -570,7 +643,7 @@ impl Path2D {
         q3: (f64, f64),
         colors: [i32; 4],
     ) {
-        buffer.push(4.0); // Quad type
+        buffer.push(4.0);
         let pts = [q0, q1, q2, q3];
         for pt in &pts {
             buffer.push(pt.0 as f32);
@@ -685,39 +758,23 @@ impl Path2D {
             LineJoin::MiterClip => {
                 let miter_v = normalize(v2.0 - v1.0, v2.1 - v1.1);
                 let cos_theta = v1.0 * v2.0 + v1.1 * v2.1;
-
-                // マイター頂点までの距離
                 let miter_len = half_w / ((1.0 + cos_theta) / 2.0).sqrt();
-
-                // 制限距離（ここでは一般的な 10.0 倍としていますが、必要なら引数で調整）
                 let limit = half_w * 10.0;
 
                 if miter_len <= limit {
-                    // 制限内なら通常の Miter と同じ
                     Self::static_push_join(buffer, p, v1, v2, LineJoin::Miter);
                 } else {
-                    // 制限を超える場合：先端をフラットに切り落とす
-                    // 1. 本来のマイター方向の単位ベクトルを計算
                     let nx_unit = if cross > 0.0 { -miter_v.0 } else { miter_v.0 };
                     let ny_unit = if cross > 0.0 { -miter_v.1 } else { miter_v.1 };
-
-                    // 2. 切り落とし面（Clip面）の左右の端点を計算
-                    // マイターの軸に対して垂直な方向に幅を広げる
                     let clip_v = (-ny_unit, nx_unit);
-                    // 切り落とし面の幅は、ジオメトリ計算上、交点付近の広がりを考慮
-                    let clip_w = half_w * (1.0 - (limit / miter_len)); // 簡易的な幅補正
-
+                    let clip_w = half_w * (1.0 - (limit / miter_len));
                     let cx = nx_unit * limit;
                     let cy = ny_unit * limit;
 
-                    // 3. 2つの Quad を使って「台形」状の接合部を作る
-                    // [中心, 前法線点, Clip左, Clip右] と [中心, Clip右, 次法線点, 中心] のイメージ
                     if cross > 0.0 {
-                        // 左曲がり：右側を Clip
                         let c1 = (p.x + cx + clip_v.0 * clip_w, p.y + cy + clip_v.1 * clip_w);
                         let c2 = (p.x + cx - clip_v.0 * clip_w, p.y + cy - clip_v.1 * clip_w);
 
-                        // Quad 1: 前の線分から Clip 面へ
                         Self::static_push_quad(
                             buffer,
                             (p.x, p.y),
@@ -726,7 +783,6 @@ impl Path2D {
                             c2,
                             color_arr,
                         );
-                        // Quad 2: Clip 面から次の線分へ
                         Self::static_push_quad(
                             buffer,
                             (p.x, p.y),
@@ -736,7 +792,6 @@ impl Path2D {
                             color_arr,
                         );
                     } else {
-                        // 右曲がり：左側を Clip
                         let c1 = (p.x + cx + clip_v.0 * clip_w, p.y + cy + clip_v.1 * clip_w);
                         let c2 = (p.x + cx - clip_v.0 * clip_w, p.y + cy - clip_v.1 * clip_w);
 
@@ -752,7 +807,7 @@ impl Path2D {
                             buffer,
                             (p.x, p.y),
                             c2,
-                            (p.x + n2.0, p.y + n2.1),
+                            (p.x - n2.0, p.y - n2.1),
                             (p.x, p.y),
                             color_arr,
                         );
@@ -802,7 +857,7 @@ impl Path2D {
             }
         }
     }
-    /// 中心点から円弧状に扇形のジオメトリ（複数のQuad）を生成する
+
     fn static_push_arc_fan(
         buffer: &mut Vec<f32>,
         center: (f64, f64),
@@ -811,12 +866,11 @@ impl Path2D {
         radius: f64,
         color_arr: [i32; 4],
     ) {
-        let steps = 8; // 分割数は必要に応じて調整
+        let steps = 8;
         for j in 0..steps {
             let a0 = start_ang + diff * (j as f64 / steps as f64);
             let a1 = start_ang + diff * ((j + 1) as f64 / steps as f64);
 
-            // KotlinのQuad形式に合わせるため、中心点を2つ、円周上の2点を2つ送る
             Self::static_push_quad(
                 buffer,
                 (center.0, center.1),
@@ -828,8 +882,7 @@ impl Path2D {
         }
     }
 }
-// lyon の結果を Kotlin 用のバッファ形式に変換するアダプタ
-// 頂点情報を一時的に保持する構造体
+
 struct VertexInfo {
     position: [f32; 2],
     color: i32,
@@ -837,9 +890,7 @@ struct VertexInfo {
 
 struct FillOutput<'a> {
     buffer: &'a mut Vec<f32>,
-    // テッセレーション中に生成された頂点を保持
     vertices: Vec<VertexInfo>,
-    // 補間計算のために現在のパスのセグメント情報を参照（オプション）
     current_pen_color: i32,
 }
 
@@ -848,25 +899,16 @@ impl<'a> GeometryBuilder for FillOutput<'a> {
         self.vertices.clear();
     }
 
-    fn end_geometry(&mut self) {
-        // 必要ならここで後処理
-    }
+    fn end_geometry(&mut self) {}
 
     fn add_triangle(&mut self, a: VertexId, b: VertexId, c: VertexId) {
-        // 1. Type identifier (Triangle = 3.0f)
         self.buffer.push(3.0);
-
         let ids = [a, b, c];
-
-        // 2. 頂点座標を順番に push (x0, y0, x1, y1, x2, y2)
         for &id in &ids {
             let v = &self.vertices[id.0 as usize];
             self.buffer.push(v.position[0]);
             self.buffer.push(v.position[1]);
         }
-
-        // 3. 頂点色を順番に push (c0, c1, c2)
-        // Kotlin 側で JAVA_INT として読み込むため、ビットパターンを保持したまま f32 として格納
         for &id in &ids {
             let v = &self.vertices[id.0 as usize];
             self.buffer.push(f32::from_bits(v.color as u32));
@@ -880,10 +922,6 @@ impl<'a> GeometryBuilder for FillOutput<'a> {
 impl<'a> FillGeometryBuilder for FillOutput<'a> {
     fn add_fill_vertex(&mut self, vertex: FillVertex) -> Result<VertexId, GeometryBuilderError> {
         let pos = vertex.position();
-
-        // 頂点ごとの色を決定
-        // Fillの場合、複雑なグラデーション（Linear/Radial）は座標から計算する必要があります。
-        // ここでは一旦、現在のペンの色を使用します。
         let color = self.current_pen_color;
 
         self.vertices.push(VertexInfo {
@@ -891,7 +929,6 @@ impl<'a> FillGeometryBuilder for FillOutput<'a> {
             color,
         });
 
-        // 頂点のインデックスを返す
         Ok(VertexId(self.vertices.len() as u32 - 1))
     }
 }

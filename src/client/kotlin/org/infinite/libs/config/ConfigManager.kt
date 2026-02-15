@@ -134,7 +134,10 @@ object ConfigManager : MinecraftInterface() {
                     if (it.size >= 2) it[it.size - 2].toLowerSnakeCase() else null
                 }
                 id == categoryName
-            } ?: return@forEach
+            } ?: run {
+                LogSystem.warn("Category not found: $categoryName")
+                return@forEach
+            }
 
             featuresElement.forEach { (featureName, featureDataElement) ->
                 if (featureDataElement !is JsonObject) return@forEach
@@ -151,8 +154,6 @@ object ConfigManager : MinecraftInterface() {
                 // --- Properties ---
                 val props = featureDataElement["properties"]?.jsonObject ?: return@forEach
                 props.forEach { (propName, jsonValue) ->
-                    // jsonValue (JsonElement) をそのまま渡す
-                    // Feature側の tryApply 内で、プロパティの型に合わせて decodeFromJsonElement する必要がある
                     applyPropertySafely(feature, propName, jsonValue)
                 }
             }
@@ -172,9 +173,13 @@ object ConfigManager : MinecraftInterface() {
         InfiniteClient.localFeatures.categories.values.forEach { it.features.values.forEach { f -> f.ensureAllPropertiesRegistered() } }
     }
 
+    private var lastLocalPath: String? = null
+
     private fun getLocalPath(): String? {
         val isLocal = minecraft.isLocalServer
         val name = if (isLocal) minecraft.singleplayerServer?.storageSource?.levelId else minecraft.currentServer?.name
-        return name?.let { "${if (isLocal) "sp" else "mp"}/$it" }
+        val path = name?.let { "${if (isLocal) "sp" else "mp"}/$it" }
+        if (path != null) lastLocalPath = path
+        return path ?: lastLocalPath
     }
 }

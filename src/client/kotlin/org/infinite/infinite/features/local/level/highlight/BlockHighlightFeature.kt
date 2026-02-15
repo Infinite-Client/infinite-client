@@ -11,6 +11,7 @@ import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.graphics.mesh.HighlightMeshEngine
+import org.infinite.libs.log.LogSystem
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class BlockHighlightFeature : LocalFeature() {
@@ -108,7 +109,7 @@ class BlockHighlightFeature : LocalFeature() {
     }
 
     override fun onLevelRendering(graphics3D: Graphics3D) {
-        if (!isEnabled()) return
+        LogSystem.log("RENDER")
 
         // onLevelRenderingが呼ばれたときにMeshEngineを初期化（Graphics3Dインスタンスが必要なため）
         // meshEngineが初期化されていない、またはGraphics3Dインスタンスが変わった場合に再初期化

@@ -60,9 +60,23 @@ abstract class ListProperty<T : Any>(
         is JsonPrimitive -> {
             if (element.isString) {
                 @Suppress("UNCHECKED_CAST")
-                element.content as? T
+                (element.content as? T) ?: convertElement(element.content)
             } else {
                 convertElement(element.content) // 数値やboolなどもここで
+            }
+        }
+
+        is kotlinx.serialization.json.JsonObject -> {
+            // JsonObject の場合は、T の型情報を使用してデコードを試みる
+            try {
+                // T が reified ではないため、少し工夫が必要だが、
+                // 今回は internalList[0] などからクラス情報を取得できないため、
+                // フォールバックとして convertElement に委ねるか、
+                // もしくはリフレクション等でデコードを試みる。
+                // 現状、BlockAndColor 等の特定の型については convertElement で JsonObject を扱えるようにする。
+                convertElement(element)
+            } catch (e: Exception) {
+                convertElement(element)
             }
         }
 

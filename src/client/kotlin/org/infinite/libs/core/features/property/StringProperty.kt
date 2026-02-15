@@ -1,5 +1,6 @@
 package org.infinite.libs.core.features.property
 
+import kotlinx.serialization.json.JsonPrimitive
 import org.infinite.libs.core.features.Property
 import org.infinite.libs.ui.widgets.PropertyWidget
 import org.infinite.libs.ui.widgets.StringPropertyWidget
@@ -15,7 +16,11 @@ class StringProperty(
 ) : Property<String>(default) {
     override fun tryApply(anyValue: Any?) {
         if (anyValue == null) return
-        this.value = anyValue.toString()
+        val newValue = when (anyValue) {
+            is JsonPrimitive -> anyValue.content
+            else -> anyValue.toString()
+        }
+        this.value = newValue
     }
 
     override fun filterValue(newValue: String): String {
