@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 use xross_core::{XrossClass, xross_methods};
 
 #[derive(XrossClass, Default, Clone, Debug)]
-#[xross(clonable)]
+#[xross(clonable(panicable), drop(panicable))]
 pub struct AdvancedResult {
     #[xross_field]
     pub low_pitch: f32,
@@ -59,7 +59,7 @@ fn simulate_max_dist(v: f32, pitch: f32, dy: f32, max_step: i32, drag: f32, grav
 
 #[xross_methods]
 impl AdvancedResult {
-    #[xross_new]
+    #[xross_new(panicable)]
     pub fn new(
         power: f32,
         s_x: f32,

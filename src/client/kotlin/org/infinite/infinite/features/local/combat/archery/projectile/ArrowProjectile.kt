@@ -36,7 +36,8 @@ object ArrowProjectile : AbstractProjectile() {
             else -> return null
         }
 
-        if (basePower < 0.1) return null
+        // 引き絞り不足（パワーが低い）なら描画しない
+        if (basePower < 0.5) return null
 
         // 2. 開始位置の修正
         // getEyePosition(1.0f) を使用して現在のフレームの正確な位置を取得

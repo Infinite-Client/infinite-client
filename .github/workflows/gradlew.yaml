@@ -16,6 +16,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Initialize submodules
+        run: git submodule update --init --recursive
+
       - name: Setup JDK 25
         uses: actions/setup-java@v4
         with:
@@ -79,7 +82,7 @@ jobs:
           chmod +x ./gradlew
           # 権限エラーを防ぐため、念のため実行前に build/jextract-25 の権限を付与する
           if [ -d "build/jextract-25" ]; then chmod -R +rw build/jextract-25; fi
-          ./gradlew build -x test --parallel --build-cache
+          ./gradlew build -x test --parallel --build-cache -PbuildRustAllTargets=true
         shell: bash
       - name: Prepare Artifacts
         shell: bash

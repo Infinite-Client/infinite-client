@@ -17,3 +17,4 @@ strip = true           # デバッグシンボルの削除
 [dependencies]
 lyon = "1.0.16"
 xross-core = { path = "../../project-xross/xross-core" }
+mimalloc = { version = "0.1.48", default-features = false }
