@@ -14,9 +14,6 @@ codegen-units = 1      # コンパイル単位を1に制限して最適化を強
 panic = "abort"        # パニック時のスタックトレースを省きサイズと速度を優先
 strip = true           # デバッグシンボルの削除
 
-[target.'cfg(not(target_os = "macos"))'.dependencies]
-mimalloc = { version = "0.1.48", default-features = false }
-
 [dependencies]
 lyon = "1.0.16"
-xross-core = { path = "../../project-xross/xross-core" }
+xross-core = { path = "../../project-xross/xross-core", features = ["xross-alloc"] }
