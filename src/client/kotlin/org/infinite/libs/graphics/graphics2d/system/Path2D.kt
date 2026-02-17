@@ -84,9 +84,12 @@ class Path2D : AutoCloseable {
 
     fun fillPath(
         fillRule: FillRule,
+        color: Int,
         fillTriangle: (Float, Float, Float, Float, Float, Float, Int, Int, Int) -> Unit,
         fillQuad: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit,
     ) {
+        // 塗りつぶし用の色を同期 (width=0, cap/joinはデフォルトの[0]を使用)
+        native.setPen(0.0, color, XrossLineCap.entries[0], XrossLineJoin.entries[0], false)
         native.tessellateFill(XrossFillRule.entries[fillRule.ordinal])
         processBuffer(fillTriangle, fillQuad)
     }

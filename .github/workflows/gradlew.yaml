@@ -15,9 +15,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
-      - name: Initialize submodules
-        run: git submodule update --init --recursive
+      - name: Force update submodules
+        # もし特定のコミットが見つからない場合、リモートの最新ブランチから取得を試みる
+        run: |
+          git submodule update --init --recursive --remote || git submodule update --init --recursive
+        shell: bash
 
       - name: Setup JDK 25
         uses: actions/setup-java@v4
@@ -32,9 +36,15 @@ jobs:
         with:
           path: build/jextract-25
           # 権限エラーを避けるため、プロジェクト構造が変わった際に確実に更新されるようキーを調整
-          key: ${{ runner.os }}-jextract-25-${{ hashFiles('build.gradle.kts') }}
+          key: ${{ runner.os }}-jextract-25-${{ hashFiles('build.gradle.kts', 'settings.gradle.kts', 'gradle.properties') }}
           restore-keys: |
             ${{ runner.os }}-jextract-25-
+
+      - name: Fix Directory Permissions
+        run: |
+          mkdir -p build/jextract-25
+          chmod -R 777 build
+        shell: bash
 
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
@@ -80,8 +90,12 @@ jobs:
       - name: Build with Gradle
         run: |
           chmod +x ./gradlew
-          # 権限エラーを防ぐため、念のため実行前に build/jextract-25 の権限を付与する
-          if [ -d "build/jextract-25" ]; then chmod -R +rw build/jextract-25; fi
+          # project-xross/xross-plugin が存在するか確認
+          if [ ! -d "project-xross/xross-plugin" ]; then
+            echo "Error: project-xross/xross-plugin not found!"
+            ls -R project-xross || true
+            exit 1
+          fi
           ./gradlew build -x test --parallel --build-cache -PbuildRustAllTargets=true
         shell: bash
       - name: Prepare Artifacts

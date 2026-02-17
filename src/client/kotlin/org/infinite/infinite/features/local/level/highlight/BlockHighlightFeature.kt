@@ -10,7 +10,7 @@ import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics3D
-import org.infinite.libs.graphics.mesh.HighlightMeshEngine
+import org.infinite.libs.graphics.mesh.MeshEngine
 import org.infinite.libs.log.LogSystem
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -26,11 +26,11 @@ class BlockHighlightFeature : LocalFeature() {
             ),
         ),
     )
-    val highlightMode by property(EnumSelectionProperty(HighlightMeshEngine.HighlightMode.Lines))
+    val highlightMode by property(EnumSelectionProperty(MeshEngine.RenderMode.Lines))
     val scanRange by property(IntProperty(4, 1, 16, " chunks")) // チャンク単位でのスキャン範囲 (例: 4x4チャンク)
 
     // メッシュエンジンインスタンス (onLevelRenderingのコンテキストで初期化される)
-    private lateinit var meshEngine: HighlightMeshEngine
+    private lateinit var meshEngine: MeshEngine
 
     // プレイヤーの周りのチャンクを巡回するための状態
     private var currentScanIndex = 0
@@ -114,17 +114,17 @@ class BlockHighlightFeature : LocalFeature() {
         // onLevelRenderingが呼ばれたときにMeshEngineを初期化（Graphics3Dインスタンスが必要なため）
         // meshEngineが初期化されていない、またはGraphics3Dインスタンスが変わった場合に再初期化
         if (!::meshEngine.isInitialized) {
-            meshEngine = HighlightMeshEngine(graphics3D)
+            meshEngine = MeshEngine()
         }
 
         // キューからブロックを取り出してメッシュエンジンに追加
         while (foundBlocksQueue.isNotEmpty()) {
             val (blockPos, color) = foundBlocksQueue.poll()
             // Vec3に変換して渡す
-            meshEngine.addCube(Vec3(blockPos.x.toDouble(), blockPos.y.toDouble(), blockPos.z.toDouble()), color)
+            meshEngine.addCube(Vec3(blockPos.x.toDouble(), blockPos.y.toDouble(), blockPos.z.toDouble()), color, highlightMode.value)
         }
 
         // メッシュエンジンで描画
-        meshEngine.render(highlightMode.value)
+        meshEngine.render(graphics3D)
     }
 }

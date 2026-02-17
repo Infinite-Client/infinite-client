@@ -262,91 +262,31 @@ open class Graphics2D : MinecraftInterface() {
             return
         }
 
-        // 1. 中央の大きな長方形（上下の角丸を除いた胴体部分）
-        // 左右に突き出す部分は含めず、完全に中央のブロックを描画
-        fillRect(xf, yf + rf, wf, hf - 2 * rf)
-
-        // 2. 上部と下部の角丸を含む水平ストリップの描画
-        // これにより、角の扇形と、その間の水平な長方形を「一続きの台形」として描画できる
-        val segments = (rf / 1.5f * getQualityScale()).toInt().coerceIn(4, 32)
-
-        for (i in 0 until segments) {
-            val yStartRel = i.toFloat() / segments * rf
-            val yEndRel = (i + 1).toFloat() / segments * rf
-
-            // 円の方程式 x^2 + y^2 = r^2 から、中心からの水平距離を導出
-            // 上の段のy座標に対するxのオフセット
-            val hUpper = rf - yStartRel
-            val wUpper = sqrt((rf * rf - hUpper * hUpper).coerceAtLeast(0f))
-
-            // 下の段のy座標に対するxのオフセット
-            val hLower = rf - yEndRel
-            val wLower = sqrt((rf * rf - hLower * hLower).coerceAtLeast(0f))
-
-            // --- 上側の角丸ストリップ ---
-            // 左上の角、中央の隙間、右上の角を一つの Quad Strip として描画
-            fillQuad(
-                xf + rf - wUpper,
-                yf + yStartRel, // 上左
-                xf + wf - rf + wUpper,
-                yf + yStartRel, // 上右
-                xf + wf - rf + wLower,
-                yf + yEndRel, // 下右
-                xf + rf - wLower,
-                yf + yEndRel, // 下左
-            )
-
-            // --- 下側の角丸ストリップ ---
-            // 同様に、左下、中央、右下を繋いで描画
-            fillQuad(
-                xf + rf - wLower,
-                yf + hf - yEndRel, // 上左
-                xf + wf - rf + wLower,
-                yf + hf - yEndRel, // 上右
-                xf + wf - rf + wUpper,
-                yf + hf - yStartRel, // 下右
-                xf + rf - wUpper,
-                yf + hf - yStartRel, // 下左
-            )
+        path {
+            moveTo(xf + rf, yf)
+            lineTo(xf + wf - rf, yf)
+            arc(xf + wf - rf, yf + rf, rf, -PI.toFloat() / 2f, 0f, false)
+            lineTo(xf + wf, yf + hf - rf)
+            arc(xf + wf - rf, yf + hf - rf, rf, 0f, PI.toFloat() / 2f, false)
+            lineTo(xf + rf, yf + hf)
+            arc(xf + rf, yf + hf - rf, rf, PI.toFloat() / 2f, PI.toFloat(), false)
+            lineTo(xf, yf + rf)
+            arc(xf + rf, yf + rf, rf, PI.toFloat(), -PI.toFloat() / 2f, false)
+            closePath()
+            fillPath()
         }
     }
 
     fun fillCircle(cx: Number, cy: Number, radius: Number) {
-        val x0 = cx.toFloat()
-        val y0 = cy.toFloat()
+        val x = cx.toFloat()
+        val y = cy.toFloat()
         val r = radius.toFloat()
         if (r <= 0f) return
 
-        // 品質に基づく分割数（垂直方向の分割数）
-        // 円の高さ(2r)に対して適切な解像度を決定
-        val segments = (r * 2f / 1.5f * getQualityScale()).toInt().coerceIn(8, 64)
-
-        var lastY = -r
-        var lastWidth = 0f
-
-        for (i in 1..segments) {
-            // -r から r まで垂直に走査
-            val currentY = -r + (i.toFloat() / segments) * 2 * r
-
-            // 円の方程式 x^2 + y^2 = r^2 より、各高さでの水平方向の幅(x)を求める
-            // x = sqrt(r^2 - y^2)
-            val currentWidth = sqrt((r * r - currentY * currentY).coerceAtLeast(0f))
-
-            // 前のステップの点と現在のステップの点で4点(Quad)を構成
-            // 矩形ではなく、左右が対称に窄まった「台形」として描画される
-            fillQuad(
-                x0 - lastWidth,
-                y0 + lastY, // 上左
-                x0 + lastWidth,
-                y0 + lastY, // 上右
-                x0 + currentWidth,
-                y0 + currentY, // 下右
-                x0 - currentWidth,
-                y0 + currentY, // 下左
-            )
-
-            lastY = currentY
-            lastWidth = currentWidth
+        path {
+            arc(x, y, r, 0f, 2 * PI.toFloat(), false)
+            closePath()
+            fillPath()
         }
     }
 
@@ -496,10 +436,10 @@ open class Graphics2D : MinecraftInterface() {
      * 現在構築されているパスを塗りつぶします。
      */
     fun fillPath() {
-        // fillPath を呼ぶ前に現在の fillStyle を反映させる必要があるため、
-        // 便宜上 StrokeStyle(width=0, color=fillStyle) として同期
+        // 現在の fillStyle を同期してテッセレーションを実行
         path2D.fillPath(
             fillRule = this.fillRule,
+            color = this.fillStyle,
             fillTriangle = { x0, y0, x1, y1, x2, y2, c0, c1, c2 ->
                 this.fillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2)
             },

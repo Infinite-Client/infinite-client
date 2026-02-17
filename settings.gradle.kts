@@ -33,3 +33,5 @@ plugins {
 }
 
 rootProject.name = "infinite"
+
+includeBuild("project-xross")

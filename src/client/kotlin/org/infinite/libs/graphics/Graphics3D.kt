@@ -7,6 +7,7 @@ import org.infinite.libs.core.tick.RenderTicks
 import org.infinite.libs.graphics.graphics3d.RenderSystem3D
 import org.infinite.libs.graphics.graphics3d.structs.RenderCommand3D
 import org.infinite.libs.graphics.graphics3d.structs.TexturedVertex
+import org.infinite.libs.graphics.mesh.InfiniteMesh
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import java.util.LinkedList
@@ -33,6 +34,17 @@ class Graphics3D : MinecraftInterface() {
      */
     fun clear() {
         commandQueue.clear()
+    }
+
+    fun mesh(mesh: InfiniteMesh) {
+        commandQueue.add(
+            RenderCommand3D.MeshBuffer(
+                mesh.getLineBuffer(),
+                mesh.getLineBufferSize(),
+                mesh.getQuadBuffer(),
+                mesh.getQuadBufferSize(),
+            ),
+        )
     }
 
     fun line(

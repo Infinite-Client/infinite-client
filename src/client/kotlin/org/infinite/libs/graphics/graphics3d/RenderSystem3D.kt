@@ -20,6 +20,7 @@ import org.infinite.libs.graphics.graphics3d.system.resource.RenderLayers
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import org.joml.Vector4f
+import java.lang.foreign.ValueLayout
 import java.util.ArrayDeque
 
 @Suppress("unused")
@@ -164,6 +165,69 @@ class RenderSystem3D(
                         LightTexture.FULL_BRIGHT,
                     )
                     usedRenderTypes.add(renderType)
+                }
+
+                is RenderCommand3D.MeshBuffer -> {
+                    val mat = currentMatrix()
+                    // 1. Lines Rendering
+                    c.lineBuffer?.let { buffer ->
+                        val renderType = RenderLayers.lines(false)
+                        val consumer = bufferSource.getBuffer(renderType)
+                        var cursor = 0L
+                        while (cursor < c.lineBufferSize) {
+                            val x1 = buffer.get(ValueLayout.JAVA_FLOAT, cursor * 4)
+                            val y1 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 1) * 4)
+                            val z1 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 2) * 4)
+                            val x2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 3) * 4)
+                            val y2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 4) * 4)
+                            val z2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 5) * 4)
+                            val color = buffer.get(ValueLayout.JAVA_INT, (cursor + 6) * 4)
+
+                            val a = (color ushr 24) and 0xFF
+                            val r = (color shr 16) and 0xFF
+                            val g = (color shr 8) and 0xFF
+                            val b = color and 0xFF
+
+                            consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, a).setNormal(0f, 1f, 0f).setLineWidth(2.0f)
+                            consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, a).setNormal(0f, 1f, 0f).setLineWidth(2.0f)
+                            cursor += 7
+                        }
+                        usedRenderTypes.add(renderType)
+                    }
+
+                    // 2. Quads Rendering
+                    c.quadBuffer?.let { buffer ->
+                        val renderType = RenderLayers.quads(false)
+                        val consumer = bufferSource.getBuffer(renderType)
+                        var cursor = 0L
+                        while (cursor < c.quadBufferSize) {
+                            val x1 = buffer.get(ValueLayout.JAVA_FLOAT, cursor * 4)
+                            val y1 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 1) * 4)
+                            val z1 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 2) * 4)
+                            val x2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 3) * 4)
+                            val y2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 4) * 4)
+                            val z2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 5) * 4)
+                            val x3 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 6) * 4)
+                            val y3 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 7) * 4)
+                            val z3 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 8) * 4)
+                            val x4 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 9) * 4)
+                            val y4 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 10) * 4)
+                            val z4 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 11) * 4)
+                            val color = buffer.get(ValueLayout.JAVA_INT, (cursor + 12) * 4)
+
+                            val a = (color ushr 24) and 0xFF
+                            val r = (color shr 16) and 0xFF
+                            val g = (color shr 8) and 0xFF
+                            val b = color and 0xFF
+
+                            consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                            consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                            consumer.addVertex(mat, x3, y3, z3).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                            consumer.addVertex(mat, x4, y4, z4).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                            cursor += 13
+                        }
+                        usedRenderTypes.add(renderType)
+                    }
                 }
             }
         }
