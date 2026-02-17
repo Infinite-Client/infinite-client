@@ -27,13 +27,39 @@ impl InfiniteMesh {
     }
 
     #[xross_method(critical)]
-    pub fn add_quad(&mut self, x1: f32, y1: f32, z1: f32, x2: f32, y2: f32, z2: f32, x3: f32, y3: f32, z3: f32, x4: f32, y4: f32, z4: f32, color: i32) {
+    pub fn add_quad(
+        &mut self,
+        x1: f32,
+        y1: f32,
+        z1: f32,
+        x2: f32,
+        y2: f32,
+        z2: f32,
+        x3: f32,
+        y3: f32,
+        z3: f32,
+        x4: f32,
+        y4: f32,
+        z4: f32,
+        color: i32,
+    ) {
         let c = f32::from_bits(color as u32);
-        self.quads.extend_from_slice(&[x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, c]);
+        self.quads
+            .extend_from_slice(&[x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, c]);
     }
 
     #[xross_method(critical)]
-    pub fn add_box(&mut self, x: f32, y: f32, z: f32, w: f32, h: f32, d: f32, color: i32, lines: bool) {
+    pub fn add_box(
+        &mut self,
+        x: f32,
+        y: f32,
+        z: f32,
+        w: f32,
+        h: f32,
+        d: f32,
+        color: i32,
+        lines: bool,
+    ) {
         let x2 = x + w;
         let y2 = y + h;
         let z2 = z + d;
@@ -71,11 +97,19 @@ impl InfiniteMesh {
     }
 
     #[xross_method(critical)]
-    pub fn get_line_buffer_ptr(&self) -> *const f32 { self.lines.as_ptr() }
+    pub fn get_line_buffer_ptr(&self) -> *const f32 {
+        self.lines.as_ptr()
+    }
     #[xross_method(critical)]
-    pub fn get_line_buffer_size(&self) -> usize { self.lines.len() }
+    pub fn get_line_buffer_size(&self) -> usize {
+        self.lines.len()
+    }
     #[xross_method(critical)]
-    pub fn get_quad_buffer_ptr(&self) -> *const f32 { self.quads.as_ptr() }
+    pub fn get_quad_buffer_ptr(&self) -> *const f32 {
+        self.quads.as_ptr()
+    }
     #[xross_method(critical)]
-    pub fn get_quad_buffer_size(&self) -> usize { self.quads.len() }
+    pub fn get_quad_buffer_size(&self) -> usize {
+        self.quads.len()
+    }
 }
