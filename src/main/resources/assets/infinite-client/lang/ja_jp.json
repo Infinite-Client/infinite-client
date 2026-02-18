@@ -259,5 +259,10 @@
   "key.infinite.features.local.combat.instant_use_feature.cycle_mode": "即時使用モードを切り替え",
   "infinite.features.local.combat.lock_on_feature.attack_target": "自動攻撃",
   "infinite.features.local.combat.lock_on_feature.attack_strength": "攻撃強度 (クールダウン)",
-  "infinite.features.local.combat.lock_on_feature.attack_randomization": "ランダムディレイ (Tick)"
+  "infinite.features.local.combat.lock_on_feature.attack_randomization": "ランダムディレイ (Tick)",
+  "infinite.features.local.level.block_highlight_feature": "ブロックハイライト",
+  "infinite.features.local.level.block_highlight_feature.blocks_to_highlight": "ハイライト対象",
+  "infinite.features.local.level.block_highlight_feature.highlight_mode": "描画モード",
+  "infinite.features.local.level.block_highlight_feature.scan_range": "スキャン範囲",
+  "key.infinite.features.local.level.block_highlight_feature.toggle": "ブロックハイライトを切り替え"
 }

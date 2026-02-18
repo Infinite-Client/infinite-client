@@ -259,5 +259,10 @@
   "key.infinite.features.local.combat.instant_use_feature.cycle_mode": "Cycle Instant Use Mode",
   "infinite.features.local.combat.lock_on_feature.attack_target": "Auto Attack",
   "infinite.features.local.combat.lock_on_feature.attack_strength": "Attack Strength",
-  "infinite.features.local.combat.lock_on_feature.attack_randomization": "Random Delay"
+  "infinite.features.local.combat.lock_on_feature.attack_randomization": "Random Delay",
+  "infinite.features.local.level.block_highlight_feature": "Block Highlight",
+  "infinite.features.local.level.block_highlight_feature.blocks_to_highlight": "Blocks to Highlight",
+  "infinite.features.local.level.block_highlight_feature.highlight_mode": "Highlight Mode",
+  "infinite.features.local.level.block_highlight_feature.scan_range": "Scan Range",
+  "key.infinite.features.local.level.block_highlight_feature.toggle": "Toggle Block Highlight"
 }
