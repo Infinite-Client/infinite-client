@@ -64,8 +64,8 @@ jobs:
         env:
           # C関連の依存関係（mimalloc等）のビルドエラーを避けるための設定
           AR_aarch64_apple_darwin: zig ar
-          CC_aarch64_apple_darwin: zig cc -target aarch64-macos
-          CXX_aarch64_apple_darwin: zig c++ -target aarch64-macos
+          CC_aarch64_apple_darwin: zig cc
+          CXX_aarch64_apple_darwin: zig c++
         run: |
           chmod +x ./gradlew
           # project-xross/xross-plugin が存在するか確認
