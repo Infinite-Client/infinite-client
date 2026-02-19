@@ -57,10 +57,15 @@ jobs:
       - name: Install Build Tools (Cached)
         run: |
           if ! command -v cargo-zigbuild &> /dev/null; then
-            cargo install cargo-zigbuild --force
+            curl -L https://github.com/rust-cross/cargo-zigbuild/releases/latest/download/cargo-zigbuild-x86_64-unknown-linux-musl.tar.gz | tar xz -C ~/.cargo/bin
           fi
 
       - name: Build with Gradle
+        env:
+          # C関連の依存関係（mimalloc等）のビルドエラーを避けるための設定
+          AR_aarch64_apple_darwin: zig ar
+          CC_aarch64_apple_darwin: zig cc -target aarch64-macos
+          CXX_aarch64_apple_darwin: zig c++ -target aarch64-macos
         run: |
           chmod +x ./gradlew
           # project-xross/xross-plugin が存在するか確認
