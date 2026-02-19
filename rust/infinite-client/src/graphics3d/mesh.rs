@@ -24,7 +24,9 @@ impl BlockPos {
 
     #[inline(always)]
     pub fn pack(&self) -> u64 {
-        ((self.x as u64 & 0x3FFFFFF) << 38) | ((self.z as u64 & 0x3FFFFFF) << 12) | (self.y as u64 & 0xFFF)
+        ((self.x as u64 & 0x3FFFFFF) << 38)
+            | ((self.z as u64 & 0x3FFFFFF) << 12)
+            | (self.y as u64 & 0xFFF)
     }
 
     #[inline(always)]
@@ -32,12 +34,12 @@ impl BlockPos {
         let x = (val >> 38) as i64;
         let z = (val << 26 >> 38) as i64;
         let y = (val << 52 >> 52) as i64;
-        
+
         // Sign extend from 26bit for X, Z and 12bit for Y
         let x = if x >= 0x2000000 { x - 0x4000000 } else { x } as i32;
         let z = if z >= 0x2000000 { z - 0x4000000 } else { z } as i32;
         let y = if y >= 0x800 { y - 0x1000 } else { y } as i32;
-        
+
         Self::new(x, y, z)
     }
 
@@ -141,7 +143,7 @@ impl InfiniteMesh {
     pub fn get_quad_buffer_size(&self) -> usize {
         self.quad_buffer.len()
     }
-    }
+}
 
 #[derive(XrossClass, Default)]
 pub struct BlockMeshGenerator {
@@ -181,40 +183,51 @@ impl BlockMeshGenerator {
 
         // Parallel greedy meshing for each face
         let directions = Direction::all();
-        let face_results: Vec<(Vec<Quad>, Vec<Line>)> = directions.par_iter().map(|&dir| {
-            let mut quads = Vec::new();
-            let mut face_positions: FxHashMap<i32, FxHashMap<i32, FxHashSet<(i32, i32)>>> = FxHashMap::default();
-            
-            let (nx, ny, nz) = {
-                let (dx, dy, dz) = dir.step();
-                (dx as f32, dy as f32, dz as f32)
-            };
+        let face_results: Vec<(Vec<Quad>, Vec<Line>)> = directions
+            .par_iter()
+            .map(|&dir| {
+                let mut quads = Vec::new();
+                let mut face_positions: FxHashMap<i32, FxHashMap<i32, FxHashSet<(i32, i32)>>> =
+                    FxHashMap::default();
 
-            for (&packed_pos, &color) in &self.blocks {
-                let pos = BlockPos::unpack(packed_pos);
-                let neighbor = pos.relative(dir);
-                if self.blocks.get(&neighbor.pack()) != Some(&color) {
-                    let (plane, u, v) = self.get_coords(pos, dir);
-                    face_positions
-                        .entry(color)
-                        .or_default()
-                        .entry(plane)
-                        .or_default()
-                        .insert((u, v));
-                }
-            }
+                let (nx, ny, nz) = {
+                    let (dx, dy, dz) = dir.step();
+                    (dx as f32, dy as f32, dz as f32)
+                };
 
-            for (color, planes) in face_positions {
-                for (plane, mut cells) in planes {
-                    self.greedy_mesh_2d(&mut quads, plane, color, &mut cells, dir, (nx, ny, nz));
+                for (&packed_pos, &color) in &self.blocks {
+                    let pos = BlockPos::unpack(packed_pos);
+                    let neighbor = pos.relative(dir);
+                    if self.blocks.get(&neighbor.pack()) != Some(&color) {
+                        let (plane, u, v) = self.get_coords(pos, dir);
+                        face_positions
+                            .entry(color)
+                            .or_default()
+                            .entry(plane)
+                            .or_default()
+                            .insert((u, v));
+                    }
                 }
-            }
-            
-            // Generate lines for this direction (simple implementation, improved in second pass)
-            // Note: Line generation is complex to parallelize fully because of shared edges.
-            // We'll collect raw lines and combine them after.
-            (quads, Vec::new())
-        }).collect();
+
+                for (color, planes) in face_positions {
+                    for (plane, mut cells) in planes {
+                        self.greedy_mesh_2d(
+                            &mut quads,
+                            plane,
+                            color,
+                            &mut cells,
+                            dir,
+                            (nx, ny, nz),
+                        );
+                    }
+                }
+
+                // Generate lines for this direction (simple implementation, improved in second pass)
+                // Note: Line generation is complex to parallelize fully because of shared edges.
+                // We'll collect raw lines and combine them after.
+                (quads, Vec::new())
+            })
+            .collect();
 
         // 1. Combine Quads
         let mut all_quads = Vec::new();
@@ -225,7 +238,7 @@ impl BlockMeshGenerator {
         // 2. Collect and Combine Lines
         let mut raw_lines = Vec::new();
         let mut unique_lines = HashSet::new(); // HashSet is fine for small collections, but FxHashSet is better.
-        
+
         // Edge generation depends on all blocks, so we do it in a single pass here.
         // For very large datasets, this could be chunked.
         for (&packed_pos, &color) in &self.blocks {
@@ -282,7 +295,7 @@ impl BlockMeshGenerator {
     ) {
         // Optimization: Use a bounding box to minimize iterations if cells were managed by bitset
         // but since we already have a set of coordinates, we iterate the set.
-        
+
         while let Some(&start) = cells.iter().next() {
             let mut width = 1;
             while cells.contains(&(start.0 + width, start.1)) {
@@ -408,24 +421,27 @@ impl BlockMeshGenerator {
         let y = pos.y;
         let z = pos.z;
 
-        let mut edge_check = |x1: i32,
-                              y1: i32,
-                              z1: i32,
-                              x2: i32,
-                              y2: i32,
-                              z2: i32,
-                              n1: BlockPos,
-                              n2: BlockPos| {
-            let c1 = self.blocks.get(&n1.pack()).copied();
-            let c2 = self.blocks.get(&n2.pack()).copied();
-            if c1 != Some(color) || c2 != Some(color) {
-                let s = (x1, y1, z1);
-                let e = (x2, y2, z2);
-                let pair = if s < e { (s, e) } else { (e, s) };
-                if unq.insert(pair) {
-                    let edge_color = if let Some(c) = c1 {
-                        if c != color {
-                            interpolate(color, c)
+        let mut edge_check =
+            |x1: i32, y1: i32, z1: i32, x2: i32, y2: i32, z2: i32, n1: BlockPos, n2: BlockPos| {
+                let c1 = self.blocks.get(&n1.pack()).copied();
+                let c2 = self.blocks.get(&n2.pack()).copied();
+                if c1 != Some(color) || c2 != Some(color) {
+                    let s = (x1, y1, z1);
+                    let e = (x2, y2, z2);
+                    let pair = if s < e { (s, e) } else { (e, s) };
+                    if unq.insert(pair) {
+                        let edge_color = if let Some(c) = c1 {
+                            if c != color {
+                                interpolate(color, c)
+                            } else if let Some(cc) = c2 {
+                                if cc != color {
+                                    interpolate(color, cc)
+                                } else {
+                                    color
+                                }
+                            } else {
+                                color
+                            }
                         } else if let Some(cc) = c2 {
                             if cc != color {
                                 interpolate(color, cc)
@@ -434,41 +450,140 @@ impl BlockMeshGenerator {
                             }
                         } else {
                             color
-                        }
-                    } else if let Some(cc) = c2 {
-                        if cc != color {
-                            interpolate(color, cc)
-                        } else {
-                            color
-                        }
-                    } else {
-                        color
-                    };
+                        };
 
-                    ls.push(Line {
-                        start: (s.0, s.1, s.2),
-                        end: (e.0, e.1, e.2),
-                        color: edge_color,
-                    });
+                        ls.push(Line {
+                            start: (s.0, s.1, s.2),
+                            end: (e.0, e.1, e.2),
+                            color: edge_color,
+                        });
+                    }
                 }
-            }
-        };
+            };
 
         // Down/North
-        edge_check(x, y, z, x + 1, y, z, pos.relative(Direction::Down), pos.relative(Direction::North));
-        edge_check(x, y + 1, z, x + 1, y + 1, z, pos.relative(Direction::Up), pos.relative(Direction::North));
-        edge_check(x, y, z + 1, x + 1, y, z + 1, pos.relative(Direction::Down), pos.relative(Direction::South));
-        edge_check(x, y + 1, z + 1, x + 1, y + 1, z + 1, pos.relative(Direction::Up), pos.relative(Direction::South));
+        edge_check(
+            x,
+            y,
+            z,
+            x + 1,
+            y,
+            z,
+            pos.relative(Direction::Down),
+            pos.relative(Direction::North),
+        );
+        edge_check(
+            x,
+            y + 1,
+            z,
+            x + 1,
+            y + 1,
+            z,
+            pos.relative(Direction::Up),
+            pos.relative(Direction::North),
+        );
+        edge_check(
+            x,
+            y,
+            z + 1,
+            x + 1,
+            y,
+            z + 1,
+            pos.relative(Direction::Down),
+            pos.relative(Direction::South),
+        );
+        edge_check(
+            x,
+            y + 1,
+            z + 1,
+            x + 1,
+            y + 1,
+            z + 1,
+            pos.relative(Direction::Up),
+            pos.relative(Direction::South),
+        );
 
-        edge_check(x, y, z, x, y + 1, z, pos.relative(Direction::West), pos.relative(Direction::North));
-        edge_check(x + 1, y, z, x + 1, y + 1, z, pos.relative(Direction::East), pos.relative(Direction::North));
-        edge_check(x, y, z + 1, x, y + 1, z + 1, pos.relative(Direction::West), pos.relative(Direction::South));
-        edge_check(x + 1, y, z + 1, x + 1, y + 1, z + 1, pos.relative(Direction::East), pos.relative(Direction::South));
+        edge_check(
+            x,
+            y,
+            z,
+            x,
+            y + 1,
+            z,
+            pos.relative(Direction::West),
+            pos.relative(Direction::North),
+        );
+        edge_check(
+            x + 1,
+            y,
+            z,
+            x + 1,
+            y + 1,
+            z,
+            pos.relative(Direction::East),
+            pos.relative(Direction::North),
+        );
+        edge_check(
+            x,
+            y,
+            z + 1,
+            x,
+            y + 1,
+            z + 1,
+            pos.relative(Direction::West),
+            pos.relative(Direction::South),
+        );
+        edge_check(
+            x + 1,
+            y,
+            z + 1,
+            x + 1,
+            y + 1,
+            z + 1,
+            pos.relative(Direction::East),
+            pos.relative(Direction::South),
+        );
 
-        edge_check(x, y, z, x, y, z + 1, pos.relative(Direction::West), pos.relative(Direction::Down));
-        edge_check(x + 1, y, z, x + 1, y, z + 1, pos.relative(Direction::East), pos.relative(Direction::Down));
-        edge_check(x, y + 1, z, x, y + 1, z + 1, pos.relative(Direction::West), pos.relative(Direction::Up));
-        edge_check(x + 1, y + 1, z, x + 1, y + 1, z + 1, pos.relative(Direction::East), pos.relative(Direction::Up));
+        edge_check(
+            x,
+            y,
+            z,
+            x,
+            y,
+            z + 1,
+            pos.relative(Direction::West),
+            pos.relative(Direction::Down),
+        );
+        edge_check(
+            x + 1,
+            y,
+            z,
+            x + 1,
+            y,
+            z + 1,
+            pos.relative(Direction::East),
+            pos.relative(Direction::Down),
+        );
+        edge_check(
+            x,
+            y + 1,
+            z,
+            x,
+            y + 1,
+            z + 1,
+            pos.relative(Direction::West),
+            pos.relative(Direction::Up),
+        );
+        edge_check(
+            x + 1,
+            y + 1,
+            z,
+            x + 1,
+            y + 1,
+            z + 1,
+            pos.relative(Direction::East),
+            pos.relative(Direction::Up),
+        );
     }
 
     fn combine_lines(&self, lines: Vec<Line>) -> Vec<Line> {
