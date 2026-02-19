@@ -227,9 +227,9 @@ tasks {
         rustTargets.forEach { (id, target) ->
             val hostUsesZigbuild = buildAllRustTargets || providers.gradleProperty("useZigbuild").orNull == "true"
             val sourceDir = if (id == hostRustTargetId && !hostUsesZigbuild) {
-                "${project.file("rust/infinite-client")}/target/release"
+                "${project.rootDir}/target/release"
             } else {
-                "${project.file("rust/infinite-client")}/target/$target/release"
+                "${project.rootDir}/target/$target/release"
             }
             from(sourceDir) {
                 include("*.so", "*.dll", "*.dylib")

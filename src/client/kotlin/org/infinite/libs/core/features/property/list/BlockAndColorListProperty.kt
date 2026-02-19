@@ -1,7 +1,6 @@
 package org.infinite.libs.core.features.property.list
 
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
@@ -28,11 +27,19 @@ class BlockAndColorListProperty(default: List<BlockAndColor>) : ListProperty<Blo
 
     override fun convertElement(anyValue: Any): BlockAndColor? {
         if (anyValue is BlockAndColor) return anyValue
+
+        // JsonObject の場合の処理を修正 (文字列の color をパースする)
         if (anyValue is JsonObject) {
             val blockId = anyValue["blockId"]?.jsonPrimitive?.content ?: return null
-            val color = anyValue["color"]?.jsonPrimitive?.intOrNull ?: 0xFFFFFFFF.toInt()
+            val colorStr = anyValue["color"]?.jsonPrimitive?.content ?: "FFFFFFFF"
+            val color = try {
+                colorStr.removePrefix("#").toLong(16).toInt()
+            } catch (_: Exception) {
+                0xFFFFFFFF.toInt()
+            }
             return BlockAndColor(blockId, color)
         }
+
         if (anyValue is String) {
             val parts = anyValue.split("#")
             val blockId = parts[0].trim()
@@ -130,7 +137,6 @@ class BlockAndColorListProperty(default: List<BlockAndColor>) : ListProperty<Blo
         override fun keyPressed(keyEvent: KeyEvent): Boolean {
             val key = keyEvent.key
 
-            // 左右端でフォーカス移動
             if (key == GLFW.GLFW_KEY_LEFT && currentInput().cursorPosition == 0) {
                 swapFocus()
                 return true
@@ -140,7 +146,6 @@ class BlockAndColorListProperty(default: List<BlockAndColor>) : ListProperty<Blo
                 return true
             }
 
-            // Enter / Esc
             if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
                 submit()
                 return true
@@ -153,7 +158,6 @@ class BlockAndColorListProperty(default: List<BlockAndColor>) : ListProperty<Blo
             return currentInput().keyPressed(keyEvent)
         }
 
-        // 現在フォーカスされている入力欄を返す便利関数
         private fun currentInput() = if (blockInput.isFocused) blockInput else colorInput
 
         private fun swapFocus() {

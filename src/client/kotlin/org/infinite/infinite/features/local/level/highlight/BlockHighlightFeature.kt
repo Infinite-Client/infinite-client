@@ -1,130 +1,119 @@
 package org.infinite.infinite.features.local.level.highlight
 
-import net.minecraft.core.BlockPos
-import net.minecraft.core.SectionPos
-import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.world.phys.Vec3
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.list.BlockAndColorListProperty
 import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
+import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics3D
-import org.infinite.libs.graphics.mesh.MeshEngine
-import org.infinite.libs.log.LogSystem
-import java.util.concurrent.ConcurrentLinkedQueue
 
 class BlockHighlightFeature : LocalFeature() {
     override val featureType = FeatureLevel.Utils
 
-    // プロパティ定義
+    enum class RenderStyle { Lines, Faces, Both }
+    enum class ViewFocus { None, Balanced, Strict }
+    enum class Animation { None, Pulse, FadeIn }
+
     val blocksToHighlight by property(
         BlockAndColorListProperty(
             listOf(
-                BlockAndColor("minecraft:diamond_ore", 0xFF00FFFF.toInt()),
-                BlockAndColor("minecraft:gold_ore", 0xFFFFFF00.toInt()),
+                // --- 超重要・貴重ブロック ---
+                BlockAndColor("minecraft:ancient_debris", 0x80583431.toInt()),
+                BlockAndColor("minecraft:diamond_ore", 0x8000FFFF.toInt()),
+                BlockAndColor("minecraft:deepslate_diamond_ore", 0x8000FFFF.toInt()),
+                BlockAndColor("minecraft:diamond_block", 0x8000FFFF.toInt()),
+                BlockAndColor("minecraft:emerald_ore", 0x8000FF00.toInt()),
+                BlockAndColor("minecraft:deepslate_emerald_ore", 0x8000FF00.toInt()),
+                BlockAndColor("minecraft:emerald_block", 0x8000FF00.toInt()),
+
+                // --- 一般鉱石 ---
+                BlockAndColor("minecraft:gold_ore", 0x80FFD700.toInt()),
+                BlockAndColor("minecraft:deepslate_gold_ore", 0x80FFD700.toInt()),
+                BlockAndColor("minecraft:nether_gold_ore", 0x80FFD700.toInt()),
+                BlockAndColor("minecraft:gold_block", 0x80FFD700.toInt()),
+                BlockAndColor("minecraft:iron_ore", 0x80D8AF93.toInt()),
+                BlockAndColor("minecraft:deepslate_iron_ore", 0x80D8AF93.toInt()),
+                BlockAndColor("minecraft:iron_block", 0x80C0C0C0.toInt()),
+                BlockAndColor("minecraft:copper_ore", 0x80E77C5E.toInt()),
+                BlockAndColor("minecraft:deepslate_copper_ore", 0x80E77C5E.toInt()),
+                BlockAndColor("minecraft:coal_ore", 0x80333333.toInt()),
+                BlockAndColor("minecraft:deepslate_coal_ore", 0x80333333.toInt()),
+                BlockAndColor("minecraft:lapis_ore", 0x800000FF.toInt()),
+                BlockAndColor("minecraft:deepslate_lapis_ore", 0x800000FF.toInt()),
+                BlockAndColor("minecraft:redstone_ore", 0x80FF0000.toInt()),
+                BlockAndColor("minecraft:deepslate_redstone_ore", 0x80FF0000.toInt()),
+                BlockAndColor("minecraft:nether_quartz_ore", 0x80FFFFFF.toInt()),
+
+                // --- ストレージ・ユーティリティ ---
+                BlockAndColor("minecraft:chest", 0x80FFA500.toInt()),
+                BlockAndColor("minecraft:trapped_chest", 0x80FF4500.toInt()),
+                BlockAndColor("minecraft:ender_chest", 0x80800080.toInt()),
+                BlockAndColor("minecraft:barrel", 0x808B4513.toInt()),
+                BlockAndColor("minecraft:shulker_box", 0x80FF00FF.toInt()),
+                BlockAndColor("minecraft:white_shulker_box", 0x80FFFFFF.toInt()),
+                BlockAndColor("minecraft:orange_shulker_box", 0x80FFA500.toInt()),
+                BlockAndColor("minecraft:magenta_shulker_box", 0x80FF00FF.toInt()),
+                BlockAndColor("minecraft:light_blue_shulker_box", 0x80ADD8E6.toInt()),
+                BlockAndColor("minecraft:yellow_shulker_box", 0x80FFFF00.toInt()),
+                BlockAndColor("minecraft:lime_shulker_box", 0x8000FF00.toInt()),
+                BlockAndColor("minecraft:pink_shulker_box", 0x80FFC0CB.toInt()),
+                BlockAndColor("minecraft:gray_shulker_box", 0x80808080.toInt()),
+                BlockAndColor("minecraft:light_gray_shulker_box", 0x80D3D3D3.toInt()),
+                BlockAndColor("minecraft:cyan_shulker_box", 0x8000FFFF.toInt()),
+                BlockAndColor("minecraft:purple_shulker_box", 0x80800080.toInt()),
+                BlockAndColor("minecraft:blue_shulker_box", 0x800000FF.toInt()),
+                BlockAndColor("minecraft:brown_shulker_box", 0x808B4513.toInt()),
+                BlockAndColor("minecraft:green_shulker_box", 0x80008000.toInt()),
+                BlockAndColor("minecraft:red_shulker_box", 0x80FF0000.toInt()),
+                BlockAndColor("minecraft:black_shulker_box", 0x80000000.toInt()),
+
+                // --- 構造物・重要地点 ---
+                BlockAndColor("minecraft:spawner", 0x801E90FF.toInt()),
+                BlockAndColor("minecraft:beacon", 0x8000FFFF.toInt()),
+                BlockAndColor("minecraft:enchanting_table", 0x80FF00FF.toInt()),
+                BlockAndColor("minecraft:tnt", 0x80FF0000.toInt()),
+                BlockAndColor("minecraft:respawn_anchor", 0x80FFFF00.toInt()),
+                BlockAndColor("minecraft:lodestone", 0x80C0C0C0.toInt()),
+
+                // --- ポータル・レアブロック ---
+                BlockAndColor("minecraft:nether_portal", 0x809932CC.toInt()),
+                BlockAndColor("minecraft:end_portal_frame", 0x80006400.toInt()),
+                BlockAndColor("minecraft:end_portal", 0x80000000.toInt()),
+                BlockAndColor("minecraft:suspicious_sand", 0x80EEDC82.toInt()),
+                BlockAndColor("minecraft:suspicious_gravel", 0x80808080.toInt()),
+                BlockAndColor("minecraft:budding_amethyst", 0x80A45AEE.toInt()),
+                BlockAndColor("minecraft:trial_spawner", 0x80FF8C00.toInt()),
+                BlockAndColor("minecraft:vault", 0x80B8860B.toInt()),
             ),
         ),
     )
-    val highlightMode by property(EnumSelectionProperty(MeshEngine.RenderMode.Lines))
-    val scanRange by property(IntProperty(4, 1, 16, " chunks")) // チャンク単位でのスキャン範囲 (例: 4x4チャンク)
 
-    // メッシュエンジンインスタンス (onLevelRenderingのコンテキストで初期化される)
-    private lateinit var meshEngine: MeshEngine
+    val scanRange by property(IntProperty(8, 1, 32, " chunks"))
+    val renderRange by property(IntProperty(64, 8, 256, " blocks"))
+    val renderStyle by property(EnumSelectionProperty(RenderStyle.Lines))
+    val maxDrawCount by property(IntProperty(1000, 100, 10000, " blocks"))
 
-    // プレイヤーの周りのチャンクを巡回するための状態
-    private var currentScanIndex = 0
-
-    // 発見されたブロックを一時的に保持するキュー
-    private val foundBlocksQueue = ConcurrentLinkedQueue<Pair<BlockPos, Int>>()
+    val lineWidth by property(FloatProperty(1.5f, 0.1f, 5.0f, " px"))
+    val viewFocus by property(EnumSelectionProperty(ViewFocus.Balanced))
+    val animation by property(EnumSelectionProperty(Animation.Pulse))
 
     override fun onEndTick() {
         super.onEndTick()
-        val p = player ?: return
-        val l = level ?: return
-
-        // スキャン範囲に基づいてチャンクを巡回
-        val playerChunkX = p.chunkPosition().x
-        val playerChunkZ = p.chunkPosition().z
-        val range = scanRange.value
-
-        val startChunkX = playerChunkX - range
-        val endChunkX = playerChunkX + range
-        val startChunkZ = playerChunkZ - range
-        val endChunkZ = playerChunkZ + range
-
-        // 毎ティック1つのチャンクをスキャン
-        val numChunksX = endChunkX - startChunkX + 1
-        val numChunksZ = endChunkZ - startChunkZ + 1
-        val totalChunks = numChunksX * numChunksZ
-        if (totalChunks <= 0) return
-
-        currentScanIndex = (currentScanIndex + 1) % totalChunks
-
-        val targetChunkOffsetX = currentScanIndex / numChunksZ
-        val targetChunkOffsetZ = currentScanIndex % numChunksZ
-
-        val targetChunkX = startChunkX + targetChunkOffsetX
-        val targetChunkZ = startChunkZ + targetChunkOffsetZ
-
-        // 指定されたチャンクがロードされているか確認
-        val chunk = l.getChunk(targetChunkX, targetChunkZ)
-
-        // チャンク内のすべてのセクションをスキャン (Y座標はLevelのminBuildHeightからmaxBuildHeightまで)
-        // Minecraft 1.18+ ではY座標が負の領域も存在する
-        val minSectionY = l.minSectionY
-        val maxSectionY = l.maxSectionY
-
-        for (sectionY in minSectionY..maxSectionY) {
-            val chunkSection = chunk.getSection(l.getSectionIndex(sectionY))
-            // セクションにデータが存在しない場合はスキップ
-            if (!chunkSection.hasOnlyAir()) {
-                for (x in 0..15) {
-                    for (y in 0..15) {
-                        for (z in 0..15) {
-                            val blockState = chunkSection.getBlockState(x, y, z)
-                            // 空気のブロックは無視
-                            if (blockState.isAir) continue
-
-                            val blockId = BuiltInRegistries.BLOCK.getKey(blockState.block).toString()
-
-                            // ハイライト対象ブロックかどうかチェック
-                            blocksToHighlight.value.forEach { highlightEntry ->
-                                if (highlightEntry.blockId == blockId) {
-                                    val actualBlockPos = BlockPos(
-                                        SectionPos.sectionToBlockCoord(targetChunkX, x),
-                                        SectionPos.sectionToBlockCoord(sectionY, y),
-                                        SectionPos.sectionToBlockCoord(targetChunkZ, z),
-                                    )
-                                    foundBlocksQueue.add(actualBlockPos to highlightEntry.color)
-                                    // 1つのブロックが見つかったら、このブロックのチェックは終了
-                                    // (同じブロックIDに対して複数色設定がない限りはbreak可能)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        if (isEnabled()) BlockHighlightRenderer.tick(this)
     }
 
     override fun onLevelRendering(graphics3D: Graphics3D) {
-        LogSystem.log("RENDER")
+        if (isEnabled()) BlockHighlightRenderer.render(graphics3D, this)
+    }
 
-        // onLevelRenderingが呼ばれたときにMeshEngineを初期化（Graphics3Dインスタンスが必要なため）
-        // meshEngineが初期化されていない、またはGraphics3Dインスタンスが変わった場合に再初期化
-        if (!::meshEngine.isInitialized) {
-            meshEngine = MeshEngine()
-        }
+    override fun onEnabled() {
+        super.onEnabled()
+        BlockHighlightRenderer.clear()
+    }
 
-        // キューからブロックを取り出してメッシュエンジンに追加
-        while (foundBlocksQueue.isNotEmpty()) {
-            val (blockPos, color) = foundBlocksQueue.poll()
-            // Vec3に変換して渡す
-            meshEngine.addCube(Vec3(blockPos.x.toDouble(), blockPos.y.toDouble(), blockPos.z.toDouble()), color, highlightMode.value)
-        }
-
-        // メッシュエンジンで描画
-        meshEngine.render(graphics3D)
+    override fun onDisabled() {
+        super.onDisabled()
+        BlockHighlightRenderer.clear()
     }
 }

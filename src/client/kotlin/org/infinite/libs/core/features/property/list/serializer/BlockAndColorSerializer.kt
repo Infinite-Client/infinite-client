@@ -1,42 +1,44 @@
 package org.infinite.libs.core.features.property.list.serializer
 
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
+
+/**
+ * JSON上で読み書きするためのサロゲートクラス
+ */
+@Serializable
+private data class BlockAndColorSurrogate(
+    val blockId: String,
+    val color: String,
+)
 
 /**
  * JSON上で color を #AARRGGBB 文字列として扱うためのカスタムシリアライザー
  */
 object BlockAndColorSerializer : KSerializer<BlockAndColor> {
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("BlockAndColor", PrimitiveKind.STRING)
+    override val descriptor: SerialDescriptor = BlockAndColorSurrogate.serializer().descriptor
 
     override fun serialize(encoder: Encoder, value: BlockAndColor) {
+        // color を 16進数文字列 (#AARRGGBB) に変換して書き込み
         val colorHex = "#%08X".format(value.color)
-        // 複合オブジェクトとして保存 (ConfigManagerが対応していればJsonObjectとしても可)
-        val json = buildJsonObject {
-            put("blockId", value.blockId)
-            put("color", colorHex)
-        }
-        encoder.encodeSerializableValue(JsonElement.serializer(), json)
+        val surrogate = BlockAndColorSurrogate(value.blockId, colorHex)
+        encoder.encodeSerializableValue(BlockAndColorSurrogate.serializer(), surrogate)
     }
 
     override fun deserialize(decoder: Decoder): BlockAndColor {
-        val element = decoder.decodeSerializableValue(JsonElement.serializer()).jsonObject
-        val blockId = element["blockId"]?.jsonPrimitive?.content ?: "minecraft:air"
-        val colorStr = element["color"]?.jsonPrimitive?.content ?: "#FFFFFFFF"
+        // JSONオブジェクトをサロゲートとして読み込み
+        val surrogate = decoder.decodeSerializableValue(BlockAndColorSurrogate.serializer())
+
+        // 16進数文字列を Int に戻す
         val color = try {
-            colorStr.removePrefix("#").toLong(16).toInt()
+            surrogate.color.removePrefix("#").toLong(16).toInt()
         } catch (_: Exception) {
-            0xFFFFFFFF.toInt()
+            0xFFFFFFFF.toInt() // 失敗時は白
         }
-        return BlockAndColor(blockId, color)
+
+        return BlockAndColor(surrogate.blockId, color)
     }
 }

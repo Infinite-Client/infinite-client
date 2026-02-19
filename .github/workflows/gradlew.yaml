@@ -59,27 +59,64 @@ jobs:
           if ! command -v cargo-zigbuild &> /dev/null; then
             curl -L https://github.com/rust-cross/cargo-zigbuild/releases/latest/download/cargo-zigbuild-x86_64-unknown-linux-musl.tar.gz | tar xz -C ~/.cargo/bin
           fi
-          # Create wrappers for Zig to help cc crate detection
+          # Create enhanced wrappers for Zig to fix target triple issues
           mkdir -p ~/.cargo/bin/wrappers
-          echo '#!/bin/bash' > ~/.cargo/bin/wrappers/zig-cc
-          echo 'exec zig cc "$@"' >> ~/.cargo/bin/wrappers/zig-cc
-          echo '#!/bin/bash' > ~/.cargo/bin/wrappers/zig-cpp
-          echo 'exec zig c++ "$@"' >> ~/.cargo/bin/wrappers/zig-cpp
+          
+          cat <<'EOF' > ~/.cargo/bin/wrappers/zig-cc
+          #!/bin/bash
+          args=()
+          for arg in "$@"; do
+            case "$arg" in
+              --target=arm64-apple-macosx*)
+                args+=("-target" "aarch64-macos")
+                ;;
+              --target=x86_64-apple-macosx*)
+                args+=("-target" "x86_64-macos")
+                ;;
+              *)
+                args+=("$arg")
+                ;;
+            esac
+          done
+          exec zig cc "${args[@]}"
+          EOF
+          
+          cat <<'EOF' > ~/.cargo/bin/wrappers/zig-cpp
+          #!/bin/bash
+          args=()
+          for arg in "$@"; do
+            case "$arg" in
+              --target=arm64-apple-macosx*)
+                args+=("-target" "aarch64-macos")
+                ;;
+              --target=x86_64-apple-macosx*)
+                args+=("-target" "x86_64-macos")
+                ;;
+              *)
+                args+=("$arg")
+                ;;
+            esac
+          done
+          exec zig c++ "${args[@]}"
+          EOF
+
           echo '#!/bin/bash' > ~/.cargo/bin/wrappers/zig-ar
           echo 'exec zig ar "$@"' >> ~/.cargo/bin/wrappers/zig-ar
           chmod +x ~/.cargo/bin/wrappers/zig-*
 
       - name: Build with Gradle
         env:
-          # C関連の依存関係（mimalloc等）のビルドエラーを避けるための設定
-          # 単一単語のコマンドを渡すことでccクレートの判定を助ける
+          # C関連の依存関係（mimalloc, jemalloc）のビルドエラーを避けるための設定
           AR_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-ar
           CC_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cc
           CXX_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cpp
-          # x86_64も同様に設定しておく
+          
           AR_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-ar
           CC_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cc
           CXX_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cpp
+          
+          # jemalloc 等の configure 時に SDK チェックでコケるのを防ぐ
+          SDKROOT: ""
         run: |
           chmod +x ./gradlew
           # project-xross/xross-plugin が存在するか確認
