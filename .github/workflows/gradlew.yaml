@@ -59,13 +59,27 @@ jobs:
           if ! command -v cargo-zigbuild &> /dev/null; then
             curl -L https://github.com/rust-cross/cargo-zigbuild/releases/latest/download/cargo-zigbuild-x86_64-unknown-linux-musl.tar.gz | tar xz -C ~/.cargo/bin
           fi
+          # Create wrappers for Zig to help cc crate detection
+          mkdir -p ~/.cargo/bin/wrappers
+          echo '#!/bin/bash' > ~/.cargo/bin/wrappers/zig-cc
+          echo 'exec zig cc "$@"' >> ~/.cargo/bin/wrappers/zig-cc
+          echo '#!/bin/bash' > ~/.cargo/bin/wrappers/zig-cpp
+          echo 'exec zig c++ "$@"' >> ~/.cargo/bin/wrappers/zig-cpp
+          echo '#!/bin/bash' > ~/.cargo/bin/wrappers/zig-ar
+          echo 'exec zig ar "$@"' >> ~/.cargo/bin/wrappers/zig-ar
+          chmod +x ~/.cargo/bin/wrappers/zig-*
 
       - name: Build with Gradle
         env:
           # C関連の依存関係（mimalloc等）のビルドエラーを避けるための設定
-          AR_aarch64_apple_darwin: zig ar
-          CC_aarch64_apple_darwin: zig cc
-          CXX_aarch64_apple_darwin: zig c++
+          # 単一単語のコマンドを渡すことでccクレートの判定を助ける
+          AR_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-ar
+          CC_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cc
+          CXX_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cpp
+          # x86_64も同様に設定しておく
+          AR_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-ar
+          CC_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cc
+          CXX_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cpp
         run: |
           chmod +x ./gradlew
           # project-xross/xross-plugin が存在するか確認

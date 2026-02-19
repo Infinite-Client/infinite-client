@@ -49,6 +49,7 @@ tasks.named<JavaCompile>("compileJava") {
 
 dependencies {
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
+    @Suppress("UnstableApiUsage")
     mappings(
         loom.layered {
             officialMojangMappings()
