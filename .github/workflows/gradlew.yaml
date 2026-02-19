@@ -30,41 +30,17 @@ jobs:
           distribution: 'microsoft'
           cache: 'gradle'
 
-      - name: Cache jextract
-        id: cache-jextract
-        uses: actions/cache@v4
-        with:
-          path: build/jextract-25
-          # 権限エラーを避けるため、プロジェクト構造が変わった際に確実に更新されるようキーを調整
-          key: ${{ runner.os }}-jextract-25-${{ hashFiles('build.gradle.kts', 'settings.gradle.kts', 'gradle.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-jextract-25-
-
-      - name: Fix Directory Permissions
-        run: |
-          mkdir -p build/jextract-25
-          chmod -R 777 build
-        shell: bash
-
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.13.0
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust (Nightly)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly
+          components: rust-src, rustfmt, clippy
 
-      - name: Install Rust Targets
-        run: |
-          rustup target add x86_64-unknown-linux-gnu
-          rustup target add aarch64-unknown-linux-gnu
-          rustup target add x86_64-pc-windows-gnu
-          rustup target add aarch64-pc-windows-gnullvm
-          rustup target add x86_64-apple-darwin
-          rustup target add aarch64-apple-darwin
-        shell: bash
-
-      # 2. Rust/Cargo 関連の統合キャッシュ (バイナリとビルド成果物)
       - name: Cache Cargo and Rust targets
         uses: actions/cache@v4
         with:
@@ -74,19 +50,14 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/infinite-client/target/
-          # Cargo.lock の変更、またはOSが変わった時に再生成
           key: ${{ runner.os }}-cargo-full-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-full-
 
       - name: Install Build Tools (Cached)
         run: |
-          # インストール済みかチェックして時間を節約
           if ! command -v cargo-zigbuild &> /dev/null; then
-            cargo install cargo-zigbuild
-          fi
-          if ! command -v cbindgen &> /dev/null; then
-            cargo install cbindgen
+            cargo install cargo-zigbuild --force
           fi
 
       - name: Build with Gradle

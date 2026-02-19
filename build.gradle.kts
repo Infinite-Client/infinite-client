@@ -109,7 +109,8 @@ val hostRustTargetId = when {
     else -> throw GradleException("Unsupported host OS for Rust build: $hostOs")
 }
 
-val buildAllRustTargets = providers.gradleProperty("buildRustAllTargets").orNull == "true"
+// デフォルトで全ターゲットビルドを有効にする (ユーザーの要望)
+val buildAllRustTargets = providers.gradleProperty("buildRustAllTargets").getOrElse("true") == "true"
 
 rustTargets.forEach { (id, targetTriple) ->
     tasks.register<Exec>("rustBuild_$id") {
@@ -117,6 +118,15 @@ rustTargets.forEach { (id, targetTriple) ->
         description = "Build Rust library for $id ($targetTriple) using zigbuild"
         workingDir = project.file("rust/infinite-client")
         val useZigbuild = buildAllRustTargets || id != hostRustTargetId || providers.gradleProperty("useZigbuild").orNull == "true"
+
+        // メタデータの競合を避けるため、buildディレクトリ内にターゲットごとのディレクトリを作成
+        val targetMetadataDir = project.layout.buildDirectory.dir("xross-metadata/$id").get().asFile
+        doFirst {
+            targetMetadataDir.deleteRecursively()
+            targetMetadataDir.mkdirs()
+        }
+        environment("XROSS_METADATA_DIR", targetMetadataDir.absolutePath)
+
         if (useZigbuild) {
             commandLine("cargo", "zigbuild", "--release", "--target", targetTriple)
         } else {
@@ -143,9 +153,32 @@ val buildRustAll = tasks.register("buildRustAll") {
     dependsOn(rustBuildTasks)
 }
 
+val mergeXrossMetadata = tasks.register("mergeXrossMetadata") {
+    group = "native"
+    description = "Merges Xross metadata from all build targets."
+    dependsOn(buildRustAll)
+    doLast {
+        val mergedDir = project.file("rust/infinite-client/target/xross")
+        mergedDir.deleteRecursively()
+        mergedDir.mkdirs()
+
+        val targetIds = if (buildAllRustTargets) rustTargets.keys else listOf(hostRustTargetId)
+        targetIds.forEach { id ->
+            val targetMetadataDir = project.layout.buildDirectory.dir("xross-metadata/$id").get().asFile
+            if (targetMetadataDir.exists()) {
+                targetMetadataDir.listFiles()?.forEach { file ->
+                    if (file.extension == "json") {
+                        file.copyTo(File(mergedDir, file.name), overwrite = true)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Xrossのバインディング生成はRustのビルド（メタデータ生成）に依存する
 tasks.named("generateXrossBindings") {
-    dependsOn(buildRustAll)
+    dependsOn(mergeXrossMetadata)
 }
 
 val refreshNative = tasks.register("refreshNative") {
