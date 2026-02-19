@@ -1,5 +1,5 @@
 use std::f32::consts::PI;
-use xross_core::{XrossClass, xross_methods};
+use xross_core::{xross_methods, XrossClass};
 
 #[derive(XrossClass, Default, Clone, Debug)]
 #[xross(clonable(panicable), drop(panicable))]
@@ -60,6 +60,7 @@ fn simulate_max_dist(v: f32, pitch: f32, dy: f32, max_step: i32, drag: f32, grav
 #[xross_methods]
 impl AdvancedResult {
     #[xross_new(panicable)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         power: f32,
         s_x: f32,

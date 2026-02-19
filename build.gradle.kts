@@ -181,6 +181,28 @@ tasks.named("generateXrossBindings") {
     dependsOn(mergeXrossMetadata)
 }
 
+// --- Rust Formatting ---
+
+val rustFmt = tasks.register<Exec>("rustFmt") {
+    group = "formatting"
+    description = "Formats Rust code using cargo fmt"
+    commandLine("cargo", "fmt", "--all")
+}
+
+val rustFmtCheck = tasks.register<Exec>("rustFmtCheck") {
+    group = "verification"
+    description = "Checks Rust code formatting using cargo fmt --check"
+    commandLine("cargo", "fmt", "--all", "--", "--check")
+}
+
+tasks.named("spotlessApply") {
+    dependsOn(rustFmt)
+}
+
+tasks.named("spotlessCheck") {
+    dependsOn(rustFmtCheck)
+}
+
 val refreshNative = tasks.register("refreshNative") {
     group = "native"
     description = "Performs a clean rebuild of Rust binaries and regenerates Xross bindings."
@@ -295,6 +317,18 @@ spotless {
         ktlint().editorConfigOverride(
             mapOf("ktlint_standard_no-wildcard-imports" to "disabled"),
         )
+    }
+    format("rust") {
+        target("**/*.rs")
+        targetExclude("**/target/**")
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    format("toml") {
+        target("**/*.toml")
+        targetExclude("**/target/**")
+        trimTrailingWhitespace()
+        endWithNewline()
     }
 }
 

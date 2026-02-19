@@ -1,4 +1,4 @@
-use xross_core::{XrossClass, xross_methods};
+use xross_core::{xross_methods, XrossClass};
 
 #[derive(XrossClass, Default, Clone)]
 #[xross(clonable)]
@@ -21,12 +21,14 @@ impl InfiniteMesh {
     }
 
     #[xross_method(critical)]
+    #[allow(clippy::too_many_arguments)]
     pub fn add_line(&mut self, x1: f32, y1: f32, z1: f32, x2: f32, y2: f32, z2: f32, color: i32) {
         let c = f32::from_bits(color as u32);
         self.lines.extend_from_slice(&[x1, y1, z1, x2, y2, z2, c]);
     }
 
     #[xross_method(critical)]
+    #[allow(clippy::too_many_arguments)]
     pub fn add_quad(
         &mut self,
         x1: f32,
@@ -49,6 +51,7 @@ impl InfiniteMesh {
     }
 
     #[xross_method(critical)]
+    #[allow(clippy::too_many_arguments)]
     pub fn add_box(
         &mut self,
         x: f32,

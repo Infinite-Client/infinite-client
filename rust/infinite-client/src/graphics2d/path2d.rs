@@ -3,13 +3,12 @@ use lyon::math::point;
 use lyon::path::{FillRule, LineCap, LineJoin, Path};
 use lyon::tessellation::{FillGeometryBuilder, FillOptions, FillTessellator, GeometryBuilder};
 use std::f64::consts::PI;
-use xross_core::{XrossClass, xross_methods};
+use xross_core::{xross_methods, XrossClass};
 
 #[derive(XrossClass, Default, Clone)]
 #[xross(clonable)]
 pub struct Path2D {
     segments: Vec<SegmentData>,
-    // #[xross_field] を削除。メソッド経由でのみアクセスさせる。
     pub pen: Pen,
     buffer: Vec<f32>,
 }
@@ -19,6 +18,7 @@ pub struct SegmentData {
     points: Vec<PointData>,
     is_closed: bool,
 }
+
 impl Default for SegmentData {
     fn default() -> Self {
         Self {
@@ -74,6 +74,12 @@ pub enum XrossLineCap {
     Round,
 }
 
+impl Default for XrossLineCap {
+    fn default() -> Self {
+        Self::Butt
+    }
+}
+
 impl From<LineCap> for XrossLineCap {
     fn from(cap: LineCap) -> Self {
         match cap {
@@ -94,18 +100,18 @@ impl From<XrossLineCap> for LineCap {
     }
 }
 
-impl Default for XrossLineCap {
-    fn default() -> Self {
-        Self::Butt
-    }
-}
-
 #[derive(Copy, Clone, Debug, PartialEq, XrossClass)]
 pub enum XrossLineJoin {
     Miter,
     MiterClip,
     Round,
     Bevel,
+}
+
+impl Default for XrossLineJoin {
+    fn default() -> Self {
+        Self::Miter
+    }
 }
 
 impl From<LineJoin> for XrossLineJoin {
@@ -127,12 +133,6 @@ impl From<XrossLineJoin> for LineJoin {
             XrossLineJoin::Round => Self::Round,
             XrossLineJoin::Bevel => Self::Bevel,
         }
-    }
-}
-
-impl Default for XrossLineJoin {
-    fn default() -> Self {
-        Self::Miter
     }
 }
 
@@ -351,20 +351,42 @@ impl Path2D {
         end_angle: f64,
         counterclockwise: bool,
     ) {
-        let mut diff = end_angle - start_angle;
+        let original_diff = end_angle - start_angle;
+        let mut diff = original_diff;
 
-        if counterclockwise {
-            if diff > 0.0 {
-                diff -= 2.0 * PI;
-            } else if diff < -2.0 * PI {
-                diff += 2.0 * PI;
-            }
+        if original_diff.abs() >= 2.0 * PI - 1e-6 {
+            diff = if counterclockwise {
+                -2.0 * PI
+            } else {
+                2.0 * PI
+            };
         } else {
-            if diff < 0.0 {
-                diff += 2.0 * PI;
-            } else if diff > 2.0 * PI {
-                diff -= 2.0 * PI;
+            if counterclockwise {
+                while diff > 0.0 {
+                    diff -= 2.0 * PI;
+                }
+                while diff <= -2.0 * PI {
+                    diff += 2.0 * PI;
+                }
+            } else {
+                while diff < 0.0 {
+                    diff += 2.0 * PI;
+                }
+                while diff >= 2.0 * PI {
+                    diff -= 2.0 * PI;
+                }
             }
+        }
+
+        if diff.abs() < 1e-6 && original_diff.abs() < 1e-6 {
+            return;
+        }
+        if diff.abs() < 1e-6 {
+            diff = if counterclockwise {
+                -2.0 * PI
+            } else {
+                2.0 * PI
+            };
         }
 
         let last = self.last_point();
@@ -447,6 +469,7 @@ impl Path2D {
     }
 
     #[xross_method(panicable)]
+    #[allow(clippy::too_many_arguments)]
     pub fn ellipse(
         &mut self,
         x: f64,
@@ -458,15 +481,42 @@ impl Path2D {
         end_angle: f64,
         counterclockwise: bool,
     ) {
-        let mut diff = end_angle - start_angle;
-        if counterclockwise {
-            if diff > 0.0 {
-                diff -= 2.0 * PI;
-            }
+        let original_diff = end_angle - start_angle;
+        let mut diff = original_diff;
+
+        if original_diff.abs() >= 2.0 * PI - 1e-6 {
+            diff = if counterclockwise {
+                -2.0 * PI
+            } else {
+                2.0 * PI
+            };
         } else {
-            if diff < 0.0 {
-                diff += 2.0 * PI;
+            if counterclockwise {
+                while diff > 0.0 {
+                    diff -= 2.0 * PI;
+                }
+                while diff <= -2.0 * PI {
+                    diff += 2.0 * PI;
+                }
+            } else {
+                while diff < 0.0 {
+                    diff += 2.0 * PI;
+                }
+                while diff >= 2.0 * PI {
+                    diff -= 2.0 * PI;
+                }
             }
+        }
+
+        if diff.abs() < 1e-6 && original_diff.abs() < 1e-6 {
+            return;
+        }
+        if diff.abs() < 1e-6 {
+            diff = if counterclockwise {
+                -2.0 * PI
+            } else {
+                2.0 * PI
+            };
         }
 
         let steps = 40;
@@ -507,11 +557,8 @@ impl Path2D {
                 builder.line_to(point(p.x as f32, p.y as f32));
             }
 
-            if segment.is_closed {
-                builder.end(true);
-            } else {
-                builder.end(false);
-            }
+            // Canvas fill implicitly closes all segments.
+            builder.end(true);
         }
 
         let path = builder.build();
