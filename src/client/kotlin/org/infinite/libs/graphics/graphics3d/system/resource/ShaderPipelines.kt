@@ -44,6 +44,7 @@ object ShaderPipelines {
         .register(
             RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
                 .withLocation(Identifier.parse("infinite:pipeline/quads"))
+                .withCull(false)
                 .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
                 .build(),
         )
@@ -52,13 +53,14 @@ object ShaderPipelines {
         .register(
             RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
                 .withLocation(Identifier.parse("infinite:pipeline/esp_quads"))
+                .withCull(false)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST).build(),
         )
 
     val espQuadsNoCulling: RenderPipeline = RenderPipelines
         .register(
             RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
-                .withLocation(Identifier.parse("infinite:pipeline/esp_quads"))
+                .withLocation(Identifier.parse("infinite:pipeline/esp_quads_no_culling"))
                 .withCull(false)
                 .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST).build(),
         )

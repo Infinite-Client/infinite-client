@@ -261,8 +261,15 @@
   "infinite.features.local.combat.lock_on_feature.attack_strength": "Attack Strength",
   "infinite.features.local.combat.lock_on_feature.attack_randomization": "Random Delay",
   "infinite.features.local.level.block_highlight_feature": "Block Highlight",
-  "infinite.features.local.level.block_highlight_feature.blocks_to_highlight": "Blocks to Highlight",
-  "infinite.features.local.level.block_highlight_feature.highlight_mode": "Highlight Mode",
-  "infinite.features.local.level.block_highlight_feature.scan_range": "Scan Range",
-  "key.infinite.features.local.level.block_highlight_feature.toggle": "Toggle Block Highlight"
-}
+    "infinite.features.local.level.block_highlight_feature.blocks_to_highlight": "Blocks to Highlight",
+    "infinite.features.local.level.block_highlight_feature.highlight_mode": "Highlight Mode",
+    "infinite.features.local.level.block_highlight_feature.scan_range": "Scan Range",
+    "infinite.features.local.level.block_highlight_feature.render_range": "Render Range",
+    "infinite.features.local.level.block_highlight_feature.render_style": "Render Style",
+    "infinite.features.local.level.block_highlight_feature.max_draw_count": "Max Draw Count",
+    "infinite.features.local.level.block_highlight_feature.line_width": "Line Width",
+    "infinite.features.local.level.block_highlight_feature.view_focus": "View Focus",
+    "infinite.features.local.level.block_highlight_feature.animation": "Animation",
+    "key.infinite.features.local.level.block_highlight_feature.toggle": "Toggle Block Highlight"
+  }
+  

@@ -21,11 +21,9 @@ object BlockHighlightRenderer {
 
     private var currentScanIndex = 0
     private var lastSettingsHash = 0
+    private val colorCache = mutableMapOf<String, Int>()
 
-    private fun getColorForBlock(id: Identifier, feature: BlockHighlightFeature): Int? {
-        val idStr = id.toString()
-        return feature.blocksToHighlight.value.find { it.blockId == idStr }?.color
-    }
+    private fun getColorForBlock(id: Identifier, feature: BlockHighlightFeature): Int? = colorCache[id.toString()]
 
     fun tick(feature: BlockHighlightFeature) {
         val mc = Minecraft.getInstance()
@@ -35,16 +33,23 @@ object BlockHighlightRenderer {
         if (settingsHash != lastSettingsHash) {
             clear()
             lastSettingsHash = settingsHash
+            feature.blocksToHighlight.value.forEach {
+                colorCache[it.blockId] = it.color
+            }
         }
 
         val scanRadius = feature.scanRange.value
         val side = scanRadius * 2 + 1
         val center = player.chunkPosition()
-        val ox = (currentScanIndex % side) - scanRadius
-        val oz = (currentScanIndex / side) - scanRadius
 
-        scanChunk(world, center.x + ox, center.z + oz, feature)
-        currentScanIndex = (currentScanIndex + 1) % (side * side)
+        // Scan multiple chunks per tick to cover the area faster
+        val chunksToScanPerTick = 16
+        repeat(chunksToScanPerTick) {
+            val ox = (currentScanIndex % side) - scanRadius
+            val oz = (currentScanIndex / side) - scanRadius
+            scanChunk(world, center.x + ox, center.z + oz, feature)
+            currentScanIndex = (currentScanIndex + 1) % (side * side)
+        }
 
         if (mc.player!!.tickCount % 100 == 0) {
             val toRemove = blockPositions.keys.filter { abs(it.x - center.x) > scanRadius + 2 || abs(it.z - center.z) > scanRadius + 2 }
@@ -63,7 +68,7 @@ object BlockHighlightRenderer {
         val newBlocks = mutableMapOf<BlockPos, Int>()
 
         chunk.sections.forEachIndexed { index, section ->
-            if (section.hasOnlyAir()) return@forEachIndexed
+            if (section == null || section.hasOnlyAir()) return@forEachIndexed
             val minY = (world.minSectionY + index) shl 4
             for (y in 0..15) {
                 for (z in 0..15) {
@@ -78,9 +83,15 @@ object BlockHighlightRenderer {
         }
 
         if (blockPositions[cp] != newBlocks) {
-            blockPositions[cp] = newBlocks
-            meshCache.remove(cp)
-            if (!chunkFirstSeen.containsKey(cp)) chunkFirstSeen[cp] = System.currentTimeMillis()
+            if (newBlocks.isEmpty()) {
+                blockPositions.remove(cp)
+                meshCache.remove(cp)
+                chunkFirstSeen.remove(cp)
+            } else {
+                blockPositions[cp] = newBlocks
+                meshCache.remove(cp)
+                if (!chunkFirstSeen.containsKey(cp)) chunkFirstSeen[cp] = System.currentTimeMillis()
+            }
         }
     }
 
@@ -96,20 +107,25 @@ object BlockHighlightRenderer {
         val meshesToDraw = mutableListOf<Triple<BlockMesh, Double, ChunkPos>>()
 
         blockPositions.forEach { (cp, blocks) ->
+            if (blocks.isEmpty()) return@forEach
             val mesh = meshCache.getOrPut(cp) { BlockMeshGenerator.generateMesh(blocks) }
             if (mesh.quads.isEmpty() && mesh.lines.isEmpty()) return@forEach
 
-            val chunkMid = Vec3(cp.middleBlockX.toDouble(), player.y, cp.middleBlockZ.toDouble())
-            val toChunk = chunkMid.subtract(cameraPos).normalize()
-            val dot = lookVec.dot(toChunk)
-            val distSq = cameraPos.distanceToSqr(chunkMid)
-
+            val chunkMid = Vec3(cp.middleBlockX.toDouble(), cameraPos.y, cp.middleBlockZ.toDouble())
+            val diff = chunkMid.subtract(cameraPos)
+            val distSq = diff.lengthSqr()
             if (distSq > renderRangeSq * 4) return@forEach
 
+            val dot = if (distSq > 0.001) {
+                lookVec.dot(diff.normalize())
+            } else {
+                1.0 // If inside the chunk center, consider it in focus
+            }
+
             val score = when (viewFocus) {
-                BlockHighlightFeature.ViewFocus.Strict -> if (dot < 0.2) -1.0 else dot / distSq
-                BlockHighlightFeature.ViewFocus.Balanced -> (dot + 1.5) / distSq
-                else -> 1.0 / distSq
+                BlockHighlightFeature.ViewFocus.Strict -> if (dot < 0.2) -1.0 else dot / (distSq + 1.0)
+                BlockHighlightFeature.ViewFocus.Balanced -> (dot + 1.5) / (distSq + 1.0)
+                else -> 1.0 / (distSq + 1.0)
             }
 
             if (score >= 0) meshesToDraw.add(Triple(mesh, score, cp))
@@ -140,7 +156,9 @@ object BlockHighlightRenderer {
                 val width = feature.lineWidth.value
                 mesh.lines.forEach { l -> graphics3D.line(l.start, l.end, applyAnim(l.color), width, false) }
             }
-            drawCount += mesh.quads.size + (mesh.lines.size / 4)
+
+            // Count actual block count for budget instead of mesh complexity
+            drawCount += blockPositions[cp]?.size ?: 0
         }
     }
 
@@ -149,5 +167,6 @@ object BlockHighlightRenderer {
         meshCache.clear()
         chunkFirstSeen.clear()
         currentScanIndex = 0
+        colorCache.clear()
     }
 }

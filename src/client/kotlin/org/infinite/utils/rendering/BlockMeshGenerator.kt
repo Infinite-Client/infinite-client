@@ -49,7 +49,7 @@ object BlockMeshGenerator {
         return BlockMesh(finalQuads, combineLines(rawLines))
     }
 
-    private fun getCoords(pos: BlockPos, dir: Direction): Triple<Int, Int, Int> = when (dir.axis!!) {
+    private fun getCoords(pos: BlockPos, dir: Direction): Triple<Int, Int, Int> = when (dir.axis) {
         Direction.Axis.X -> Triple(pos.x, pos.z, pos.y)
         Direction.Axis.Y -> Triple(pos.y, pos.x, pos.z)
         Direction.Axis.Z -> Triple(pos.z, pos.x, pos.y)
@@ -90,11 +90,56 @@ object BlockMeshGenerator {
     private fun buildQuad(p: Int, u: Int, v: Int, w: Int, h: Int, color: Int, dir: Direction, normal: Vector3f): Quad {
         val offset = if (dir.axisDirection == Direction.AxisDirection.POSITIVE) 1.0 else 0.0
         val plane = p.toDouble() + offset
-        return when (dir.axis!!) {
-            Direction.Axis.X -> Quad(Vec3(plane, v.toDouble(), u.toDouble()), Vec3(plane, v.toDouble(), u.toDouble() + w), Vec3(plane, v.toDouble() + h, u.toDouble() + w), Vec3(plane, v.toDouble() + h, u.toDouble()), color, normal)
-            Direction.Axis.Y -> Quad(Vec3(u.toDouble(), plane, v.toDouble()), Vec3(u.toDouble(), plane, v.toDouble() + h), Vec3(u.toDouble() + w, plane, v.toDouble() + h), Vec3(u.toDouble() + w, plane, v.toDouble()), color, normal)
-            Direction.Axis.Z -> Quad(Vec3(u.toDouble(), v.toDouble(), plane), Vec3(u.toDouble() + w, v.toDouble(), plane), Vec3(u.toDouble() + w, v.toDouble() + h, plane), Vec3(u.toDouble(), v.toDouble() + h, plane), color, normal)
+
+        val v1: Vec3
+        val v2: Vec3
+        val v3: Vec3
+        val v4: Vec3
+
+        when (dir.axis) {
+            Direction.Axis.X -> {
+                if (dir.axisDirection == Direction.AxisDirection.POSITIVE) {
+                    v1 = Vec3(plane, v.toDouble(), u.toDouble())
+                    v2 = Vec3(plane, v.toDouble() + h, u.toDouble())
+                    v3 = Vec3(plane, v.toDouble() + h, u.toDouble() + w)
+                    v4 = Vec3(plane, v.toDouble(), u.toDouble() + w)
+                } else {
+                    v1 = Vec3(plane, v.toDouble(), u.toDouble())
+                    v2 = Vec3(plane, v.toDouble(), u.toDouble() + w)
+                    v3 = Vec3(plane, v.toDouble() + h, u.toDouble() + w)
+                    v4 = Vec3(plane, v.toDouble() + h, u.toDouble())
+                }
+            }
+
+            Direction.Axis.Y -> {
+                if (dir.axisDirection == Direction.AxisDirection.POSITIVE) {
+                    v1 = Vec3(u.toDouble(), plane, v.toDouble())
+                    v2 = Vec3(u.toDouble(), plane, v.toDouble() + h)
+                    v3 = Vec3(u.toDouble() + w, plane, v.toDouble() + h)
+                    v4 = Vec3(u.toDouble() + w, plane, v.toDouble())
+                } else {
+                    v1 = Vec3(u.toDouble(), plane, v.toDouble())
+                    v2 = Vec3(u.toDouble() + w, plane, v.toDouble())
+                    v3 = Vec3(u.toDouble() + w, plane, v.toDouble() + h)
+                    v4 = Vec3(u.toDouble(), plane, v.toDouble() + h)
+                }
+            }
+
+            Direction.Axis.Z -> {
+                if (dir.axisDirection == Direction.AxisDirection.POSITIVE) {
+                    v1 = Vec3(u.toDouble(), v.toDouble(), plane)
+                    v2 = Vec3(u.toDouble() + w, v.toDouble(), plane)
+                    v3 = Vec3(u.toDouble() + w, v.toDouble() + h, plane)
+                    v4 = Vec3(u.toDouble(), v.toDouble() + h, plane)
+                } else {
+                    v1 = Vec3(u.toDouble(), v.toDouble(), plane)
+                    v2 = Vec3(u.toDouble(), v.toDouble() + h, plane)
+                    v3 = Vec3(u.toDouble() + w, v.toDouble() + h, plane)
+                    v4 = Vec3(u.toDouble() + w, v.toDouble(), plane)
+                }
+            }
         }
+        return Quad(v1, v2, v3, v4, color, normal)
     }
 
     private fun processEdgesForPos(ls: MutableList<Line>, unq: MutableSet<Pair<Vec3, Vec3>>, blocks: Map<BlockPos, Int>, pos: BlockPos, color: Int) {

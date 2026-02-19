@@ -89,10 +89,10 @@ class BlockHighlightFeature : LocalFeature() {
         ),
     )
 
-    val scanRange by property(IntProperty(8, 1, 32, " chunks"))
-    val renderRange by property(IntProperty(64, 8, 256, " blocks"))
+    val scanRange by property(IntProperty(12, 1, 32, " chunks"))
+    val renderRange by property(IntProperty(128, 8, 512, " blocks"))
     val renderStyle by property(EnumSelectionProperty(RenderStyle.Lines))
-    val maxDrawCount by property(IntProperty(1000, 100, 10000, " blocks"))
+    val maxDrawCount by property(IntProperty(20000, 1000, 100000, " elements"))
 
     val lineWidth by property(FloatProperty(1.5f, 0.1f, 5.0f, " px"))
     val viewFocus by property(EnumSelectionProperty(ViewFocus.Balanced))
