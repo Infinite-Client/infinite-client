@@ -3,61 +3,62 @@ package org.infinite.libs.level
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket
 import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData
 import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket
+import java.util.concurrent.ConcurrentLinkedDeque
 
 /**
  * ワールド（Level）内の更新イベント（チャンク読み込み、ブロック更新）を管理するクラス
  */
-class LevelManager {
+object LevelManager {
     sealed class Chunk {
-        /**
-         * 新規チャンクデータの受信
-         */
-        class Data(
-            val x: Int,
-            val z: Int,
-            val data: ClientboundLevelChunkPacketData,
-        ) : Chunk()
-
-        /**
-         * 単一ブロックの更新
-         */
-        class BlockUpdate(
-            val packet: ClientboundBlockUpdatePacket,
-        ) : Chunk()
-
-        /**
-         * チャンクセクション（16x16x16）内の複数ブロック更新
-         */
-        class DeltaUpdate(
-            val packet: ClientboundSectionBlocksUpdatePacket,
-        ) : Chunk()
+        class Data(val x: Int, val z: Int, val data: ClientboundLevelChunkPacketData) : Chunk()
+        class BlockUpdate(val packet: ClientboundBlockUpdatePacket) : Chunk()
+        class DeltaUpdate(val packet: ClientboundSectionBlocksUpdatePacket) : Chunk()
     }
 
-    // 更新イベントを保持するキュー
-    val queue: ArrayDeque<Chunk> = ArrayDeque()
+    // キューの最大サイズ
+    private const val MAX_QUEUE_SIZE = 2000
+
+    // 現在この情報を必要としている機能があるかどうか
+    @Volatile
+    var hasListeners: Boolean = false
+
+    // スレッドセーフなデックを使用
+    val queue = ConcurrentLinkedDeque<Chunk>()
 
     /**
      * チャンクデータ受信時の処理
      */
-    fun handleChunkLoad(
-        x: Int,
-        z: Int,
-        chunkData: ClientboundLevelChunkPacketData,
-    ) {
-        queue.addLast(Chunk.Data(x, z, chunkData))
+    fun handleChunkLoad(x: Int, z: Int, chunkData: ClientboundLevelChunkPacketData) {
+        if (!hasListeners) return
+        addSafe(Chunk.Data(x, z, chunkData))
     }
 
     /**
      * 複数ブロックの更新パケットをキューに追加
      */
     fun handleDeltaUpdate(packet: ClientboundSectionBlocksUpdatePacket) {
-        queue.addLast(Chunk.DeltaUpdate(packet))
+        if (!hasListeners) return
+        addSafe(Chunk.DeltaUpdate(packet))
     }
 
     /**
      * 単一ブロックの更新パケットをキューに追加
      */
     fun handleBlockUpdate(packet: ClientboundBlockUpdatePacket) {
-        queue.addLast(Chunk.BlockUpdate(packet))
+        if (!hasListeners) return
+        addSafe(Chunk.BlockUpdate(packet))
+    }
+
+    private fun addSafe(item: Chunk) {
+        // サイズチェックと追加をアトミックに行う必要はないが、
+        // 溢れそうなら古いものを消す
+        while (queue.size >= MAX_QUEUE_SIZE) {
+            queue.pollFirst() // 古いものを捨てる
+        }
+        queue.addLast(item)
+    }
+
+    fun clear() {
+        queue.clear()
     }
 }

@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "core.multiplayer.ClientLevelMixin",
+    "core.networking.ClientPacketListenerMixin",
     "graphics.FontManagerMixin",
     "graphics.FontMixin",
     "graphics.GuiGraphicsAccessor",

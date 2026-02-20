@@ -12,4 +12,5 @@ class LocalInventoryCategory : LocalCategory() {
     val containerUtilFeature by feature(ContainerUtilFeature())
     val itemRelocateFeature by feature(ItemRelocateFeature())
     val itemRestockFeature by feature(ItemRestockFeature())
+    val swapToolFeature by feature(SwapToolFeature())
 }
