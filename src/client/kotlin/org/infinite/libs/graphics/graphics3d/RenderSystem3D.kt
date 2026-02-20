@@ -8,8 +8,6 @@ import net.minecraft.client.renderer.LightTexture
 import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
-import net.minecraft.gizmos.Gizmo
-import net.minecraft.gizmos.GizmoPrimitives
 import net.minecraft.gizmos.GizmoStyle
 import net.minecraft.gizmos.Gizmos
 import net.minecraft.world.phys.Vec3
@@ -21,7 +19,7 @@ import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import org.joml.Vector4f
 import java.lang.foreign.ValueLayout
-import java.util.ArrayDeque
+import java.util.*
 
 @Suppress("unused")
 class RenderSystem3D(
@@ -88,8 +86,8 @@ class RenderSystem3D(
 
     fun render(commands: List<RenderCommand3D>) {
         val usedRenderTypes = LinkedHashSet<RenderType>()
-        for (i in 0 until commands.size) {
-            when (val c = commands[i]) {
+        commands.forEach { c ->
+            when (c) {
                 is RenderCommand3D.Line -> drawLine(c.from, c.to, c.color, c.size, c.depthTest)
 
                 RenderCommand3D.PopMatrix -> popMatrix()
@@ -188,8 +186,10 @@ class RenderSystem3D(
                             val g = (color shr 8) and 0xFF
                             val b = color and 0xFF
 
-                            consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, a).setNormal(0f, 1f, 0f).setLineWidth(2.0f)
-                            consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, a).setNormal(0f, 1f, 0f).setLineWidth(2.0f)
+                            consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                                .setLineWidth(2.0f)
+                            consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                                .setLineWidth(2.0f)
                             cursor += 7
                         }
                         usedRenderTypes.add(renderType)

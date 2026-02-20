@@ -1066,7 +1066,7 @@ dependencies = [
 
 [[package]]
 name = "xross-alloc"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "jemallocator",
  "mimalloc",
@@ -1079,7 +1079,7 @@ dependencies = [
 
 [[package]]
 name = "xross-core"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "futures",
  "tokio",
@@ -1089,7 +1089,7 @@ dependencies = [
 
 [[package]]
 name = "xross-example"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "lyon",
  "rand",
@@ -1099,7 +1099,7 @@ dependencies = [
 
 [[package]]
 name = "xross-macros"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -1112,7 +1112,7 @@ dependencies = [
 
 [[package]]
 name = "xross-metadata"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "serde",
 ]
