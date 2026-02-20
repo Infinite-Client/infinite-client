@@ -5,6 +5,7 @@ import net.minecraft.world.item.CrossbowItem
 import net.minecraft.world.item.Items
 import net.minecraft.world.phys.EntityHitResult
 import net.minecraft.world.phys.HitResult
+import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
 import org.infinite.infinite.features.local.rendering.ui.IUiRenderer
 import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature
@@ -12,6 +13,10 @@ import org.infinite.libs.graphics.Graphics2D
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.utils.alpha
 import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 class CrosshairRenderer :
     MinecraftInterface(),
@@ -23,6 +28,7 @@ class CrosshairRenderer :
     private var rotationAnim = 0f
     private var lastAttackStrength = 1f
     private var smoothEntityFactor = 0f
+    private var smoothBreakRotation = 0f
 
     override fun render(graphics2D: Graphics2D) {
         val player = player ?: return
@@ -55,6 +61,8 @@ class CrosshairRenderer :
         val player = player ?: return
         val level = level ?: return
         val colorScheme = InfiniteClient.theme.colorScheme
+        val shadowColor = colorScheme.backgroundColor
+        val mainColor = colorScheme.foregroundColor
         val alphaValue = ultraUiFeature.alpha.value
         val partialTicks = graphics2D.gameDelta
 
@@ -70,7 +78,7 @@ class CrosshairRenderer :
             rotationAnim = 90f
         }
         lastAttackStrength = attackStrength
-        rotationAnim += (0f - rotationAnim) * 0.15f
+        rotationAnim *= 0.85f
 
         val useProgress = if (player.isUsingItem) {
             val currentTicks = player.ticksUsingItem - partialTicks
@@ -108,8 +116,36 @@ class CrosshairRenderer :
         graphics2D.push()
         graphics2D.rotateDegrees(rotationAnim + (smoothEntityFactor * 45f))
 
-        val mainColor = if (smoothEntityFactor > 0.5f) colorScheme.accentColor else colorScheme.foregroundColor
-        val shadowColor = colorScheme.backgroundColor.alpha((160 * alphaValue).toInt())
+        // --- 追加：自動破壊中の回転アニメーション ---
+        val linearBreak = InfiniteClient.localFeatures.level.linearBreakFeature
+        val veinBreak = InfiniteClient.localFeatures.level.veinBreakFeature
+        val totalRemaining = (if (linearBreak.isEnabled()) linearBreak.remainingCount else 0) +
+            (if (veinBreak.isEnabled()) veinBreak.remainingCount else 0)
+
+        val normalMining = if (minecraft.gameMode?.isDestroying == true) 1 else 0
+        val totalCount = totalRemaining + normalMining
+
+        if (totalCount > 0) {
+            // 残り数の平方根に比例した速度で回転
+            val baseSpeed = 120f
+            val countFactor = sqrt(totalCount.toDouble()).toFloat()
+            smoothBreakRotation -= baseSpeed * countFactor * graphics2D.realDelta
+        } else {
+            // 破壊が終わったら、最も近い90度の倍数（0, 90, 180, 270...）にスナップさせる
+            val target = (smoothBreakRotation / 90f).roundToInt() * 90f
+            val diff = target - smoothBreakRotation
+
+            // なめらかに目標角度へ近づける (Lerp)
+            val snapSpeed = 10f // スナップの速さ
+            smoothBreakRotation += diff * (1f - 0.1.pow((graphics2D.realDelta * snapSpeed).toDouble()).toFloat())
+
+            // 誤差が十分に小さくなったら完全に固定し、値を0-360の範囲に正規化
+            if (abs(diff) < 0.05f) {
+                smoothBreakRotation = target % 360f
+            }
+        }
+        val breakRotation = smoothBreakRotation
+        // ----------------------------------------
 
         // 内部ヘルパー関数
         fun fillWithThinOutline(ox: Float, oy: Float, w: Float, h: Float, color: Int) {
@@ -125,6 +161,8 @@ class CrosshairRenderer :
         fillWithThinOutline(-dotSize / 2f, -dotSize / 2f, dotSize, dotSize, mainColor)
 
         // C. 四方のライン
+        graphics2D.push()
+        graphics2D.rotateDegrees(breakRotation) // 破壊時の追加回転を適用
         val gap = 2.2f + (1f - attackStrength) * 2.5f
         val thick = 0.8f
         val len = 2.2f
@@ -132,8 +170,40 @@ class CrosshairRenderer :
         fillWithThinOutline(-thick / 2f, gap, thick, len, mainColor)
         fillWithThinOutline(-gap - len, -thick / 2f, len, thick, mainColor)
         fillWithThinOutline(gap, -thick / 2f, len, thick, mainColor)
+        graphics2D.pop()
 
         graphics2D.pop() // 回転コンテキストを終了
+
+        // --- LinearBreak 2D Indicators ---
+        if (linearBreak.isEnabled()) {
+            val list = synchronized(linearBreak.blocksToMine) { linearBreak.blocksToMine.toList() }
+            var accumulatedTime = 0f
+            val fastBreak = InfiniteClient.localFeatures.level.fastBreakFeature
+            val interval = if (fastBreak.isEnabled()) fastBreak.interval.value / 20f else 0.25f
+
+            list.forEach { pos ->
+                val center = Vec3.atCenterOf(pos)
+                val screenPos = graphics2D.projectWorldToScreen(center) ?: return@forEach
+
+                val pPerTick = linearBreak.getProgressPerTick(pos)
+                if (pPerTick <= 0) return@forEach
+
+                val isCurrent = linearBreak.currentBreakingPos == pos
+                val currentProgress = if (isCurrent) linearBreak.currentBreakingProgress else 0f
+
+                val blockTime = (1f - currentProgress) / pPerTick / 20f
+                accumulatedTime += blockTime + interval
+
+                renderBlockIndicator(
+                    graphics2D,
+                    screenPos.first,
+                    screenPos.second,
+                    currentProgress,
+                    accumulatedTime,
+                    colorScheme.accentColor.alpha((255 * alphaValue).toInt()),
+                )
+            }
+        }
 
         // B. 円形ゲージ
         val progress = if (useProgress > 0f) useProgress else attackStrength
@@ -201,5 +271,48 @@ class CrosshairRenderer :
             graphics2D.textCentered(displaySec, 0, size * 1.5)
         }
         graphics2D.pop() // 全体の translate/scale を終了
+    }
+
+    private fun renderBlockIndicator(
+        g: Graphics2D,
+        x: Float,
+        y: Float,
+        progress: Float,
+        remainingTime: Float,
+        color: Int,
+    ) {
+        val size = 8f
+        val p = progress.coerceIn(0f, 1f)
+
+        g.push()
+        g.translate(x, y)
+
+        // Background square
+        g.strokeStyle.width = 1.2f
+        g.strokeStyle.color = 0x80000000.toInt()
+        g.strokeRect(-size, -size, size * 2, size * 2)
+
+        // Progress square
+        if (p > 0) {
+            g.strokeStyle.color = color
+            g.beginPath()
+            g.moveTo(0f, -size)
+            g.lineTo(size * (p / 0.125f).coerceIn(0f, 1f), -size)
+            if (p > 0.125f) g.lineTo(size, -size + (size * 2 * ((p - 0.125f) / 0.25f)).coerceIn(0f, 2 * size))
+            if (p > 0.375f) g.lineTo(size - (size * 2 * ((p - 0.375f) / 0.25f)).coerceIn(0f, 2 * size), size)
+            if (p > 0.625f) g.lineTo(-size, size - (size * 2 * ((p - 0.625f) / 0.25f)).coerceIn(0f, 2 * size))
+            if (p > 0.875f) g.lineTo(-size + (size * ((p - 0.875f) / 0.125f)).coerceIn(0f, size), -size)
+            g.strokePath()
+        }
+
+        // Remaining time text
+        val timeText = String.format("%.1fs", remainingTime)
+        g.textStyle.size = 7f
+        g.textStyle.font = "infinite_regular"
+        g.textStyle.shadow = true
+        g.fillStyle = color
+        g.textCentered(timeText, 0, size + 8)
+
+        g.pop()
     }
 }

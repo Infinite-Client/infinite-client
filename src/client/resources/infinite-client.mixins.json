@@ -26,6 +26,8 @@
     "infinite.features.local.combat.attack.CriticalFeatureMixin",
     "infinite.features.local.combat.counter.CounterFeatureMixin",
     "infinite.features.local.combat.mace.MultiPlayerGameModeMixin",
+    "infinite.features.local.level.blockbreak.BlockBreakMixin",
+    "infinite.features.local.level.blockbreak.MultiPlayerGameModeAccessor",
     "infinite.features.local.combat.swapshot.ConnectionMixin",
     "infinite.features.local.combat.throwable.ConnectionMixin",
     "infinite.features.local.level.esp.EntityMixin",
