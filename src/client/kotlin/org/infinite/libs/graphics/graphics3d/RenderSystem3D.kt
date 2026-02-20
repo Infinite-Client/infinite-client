@@ -16,6 +16,7 @@ import org.infinite.libs.graphics.graphics3d.system.QuadRenderer
 import org.infinite.libs.graphics.graphics3d.system.TexturedRenderer
 import org.infinite.libs.graphics.graphics3d.system.resource.RenderLayers
 import org.infinite.libs.interfaces.MinecraftInterface
+import org.joml.Matrix4d
 import org.joml.Matrix4f
 import org.joml.Vector4f
 import java.lang.foreign.ValueLayout
@@ -34,7 +35,8 @@ class RenderSystem3D(
     private val vector4f: Vector4f,
     private val bl2: Boolean,
 ) : MinecraftInterface() {
-    private val modelMatrixStack = ArrayDeque<Matrix4f>().apply { add(Matrix4f()) }
+
+    private val modelMatrixStack = ArrayDeque<Matrix4d>().apply { add(Matrix4d()) }
     private val bufferSource = minecraft.renderBuffers().bufferSource()
     private val quadRenderer = QuadRenderer(bufferSource)
     private val texturedRenderer = TexturedRenderer(bufferSource)
@@ -54,6 +56,7 @@ class RenderSystem3D(
 
     fun snapShot(): RenderSnapshot {
         val window = minecraft.window
+
         return RenderSnapshot(
             posMatrix = Matrix4f(positionMatrix),
             projMatrix = Matrix4f(projectionMatrix),
@@ -298,37 +301,46 @@ class RenderSystem3D(
         }
     }
 
+    // 1. スタックの型を Matrix4d に変更
+
     private fun transform(position: Vec3): Vec3 {
-        val model = modelMatrixStack.peekLast() ?: Matrix4f()
-        val vec = Vector4f(
-            position.x.toFloat(),
-            position.y.toFloat(),
-            position.z.toFloat(),
-            1.0f,
-        ).mul(model)
-        return Vec3(vec.x.toDouble(), vec.y.toDouble(), vec.z.toDouble())
+        val model = modelMatrixStack.peekLast() ?: Matrix4d()
+
+        // もし描画されないなら、一旦ここを 0,0,0 にして試す
+        // val camPos = camera.position
+        val relX = position.x // - camPos.x
+        val relY = position.y // - camPos.y
+        val relZ = position.z // - camPos.z
+
+        val vec = org.joml.Vector4d(relX, relY, relZ, 1.0)
+        vec.mul(model)
+
+        return Vec3(vec.x, vec.y, vec.z)
     }
 
+    // 2. MatrixStack 操作関数も Double に対応
     private fun pushMatrix() {
-        val current = modelMatrixStack.peekLast() ?: Matrix4f()
-        modelMatrixStack.add(Matrix4f(current))
+        val current = modelMatrixStack.peekLast() ?: Matrix4d()
+        modelMatrixStack.add(Matrix4d(current))
     }
 
+    private fun setMatrix(matrix: Matrix4f) { // 引数が Matrix4f の場合はキャスト
+        if (modelMatrixStack.isNotEmpty()) {
+            modelMatrixStack.removeLast()
+        }
+        modelMatrixStack.add(Matrix4d(matrix))
+    }
     private fun popMatrix() {
         if (modelMatrixStack.size > 1) {
             modelMatrixStack.removeLast()
         }
     }
-
-    private fun setMatrix(matrix: Matrix4f) {
-        if (modelMatrixStack.isNotEmpty()) {
-            modelMatrixStack.removeLast()
-        }
-        modelMatrixStack.add(Matrix4f(matrix))
-    }
-
     private fun currentMatrix(): Matrix4f {
-        val model = modelMatrixStack.peekLast() ?: Matrix4f()
-        return Matrix4f(positionMatrix).mul(model)
+        // 1. Double精度のモデル行列を取得
+        val model = modelMatrixStack.peekLast() ?: Matrix4d()
+        // 2. positionMatrix (Matrix4f) を一旦 Matrix4d に変換して、Double精度で乗算を行う
+        val resultD = Matrix4d(positionMatrix).mul(model)
+        // 3. 最終結果を Matrix4f に変換して返す
+        return Matrix4f(resultD)
     }
 }

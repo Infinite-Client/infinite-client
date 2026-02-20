@@ -306,7 +306,7 @@ dependencies = [
 
 [[package]]
 name = "infinite-client"
-version = "3.0.1"
+version = "2.3.0"
 dependencies = [
  "lyon",
  "rayon",

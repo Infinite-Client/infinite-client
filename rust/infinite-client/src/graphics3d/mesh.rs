@@ -2,7 +2,7 @@ use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::HashSet;
 use std::hash::Hash;
-use xross_core::{xross_methods, XrossClass};
+use xross_core::{XrossClass, xross_methods};
 
 /// Minecraft coordinates (X: 26bit, Y: 12bit, Z: 26bit) packed into u64.
 /// This matches BlockPos::asLong() in modern Minecraft versions.

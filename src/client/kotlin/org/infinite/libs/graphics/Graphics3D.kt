@@ -24,11 +24,10 @@ class Graphics3D : MinecraftInterface() {
 
     private val commandQueue: LinkedList<RenderCommand3D> = LinkedList()
 
-    fun commands(): LinkedList<RenderCommand3D> = commandQueue
-
     fun clear() {
         commandQueue.clear()
     }
+    fun commands() = commandQueue.toList()
 
     fun mesh(mesh: InfiniteMesh) {
         commandQueue.add(

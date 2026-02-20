@@ -1,5 +1,5 @@
 use std::f32::consts::PI;
-use xross_core::{xross_methods, XrossClass};
+use xross_core::{XrossClass, xross_methods};
 
 #[derive(XrossClass, Default, Clone, Debug)]
 #[xross(clonable(panicable), drop(panicable))]

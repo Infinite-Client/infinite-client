@@ -3,7 +3,7 @@ use lyon::math::point;
 use lyon::path::{FillRule, LineCap, LineJoin, Path};
 use lyon::tessellation::{FillGeometryBuilder, FillOptions, FillTessellator, GeometryBuilder};
 use std::f64::consts::PI;
-use xross_core::{xross_methods, XrossClass};
+use xross_core::{XrossClass, xross_methods};
 
 #[derive(XrossClass, Default, Clone)]
 #[xross(clonable)]
