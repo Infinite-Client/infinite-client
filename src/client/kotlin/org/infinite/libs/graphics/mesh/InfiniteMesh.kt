@@ -37,6 +37,31 @@ class InfiniteMesh : AutoCloseable {
         }
     }
 
+    fun updateFromNativeMesh(
+        linePtr: MemorySegment,
+        lineSize: Long,
+        quadPtr: MemorySegment,
+        quadSize: Long,
+    ) {
+        if (lineSize > 0) {
+            this.lineSize = lineSize
+            this.lineBuffer = arena.allocate(lineSize * 4)
+            this.lineBuffer.copyFrom(linePtr.reinterpret(lineSize * 4))
+        } else {
+            this.lineSize = 0
+            this.lineBuffer = MemorySegment.NULL
+        }
+
+        if (quadSize > 0) {
+            this.quadSize = quadSize
+            this.quadBuffer = arena.allocate(quadSize * 4)
+            this.quadBuffer.copyFrom(quadPtr.reinterpret(quadSize * 4))
+        } else {
+            this.quadSize = 0
+            this.quadBuffer = MemorySegment.NULL
+        }
+    }
+
     fun getLineBuffer(): MemorySegment = lineBuffer
     fun getLineBufferSize(): Long = lineSize
 
