@@ -179,6 +179,5 @@ object BlockHighlightRenderer {
         meshCache.clear()
         sectionFirstSeen.clear()
         currentScanIndex = 0
-        colorCache.clear()
     }
 }

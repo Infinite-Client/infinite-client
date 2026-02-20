@@ -99,21 +99,14 @@ class BlockHighlightFeature : LocalFeature() {
     val animation by property(EnumSelectionProperty(Animation.Pulse))
 
     override fun onEndTick() {
-        super.onEndTick()
-        if (isEnabled()) BlockHighlightRenderer.tick(this)
+        BlockHighlightRenderer.tick(this)
     }
 
     override fun onLevelRendering(graphics3D: Graphics3D) {
-        if (isEnabled()) BlockHighlightRenderer.render(graphics3D, this)
-    }
-
-    override fun onEnabled() {
-        super.onEnabled()
-        BlockHighlightRenderer.clear()
+        BlockHighlightRenderer.render(graphics3D, this)
     }
 
     override fun onDisabled() {
-        super.onDisabled()
         BlockHighlightRenderer.clear()
     }
 }
