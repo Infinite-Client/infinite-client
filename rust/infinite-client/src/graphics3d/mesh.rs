@@ -172,42 +172,6 @@ impl BlockMeshGenerator {
         self.blocks.insert(pos.pack(), color);
     }
 
-    #[xross_method(critical(heap_access))]
-    pub fn add_blocks_batch(&mut self, xs: &[i32], ys: &[i32], zs: &[i32], colors: &[i32]) {
-        let len = xs.len().min(ys.len()).min(zs.len()).min(colors.len());
-        for i in 0..len {
-            let pos = BlockPos::new(xs[i], ys[i], zs[i]);
-            self.blocks.insert(pos.pack(), colors[i]);
-        }
-    }
-
-    #[xross_method(critical(heap_access))]
-    pub fn add_blocks_with_filter(
-        &mut self,
-        base_x: i32,
-        base_y: i32,
-        base_z: i32,
-        block_ids: &[i32],
-        filter_ids: &[i32],
-        filter_colors: &[i32],
-    ) {
-        let mut id_to_color = FxHashMap::default();
-        let map_len = filter_ids.len().min(filter_colors.len());
-        for i in 0..map_len {
-            id_to_color.insert(filter_ids[i], filter_colors[i]);
-        }
-
-        for (i, &id) in block_ids.iter().enumerate() {
-            if let Some(&color) = id_to_color.get(&id) {
-                let x = (i & 15) as i32;
-                let z = ((i >> 4) & 15) as i32;
-                let y = ((i >> 8) & 15) as i32;
-                let pos = BlockPos::new(base_x + x, base_y + y, base_z + z);
-                self.blocks.insert(pos.pack(), color);
-            }
-        }
-    }
-
     #[xross_method(panicable)]
     pub fn generate(&mut self) {
         self.line_buffer.clear();
@@ -226,6 +190,11 @@ impl BlockMeshGenerator {
                 let mut face_positions: FxHashMap<i32, FxHashMap<i32, FxHashSet<(i32, i32)>>> =
                     FxHashMap::default();
 
+                let (nx, ny, nz) = {
+                    let (dx, dy, dz) = dir.step();
+                    (dx as f32, dy as f32, dz as f32)
+                };
+
                 for (&packed_pos, &color) in &self.blocks {
                     let pos = BlockPos::unpack(packed_pos);
                     let neighbor = pos.relative(dir);
@@ -242,7 +211,14 @@ impl BlockMeshGenerator {
 
                 for (color, planes) in face_positions {
                     for (plane, mut cells) in planes {
-                        self.greedy_mesh_2d(&mut quads, plane, color, &mut cells, dir);
+                        self.greedy_mesh_2d(
+                            &mut quads,
+                            plane,
+                            color,
+                            &mut cells,
+                            dir,
+                            (nx, ny, nz),
+                        );
                     }
                 }
 
@@ -315,6 +291,7 @@ impl BlockMeshGenerator {
         color: i32,
         cells: &mut FxHashSet<(i32, i32)>,
         dir: Direction,
+        normal: (f32, f32, f32),
     ) {
         // Optimization: Use a bounding box to minimize iterations if cells were managed by bitset
         // but since we already have a set of coordinates, we iterate the set.
@@ -341,7 +318,7 @@ impl BlockMeshGenerator {
                 }
             }
 
-            quads.push(self.build_quad(plane, start.0, start.1, width, height, color, dir));
+            quads.push(self.build_quad(plane, start.0, start.1, width, height, color, dir, normal));
 
             for w in 0..width {
                 for h in 0..height {
@@ -360,6 +337,7 @@ impl BlockMeshGenerator {
         h: i32,
         color: i32,
         dir: Direction,
+        normal: (f32, f32, f32),
     ) -> Quad {
         let offset = if dir.axis_direction() == AxisDirection::Positive {
             1.0
@@ -428,6 +406,7 @@ impl BlockMeshGenerator {
             v3,
             v4,
             color,
+            normal,
         }
     }
 
@@ -671,19 +650,16 @@ impl BlockMeshGenerator {
 
     fn fill_quad_buffer(&mut self, quads: &[Quad]) {
         for q in quads {
-            self.quad_buffer.push(q.v1.0 as f32);
-            self.quad_buffer.push(q.v1.1 as f32);
-            self.quad_buffer.push(q.v1.2 as f32);
-            self.quad_buffer.push(q.v2.0 as f32);
-            self.quad_buffer.push(q.v2.1 as f32);
-            self.quad_buffer.push(q.v2.2 as f32);
-            self.quad_buffer.push(q.v3.0 as f32);
-            self.quad_buffer.push(q.v3.1 as f32);
-            self.quad_buffer.push(q.v3.2 as f32);
-            self.quad_buffer.push(q.v4.0 as f32);
-            self.quad_buffer.push(q.v4.1 as f32);
-            self.quad_buffer.push(q.v4.2 as f32);
-            self.quad_buffer.push(f32::from_bits(q.color as u32));
+            let vertices = [q.v1, q.v2, q.v3, q.v4];
+            for v in vertices {
+                self.quad_buffer.push(v.0 as f32);
+                self.quad_buffer.push(v.1 as f32);
+                self.quad_buffer.push(v.2 as f32);
+                self.quad_buffer.push(f32::from_bits(q.color as u32));
+                self.quad_buffer.push(q.normal.0);
+                self.quad_buffer.push(q.normal.1);
+                self.quad_buffer.push(q.normal.2);
+            }
         }
     }
 
@@ -692,6 +668,8 @@ impl BlockMeshGenerator {
             self.line_buffer.push(l.start.0 as f32);
             self.line_buffer.push(l.start.1 as f32);
             self.line_buffer.push(l.start.2 as f32);
+            self.line_buffer.push(f32::from_bits(l.color as u32));
+
             self.line_buffer.push(l.end.0 as f32);
             self.line_buffer.push(l.end.1 as f32);
             self.line_buffer.push(l.end.2 as f32);
@@ -707,6 +685,7 @@ struct Quad {
     v3: (f64, f64, f64),
     v4: (f64, f64, f64),
     color: i32,
+    normal: (f32, f32, f32),
 }
 
 #[derive(Clone, Copy)]
