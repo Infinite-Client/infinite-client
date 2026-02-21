@@ -1,7 +1,7 @@
-use xross_core::{XrossClass, xross_methods};
 use crate::graphics3d::mesh::generator::BlockMeshGenerator;
-use minecraft_rs::mgpu3d::{MinecraftGpu3DChild, Color4};
 use glam::DVec3;
+use minecraft_rs::mgpu3d::{Color4, MinecraftGpu3DChild};
+use xross_core::{XrossClass, xross_methods};
 
 #[derive(XrossClass, Default)]
 pub struct CaveHighlight {
@@ -59,7 +59,14 @@ impl CaveHighlight {
         max_sky_light: i32,
     ) {
         self.generator.scan_section_caves(
-            start_x, start_y, start_z, ids, sky_lights, target_id, color, max_sky_light
+            start_x,
+            start_y,
+            start_z,
+            ids,
+            sky_lights,
+            target_id,
+            color,
+            max_sky_light,
         );
     }
 
@@ -80,26 +87,38 @@ impl CaveHighlight {
     /// mgpu3d システムを利用して描画コマンドを発行します。
     pub fn render(&self, g: &mut MinecraftGpu3DChild) {
         let render_style = self.render_style;
-        
+
         // Quad (Faces)
         if render_style == 1 || render_style == 2 {
             let ptr = self.generator.get_quad_buffer_ptr();
             let size = self.generator.get_quad_buffer_size();
             let slice = unsafe { std::slice::from_raw_parts(ptr, size) };
-            
+
             for i in (0..size).step_by(28) {
-                let v1 = DVec3::new(slice[i] as f64, slice[i+1] as f64, slice[i+2] as f64);
-                let c_bits = slice[i+3].to_bits();
+                let v1 = DVec3::new(slice[i] as f64, slice[i + 1] as f64, slice[i + 2] as f64);
+                let c_bits = slice[i + 3].to_bits();
                 let color = Color4::rgba(
                     ((c_bits >> 16) & 0xFF) as u8,
                     ((c_bits >> 8) & 0xFF) as u8,
                     (c_bits & 0xFF) as u8,
                     ((c_bits >> 24) & 0xFF) as u8,
                 );
-                let v2 = DVec3::new(slice[i+7] as f64, slice[i+8] as f64, slice[i+9] as f64);
-                let v3 = DVec3::new(slice[i+14] as f64, slice[i+15] as f64, slice[i+16] as f64);
-                let v4 = DVec3::new(slice[i+21] as f64, slice[i+22] as f64, slice[i+23] as f64);
-                
+                let v2 = DVec3::new(
+                    slice[i + 7] as f64,
+                    slice[i + 8] as f64,
+                    slice[i + 9] as f64,
+                );
+                let v3 = DVec3::new(
+                    slice[i + 14] as f64,
+                    slice[i + 15] as f64,
+                    slice[i + 16] as f64,
+                );
+                let v4 = DVec3::new(
+                    slice[i + 21] as f64,
+                    slice[i + 22] as f64,
+                    slice[i + 23] as f64,
+                );
+
                 g.quad(v1, v2, v3, v4, color);
             }
         }
@@ -109,18 +128,22 @@ impl CaveHighlight {
             let ptr = self.generator.get_line_buffer_ptr();
             let size = self.generator.get_line_buffer_size();
             let slice = unsafe { std::slice::from_raw_parts(ptr, size) };
-            
+
             for i in (0..size).step_by(8) {
-                let start = DVec3::new(slice[i] as f64, slice[i+1] as f64, slice[i+2] as f64);
-                let c_bits = slice[i+3].to_bits();
+                let start = DVec3::new(slice[i] as f64, slice[i + 1] as f64, slice[i + 2] as f64);
+                let c_bits = slice[i + 3].to_bits();
                 let color = Color4::rgba(
                     ((c_bits >> 16) & 0xFF) as u8,
                     ((c_bits >> 8) & 0xFF) as u8,
                     (c_bits & 0xFF) as u8,
                     ((c_bits >> 24) & 0xFF) as u8,
                 );
-                let end = DVec3::new(slice[i+4] as f64, slice[i+5] as f64, slice[i+6] as f64);
-                
+                let end = DVec3::new(
+                    slice[i + 4] as f64,
+                    slice[i + 5] as f64,
+                    slice[i + 6] as f64,
+                );
+
                 g.line(start, end, color, self.line_width);
             }
         }

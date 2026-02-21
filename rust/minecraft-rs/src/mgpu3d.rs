@@ -51,9 +51,12 @@ impl Default for MinecraftGpu3D {
     fn default() -> Self {
         let mut handlers = HashMap::new();
         // ハイライト描画ハンドラをID 0として事前登録
-        handlers.insert(0, Arc::new(|g: &mut MinecraftGpu3DChild| {
-            highlight::render_highlights(g);
-        }) as DrawHandler);
+        handlers.insert(
+            0,
+            Arc::new(|g: &mut MinecraftGpu3DChild| {
+                highlight::render_highlights(g);
+            }) as DrawHandler,
+        );
 
         Self {
             commands: Mutex::new(Vec::with_capacity(1024)),
@@ -229,13 +232,7 @@ pub fn remove_handler(id: usize) {
 
 /// critical(heap_access) を使用して、Javaのヒープ配列を直接受け取れるようにします
 #[xross_function(package = "com.mgpu3d", critical(heap_access))]
-pub fn update_matrices(
-    model_view: &[f64],
-    projection: &[f64],
-    cam_x: f64,
-    cam_y: f64,
-    cam_z: f64,
-) {
+pub fn update_matrices(model_view: &[f64], projection: &[f64], cam_x: f64, cam_y: f64, cam_z: f64) {
     let global = MinecraftGpu3D::global();
     if let Ok(mut state) = global.render_state.write() {
         if model_view.len() >= 16 {
@@ -298,7 +295,11 @@ pub fn flush() -> Vec<u8> {
     if total_len == 0 {
         return Vec::new();
     }
-    println!("Rust Flush: flushing {} commands, {} bytes", commands.len(), total_len);
+    println!(
+        "Rust Flush: flushing {} commands, {} bytes",
+        commands.len(),
+        total_len
+    );
     let mut buffer = vec![0u8; total_len];
     let mut offset = 0;
     for command in commands {
