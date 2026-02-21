@@ -102,10 +102,6 @@ class BlockHighlightFeature : LocalFeature() {
         BlockHighlightRenderer.tick(this)
     }
 
-    override fun onLevelRendering(graphics3D: Graphics3D) {
-        BlockHighlightRenderer.render(graphics3D, this)
-    }
-
     override fun onDisabled() {
         BlockHighlightRenderer.clear()
     }

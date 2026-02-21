@@ -97,6 +97,25 @@ object RenderTicks : MinecraftInterface() {
             positionMatrix,
             projectionMatrix,
         )
+
+        // Rust 側の行列とカメラ位置を更新
+        val mv = DoubleArray(16)
+        org.joml.Matrix4d(positionMatrix).get(mv)
+        val proj = DoubleArray(16)
+        org.joml.Matrix4d(projectionMatrix).get(proj)
+        val cPos = camera.position()
+
+        org.infinite.nativebind.com.mgpu3d.UpdateMatrices.updateMatrices(
+            mv,
+            proj,
+            cPos.x,
+            cPos.y,
+            cPos.z,
+        )
+
+        // Rust 側のハンドラを並列実行
+        org.infinite.nativebind.com.mgpu3d.ProcessHandlers.processHandlers()
+
         val renderSystem3D = RenderSystem3D(
             graphicsResourceAllocator,
             deltaTracker,

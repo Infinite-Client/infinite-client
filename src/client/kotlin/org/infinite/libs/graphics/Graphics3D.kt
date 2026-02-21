@@ -11,7 +11,9 @@ import org.infinite.libs.graphics.mesh.InfiniteMesh
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.utils.rendering.Line
 import org.infinite.utils.rendering.Quad
+import org.joml.Matrix4d
 import org.joml.Matrix4f
+import java.util.ArrayDeque
 import java.util.LinkedList
 
 @Suppress("unused")
@@ -23,11 +25,24 @@ class Graphics3D : MinecraftInterface() {
         get() = RenderTicks.renderSnapShot ?: throw IllegalStateException("RenderSnapshot is not available.")
 
     private val commandQueue: LinkedList<RenderCommand3D> = LinkedList()
+    private val modelMatrixStack = ArrayDeque<Matrix4d>().apply { add(Matrix4d()) }
 
     fun clear() {
         commandQueue.clear()
+        modelMatrixStack.clear()
+        modelMatrixStack.add(Matrix4d())
     }
+
     fun commands() = commandQueue.toList()
+
+    private fun transform(position: Vec3): Vec3 {
+        val model = modelMatrixStack.peekLast() ?: Matrix4d()
+        val vec = org.joml.Vector4d(position.x, position.y, position.z, 1.0)
+        vec.mul(model)
+        return Vec3(vec.x, vec.y, vec.z)
+    }
+
+    private fun currentModelMatrix(): Matrix4f = Matrix4f(modelMatrixStack.peekLast() ?: Matrix4d())
 
     fun mesh(mesh: InfiniteMesh) {
         commandQueue.add(
@@ -36,6 +51,7 @@ class Graphics3D : MinecraftInterface() {
                 mesh.getLineBufferSize(),
                 mesh.getQuadBuffer(),
                 mesh.getQuadBufferSize(),
+                currentModelMatrix(),
             ),
         )
     }
@@ -53,15 +69,26 @@ class Graphics3D : MinecraftInterface() {
     }
 
     fun line(start: Vec3, end: Vec3, color: Int, size: Float = 1.0f, depthTest: Boolean = true) {
-        commandQueue.add(RenderCommand3D.Line(start, end, color, size, depthTest))
+        commandQueue.add(RenderCommand3D.Line(transform(start), transform(end), color, size, depthTest))
     }
 
     fun triangleFill(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
-        commandQueue.add(RenderCommand3D.TriangleFill(a, b, c, color, depthTest))
+        commandQueue.add(RenderCommand3D.TriangleFill(transform(a), transform(b), transform(c), color, depthTest))
     }
 
     fun triangleFill(a: Vec3, b: Vec3, c: Vec3, colorA: Int, colorB: Int, colorC: Int, depthTest: Boolean = true) {
-        commandQueue.add(RenderCommand3D.TriangleFillGradient(a, b, c, colorA, colorB, colorC, depthTest))
+        commandQueue.add(
+            RenderCommand3D.TriangleFillGradient(
+                a,
+                b,
+                c,
+                colorA,
+                colorB,
+                colorC,
+                depthTest,
+                currentModelMatrix(),
+            ),
+        )
     }
 
     fun triangleFrame(a: Vec3, b: Vec3, c: Vec3, color: Int, size: Float = 1.0f, depthTest: Boolean = true) {
@@ -71,19 +98,32 @@ class Graphics3D : MinecraftInterface() {
     }
 
     fun rectangleFill(a: Vec3, b: Vec3, c: Vec3, d: Vec3, color: Int, depthTest: Boolean = true) {
-        commandQueue.add(RenderCommand3D.QuadFill(a, b, c, d, color, depthTest))
+        commandQueue.add(RenderCommand3D.QuadFill(transform(a), transform(b), transform(c), transform(d), color, depthTest))
     }
 
     fun rectangleFill(a: Vec3, b: Vec3, c: Vec3, d: Vec3, colorA: Int, colorB: Int, colorC: Int, colorD: Int, depthTest: Boolean = true) {
-        commandQueue.add(RenderCommand3D.QuadFillGradient(a, b, c, d, colorA, colorB, colorC, colorD, depthTest))
+        commandQueue.add(
+            RenderCommand3D.QuadFillGradient(
+                a,
+                b,
+                c,
+                d,
+                colorA,
+                colorB,
+                colorC,
+                colorD,
+                depthTest,
+                currentModelMatrix(),
+            ),
+        )
     }
 
     fun triangleTexture(a: TexturedVertex, b: TexturedVertex, c: TexturedVertex, texture: Identifier, depthTest: Boolean = true) {
-        commandQueue.add(RenderCommand3D.TriangleTextured(a, b, c, texture, depthTest))
+        commandQueue.add(RenderCommand3D.TriangleTextured(a, b, c, texture, depthTest, currentModelMatrix()))
     }
 
     fun rectangleTexture(a: TexturedVertex, b: TexturedVertex, c: TexturedVertex, d: TexturedVertex, texture: Identifier, depthTest: Boolean = true) {
-        commandQueue.add(RenderCommand3D.QuadTextured(a, b, c, d, texture, depthTest))
+        commandQueue.add(RenderCommand3D.QuadTextured(a, b, c, d, texture, depthTest, currentModelMatrix()))
     }
 
     fun rectangleFrame(a: Vec3, b: Vec3, c: Vec3, d: Vec3, color: Int, size: Float = 1.0f, depthTest: Boolean = true) {
@@ -123,14 +163,26 @@ class Graphics3D : MinecraftInterface() {
     }
 
     fun triangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
-        commandQueue.add(RenderCommand3D.Triangle(a, b, c, color, depthTest))
+        commandQueue.add(RenderCommand3D.Triangle(transform(a), transform(b), transform(c), color, depthTest))
     }
 
     fun quad(a: Vec3, b: Vec3, c: Vec3, d: Vec3, color: Int, depthTest: Boolean = true) {
-        commandQueue.add(RenderCommand3D.Quad(a, b, c, d, color, depthTest))
+        commandQueue.add(RenderCommand3D.Quad(transform(a), transform(b), transform(c), transform(d), color, depthTest))
     }
 
-    fun setMatrix(matrix: Matrix4f) = commandQueue.add(RenderCommand3D.SetMatrix(matrix))
-    fun pushMatrix() = commandQueue.add(RenderCommand3D.PushMatrix)
-    fun popMatrix() = commandQueue.add(RenderCommand3D.PopMatrix)
+    fun setMatrix(matrix: Matrix4f) {
+        modelMatrixStack.removeLast()
+        modelMatrixStack.add(Matrix4d(matrix))
+    }
+
+    fun pushMatrix() {
+        val current = modelMatrixStack.peekLast() ?: Matrix4d()
+        modelMatrixStack.add(Matrix4d(current))
+    }
+
+    fun popMatrix() {
+        if (modelMatrixStack.size > 1) {
+            modelMatrixStack.removeLast()
+        }
+    }
 }

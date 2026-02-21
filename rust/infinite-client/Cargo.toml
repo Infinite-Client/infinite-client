@@ -12,3 +12,4 @@ lyon = "1.0.16"
 rustc-hash = "2.1.0"
 rayon = "1.10.0"
 xross-core = { workspace = true, features = ["xross-alloc"] }
+minecraft-rs = { path = "../minecraft-rs"}

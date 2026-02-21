@@ -2,12 +2,7 @@
 resolver = "3"
 
 members = [
-    "project-xross/xross-alloc",
-    "project-xross/xross-core",
-    "project-xross/xross-macros",
-    "project-xross/xross-metadata",
-    "project-xross/xross-example/rust",
-    "rust/infinite-client",
+    "rust/infinite-client", "rust/minecraft-rs",
 ]
 
 [workspace.package]
@@ -20,9 +15,6 @@ license = "MIT"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 xross-core = { path = "project-xross/xross-core" }
-xross-macros = { path = "project-xross/xross-macros" }
-xross-metadata = { path = "project-xross/xross-metadata" }
-xross-alloc = { path = "project-xross/xross-alloc" }
 
 [profile.release]
 opt-level = 3          # 最大限の最適化

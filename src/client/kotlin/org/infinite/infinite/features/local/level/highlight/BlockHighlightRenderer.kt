@@ -5,16 +5,10 @@ import net.minecraft.core.BlockPos
 import net.minecraft.core.SectionPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier
-import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.level.Level
-import net.minecraft.world.phys.Vec3
-import org.infinite.libs.graphics.Graphics3D
 import org.infinite.utils.rendering.BlockMesh
-import org.infinite.utils.rendering.BlockMeshGenerator
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 object BlockHighlightRenderer {
     private val blockPositions = ConcurrentHashMap<SectionPos, MutableMap<BlockPos, Int>>()
@@ -25,7 +19,7 @@ object BlockHighlightRenderer {
     private var lastSettingsHash = 0
     private val colorCache = mutableMapOf<String, Int>()
 
-    private fun getColorForBlock(id: Identifier, feature: BlockHighlightFeature): Int? = colorCache[id.toString()]
+    private fun getColorForBlock(id: Identifier): Int? = colorCache[id.toString()]
 
     fun tick(feature: BlockHighlightFeature) {
         val mc = Minecraft.getInstance()
@@ -49,7 +43,7 @@ object BlockHighlightRenderer {
         repeat(chunksToScanPerTick) {
             val ox = (currentScanIndex % side) - scanRadius
             val oz = (currentScanIndex / side) - scanRadius
-            scanChunk(world, center.x + ox, center.z + oz, feature)
+            scanChunk(world, center.x + ox, center.z + oz)
             currentScanIndex = (currentScanIndex + 1) % (side * side)
         }
 
@@ -61,9 +55,36 @@ object BlockHighlightRenderer {
                 sectionFirstSeen.remove(it)
             }
         }
+
+        // --- 同期: Rust 側へデータを送る ---
+        syncWithRust(feature)
     }
 
-    private fun scanChunk(world: Level, cx: Int, cz: Int, feature: BlockHighlightFeature) {
+    private fun syncWithRust(feature: BlockHighlightFeature) {
+        val positions = mutableListOf<Int>()
+        val colors = mutableListOf<Int>()
+
+        blockPositions.values.forEach { map ->
+            map.forEach { (pos, color) ->
+                positions.add(pos.x)
+                positions.add(pos.y)
+                positions.add(pos.z)
+                colors.add(color)
+            }
+        }
+
+        org.infinite.nativebind.mgpu3d.highlight.SetHighlightStyle.setHighlightStyle(
+            feature.renderStyle.value.ordinal,
+            feature.lineWidth.value,
+        )
+        org.infinite.nativebind.mgpu3d.highlight.UpdateHighlightBlocks.updateHighlightBlocks(
+            "block",
+            positions.toIntArray(),
+            colors.toIntArray(),
+        )
+    }
+
+    private fun scanChunk(world: Level, cx: Int, cz: Int) {
         if (!world.chunkSource.hasChunk(cx, cz)) return
         val chunk = world.getChunk(cx, cz)
 
@@ -77,7 +98,7 @@ object BlockHighlightRenderer {
                     for (x in 0..15) {
                         val state = section.getBlockState(x, y, z)
                         if (state.isAir) continue
-                        val color = getColorForBlock(BuiltInRegistries.BLOCK.getKey(state.block), feature) ?: continue
+                        val color = getColorForBlock(BuiltInRegistries.BLOCK.getKey(state.block)) ?: continue
                         newBlocks[BlockPos((cx shl 4) + x, minY + y, (cz shl 4) + z)] = color
                     }
                 }
@@ -94,83 +115,6 @@ object BlockHighlightRenderer {
                     if (!sectionFirstSeen.containsKey(sp)) sectionFirstSeen[sp] = System.currentTimeMillis()
                 }
             }
-        }
-    }
-
-    fun render(graphics3D: Graphics3D, feature: BlockHighlightFeature) {
-        val mc = Minecraft.getInstance()
-        val player = mc.player ?: return
-        val camera = mc.gameRenderer.mainCamera
-        val cameraPos = camera.position()
-        val lookVec = player.lookAngle
-        val horizontalLook = Vec3(lookVec.x, 0.0, lookVec.z)
-        val hLenSq = horizontalLook.lengthSqr()
-        val renderRangeSq = (feature.renderRange.value * feature.renderRange.value).toDouble()
-        val viewFocus = feature.viewFocus.value
-
-        val meshesToDraw = mutableListOf<Triple<BlockMesh, Double, SectionPos>>()
-
-        blockPositions.forEach { (sp, blocks) ->
-            if (blocks.isEmpty()) return@forEach
-            val mesh = meshCache.getOrPut(sp) { BlockMeshGenerator.generateMesh(blocks) }
-            if (mesh.quads.isEmpty() && mesh.lines.isEmpty()) return@forEach
-
-            val sectionCenter = Vec3(
-                sp.minBlockX() + 8.0,
-                sp.minBlockY() + 8.0,
-                sp.minBlockZ() + 8.0,
-            )
-            val diff = sectionCenter.subtract(cameraPos)
-            val distSq = diff.lengthSqr()
-            if (distSq > renderRangeSq * 4) return@forEach
-
-            val dot = if (distSq > 0.001) {
-                if (hLenSq > 0.0001) {
-                    // Include height (diff.y) in the score by default now that we use sections
-                    lookVec.dot(diff.normalize())
-                } else {
-                    1.0 // Straight up/down
-                }
-            } else {
-                1.0
-            }
-
-            val score = when (viewFocus) {
-                BlockHighlightFeature.ViewFocus.Strict -> if (dot < 0.2) -1.0 else dot / (distSq + 1.0)
-                BlockHighlightFeature.ViewFocus.Balanced -> (dot + 1.5) / (distSq + 1.0)
-                else -> 1.0 / (distSq + 1.0)
-            }
-
-            if (score >= 0) meshesToDraw.add(Triple(mesh, score, sp))
-        }
-
-        meshesToDraw.sortByDescending { it.second }
-        var drawCount = 0
-        val maxCount = feature.maxDrawCount.value
-        val style = feature.renderStyle.value
-        val time = System.currentTimeMillis() / 1000.0
-
-        meshesToDraw.forEach { (mesh, _, sp) ->
-            if (drawCount > maxCount) return@forEach
-
-            val pulse = if (feature.animation.value == BlockHighlightFeature.Animation.Pulse) (sin(time * 4.0) * 0.5 + 0.5) * 0.4 + 0.6 else 1.0
-            val fadeIn = if (feature.animation.value == BlockHighlightFeature.Animation.FadeIn) ((System.currentTimeMillis() - (sectionFirstSeen[sp] ?: 0L)) / 600.0).coerceIn(0.0, 1.0) else 1.0
-            val alphaMultiplier = pulse * fadeIn
-
-            fun applyAnim(c: Int): Int {
-                val a = ((c shr 24 and 0xFF) * alphaMultiplier).toInt().coerceIn(0, 255)
-                return (c and 0x00FFFFFF) or (a shl 24)
-            }
-
-            if (style != BlockHighlightFeature.RenderStyle.Lines) {
-                mesh.quads.forEach { q -> graphics3D.rectangleFill(q.vertex1, q.vertex2, q.vertex3, q.vertex4, applyAnim(q.color), false) }
-            }
-            if (style != BlockHighlightFeature.RenderStyle.Faces) {
-                val width = feature.lineWidth.value
-                mesh.lines.forEach { l -> graphics3D.line(l.start, l.end, applyAnim(l.color), width, false) }
-            }
-
-            drawCount += blockPositions[sp]?.size ?: 0
         }
     }
 

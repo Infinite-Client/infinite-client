@@ -40,6 +40,7 @@ sealed interface RenderCommand3D {
         val colorB: Int,
         val colorC: Int,
         val depthTest: Boolean,
+        val modelMatrix: Matrix4f? = null,
     ) : RenderCommand3D
 
     data class Quad(
@@ -70,6 +71,7 @@ sealed interface RenderCommand3D {
         val colorC: Int,
         val colorD: Int,
         val depthTest: Boolean,
+        val modelMatrix: Matrix4f? = null,
     ) : RenderCommand3D
 
     data class TriangleTextured(
@@ -78,6 +80,7 @@ sealed interface RenderCommand3D {
         val c: TexturedVertex,
         val texture: Identifier,
         val depthTest: Boolean,
+        val modelMatrix: Matrix4f? = null,
     ) : RenderCommand3D
 
     data class QuadTextured(
@@ -87,6 +90,7 @@ sealed interface RenderCommand3D {
         val d: TexturedVertex,
         val texture: Identifier,
         val depthTest: Boolean,
+        val modelMatrix: Matrix4f? = null,
     ) : RenderCommand3D
 
     data class MeshBuffer(
@@ -94,10 +98,6 @@ sealed interface RenderCommand3D {
         val lineBufferSize: Long,
         val quadBuffer: java.lang.foreign.MemorySegment?,
         val quadBufferSize: Long,
+        val modelMatrix: Matrix4f? = null,
     ) : RenderCommand3D
-
-    data class SetMatrix(val matrix: Matrix4f) : RenderCommand3D
-
-    object PushMatrix : RenderCommand3D
-    object PopMatrix : RenderCommand3D
 }

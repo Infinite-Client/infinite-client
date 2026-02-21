@@ -1,0 +1,12 @@
+[package]
+name = "minecraft-rs"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+glam = "0.32.0"
+num_cpus = "1.17.0"
+threadpool = "1.8.1"
+xross-core = {workspace = true}

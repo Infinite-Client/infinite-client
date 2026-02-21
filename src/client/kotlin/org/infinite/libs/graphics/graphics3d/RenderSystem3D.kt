@@ -36,7 +36,6 @@ class RenderSystem3D(
     private val bl2: Boolean,
 ) : MinecraftInterface() {
 
-    private val modelMatrixStack = ArrayDeque<Matrix4d>().apply { add(Matrix4d()) }
     private val bufferSource = minecraft.renderBuffers().bufferSource()
     private val quadRenderer = QuadRenderer(bufferSource)
     private val texturedRenderer = TexturedRenderer(bufferSource)
@@ -79,23 +78,47 @@ class RenderSystem3D(
 //        get() = camera.position()
 
     fun drawLine(start: Vec3, end: Vec3, color: Int, lineWidth: Float, depthTest: Boolean = true) {
-        val from = transform(start)
-        val to = transform(end)
-        val props = Gizmos.line(from, to, color, lineWidth)
+        val props = Gizmos.line(start, end, color, lineWidth)
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
     }
 
+    // --- Parser Direct Methods ---
+
+    fun drawTriangleDirect(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean) {
+        drawTriangle(a, b, c, color, depthTest)
+    }
+
+    fun drawTriangleGradientDirect(a: Vec3, b: Vec3, c: Vec3, ca: Int, cb: Int, cc: Int, depthTest: Boolean) {
+        val renderType = RenderLayers.quads(depthTest)
+        quadRenderer.drawTriangle(renderType, currentMatrix(), a, b, c, ca, cb, cc)
+        bufferSource.endBatch(renderType)
+    }
+
+    fun drawQuadDirect(a: Vec3, b: Vec3, c: Vec3, d: Vec3, color: Int, depthTest: Boolean) {
+        drawQuad(a, b, c, d, color, depthTest)
+    }
+
+    fun drawQuadGradientDirect(a: Vec3, b: Vec3, c: Vec3, d: Vec3, ca: Int, cb: Int, cc: Int, cd: Int, depthTest: Boolean) {
+        val renderType = RenderLayers.quads(depthTest)
+        quadRenderer.drawQuad(renderType, currentMatrix(), a, b, c, d, ca, cb, cc, cd)
+        bufferSource.endBatch(renderType)
+    }
+
     fun render(commands: List<RenderCommand3D>) {
+        // Rust 側のコマンドをフラッシュして直接レンダリング
+        val binaryCommands = org.infinite.nativebind.com.mgpu3d.Flush.flush()
+        if (binaryCommands.isNotEmpty()) {
+            println("Mgpu3D Flush: processing ${binaryCommands.size} bytes")
+            org.infinite.libs.mgpu3d.Mgpu3DParser.process(binaryCommands, this)
+        }
+
+        // 2. Kotlin 側の既存のコマンドをレンダリング
         val usedRenderTypes = LinkedHashSet<RenderType>()
         commands.forEach { c ->
             when (c) {
                 is RenderCommand3D.Line -> drawLine(c.from, c.to, c.color, c.size, c.depthTest)
-
-                RenderCommand3D.PopMatrix -> popMatrix()
-
-                RenderCommand3D.PushMatrix -> pushMatrix()
 
                 is RenderCommand3D.Quad -> drawQuad(c.a, c.b, c.c, c.d, c.color, c.depthTest)
 
@@ -105,7 +128,7 @@ class RenderSystem3D(
                     val renderType = RenderLayers.quads(c.depthTest)
                     quadRenderer.drawQuad(
                         renderType,
-                        currentMatrix(),
+                        currentMatrix(c.modelMatrix),
                         c.a,
                         c.b,
                         c.c,
@@ -122,7 +145,7 @@ class RenderSystem3D(
                     val renderType = RenderTypes.entityTranslucent(c.texture)
                     texturedRenderer.drawQuad(
                         renderType,
-                        currentMatrix(),
+                        currentMatrix(c.modelMatrix),
                         c.a,
                         c.b,
                         c.c,
@@ -133,8 +156,6 @@ class RenderSystem3D(
                     usedRenderTypes.add(renderType)
                 }
 
-                is RenderCommand3D.SetMatrix -> setMatrix(c.matrix)
-
                 is RenderCommand3D.Triangle -> drawTriangle(c.a, c.b, c.c, c.color, c.depthTest)
 
                 is RenderCommand3D.TriangleFill -> drawTriangleFill(c.a, c.b, c.c, c.color, c.depthTest)
@@ -143,7 +164,7 @@ class RenderSystem3D(
                     val renderType = RenderLayers.quads(c.depthTest)
                     quadRenderer.drawTriangle(
                         renderType,
-                        currentMatrix(),
+                        currentMatrix(c.modelMatrix),
                         c.a,
                         c.b,
                         c.c,
@@ -158,7 +179,7 @@ class RenderSystem3D(
                     val renderType = RenderTypes.entityTranslucent(c.texture)
                     texturedRenderer.drawTriangle(
                         renderType,
-                        currentMatrix(),
+                        currentMatrix(c.modelMatrix),
                         c.a,
                         c.b,
                         c.c,
@@ -169,7 +190,7 @@ class RenderSystem3D(
                 }
 
                 is RenderCommand3D.MeshBuffer -> {
-                    val mat = currentMatrix()
+                    val mat = currentMatrix(c.modelMatrix)
                     // 1. Lines Rendering
                     c.lineBuffer?.let { buffer ->
                         val renderType = RenderLayers.lines(false)
@@ -242,12 +263,9 @@ class RenderSystem3D(
     }
 
     private fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
-        val p0 = transform(a)
-        val p1 = transform(b)
-        val p2 = transform(c)
-        val props0 = Gizmos.line(p0, p1, color, 2.0f)
-        val props1 = Gizmos.line(p1, p2, color, 2.0f)
-        val props2 = Gizmos.line(p2, p0, color, 2.0f)
+        val props0 = Gizmos.line(a, b, color, 2.0f)
+        val props1 = Gizmos.line(b, c, color, 2.0f)
+        val props2 = Gizmos.line(c, a, color, 2.0f)
         if (!depthTest) {
             props0.setAlwaysOnTop()
             props1.setAlwaysOnTop()
@@ -256,10 +274,7 @@ class RenderSystem3D(
     }
 
     private fun drawTriangleFill(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
-        val p0 = transform(a)
-        val p1 = transform(b)
-        val p2 = transform(c)
-        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addTriangleFan(arrayOf(p0, p1, p2), color) }
+        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addTriangleFan(arrayOf(a, b, c), color) }
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
@@ -273,11 +288,7 @@ class RenderSystem3D(
         color: Int,
         depthTest: Boolean = true,
     ) {
-        val p0 = transform(a)
-        val p1 = transform(b)
-        val p2 = transform(c)
-        val p3 = transform(d)
-        val props = Gizmos.rect(p0, p1, p2, p3, GizmoStyle.stroke(color, 2.0f))
+        val props = Gizmos.rect(a, b, c, d, GizmoStyle.stroke(color, 2.0f))
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
@@ -291,56 +302,15 @@ class RenderSystem3D(
         color: Int,
         depthTest: Boolean = true,
     ) {
-        val p0 = transform(a)
-        val p1 = transform(b)
-        val p2 = transform(c)
-        val p3 = transform(d)
-        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addQuad(p0, p1, p2, p3, color) }
+        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addQuad(a, b, c, d, color) }
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
     }
 
-    // 1. スタックの型を Matrix4d に変更
-
-    private fun transform(position: Vec3): Vec3 {
-        val model = modelMatrixStack.peekLast() ?: Matrix4d()
-
-        // もし描画されないなら、一旦ここを 0,0,0 にして試す
-        // val camPos = camera.position
-        val relX = position.x // - camPos.x
-        val relY = position.y // - camPos.y
-        val relZ = position.z // - camPos.z
-
-        val vec = org.joml.Vector4d(relX, relY, relZ, 1.0)
-        vec.mul(model)
-
-        return Vec3(vec.x, vec.y, vec.z)
-    }
-
-    // 2. MatrixStack 操作関数も Double に対応
-    private fun pushMatrix() {
-        val current = modelMatrixStack.peekLast() ?: Matrix4d()
-        modelMatrixStack.add(Matrix4d(current))
-    }
-
-    private fun setMatrix(matrix: Matrix4f) { // 引数が Matrix4f の場合はキャスト
-        if (modelMatrixStack.isNotEmpty()) {
-            modelMatrixStack.removeLast()
-        }
-        modelMatrixStack.add(Matrix4d(matrix))
-    }
-    private fun popMatrix() {
-        if (modelMatrixStack.size > 1) {
-            modelMatrixStack.removeLast()
-        }
-    }
-    private fun currentMatrix(): Matrix4f {
-        // 1. Double精度のモデル行列を取得
-        val model = modelMatrixStack.peekLast() ?: Matrix4d()
-        // 2. positionMatrix (Matrix4f) を一旦 Matrix4d に変換して、Double精度で乗算を行う
-        val resultD = Matrix4d(positionMatrix).mul(model)
-        // 3. 最終結果を Matrix4f に変換して返す
+    private fun currentMatrix(model: Matrix4f? = null): Matrix4f {
+        if (model == null) return Matrix4f(positionMatrix)
+        val resultD = Matrix4d(positionMatrix).mul(Matrix4d(model))
         return Matrix4f(resultD)
     }
 }
