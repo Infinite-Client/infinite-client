@@ -4,6 +4,8 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier
 import net.minecraft.world.item.Items
 import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.state.BlockState
+import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
@@ -51,11 +53,16 @@ class SwapToolFeature : LocalFeature() {
         val currentTime = world.gameTime
 
         val controller = minecraft.gameMode ?: return
-        // Note: In 1.20.4, gameMode.isDestroying is used.
-        // We might need to check if there are other features breaking blocks like LinearBreak/VeinBreak.
-        // For now, we use the standard gameMode status.
-        val isMining = controller.isDestroying
-        val blockPos = controller.destroyBlockPos
+
+        // 自動破壊機能の状態を取得
+        val linearBreak = InfiniteClient.localFeatures.level.linearBreakFeature
+        val veinBreak = InfiniteClient.localFeatures.level.veinBreakFeature
+
+        val autoMiningPos = linearBreak.currentBreakingPos ?: veinBreak.currentBreakingPos
+        val manualMiningPos = if (controller.isDestroying) controller.destroyBlockPos else null
+
+        val blockPos = autoMiningPos ?: manualMiningPos
+        val isMining = blockPos != null
 
         if (!isMining) {
             if (currentTime - lastMiningTick >= switchDelay.value) {
@@ -133,23 +140,22 @@ class SwapToolFeature : LocalFeature() {
         }
     }
 
-    private fun findBestToolForBlock(state: net.minecraft.world.level.block.state.BlockState): InventoryIndex? {
-        val gameMode = minecraft.gameMode ?: return null
-        val level = level ?: return null
+    private fun findBestToolForBlock(state: BlockState): InventoryIndex? {
+        val player = player ?: return null
         var bestIndex: InventoryIndex? = null
-        var maxSpeed = state.getDestroySpeed(level, gameMode.destroyBlockPos)
 
-        // 1.20では手に持っているアイテムとの相性をチェックするのが確実
+        // 現在持っているツールの速度を基準にする
+        var maxSpeed = player.mainHandItem.getDestroySpeed(state)
+
         // ホットバーとバックパックを検索
         for (i in 0..35) {
             val idx = if (i < 9) InventoryIndex.Hotbar(i) else InventoryIndex.Backpack(i - 9)
             val stack = InventorySystem.getItem(idx)
             if (stack.isEmpty) continue
 
-            // そのツールがブロックに適しているか、且つ速度が速いか
             val speed = stack.getDestroySpeed(state)
             if (speed > maxSpeed) {
-                // 収穫可能かどうかも考慮（オプション）
+                // 収穫可能かどうかも考慮
                 if (state.requiresCorrectToolForDrops() && !stack.isCorrectToolForDrops(state)) {
                     continue
                 }

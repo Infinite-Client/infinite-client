@@ -7,6 +7,7 @@ import net.minecraft.world.phys.EntityHitResult
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import org.infinite.InfiniteClient
+import org.infinite.infinite.features.local.level.blockbreak.LinearBreakFeature
 import org.infinite.infinite.features.local.rendering.ui.IUiRenderer
 import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature
 import org.infinite.libs.graphics.Graphics2D
@@ -59,7 +60,6 @@ class CrosshairRenderer :
      */
     fun renderCrosshair(graphics2D: Graphics2D, x: Float, y: Float) {
         val player = player ?: return
-        val level = level ?: return
         val colorScheme = InfiniteClient.theme.colorScheme
         val shadowColor = colorScheme.backgroundColor
         val mainColor = colorScheme.foregroundColor
@@ -181,12 +181,12 @@ class CrosshairRenderer :
             val fastBreak = InfiniteClient.localFeatures.level.fastBreakFeature
             val interval = if (fastBreak.isEnabled()) fastBreak.interval.value / 20f else 0.25f
 
-            list.forEach { pos ->
+            list.forEachIndexed { index, pos ->
                 val center = Vec3.atCenterOf(pos)
-                val screenPos = graphics2D.projectWorldToScreen(center) ?: return@forEach
+                val screenPos = graphics2D.projectWorldToScreen(center) ?: return@forEachIndexed
 
-                val pPerTick = linearBreak.getProgressPerTick(pos)
-                if (pPerTick <= 0) return@forEach
+                val pPerTick = LinearBreakFeature.getProgressPerTick(minecraft, pos)
+                if (pPerTick <= 0) return@forEachIndexed
 
                 val isCurrent = linearBreak.currentBreakingPos == pos
                 val currentProgress = if (isCurrent) linearBreak.currentBreakingProgress else 0f
@@ -200,6 +200,39 @@ class CrosshairRenderer :
                     screenPos.second,
                     currentProgress,
                     accumulatedTime,
+                    index + 1,
+                    colorScheme.accentColor.alpha((255 * alphaValue).toInt()),
+                )
+            }
+        }
+
+        // --- VeinBreak 2D Indicators ---
+        if (veinBreak.isEnabled()) {
+            val list = synchronized(veinBreak.blocksToMine) { veinBreak.blocksToMine.toList() }
+            var accumulatedTime = 0f
+            val fastBreak = InfiniteClient.localFeatures.level.fastBreakFeature
+            val interval = if (fastBreak.isEnabled()) fastBreak.interval.value / 20f else 0.25f
+
+            list.forEachIndexed { index, pos ->
+                val center = Vec3.atCenterOf(pos)
+                val screenPos = graphics2D.projectWorldToScreen(center) ?: return@forEachIndexed
+
+                val pPerTick = LinearBreakFeature.getProgressPerTick(minecraft, pos)
+                if (pPerTick <= 0) return@forEachIndexed
+
+                val isCurrent = veinBreak.currentBreakingPos == pos
+                val currentProgress = if (isCurrent) veinBreak.currentBreakingProgress else 0f
+
+                val blockTime = (1f - currentProgress) / pPerTick / 20f
+                accumulatedTime += blockTime + interval
+
+                renderBlockIndicator(
+                    graphics2D,
+                    screenPos.first,
+                    screenPos.second,
+                    currentProgress,
+                    accumulatedTime,
+                    index + 1,
                     colorScheme.accentColor.alpha((255 * alphaValue).toInt()),
                 )
             }
@@ -253,13 +286,7 @@ class CrosshairRenderer :
             }
             graphics2D.strokePath()
             val blockPos = minecraft.gameMode?.destroyBlockPos ?: return
-            val block = level.getBlockState(blockPos)
-            val progressPerTick = player.getDestroySpeed(block) / (
-                block.getDestroySpeed(
-                    level,
-                    blockPos,
-                ) * (if (player.hasCorrectToolForDrops(block)) 30f else 100f)
-                )
+            val progressPerTick = LinearBreakFeature.getProgressPerTick(minecraft, blockPos)
             if (progressPerTick <= 0f) return
             val remainingProgress = 1.0f - breakProgress
             val remainSecs = remainingProgress / progressPerTick / 20.0f
@@ -279,6 +306,7 @@ class CrosshairRenderer :
         y: Float,
         progress: Float,
         remainingTime: Float,
+        order: Int,
         color: Int,
     ) {
         val size = 8f
@@ -288,15 +316,16 @@ class CrosshairRenderer :
         g.translate(x, y)
 
         // Background square
-        g.strokeStyle.width = 1.2f
+        g.strokeStyle.width = 1.6f
         g.strokeStyle.color = 0x80000000.toInt()
         g.strokeRect(-size, -size, size * 2, size * 2)
 
-        // Progress square
+        // Progress square (Same logic as reticle)
         if (p > 0) {
+            g.strokeStyle.width = 1f
             g.strokeStyle.color = color
             g.beginPath()
-            g.moveTo(0f, -size)
+            g.moveTo(0f, -size) // Start: Top center
             g.lineTo(size * (p / 0.125f).coerceIn(0f, 1f), -size)
             if (p > 0.125f) g.lineTo(size, -size + (size * 2 * ((p - 0.125f) / 0.25f)).coerceIn(0f, 2 * size))
             if (p > 0.375f) g.lineTo(size - (size * 2 * ((p - 0.375f) / 0.25f)).coerceIn(0f, 2 * size), size)
@@ -312,6 +341,11 @@ class CrosshairRenderer :
         g.textStyle.shadow = true
         g.fillStyle = color
         g.textCentered(timeText, 0, size + 8)
+
+        // Order text (#1, #2...)
+        g.textStyle.size = 6f
+        g.fillStyle = 0xFFFFFFFF.toInt()
+        g.textCentered("#$order", 0, -size - 4)
 
         g.pop()
     }

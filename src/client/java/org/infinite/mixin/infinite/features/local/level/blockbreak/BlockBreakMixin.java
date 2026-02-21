@@ -24,13 +24,13 @@ public class BlockBreakMixin {
     // 1. VeinBreakを最優先 (鉱石ならこちらが引き受ける)
     if (veinBreak.isEnabled() && veinBreak.tryAdd(pos)) {
       cir.setReturnValue(false);
+      cir.cancel();
       return;
     }
-
     // 2. VeinBreakが対象外なら LinearBreak が引き受ける
     if (linearBreak.isEnabled() && linearBreak.tryAdd(pos)) {
       cir.setReturnValue(false);
-      return;
+      cir.cancel();
     }
   }
 
@@ -43,8 +43,8 @@ public class BlockBreakMixin {
             .getLevel()
             .getLinearBreakFeature()
             .isWorking()) {
-      // いずれかの自動破壊が稼働中なら、バニラの処理をキャンセル
       cir.setReturnValue(false);
+      cir.cancel();
     }
   }
 }

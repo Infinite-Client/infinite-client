@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.Options
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.multiplayer.ClientPacketListener
+import net.minecraft.client.multiplayer.MultiPlayerGameMode
 import net.minecraft.client.player.ClientInput
 import net.minecraft.client.player.LocalPlayer
 
@@ -20,4 +21,6 @@ open class MinecraftInterface {
         by lazy { minecraft.options }
     protected val connection: ClientPacketListener?
         get() = minecraft.connection
+    protected val gameMode: MultiPlayerGameMode?
+        get() = minecraft.gameMode
 }
