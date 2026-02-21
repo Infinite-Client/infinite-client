@@ -6,9 +6,9 @@ import net.minecraft.core.SectionPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.LightLayer
 import org.infinite.libs.graphics.Graphics3D
 import org.infinite.libs.level.LevelManager
+import org.infinite.nativebind.CaveHighlight
 import org.infinite.utils.rendering.BlockMesh
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
@@ -18,6 +18,9 @@ object CaveHighlightRenderer {
     private val meshCache = ConcurrentHashMap<SectionPos, BlockMesh>()
     private val sectionFirstSeen = ConcurrentHashMap<SectionPos, Long>()
 
+    private val native = CaveHighlight()
+    private var handlerId = -1
+
     private var currentScanIndex = 0
     private var lastSettingsHash = 0
     private val colorCache = mutableMapOf<String, Int>()
@@ -25,6 +28,10 @@ object CaveHighlightRenderer {
     private fun getColorForBlock(id: Identifier): Int? = colorCache[id.toString()]
 
     fun tick(feature: CaveHighlightFeature) {
+        if (handlerId == -1) {
+            handlerId = native.registerToMgpu3d().toInt()
+        }
+
         val mc = Minecraft.getInstance()
         val world = mc.level ?: return
         val player = mc.player ?: return
@@ -71,41 +78,29 @@ object CaveHighlightRenderer {
         }
 
         // --- 同期: Rust 側へデータを送る ---
-        // BlockHighlight と CaveHighlight の両方のデータを Rust 側でマージして保持させるため、
-        // 実際には Rust 側の Store を拡張して複数のハイライトソースを扱えるようにするのが理想的ですが、
-        // 現状は BlockHighlightRenderer と CaveHighlightRenderer が交互に上書きし合わないよう、
-        // Kotlin 側でデータを統合してから送る形に修正が必要です。
-        // ここでは一旦、共通の sync メソッドを呼び出す形にします。
         syncWithRust(feature)
     }
 
     private fun syncWithRust(feature: CaveHighlightFeature) {
-        val positions = mutableListOf<Int>()
-        val colors = mutableListOf<Int>()
+        native.clear()
+        native.lineWidth = feature.lineWidth.value
+        native.renderStyle = feature.renderStyle.value.ordinal
 
-        // CaveHighlight のデータ
+        val positions = IntArray(blockPositions.values.sumOf { it.size } * 3)
+        val colors = IntArray(blockPositions.values.sumOf { it.size })
+        var i = 0
+        var j = 0
         blockPositions.values.forEach { map ->
             map.forEach { (pos, color) ->
-                positions.add(pos.x)
-                positions.add(pos.y)
-                positions.add(pos.z)
-                colors.add(color)
+                positions[i++] = pos.x
+                positions[i++] = pos.y
+                positions[i++] = pos.z
+                colors[j++] = color
             }
         }
+        native.addBlocks(positions, colors)
 
-        // BlockHighlight のデータも追加（統合的な管理が必要）
-        // ※ 簡略化のため、現在はそれぞれの Renderer が独立して Rust を呼び出しています。
-        // ※ Rust 側の blocks.clear() を削除し、差分更新またはソース別管理にする必要があります。
-
-        org.infinite.nativebind.mgpu3d.highlight.SetHighlightStyle.setHighlightStyle(
-            feature.renderStyle.value.ordinal,
-            feature.lineWidth.value,
-        )
-        org.infinite.nativebind.mgpu3d.highlight.UpdateHighlightBlocks.updateHighlightBlocks(
-            "cave",
-            positions.toIntArray(),
-            colors.toIntArray(),
-        )
+        native.generate()
     }
 
     private fun processQueue(world: Level, feature: CaveHighlightFeature) {

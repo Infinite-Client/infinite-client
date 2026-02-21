@@ -3,4 +3,5 @@
 pub mod graphics2d;
 pub mod graphics3d;
 pub mod projectile;
+pub mod features;
 pub use minecraft_rs;

@@ -6,6 +6,7 @@ import net.minecraft.core.SectionPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier
 import net.minecraft.world.level.Level
+import org.infinite.nativebind.BlockHighlight
 import org.infinite.utils.rendering.BlockMesh
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
@@ -15,6 +16,9 @@ object BlockHighlightRenderer {
     private val meshCache = ConcurrentHashMap<SectionPos, BlockMesh>()
     private val sectionFirstSeen = ConcurrentHashMap<SectionPos, Long>()
 
+    private val native = BlockHighlight()
+    private var handlerId = -1
+
     private var currentScanIndex = 0
     private var lastSettingsHash = 0
     private val colorCache = mutableMapOf<String, Int>()
@@ -22,6 +26,10 @@ object BlockHighlightRenderer {
     private fun getColorForBlock(id: Identifier): Int? = colorCache[id.toString()]
 
     fun tick(feature: BlockHighlightFeature) {
+        if (handlerId == -1) {
+            handlerId = native.registerToMgpu3d().toInt()
+        }
+
         val mc = Minecraft.getInstance()
         val world = mc.level ?: return
         val player = mc.player ?: return
@@ -61,27 +69,25 @@ object BlockHighlightRenderer {
     }
 
     private fun syncWithRust(feature: BlockHighlightFeature) {
-        val positions = mutableListOf<Int>()
-        val colors = mutableListOf<Int>()
+        native.clear()
+        native.lineWidth = feature.lineWidth.value
+        native.renderStyle = feature.renderStyle.value.ordinal
 
+        val positions = IntArray(blockPositions.values.sumOf { it.size } * 3)
+        val colors = IntArray(blockPositions.values.sumOf { it.size })
+        var i = 0
+        var j = 0
         blockPositions.values.forEach { map ->
             map.forEach { (pos, color) ->
-                positions.add(pos.x)
-                positions.add(pos.y)
-                positions.add(pos.z)
-                colors.add(color)
+                positions[i++] = pos.x
+                positions[i++] = pos.y
+                positions[i++] = pos.z
+                colors[j++] = color
             }
         }
+        native.addBlocks(positions, colors)
 
-        org.infinite.nativebind.mgpu3d.highlight.SetHighlightStyle.setHighlightStyle(
-            feature.renderStyle.value.ordinal,
-            feature.lineWidth.value,
-        )
-        org.infinite.nativebind.mgpu3d.highlight.UpdateHighlightBlocks.updateHighlightBlocks(
-            "block",
-            positions.toIntArray(),
-            colors.toIntArray(),
-        )
+        native.generate()
     }
 
     private fun scanChunk(world: Level, cx: Int, cz: Int) {

@@ -320,6 +320,7 @@ dependencies = [
 name = "infinite-client"
 version = "2.3.0"
 dependencies = [
+ "glam",
  "lyon",
  "minecraft-rs",
  "rayon",

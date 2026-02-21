@@ -1,7 +1,7 @@
 pub mod command;
 pub mod highlight;
 
-use crate::mgpu3d::command::{
+pub use crate::mgpu3d::command::{
     Color4, LineCommand, MinecraftGpu3dCommand, QuadCommand, QuadGradientCommand, TriangleCommand,
     TriangleGradientCommand,
 };
@@ -44,7 +44,7 @@ pub struct MinecraftGpu3DChild {
     buffer: Vec<MinecraftGpu3dCommand>,
     buffer_len: usize,
     matrix_stack: Vec<DMat4>,
-    base_state: RenderState,
+    render_state: RenderState,
 }
 
 impl Default for MinecraftGpu3D {
@@ -98,7 +98,7 @@ impl MinecraftGpu3DChild {
             buffer: Vec::with_capacity(128),
             buffer_len: 0,
             matrix_stack: vec![DMat4::IDENTITY],
-            base_state: state,
+            render_state: state,
         }
     }
 
@@ -106,9 +106,10 @@ impl MinecraftGpu3DChild {
         *self.matrix_stack.last().unwrap_or(&DMat4::IDENTITY)
     }
 
-    /// 座標変換: 何もしない (ワールド座標をそのまま返すテスト)
+    /// 絶対座標をカメラ相対座標に変換し、現在のマトリックスを適用します
     fn transform(&self, pos: DVec3) -> DVec3 {
-        pos
+        let rel_pos = pos - self.render_state.camera_pos;
+        self.current_model().transform_point3(rel_pos)
     }
 
     pub fn push_matrix(&mut self) {
