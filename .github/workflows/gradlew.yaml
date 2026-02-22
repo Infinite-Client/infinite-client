@@ -125,6 +125,7 @@ jobs:
             ls -R project-xross || true
             exit 1
           fi
+          ./gradlew refreshNative
           ./gradlew build -x test --parallel --build-cache -PbuildRustAllTargets=true
         shell: bash
       - name: Prepare Artifacts

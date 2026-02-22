@@ -9,13 +9,13 @@ import net.minecraft.client.gui.GuiGraphics
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.graphics2d.RenderSystem2D
 import org.infinite.libs.graphics.graphics3d.RenderSystem3D
+import org.infinite.libs.graphics.graphics3d.system.NativeParser3D
 import org.infinite.libs.graphics.system.ProjectionData
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.minecraft.aim.AimSystem
 import org.joml.Matrix4d
 import org.joml.Matrix4f
 import org.joml.Vector4f
-import java.nio.ByteBuffer
 
 object RenderTicks : MinecraftInterface() {
     @Volatile
@@ -150,7 +150,8 @@ object RenderTicks : MinecraftInterface() {
             posArrayShared,
             projArrayShared,
         ) { buffer ->
-            renderSystem3D.processNative(buffer)
+            val parser = NativeParser3D(buffer)
+            parser.process(renderSystem3D)
         }
     }
 }

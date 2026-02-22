@@ -5,7 +5,6 @@ import net.minecraft.core.BlockPos
 import net.minecraft.core.SectionPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier
-import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
 import org.infinite.libs.graphics.Graphics3D
@@ -14,7 +13,6 @@ import org.infinite.utils.rendering.BlockMeshGenerator
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlin.math.sin
-import kotlin.math.sqrt
 
 object BlockHighlightRenderer {
     private val blockPositions = ConcurrentHashMap<SectionPos, MutableMap<BlockPos, Int>>()

@@ -10,17 +10,17 @@ import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.gizmos.GizmoStyle
 import net.minecraft.gizmos.Gizmos
+import net.minecraft.resources.Identifier
 import net.minecraft.world.phys.Vec3
 import org.infinite.libs.graphics.graphics3d.structs.RenderCommand3D
+import org.infinite.libs.graphics.graphics3d.structs.TexturedVertex
 import org.infinite.libs.graphics.graphics3d.system.QuadRenderer
 import org.infinite.libs.graphics.graphics3d.system.TexturedRenderer
 import org.infinite.libs.graphics.graphics3d.system.resource.RenderLayers
 import org.infinite.libs.interfaces.MinecraftInterface
-import org.infinite.nativebind.xross.runtime.XrossByteArrayView
 import org.joml.Matrix4f
 import org.joml.Vector4f
 import java.lang.foreign.ValueLayout
-import java.util.*
 
 @Suppress("unused")
 class RenderSystem3D(
@@ -228,10 +228,10 @@ class RenderSystem3D(
         }
     }
 
-    private fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
-        val props0 = Gizmos.line(a, b, color, 2.0f)
-        val props1 = Gizmos.line(b, c, color, 2.0f)
-        val props2 = Gizmos.line(c, a, color, 2.0f)
+    fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, colorA: Int, colorB: Int, colorC: Int, depthTest: Boolean) {
+        val props0 = Gizmos.line(a, b, colorA, 2.0f)
+        val props1 = Gizmos.line(b, c, colorB, 2.0f)
+        val props2 = Gizmos.line(c, a, colorC, 2.0f)
         if (!depthTest) {
             props0.setAlwaysOnTop()
             props1.setAlwaysOnTop()
@@ -239,14 +239,17 @@ class RenderSystem3D(
         }
     }
 
-    private fun drawTriangleFill(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
+    fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) =
+        drawTriangle(a, b, c, color, color, color, depthTest)
+
+    fun drawTriangleFill(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
         val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addTriangleFan(arrayOf(a, b, c), color) }
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
     }
 
-    private fun drawQuad(
+    fun drawQuad(
         a: Vec3,
         b: Vec3,
         c: Vec3,
@@ -260,20 +263,59 @@ class RenderSystem3D(
         }
     }
 
-    private fun drawQuadFill(
+    fun drawTriangleTextured(
+        va: TexturedVertex,
+        vb: TexturedVertex,
+        vc: TexturedVertex,
+        identifier: Identifier,
+        depthTest: Boolean = true
+    ) {
+        val renderType = RenderTypes.entityTranslucent(identifier)
+        texturedRenderer.drawTriangle(
+            renderType,
+            Matrix4f(), // 単位行列（頂点データが絶対座標の場合）
+            va, vb, vc,
+            OverlayTexture.NO_OVERLAY,
+            LightTexture.FULL_BRIGHT
+        )
+    }
+
+    fun drawQuadFill(
+        a: Vec3, b: Vec3, c: Vec3, d: Vec3, colorA: Int,
+        colorB: Int, colorC: Int, colorD: Int,
+        depthTest: Boolean = true
+    ) {
+        val renderType = RenderLayers.quads(depthTest)
+        quadRenderer.drawQuad(
+            renderType,
+            Matrix4f(),
+            a, b, c, d, colorA, colorB, colorC, colorD,
+        )
+    }
+
+    fun drawQuadFill(
         a: Vec3,
         b: Vec3,
         c: Vec3,
         d: Vec3,
         color: Int,
         depthTest: Boolean = true,
-    ) {
-        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addQuad(a, b, c, d, color) }
-        if (!depthTest) {
-            props.setAlwaysOnTop()
-        }
-    }
+    ) = drawQuadFill(a, b, c, d, color, color, color, color, depthTest)
 
-    fun processNative(buffer: XrossByteArrayView) {
+    fun drawQuadTextured(
+        va: TexturedVertex,
+        vb: TexturedVertex,
+        vc: TexturedVertex,
+        vd: TexturedVertex,
+        identifier: Identifier,
+        depthTest: Boolean
+    ) {
+        val renderType = RenderTypes.entityTranslucent(identifier)
+        texturedRenderer.drawQuad(
+            renderType,
+            Matrix4f(),
+            va, vb, vc, vd, OverlayTexture.NO_OVERLAY,
+            LightTexture.FULL_BRIGHT
+        )
     }
 }
