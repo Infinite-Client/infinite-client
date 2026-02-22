@@ -2,11 +2,13 @@ mod command;
 mod handler;
 mod system;
 
-use crate::mgpu3d::system::{MinecraftGpu3dSystem, MinecraftMatrixes};
 use command::{Command3D, Identifier, TexturedVertex};
-use glam::{DMat4, DVec3};
+use glam::{DMat4, DVec3, Vec4Swizzles};
 use std::collections::VecDeque;
+use system::MinecraftMatrixes;
 use xross_core::xross_function;
+
+pub use system::MinecraftGpu3dSystem;
 
 #[derive(Clone)]
 pub struct MinecraftGpu3D<'a> {
@@ -47,8 +49,6 @@ impl<'a> MinecraftGpu3D<'a> {
     /// 現在のスタックのトップにあるモデル行列で座標を変換する
     fn transform(&self, pos: DVec3) -> DVec3 {
         let model = self.model_matrix_stack.back().unwrap_or(&DMat4::IDENTITY);
-        // ここに独自の変換ロジックを実装可能
-        // 現状は Kotlin 版に合わせモデル行列を適用
         model.project_point3(pos)
     }
 
@@ -58,7 +58,6 @@ impl<'a> MinecraftGpu3D<'a> {
     }
 
     // --- 描画コマンド (Public API) ---
-
     pub fn line(&mut self, start: DVec3, end: DVec3, color: u32, size: f32, depth_test: bool) {
         self.add_command(Command3D::Line {
             from: self.transform(start),
@@ -69,11 +68,50 @@ impl<'a> MinecraftGpu3D<'a> {
         });
     }
 
+    pub fn triangle(&mut self, a: DVec3, b: DVec3, c: DVec3, color: u32, depth_test: bool) {
+        self.add_command(Command3D::Triangle {
+            a: self.transform(a),
+            b: self.transform(b),
+            c: self.transform(c),
+            color,
+            depth_test,
+        });
+    }
+
     pub fn triangle_fill(&mut self, a: DVec3, b: DVec3, c: DVec3, color: u32, depth_test: bool) {
         self.add_command(Command3D::TriangleFill {
             a: self.transform(a),
             b: self.transform(b),
             c: self.transform(c),
+            color,
+            depth_test,
+        });
+    }
+
+    pub fn triangle_fill_gradient(
+        &mut self,
+        a: (DVec3, u32),
+        b: (DVec3, u32),
+        c: (DVec3, u32),
+        depth_test: bool,
+    ) {
+        self.add_command(Command3D::TriangleFillGradient {
+            a: self.transform(a.0),
+            b: self.transform(b.0),
+            c: self.transform(c.0),
+            color_a: a.1,
+            color_b: b.1,
+            color_c: c.1,
+            depth_test,
+        });
+    }
+
+    pub fn quad(&mut self, a: DVec3, b: DVec3, c: DVec3, d: DVec3, color: u32, depth_test: bool) {
+        self.add_command(Command3D::Quad {
+            a: self.transform(a),
+            b: self.transform(b),
+            c: self.transform(c),
+            d: self.transform(d),
             color,
             depth_test,
         });
@@ -98,6 +136,44 @@ impl<'a> MinecraftGpu3D<'a> {
         });
     }
 
+    pub fn quad_fill_gradient(
+        &mut self,
+        a: (DVec3, u32),
+        b: (DVec3, u32),
+        c: (DVec3, u32),
+        d: (DVec3, u32),
+        depth_test: bool,
+    ) {
+        self.add_command(Command3D::QuadFillGradient {
+            a: self.transform(a.0),
+            b: self.transform(b.0),
+            c: self.transform(c.0),
+            d: self.transform(d.0),
+            color_a: a.1,
+            color_b: b.1,
+            color_c: c.1,
+            color_d: d.1,
+            depth_test,
+        });
+    }
+
+    pub fn triangle_textured(
+        &mut self,
+        a: TexturedVertex,
+        b: TexturedVertex,
+        c: TexturedVertex,
+        texture: String,
+        depth_test: bool,
+    ) {
+        self.add_command(Command3D::TriangleTextured {
+            a: self.transform_vertex(a),
+            b: self.transform_vertex(b),
+            c: self.transform_vertex(c),
+            texture: Identifier(texture),
+            depth_test,
+        });
+    }
+
     pub fn quad_textured(
         &mut self,
         a: TexturedVertex,
@@ -117,15 +193,48 @@ impl<'a> MinecraftGpu3D<'a> {
         });
     }
 
-    // --- 内部処理・ビルド ---
+    // --- ユーティリティ (Project / Unproject) ---
 
+    pub fn project(&self, world_pos: DVec3) -> Option<DVec3> {
+        let proj = &self.matrixes.projection;
+        let view = &self.matrixes.model_view;
+        let cam_pos = &self.matrixes.camera_position;
+
+        let relative_pos = world_pos - *cam_pos;
+        let mvp = *proj * *view;
+        let local_pos = self.transform(relative_pos);
+        let pos_v4 = mvp * local_pos.extend(1.0);
+
+        if pos_v4.w <= 0.0 {
+            return None;
+        }
+
+        let ndc = pos_v4.xyz() / pos_v4.w;
+        let screen_x = (ndc.x + 1.0) / 2.0 * self.matrixes.window_width as f64;
+        let screen_y = (1.0 - ndc.y) / 2.0 * self.matrixes.window_height as f64;
+        let depth = (ndc.z + 1.0) / 2.0;
+
+        Some(DVec3::new(screen_x, screen_y, depth))
+    }
+
+    pub fn unproject(&self, screen_pos: DVec3) -> DVec3 {
+        let proj = &self.matrixes.projection;
+        let view = &self.matrixes.model_view;
+        let cam_pos = &self.matrixes.camera_position;
+
+        let mvp_inv = (*proj * *view).inverse();
+        let ndc_x = (screen_pos.x / self.matrixes.window_width as f64) * 2.0 - 1.0;
+        let ndc_y = 1.0 - (screen_pos.y / self.matrixes.window_height as f64) * 2.0;
+        let ndc_z = screen_pos.z * 2.0 - 1.0;
+
+        let world_v4 = mvp_inv * DVec3::new(ndc_x, ndc_y, ndc_z).extend(1.0);
+        let world_pos_relative = world_v4.xyz() / world_v4.w;
+
+        world_pos_relative + *cam_pos
+    }
     fn add_command(&mut self, command: Command3D) {
         self.size += command.size();
         self.buffer.push(command);
-    }
-
-    pub fn capture_frame(self) -> Vec<u8> {
-        self.build()
     }
 
     fn build(&self) -> Vec<u8> {
@@ -142,6 +251,8 @@ pub fn mgpu3d_process(
     cam_x: f64,
     cam_y: f64,
     cam_z: f64,
+    window_width: u32,
+    window_height: u32,
     position_matrix_buffer: &[f64], // 16要素のf64
     model_matrix_buffer: &[f64],    // 16要素のf64
 ) -> Vec<u8> {
@@ -149,6 +260,8 @@ pub fn mgpu3d_process(
         cam_x,
         cam_y,
         cam_z,
+        window_width,
+        window_height,
         position_matrix_buffer,
         model_matrix_buffer,
     );
