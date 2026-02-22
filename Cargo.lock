@@ -266,6 +266,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "glam"
+version = "0.32.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34627c5158214743a374170fed714833fdf4e4b0cbcc1ea98417866a4c5d4441"
+
+[[package]]
 name = "hashbrown"
 version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -309,6 +315,7 @@ name = "infinite-client"
 version = "2.3.0"
 dependencies = [
  "lyon",
+ "minecraft-rs",
  "rayon",
  "rustc-hash",
  "xross-core",
@@ -448,6 +455,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1ee66a4b64c74f4ef288bcbb9192ad9c3feaad75193129ac8509af543894fd8"
 dependencies = [
  "libmimalloc-sys",
+]
+
+[[package]]
+name = "minecraft-rs"
+version = "2.3.0"
+dependencies = [
+ "glam",
+ "rayon",
+ "xross-core",
 ]
 
 [[package]]
@@ -1085,16 +1101,6 @@ dependencies = [
  "tokio",
  "xross-alloc",
  "xross-macros",
-]
-
-[[package]]
-name = "xross-example"
-version = "3.1.0"
-dependencies = [
- "lyon",
- "rand",
- "tokio",
- "xross-core",
 ]
 
 [[package]]

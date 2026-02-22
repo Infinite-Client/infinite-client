@@ -1,0 +1,11 @@
+[package]
+name = "minecraft-rs"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+glam = "0.32.0"
+xross-core.workspace = true
+rayon = "1.11.0"

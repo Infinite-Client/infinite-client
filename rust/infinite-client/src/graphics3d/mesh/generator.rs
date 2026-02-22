@@ -11,7 +11,7 @@ pub struct BlockMeshGenerator {
     line_buffer: Vec<f32>,
     quad_buffer: Vec<f32>,
 }
-
+type Ung = HashSet<((i32, i32, i32), (i32, i32, i32))>;
 #[xross_methods]
 impl BlockMeshGenerator {
     #[xross_new(panicable)]
@@ -33,6 +33,7 @@ impl BlockMeshGenerator {
     }
 
     #[xross_method(panicable)]
+    #[allow(clippy::too_many_arguments)]
     pub fn scan_section_caves(
         &mut self,
         start_x: i32,
@@ -207,6 +208,7 @@ impl BlockMeshGenerator {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn build_quad(
         &self,
         p: i32,
@@ -288,14 +290,8 @@ impl BlockMeshGenerator {
             normal,
         }
     }
-
     fn process_edges_for_pos(
-        &self,
-        ls: &mut Vec<Line>,
-        unq: &mut HashSet<((i32, i32, i32), (i32, i32, i32))>,
-        pos: BlockPos,
-        color: i32,
-    ) {
+        &self,ls: &mut Vec<Line>, unq: &mut Ung, pos: BlockPos, color: i32,) {
         let x = pos.x;
         let y = pos.y;
         let z = pos.z;
@@ -502,21 +498,21 @@ impl BlockMeshGenerator {
                 let mut cur_s = list[0].start;
                 let mut cur_e = list[0].end;
                 let mut cur_c = list[0].color;
-
-                for i in 1..list.len() {
-                    if list[i].start == cur_e && list[i].color == cur_c {
-                        cur_e = list[i].end;
+                list.iter().for_each(|l| {
+                    if l.start == cur_e && l.color == cur_c {
+                        cur_e = l.end;
                     } else {
                         result.push(Line {
                             start: cur_s,
                             end: cur_e,
                             color: cur_c,
                         });
-                        cur_s = list[i].start;
-                        cur_e = list[i].end;
-                        cur_c = list[i].color;
+                        cur_s = l.start;
+                        cur_e = l.end;
+                        cur_c = l.color;
                     }
-                }
+                });
+                
                 result.push(Line {
                     start: cur_s,
                     end: cur_e,

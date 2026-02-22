@@ -12,8 +12,10 @@ import org.infinite.libs.graphics.graphics3d.RenderSystem3D
 import org.infinite.libs.graphics.system.ProjectionData
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.minecraft.aim.AimSystem
+import org.joml.Matrix4d
 import org.joml.Matrix4f
 import org.joml.Vector4f
+import java.nio.ByteBuffer
 
 object RenderTicks : MinecraftInterface() {
     @Volatile
@@ -114,5 +116,37 @@ object RenderTicks : MinecraftInterface() {
                 return@runBlocking InfiniteClient.localFeatures.onLevelRendering()
             }
         renderSystem3D.render(commands)
+        processNativeLevelRendering(
+            camera,
+            positionMatrix,
+            projectionMatrix,
+            renderSystem3D,
+        )
+    }
+
+    private val posArrayShared = DoubleArray(16)
+    private val projArrayShared = DoubleArray(16)
+
+    // Matrix4dも使い回してアロケーションを避ける
+    private val tempMatrix4d = Matrix4d()
+    private fun processNativeLevelRendering(
+        camera: Camera,
+        positionMatrix: Matrix4f,
+        projectionMatrix: Matrix4f,
+        renderSystem3D: RenderSystem3D
+    ) {
+        val camPos = camera.position()
+
+        // すでに存在するインスタンスに値をセット
+        tempMatrix4d.set(positionMatrix).get(posArrayShared)
+        tempMatrix4d.set(projectionMatrix).get(projArrayShared)
+
+        org.infinite.nativebind.mgpu3d.Mgpu3dProcess.withMgpu3dProcess(
+            camPos.x, camPos.y, camPos.z,
+            posArrayShared,
+            projArrayShared
+        ) { buffer ->
+            renderSystem3D.processNative(buffer)
+        }
     }
 }

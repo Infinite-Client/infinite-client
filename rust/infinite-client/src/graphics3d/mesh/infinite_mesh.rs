@@ -8,7 +8,7 @@ pub struct InfiniteMesh {
 
 #[xross_methods]
 impl InfiniteMesh {
-    #[xross_new(panicable)]
+    #[xross_new]
     pub fn new() -> Self {
         Self::default()
     }
