@@ -3,6 +3,7 @@ use lyon::math::point;
 use lyon::path::{FillRule, LineCap, LineJoin, Path};
 use lyon::tessellation::{FillGeometryBuilder, FillOptions, FillTessellator, GeometryBuilder};
 use std::f64::consts::PI;
+use minecraft_rs::color::Color;
 use xross_core::{XrossClass, xross_methods};
 
 #[derive(XrossClass, Default, Clone)]
@@ -33,29 +34,6 @@ pub struct PointData {
     pub line_cap: XrossLineCap,
     #[xross_field]
     pub line_join: XrossLineJoin,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, XrossClass)]
-pub struct Color {
-    #[xross_field]
-    pub r: f32,
-    #[xross_field]
-    pub g: f32,
-    #[xross_field]
-    pub b: f32,
-    #[xross_field]
-    pub a: f32,
-}
-
-impl Default for Color {
-    fn default() -> Self {
-        Self {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.0,
-        }
-    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, XrossClass, Default)]
@@ -129,37 +107,6 @@ pub struct Pen {
     pub line_join: XrossLineJoin,
     #[xross_field]
     pub is_gradient_enabled: bool,
-}
-
-impl Color {
-    pub fn from_raw(raw: i32) -> Self {
-        let u = raw as u32;
-        Self {
-            a: ((u >> 24) & 0xFF) as f32 / 255.0,
-            r: ((u >> 16) & 0xFF) as f32 / 255.0,
-            g: ((u >> 8) & 0xFF) as f32 / 255.0,
-            b: (u & 0xFF) as f32 / 255.0,
-        }
-    }
-
-    pub fn to_raw(&self) -> i32 {
-        let a = (self.a.clamp(0.0, 1.0) * 255.0) as u32;
-        let r = (self.r.clamp(0.0, 1.0) * 255.0) as u32;
-        let g = (self.g.clamp(0.0, 1.0) * 255.0) as u32;
-        let b = (self.b.clamp(0.0, 1.0) * 255.0) as u32;
-
-        ((a << 24) | (r << 16) | (g << 8) | b) as i32
-    }
-
-    pub fn mix(&self, other: Self, t: f32) -> Self {
-        let t = t.clamp(0.0, 1.0);
-        Self {
-            r: self.r + (other.r - self.r) * t,
-            g: self.g + (other.g - self.g) * t,
-            b: self.b + (other.b - self.b) * t,
-            a: self.a + (other.a - self.a) * t,
-        }
-    }
 }
 
 #[derive(XrossClass)]
@@ -548,7 +495,7 @@ impl Path2D {
         let mut output = FillOutput {
             buffer: &mut self.buffer,
             vertices: Vec::new(),
-            current_pen_color: self.pen.color.to_raw(),
+            current_pen_color: self.pen.color.into_raw(),
         };
         let options = FillOptions::default().with_fill_rule(match rule {
             XrossFillRule::EvenOdd => FillRule::EvenOdd,
@@ -600,13 +547,13 @@ impl Path2D {
 
                 let colors = if enable_gradient {
                     [
-                        p0.color.to_raw(),
-                        p0.color.to_raw(),
-                        p1.color.to_raw(),
-                        p1.color.to_raw(),
+                        p0.color.into_raw(),
+                        p0.color.into_raw(),
+                        p1.color.into_raw(),
+                        p1.color.into_raw(),
                     ]
                 } else {
-                    let c = self.pen.color.to_raw();
+                    let c = self.pen.color.into_raw();
                     [c, c, c, c]
                 };
 
@@ -690,7 +637,7 @@ impl Path2D {
         join: LineJoin,
     ) {
         let half_w = p.width / 2.0;
-        let c = p.color.to_raw();
+        let c = p.color.into_raw();
         let color_arr = [c, c, c, c];
         let cross = v1.0 * v2.1 - v1.1 * v2.0;
         if cross.abs() < 1e-6 {
@@ -854,7 +801,7 @@ impl Path2D {
         is_start: bool,
     ) {
         let half_w = p.width / 2.0;
-        let color_arr = [p.color.to_raw(); 4];
+        let color_arr = [p.color.into_raw(); 4];
         let sign = if is_start { -1.0 } else { 1.0 };
 
         match cap {
