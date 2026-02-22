@@ -145,6 +145,8 @@ object RenderTicks : MinecraftInterface() {
             camPos.x,
             camPos.y,
             camPos.z,
+            minecraft.window.guiScaledWidth,
+            minecraft.window.guiScaledHeight,
             posArrayShared,
             projArrayShared,
         ) { buffer ->

@@ -13,19 +13,10 @@ pub struct Path2D {
     buffer: Vec<f32>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct SegmentData {
     points: Vec<PointData>,
     is_closed: bool,
-}
-
-impl Default for SegmentData {
-    fn default() -> Self {
-        Self {
-            points: Vec::new(),
-            is_closed: false,
-        }
-    }
 }
 
 #[derive(XrossClass, Clone, Copy, Default, Debug)]
@@ -67,17 +58,12 @@ impl Default for Color {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, XrossClass)]
+#[derive(Copy, Clone, Debug, PartialEq, XrossClass, Default)]
 pub enum XrossLineCap {
+    #[default]
     Butt,
     Square,
     Round,
-}
-
-impl Default for XrossLineCap {
-    fn default() -> Self {
-        Self::Butt
-    }
 }
 
 impl From<LineCap> for XrossLineCap {
@@ -100,18 +86,13 @@ impl From<XrossLineCap> for LineCap {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, XrossClass)]
+#[derive(Copy, Clone, Debug, PartialEq, XrossClass, Default)]
 pub enum XrossLineJoin {
+    #[default]
     Miter,
     MiterClip,
     Round,
     Bevel,
-}
-
-impl Default for XrossLineJoin {
-    fn default() -> Self {
-        Self::Miter
-    }
 }
 
 impl From<LineJoin> for XrossLineJoin {
@@ -189,7 +170,7 @@ pub enum XrossFillRule {
 
 #[xross_methods]
 impl Path2D {
-    #[xross_new(panicable)]
+    #[xross_new]
     pub fn new() -> Self {
         Self::default()
     }
@@ -215,7 +196,7 @@ impl Path2D {
         self.pen.is_gradient_enabled = enable_gradient;
     }
 
-    #[xross_method(panicable)]
+    #[xross_method]
     pub fn move_to(&mut self, x: f64, y: f64) {
         self.segments.push(SegmentData::default());
         let point = self.point(x, y);
@@ -234,7 +215,7 @@ impl Path2D {
         }
     }
 
-    #[xross_method(panicable)]
+    #[xross_method]
     pub fn line_to(&mut self, x: f64, y: f64) {
         let needs_new_segment = self.segments.last().map(|s| s.is_closed).unwrap_or(false);
 
@@ -258,10 +239,10 @@ impl Path2D {
 
     #[xross_method(critical)]
     pub fn close_path(&mut self) {
-        if let Some(current_segment) = self.segments.last_mut() {
-            if !current_segment.points.is_empty() {
-                current_segment.is_closed = true;
-            }
+        if let Some(current_segment) = self.segments.last_mut()
+            && !current_segment.points.is_empty()
+        {
+            current_segment.is_closed = true;
         }
     }
 
@@ -297,7 +278,7 @@ impl Path2D {
         self.push_point(p);
     }
 
-    #[xross_method(panicable)]
+    #[xross_method]
     pub fn bezier_curve_to(&mut self, cp1x: f64, cp1y: f64, cp2x: f64, cp2y: f64, x: f64, y: f64) {
         let last = self.last_point();
         let start_pos = last.map(|p| (p.x, p.y)).unwrap_or((0.0, 0.0));
@@ -322,7 +303,7 @@ impl Path2D {
         }
     }
 
-    #[xross_method(panicable)]
+    #[xross_method]
     pub fn quadratic_curve_to(&mut self, cpx: f64, cpy: f64, x: f64, y: f64) {
         let last = self.last_point();
         let start = last.map(|p| (p.x, p.y)).unwrap_or((0.0, 0.0));
@@ -341,7 +322,7 @@ impl Path2D {
         }
     }
 
-    #[xross_method(panicable)]
+    #[xross_method]
     pub fn arc(
         &mut self,
         x: f64,
@@ -423,7 +404,7 @@ impl Path2D {
         }
     }
 
-    #[xross_method(panicable)]
+    #[xross_method]
     pub fn arc_to(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, radius: f64) {
         let start = self.last_point().map(|p| (p.x, p.y)).unwrap_or((x1, y1));
 
@@ -468,7 +449,7 @@ impl Path2D {
         );
     }
 
-    #[xross_method(panicable)]
+    #[xross_method]
     #[allow(clippy::too_many_arguments)]
     pub fn ellipse(
         &mut self,
@@ -540,7 +521,7 @@ impl Path2D {
         }
     }
 
-    #[xross_method(panicable)]
+    #[xross_method]
     pub fn tessellate_fill(&mut self, rule: XrossFillRule) {
         self.buffer.clear();
 
@@ -577,7 +558,7 @@ impl Path2D {
         let _ = tessellator.tessellate_path(&path, &options, &mut output);
     }
 
-    #[xross_method(panicable)]
+    #[xross_method]
     pub fn tessellate_stroke(&mut self) {
         let mut output_buffer = Vec::new();
         let cap = self.pen.line_cap.into();
