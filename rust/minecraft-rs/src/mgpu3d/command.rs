@@ -1,4 +1,4 @@
-use glam::{DVec3, DVec2};
+use glam::{DVec2, DVec3};
 
 /// テクスチャ付き頂点の構造体
 #[derive(Debug, Clone, Copy)]
@@ -108,22 +108,33 @@ impl Command3D {
     /// バッファに書き込まれるデータの合計バイトサイズを計算
     pub fn size(&self) -> usize {
         let signature_size = 1; // u8
-        let bool_size = 1;      // bool (u8)
-        let color_size = 4;     // u32
+        let bool_size = 1; // bool (u8)
+        let color_size = 4; // u32
         let f32_size = 4;
-        let dvec3_size = 24;    // f64 * 3
-        let dvec2_size = 16;    // f64 * 2
+        let dvec3_size = 24; // f64 * 3
+        let dvec2_size = 16; // f64 * 2
         let textured_vertex_size = dvec3_size + dvec2_size + color_size;
 
-        signature_size + match self {
-            Self::Line { .. } => (dvec3_size * 2) + color_size + f32_size + bool_size,
-            Self::Triangle { .. } | Self::TriangleFill { .. } => (dvec3_size * 3) + color_size + bool_size,
-            Self::TriangleFillGradient { .. } => (dvec3_size * 3) + (color_size * 3) + bool_size,
-            Self::Quad { .. } | Self::QuadFill { .. } => (dvec3_size * 4) + color_size + bool_size,
-            Self::QuadFillGradient { .. } => (dvec3_size * 4) + (color_size * 4) + bool_size,
-            Self::TriangleTextured { texture, .. } => (textured_vertex_size * 3) + bool_size + texture.0.len() + 4,
-            Self::QuadTextured { texture, .. } => (textured_vertex_size * 4) + bool_size + texture.0.len() + 4,
-        }
+        signature_size
+            + match self {
+                Self::Line { .. } => (dvec3_size * 2) + color_size + f32_size + bool_size,
+                Self::Triangle { .. } | Self::TriangleFill { .. } => {
+                    (dvec3_size * 3) + color_size + bool_size
+                }
+                Self::TriangleFillGradient { .. } => {
+                    (dvec3_size * 3) + (color_size * 3) + bool_size
+                }
+                Self::Quad { .. } | Self::QuadFill { .. } => {
+                    (dvec3_size * 4) + color_size + bool_size
+                }
+                Self::QuadFillGradient { .. } => (dvec3_size * 4) + (color_size * 4) + bool_size,
+                Self::TriangleTextured { texture, .. } => {
+                    (textured_vertex_size * 3) + bool_size + texture.0.len() + 4
+                }
+                Self::QuadTextured { texture, .. } => {
+                    (textured_vertex_size * 4) + bool_size + texture.0.len() + 4
+                }
+            }
     }
 
     /// データをバイナリ形式のバッファとして生成
@@ -135,22 +146,48 @@ impl Command3D {
 
         // 2. Data
         match self {
-            Self::Line { from, to, color, size, depth_test } => {
+            Self::Line {
+                from,
+                to,
+                color,
+                size,
+                depth_test,
+            } => {
                 append_dvec3(&mut buf, from);
                 append_dvec3(&mut buf, to);
                 buf.extend_from_slice(&color.to_le_bytes());
                 buf.extend_from_slice(&size.to_le_bytes());
                 buf.push(*depth_test as u8);
             }
-            Self::Triangle { a, b, c, color, depth_test } |
-            Self::TriangleFill { a, b, c, color, depth_test } => {
+            Self::Triangle {
+                a,
+                b,
+                c,
+                color,
+                depth_test,
+            }
+            | Self::TriangleFill {
+                a,
+                b,
+                c,
+                color,
+                depth_test,
+            } => {
                 append_dvec3(&mut buf, a);
                 append_dvec3(&mut buf, b);
                 append_dvec3(&mut buf, c);
                 buf.extend_from_slice(&color.to_le_bytes());
                 buf.push(*depth_test as u8);
             }
-            Self::TriangleFillGradient { a, b, c, color_a, color_b, color_c, depth_test } => {
+            Self::TriangleFillGradient {
+                a,
+                b,
+                c,
+                color_a,
+                color_b,
+                color_c,
+                depth_test,
+            } => {
                 append_dvec3(&mut buf, a);
                 append_dvec3(&mut buf, b);
                 append_dvec3(&mut buf, c);
@@ -159,8 +196,22 @@ impl Command3D {
                 buf.extend_from_slice(&color_c.to_le_bytes());
                 buf.push(*depth_test as u8);
             }
-            Self::Quad { a, b, c, d, color, depth_test } |
-            Self::QuadFill { a, b, c, d, color, depth_test } => {
+            Self::Quad {
+                a,
+                b,
+                c,
+                d,
+                color,
+                depth_test,
+            }
+            | Self::QuadFill {
+                a,
+                b,
+                c,
+                d,
+                color,
+                depth_test,
+            } => {
                 append_dvec3(&mut buf, a);
                 append_dvec3(&mut buf, b);
                 append_dvec3(&mut buf, c);
@@ -168,7 +219,17 @@ impl Command3D {
                 buf.extend_from_slice(&color.to_le_bytes());
                 buf.push(*depth_test as u8);
             }
-            Self::QuadFillGradient { a, b, c, d, color_a, color_b, color_c, color_d, depth_test } => {
+            Self::QuadFillGradient {
+                a,
+                b,
+                c,
+                d,
+                color_a,
+                color_b,
+                color_c,
+                color_d,
+                depth_test,
+            } => {
                 append_dvec3(&mut buf, a);
                 append_dvec3(&mut buf, b);
                 append_dvec3(&mut buf, c);
@@ -179,14 +240,27 @@ impl Command3D {
                 buf.extend_from_slice(&color_d.to_le_bytes());
                 buf.push(*depth_test as u8);
             }
-            Self::TriangleTextured { a, b, c, texture, depth_test } => {
+            Self::TriangleTextured {
+                a,
+                b,
+                c,
+                texture,
+                depth_test,
+            } => {
                 append_textured_vertex(&mut buf, a);
                 append_textured_vertex(&mut buf, b);
                 append_textured_vertex(&mut buf, c);
                 append_string(&mut buf, &texture.0);
                 buf.push(*depth_test as u8);
             }
-            Self::QuadTextured { a, b, c, d, texture, depth_test } => {
+            Self::QuadTextured {
+                a,
+                b,
+                c,
+                d,
+                texture,
+                depth_test,
+            } => {
                 append_textured_vertex(&mut buf, a);
                 append_textured_vertex(&mut buf, b);
                 append_textured_vertex(&mut buf, c);

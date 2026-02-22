@@ -133,7 +133,7 @@ object RenderTicks : MinecraftInterface() {
         camera: Camera,
         positionMatrix: Matrix4f,
         projectionMatrix: Matrix4f,
-        renderSystem3D: RenderSystem3D
+        renderSystem3D: RenderSystem3D,
     ) {
         val camPos = camera.position()
 
@@ -142,9 +142,11 @@ object RenderTicks : MinecraftInterface() {
         tempMatrix4d.set(projectionMatrix).get(projArrayShared)
 
         org.infinite.nativebind.mgpu3d.Mgpu3dProcess.withMgpu3dProcess(
-            camPos.x, camPos.y, camPos.z,
+            camPos.x,
+            camPos.y,
+            camPos.z,
             posArrayShared,
-            projArrayShared
+            projArrayShared,
         ) { buffer ->
             renderSystem3D.processNative(buffer)
         }

@@ -290,8 +290,7 @@ impl BlockMeshGenerator {
             normal,
         }
     }
-    fn process_edges_for_pos(
-        &self,ls: &mut Vec<Line>, unq: &mut Ung, pos: BlockPos, color: i32,) {
+    fn process_edges_for_pos(&self, ls: &mut Vec<Line>, unq: &mut Ung, pos: BlockPos, color: i32) {
         let x = pos.x;
         let y = pos.y;
         let z = pos.z;
@@ -512,7 +511,7 @@ impl BlockMeshGenerator {
                         cur_c = l.color;
                     }
                 });
-                
+
                 result.push(Line {
                     start: cur_s,
                     end: cur_e,

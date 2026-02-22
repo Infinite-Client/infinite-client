@@ -275,6 +275,5 @@ class RenderSystem3D(
     }
 
     fun processNative(buffer: XrossByteArrayView) {
-
     }
 }

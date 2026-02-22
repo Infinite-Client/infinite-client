@@ -34,9 +34,7 @@ class Graphics3D : MinecraftInterface() {
         modelMatrixStack.add(Matrix4d())
     }
 
-    fun commands(): List<RenderCommand3D> {
-        return commandQueue.toList()
-    }
+    fun commands(): List<RenderCommand3D> = commandQueue.toList()
 
     private fun transform(position: Vec3): Vec3 {
         val model = modelMatrixStack.peekLast() ?: return position
@@ -56,7 +54,6 @@ class Graphics3D : MinecraftInterface() {
         matrix.transform(vec)
         return vertex.copy(position = Vec3(vec.x.toDouble(), vec.y.toDouble(), vec.z.toDouble()))
     }
-
 
     /**
      * Projects a 3D world coordinate to 2D screen coordinates.
@@ -79,7 +76,6 @@ class Graphics3D : MinecraftInterface() {
 
         return screenCoords
     }
-
 
     /**
      * Un-projects a 2D screen coordinate (with depth) to a 3D world coordinate.
@@ -110,7 +106,7 @@ class Graphics3D : MinecraftInterface() {
                 mesh.getLineBufferSize(),
                 mesh.getQuadBuffer(),
                 mesh.getQuadBufferSize(),
-                getModelViewMatrix()
+                getModelViewMatrix(),
             ),
         )
     }
@@ -142,8 +138,11 @@ class Graphics3D : MinecraftInterface() {
                 transform(a, modelView),
                 transform(b, modelView),
                 transform(c, modelView),
-                colorA, colorB, colorC, depthTest
-            )
+                colorA,
+                colorB,
+                colorC,
+                depthTest,
+            ),
         )
     }
 
@@ -166,7 +165,7 @@ class Graphics3D : MinecraftInterface() {
         colorB: Int,
         colorC: Int,
         colorD: Int,
-        depthTest: Boolean = true
+        depthTest: Boolean = true,
     ) {
         val modelView = getModelViewMatrix()
         commandQueue.add(
@@ -175,8 +174,8 @@ class Graphics3D : MinecraftInterface() {
                 transform(b, modelView),
                 transform(c, modelView),
                 transform(d, modelView),
-                colorA, colorB, colorC, colorD, depthTest
-            )
+                colorA, colorB, colorC, colorD, depthTest,
+            ),
         )
     }
 
@@ -187,8 +186,9 @@ class Graphics3D : MinecraftInterface() {
                 transform(a, modelView),
                 transform(b, modelView),
                 transform(c, modelView),
-                texture, depthTest
-            )
+                texture,
+                depthTest,
+            ),
         )
     }
 
@@ -198,7 +198,7 @@ class Graphics3D : MinecraftInterface() {
         c: TexturedVertex,
         d: TexturedVertex,
         texture: Identifier,
-        depthTest: Boolean = true
+        depthTest: Boolean = true,
     ) {
         val modelView = getModelViewMatrix()
         commandQueue.add(
@@ -207,8 +207,9 @@ class Graphics3D : MinecraftInterface() {
                 transform(b, modelView),
                 transform(c, modelView),
                 transform(d, modelView),
-                texture, depthTest
-            )
+                texture,
+                depthTest,
+            ),
         )
     }
 
