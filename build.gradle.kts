@@ -219,6 +219,9 @@ sourceSets {
 }
 
 tasks {
+    build {
+        dependsOn(buildRustAll)
+    }
     test {
         useJUnitPlatform()
     }

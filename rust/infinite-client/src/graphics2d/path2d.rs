@@ -2,8 +2,8 @@ use lyon::lyon_tessellation::{FillVertex, GeometryBuilderError, VertexId};
 use lyon::math::point;
 use lyon::path::{FillRule, LineCap, LineJoin, Path};
 use lyon::tessellation::{FillGeometryBuilder, FillOptions, FillTessellator, GeometryBuilder};
-use std::f64::consts::PI;
 use minecraft_rs::color::Color;
+use std::f64::consts::PI;
 use xross_core::{XrossClass, xross_methods};
 
 #[derive(XrossClass, Default, Clone)]
