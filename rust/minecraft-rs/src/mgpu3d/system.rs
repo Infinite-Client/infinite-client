@@ -1,7 +1,7 @@
-use crate::mgpu3d::MinecraftGpu3D;
 use crate::mgpu3d::handler::{GpuHandler, HandlerManager};
+use crate::mgpu3d::MinecraftGpu3D;
 use glam::{DMat4, DVec3};
-use std::sync::{OnceLock, RwLock};
+use std::sync::{LazyLock, RwLock};
 
 #[derive(Default)]
 pub struct MinecraftGpu3dSystem {
@@ -37,23 +37,23 @@ impl Default for MinecraftMatrixes {
     }
 }
 
-static MINECRAFT_GPU_3D_SYSTEM: OnceLock<MinecraftGpu3dSystem> = OnceLock::new();
-fn minecraft_gpu_3d_system() -> &'static MinecraftGpu3dSystem {
-    MINECRAFT_GPU_3D_SYSTEM.get_or_init(MinecraftGpu3dSystem::default)
-}
+static MINECRAFT_GPU_3D_SYSTEM: LazyLock<MinecraftGpu3dSystem> =
+    LazyLock::new(MinecraftGpu3dSystem::default);
 
 impl MinecraftGpu3dSystem {
     pub fn add_handler(handler: Box<dyn GpuHandler>) -> usize {
-        let instance = minecraft_gpu_3d_system();
-        instance
+        MINECRAFT_GPU_3D_SYSTEM
             .handler_manager
             .write()
             .unwrap()
             .add_handler(handler)
     }
     pub fn del_handler(id: usize) -> bool {
-        let instance = minecraft_gpu_3d_system();
-        instance.handler_manager.write().unwrap().remove_handler(id)
+        MINECRAFT_GPU_3D_SYSTEM
+            .handler_manager
+            .write()
+            .unwrap()
+            .remove_handler(id)
     }
     pub fn update(
         cam_x: f64,
@@ -64,8 +64,7 @@ impl MinecraftGpu3dSystem {
         projection_buffer: &[f64],
         model_buffer: &[f64],
     ) {
-        let instance = minecraft_gpu_3d_system();
-        let mut matrixes = instance.matrixes.write().unwrap();
+        let mut matrixes = MINECRAFT_GPU_3D_SYSTEM.matrixes.write().unwrap();
 
         // デフォルトの空配列
         let empty = [0f64; 16];
@@ -82,7 +81,7 @@ impl MinecraftGpu3dSystem {
         matrixes.window_height = window_height;
     }
     pub fn process() -> Vec<u8> {
-        let instance = minecraft_gpu_3d_system();
+        let instance = &MINECRAFT_GPU_3D_SYSTEM;
         let matrixes = instance.matrixes.read().unwrap();
         let manager = instance.handler_manager.read().unwrap();
         let mgpu3d = MinecraftGpu3D::new(&matrixes);

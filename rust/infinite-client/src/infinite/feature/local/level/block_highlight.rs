@@ -1,4 +1,4 @@
-use crate::infinite::infinite_client;
+use crate::infinite::INFINITE_CLIENT;
 
 pub struct BlockHighlightFeature {}
 impl Default for BlockHighlightFeature {
@@ -11,7 +11,7 @@ impl BlockHighlightFeature {
         Self {}
     }
     fn instance() -> &'static Self {
-        &infinite_client()
+        &INFINITE_CLIENT
             .features
             .local
             .level_features

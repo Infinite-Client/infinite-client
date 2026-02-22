@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 use xross_core::{XrossClass, xross_methods};
 pub mod feature;
 use feature::FeatureBundler;
@@ -10,11 +10,8 @@ pub struct InfiniteClient {
 impl InfiniteClient {
     #[xross_method]
     pub fn on_initialized() {
-        let _ = infinite_client();
+        let _ = INFINITE_CLIENT;
         println!("Native Infinite Client has initialized.");
     }
 }
-static INFINITE_CLIENT: OnceLock<InfiniteClient> = OnceLock::new();
-fn infinite_client() -> &'static InfiniteClient {
-    INFINITE_CLIENT.get_or_init(InfiniteClient::default)
-}
+static INFINITE_CLIENT: LazyLock<InfiniteClient> = LazyLock::new(InfiniteClient::default);

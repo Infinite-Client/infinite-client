@@ -9,7 +9,7 @@ use system::MinecraftMatrixes;
 use xross_core::xross_function;
 
 pub use system::MinecraftGpu3dSystem;
-
+pub use handler::GpuHandler;
 #[derive(Clone)]
 pub struct MinecraftGpu3D<'a> {
     buffer: Vec<Command3D>,
@@ -31,6 +31,10 @@ impl<'a> MinecraftGpu3D<'a> {
             matrixes,
             model_matrix_stack: stack,
         }
+    }
+
+    pub fn matrixes(&self) -> &'a MinecraftMatrixes {
+        self.matrixes
     }
 
     // --- 行列操作 (Matrix Stack) ---

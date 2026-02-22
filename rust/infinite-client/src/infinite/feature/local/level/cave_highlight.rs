@@ -1,4 +1,4 @@
-use crate::infinite::infinite_client;
+use crate::infinite::INFINITE_CLIENT;
 use xross_core::XrossClass;
 
 #[derive(XrossClass)]
@@ -13,10 +13,6 @@ impl CaveHighlightFeature {
         Self {}
     }
     fn instance() -> &'static Self {
-        &infinite_client()
-            .features
-            .local
-            .level_features
-            .cave_highlight
+        &INFINITE_CLIENT.features.local.level_features.cave_highlight
     }
 }
