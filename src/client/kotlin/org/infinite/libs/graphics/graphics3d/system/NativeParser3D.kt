@@ -65,8 +65,11 @@ class NativeParser3D(private val buffer: XrossByteArrayView) {
         val color = readInt()
         val depthTest = readBoolean()
 
-        if (fill) system3D.drawTriangleFill(a, b, c, color, depthTest)
-        else system3D.drawTriangle(a, b, c, color, depthTest)
+        if (fill) {
+            system3D.drawTriangleFill(a, b, c, color, depthTest)
+        } else {
+            system3D.drawTriangle(a, b, c, color, depthTest)
+        }
     }
 
     private fun parseTriangleFillGradient(system3D: RenderSystem3D) {
@@ -88,8 +91,11 @@ class NativeParser3D(private val buffer: XrossByteArrayView) {
         val color = readInt()
         val depthTest = readBoolean()
 
-        if (fill) system3D.drawQuadFill(a, b, c, d, color, depthTest)
-        else system3D.drawQuad(a, b, c, d, color, depthTest)
+        if (fill) {
+            system3D.drawQuadFill(a, b, c, d, color, depthTest)
+        } else {
+            system3D.drawQuad(a, b, c, d, color, depthTest)
+        }
     }
 
     private fun parseQuadFillGradient(system3D: RenderSystem3D) {
@@ -122,7 +128,7 @@ class NativeParser3D(private val buffer: XrossByteArrayView) {
         val vd = readTexturedVertex()
         val texture = readIdentifier()
         val depthTest = readBoolean()
-        system3D.drawQuadTextured(va,vb,vc, vd,texture, depthTest)
+        system3D.drawQuadTextured(va, vb, vc, vd, texture, depthTest)
     }
 
     // --- 低レベル読み込み補助 ---
@@ -133,9 +139,9 @@ class NativeParser3D(private val buffer: XrossByteArrayView) {
 
     private fun readInt(): Int {
         val res = (buffer[offset].toInt() and 0xFF) or
-                ((buffer[offset + 1].toInt() and 0xFF) shl 8) or
-                ((buffer[offset + 2].toInt() and 0xFF) shl 16) or
-                ((buffer[offset + 3].toInt() and 0xFF) shl 24)
+            ((buffer[offset + 1].toInt() and 0xFF) shl 8) or
+            ((buffer[offset + 2].toInt() and 0xFF) shl 16) or
+            ((buffer[offset + 3].toInt() and 0xFF) shl 24)
         offset += 4
         return res
     }

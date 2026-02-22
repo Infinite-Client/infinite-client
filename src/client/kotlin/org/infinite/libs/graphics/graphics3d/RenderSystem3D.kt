@@ -239,8 +239,7 @@ class RenderSystem3D(
         }
     }
 
-    fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) =
-        drawTriangle(a, b, c, color, color, color, depthTest)
+    fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) = drawTriangle(a, b, c, color, color, color, depthTest)
 
     fun drawTriangleFill(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
         val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addTriangleFan(arrayOf(a, b, c), color) }
@@ -268,22 +267,30 @@ class RenderSystem3D(
         vb: TexturedVertex,
         vc: TexturedVertex,
         identifier: Identifier,
-        depthTest: Boolean = true
+        depthTest: Boolean = true,
     ) {
         val renderType = RenderTypes.entityTranslucent(identifier)
         texturedRenderer.drawTriangle(
             renderType,
             Matrix4f(), // 単位行列（頂点データが絶対座標の場合）
-            va, vb, vc,
+            va,
+            vb,
+            vc,
             OverlayTexture.NO_OVERLAY,
-            LightTexture.FULL_BRIGHT
+            LightTexture.FULL_BRIGHT,
         )
     }
 
     fun drawQuadFill(
-        a: Vec3, b: Vec3, c: Vec3, d: Vec3, colorA: Int,
-        colorB: Int, colorC: Int, colorD: Int,
-        depthTest: Boolean = true
+        a: Vec3,
+        b: Vec3,
+        c: Vec3,
+        d: Vec3,
+        colorA: Int,
+        colorB: Int,
+        colorC: Int,
+        colorD: Int,
+        depthTest: Boolean = true,
     ) {
         val renderType = RenderLayers.quads(depthTest)
         quadRenderer.drawQuad(
@@ -308,14 +315,18 @@ class RenderSystem3D(
         vc: TexturedVertex,
         vd: TexturedVertex,
         identifier: Identifier,
-        depthTest: Boolean
+        depthTest: Boolean,
     ) {
         val renderType = RenderTypes.entityTranslucent(identifier)
         texturedRenderer.drawQuad(
             renderType,
             Matrix4f(),
-            va, vb, vc, vd, OverlayTexture.NO_OVERLAY,
-            LightTexture.FULL_BRIGHT
+            va,
+            vb,
+            vc,
+            vd,
+            OverlayTexture.NO_OVERLAY,
+            LightTexture.FULL_BRIGHT,
         )
     }
 }

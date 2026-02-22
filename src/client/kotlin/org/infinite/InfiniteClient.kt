@@ -7,7 +7,6 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.gui.screens.Screen
-import org.infinite.InfiniteClient.feature
 import org.infinite.infinite.command.InfiniteCommand
 import org.infinite.infinite.features.global.InfiniteGlobalFeatures
 import org.infinite.infinite.features.local.InfiniteLocalFeatures
@@ -124,6 +123,7 @@ object InfiniteClient : MinecraftInterface(), ClientModInitializer {
         LogSystem.init()
         LibInfiniteClient.loadNativeLibrary()
         loadAddons()
+        org.infinite.nativebind.InfiniteClient.onInitialized()
         InfiniteCommand.register()
         themeManager.register(InfiniteTheme())
         themeManager.register(StylishTheme())
