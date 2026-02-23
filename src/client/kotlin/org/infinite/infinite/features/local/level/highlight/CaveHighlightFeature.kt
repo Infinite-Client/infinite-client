@@ -1,13 +1,14 @@
 package org.infinite.infinite.features.local.level.highlight
 
 import org.infinite.libs.core.features.feature.LocalFeature
+import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.list.BlockAndColorListProperty
+import org.infinite.libs.core.features.property.list.BlockAndColorListProperty.Companion.asNative
 import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
 import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics3D
-
 class CaveHighlightFeature : LocalFeature() {
     override val featureType = FeatureLevel.Utils
 
@@ -36,9 +37,15 @@ class CaveHighlightFeature : LocalFeature() {
 
     // Cave specific settings
     val maxY by property(IntProperty(64, -64, 320, " Y"))
-    val checkSurroundings by property(org.infinite.libs.core.features.property.BooleanProperty(true))
+    val checkSurroundings by property(BooleanProperty(true))
     val skyLightThreshold by property(IntProperty(0, 0, 15, " level"))
     val playerExclusionRadius by property(IntProperty(5, 0, 20, " blocks"))
+
+    init {
+        blocksToHighlight.addListener { _, newValue ->
+            val cachedData = newValue.asNative()
+        }
+    }
 
     override fun onEndTick() {
         CaveHighlightRenderer.tick(this)

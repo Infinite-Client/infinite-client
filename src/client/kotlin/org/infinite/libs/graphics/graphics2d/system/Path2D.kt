@@ -107,11 +107,11 @@ class Path2D : AutoCloseable {
         fillTriangle: (Float, Float, Float, Float, Float, Float, Int, Int, Int) -> Unit,
         fillQuad: (Float, Float, Float, Float, Float, Float, Float, Float, Int, Int, Int, Int) -> Unit,
     ) {
-        val sizeVal = native.getBufferSize()
+        val sizeVal = native.getBufferSize().toLong()
         if (sizeVal <= 0L) return
 
         val bufferPtr = native.getBufferPtr()
-        val segment = bufferPtr.reinterpret(sizeVal * 4)
+        val segment = bufferPtr.reinterpret(sizeVal * 4L)
 
         var cursorIdx = 0L
         while (cursorIdx < sizeVal) {

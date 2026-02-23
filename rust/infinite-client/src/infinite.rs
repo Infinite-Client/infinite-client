@@ -1,6 +1,8 @@
 use std::sync::LazyLock;
 use xross_core::{XrossClass, xross_methods};
 pub mod feature;
+mod property;
+
 use feature::FeatureBundler;
 #[derive(XrossClass, Default)]
 pub struct InfiniteClient {

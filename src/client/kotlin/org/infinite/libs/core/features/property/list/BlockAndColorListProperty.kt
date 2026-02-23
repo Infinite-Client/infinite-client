@@ -13,6 +13,7 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
+import net.minecraft.world.level.block.Blocks
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.property.ListProperty
 import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
@@ -24,6 +25,28 @@ import org.lwjgl.glfw.GLFW
 import kotlin.jvm.optionals.getOrNull
 
 class BlockAndColorListProperty(default: List<BlockAndColor>) : ListProperty<BlockAndColor>(default) {
+    companion object {
+        fun List<BlockAndColor>.asNative(): LongArray = this.mapNotNull { item ->
+            val resLoc = Identifier.tryParse(item.blockId) ?: return@mapNotNull null
+
+            // HolderをOptionalで取得 (BuiltInRegistries.BLOCK.getHolderを使用)
+            val blockHolder = BuiltInRegistries.BLOCK.get(resLoc)
+            // 存在チェック
+            if (blockHolder.isEmpty) return@mapNotNull null
+            val block = blockHolder.get().value()
+            // AIRチェック
+            if (block == Blocks.AIR && item.blockId != "minecraft:air" && item.blockId != "minecraft:cave_air") {
+                null
+            } else {
+                val id = BuiltInRegistries.BLOCK.getId(block)
+                val color = item.color // すでにInt（0x20FF4500等）であると想定
+
+                // Longにパッキング: (Colorを32bit左シフト) OR (ID)
+                // ビット演算を使用して 64bit に詰め込む
+                (color.toLong() shl 32) or (id.toLong() and 0xFFFFFFFFL)
+            }
+        }.toLongArray()
+    }
 
     override fun convertElement(anyValue: Any): BlockAndColor? {
         if (anyValue is BlockAndColor) return anyValue

@@ -2,11 +2,13 @@ package org.infinite.infinite.features.local.level.highlight
 
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.list.BlockAndColorListProperty
+import org.infinite.libs.core.features.property.list.BlockAndColorListProperty.Companion.asNative
 import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
 import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics3D
+import org.infinite.nativebind.features.local.level.highlight.BlockHighlightFeature as Native
 
 class BlockHighlightFeature : LocalFeature() {
     override val featureType = FeatureLevel.Utils
@@ -97,6 +99,55 @@ class BlockHighlightFeature : LocalFeature() {
     val lineWidth by property(FloatProperty(1.5f, 0.1f, 5.0f, " px"))
     val viewFocus by property(EnumSelectionProperty(ViewFocus.Balanced))
     val animation by property(EnumSelectionProperty(Animation.Pulse))
+
+    init {
+        // 0: blocksToHighlight (Vec<u64> / [u64])
+        blocksToHighlight.addListener { _, newValue ->
+            Native.updateSettingsHighlightList(newValue.asNative())
+        }
+
+        // 1: scanRange
+        scanRange.addListener { _, newValue ->
+            Native.updateSettingsB4(1.toUByte(), newValue.toUInt())
+        }
+
+        // 2: renderRange
+        renderRange.addListener { _, newValue ->
+            Native.updateSettingsB4(2.toUByte(), newValue.toUInt())
+        }
+
+        // 3: renderStyle (Enum)
+        renderStyle.addListener { _, newValue ->
+            Native.updateSettingsB4(3.toUByte(), newValue.ordinal.toUInt())
+        }
+
+        // 4: maxDrawCount
+        maxDrawCount.addListener { _, newValue ->
+            Native.updateSettingsB4(4.toUByte(), newValue.toUInt())
+        }
+
+        // 5: lineWidth (Float -> bits)
+        lineWidth.addListener { _, newValue ->
+            Native.updateSettingsB4(5.toUByte(), newValue.toRawBits().toUInt())
+        }
+
+        // 6: viewFocus (Enum)
+        viewFocus.addListener { _, newValue ->
+            Native.updateSettingsB4(6.toUByte(), newValue.ordinal.toUInt())
+        }
+
+        // 7: animation (Enum)
+        animation.addListener { _, newValue ->
+            Native.updateSettingsB4(7.toUByte(), newValue.ordinal.toUInt())
+        }
+
+        // 以降、必要に応じて追加 (max_y, check_surroundings 等)
+        // 9: check_surroundings (Boolean)
+        // ※ もしPropertyとして追加した場合は以下のように記述
+        // checkSurroundings.addListener { _, newValue ->
+        //     Native.updateSettingsB4(9, if (newValue) 1u else 0u)
+        // }
+    }
 
     override fun onEndTick() {
         BlockHighlightRenderer.tick(this)

@@ -74,6 +74,7 @@ dependencies {
 xross {
     rustProjectDir = project.file("rust/infinite-client").absolutePath
     packageName = "org.infinite.nativebind"
+    useUnsignedTypes = true
 }
 
 // --- Native Refresh Workflow ---
@@ -117,7 +118,8 @@ rustTargets.forEach { (id, targetTriple) ->
         group = "build"
         description = "Build Rust library for $id ($targetTriple) using zigbuild"
         workingDir = project.file("rust/infinite-client")
-        val useZigbuild = buildAllRustTargets || id != hostRustTargetId || providers.gradleProperty("useZigbuild").orNull == "true"
+        val useZigbuild =
+            buildAllRustTargets || id != hostRustTargetId || providers.gradleProperty("useZigbuild").orNull == "true"
 
         // メタデータの競合を避けるため、buildディレクトリ内にターゲットごとのディレクトリを作成
         val targetMetadataDir = project.layout.buildDirectory.dir("xross-metadata/$id").get().asFile

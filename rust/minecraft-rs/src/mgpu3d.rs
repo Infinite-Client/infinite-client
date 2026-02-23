@@ -8,8 +8,8 @@ use std::collections::VecDeque;
 use system::MinecraftMatrixes;
 use xross_core::xross_function;
 
-pub use system::MinecraftGpu3dSystem;
 pub use handler::GpuHandler;
+pub use system::MinecraftGpu3dSystem;
 #[derive(Clone)]
 pub struct MinecraftGpu3D<'a> {
     buffer: Vec<Command3D>,

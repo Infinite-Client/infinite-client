@@ -1,7 +1,8 @@
-use crate::mgpu3d::handler::{GpuHandler, HandlerManager};
 use crate::mgpu3d::MinecraftGpu3D;
+use crate::mgpu3d::handler::{GpuHandler, HandlerManager};
 use glam::{DMat4, DVec3};
-use std::sync::{LazyLock, RwLock};
+use parking_lot::RwLock;
+use std::sync::LazyLock;
 
 #[derive(Default)]
 pub struct MinecraftGpu3dSystem {
@@ -36,7 +37,6 @@ impl Default for MinecraftMatrixes {
         }
     }
 }
-
 static MINECRAFT_GPU_3D_SYSTEM: LazyLock<MinecraftGpu3dSystem> =
     LazyLock::new(MinecraftGpu3dSystem::default);
 
@@ -45,14 +45,12 @@ impl MinecraftGpu3dSystem {
         MINECRAFT_GPU_3D_SYSTEM
             .handler_manager
             .write()
-            .unwrap()
             .add_handler(handler)
     }
     pub fn del_handler(id: usize) -> bool {
         MINECRAFT_GPU_3D_SYSTEM
             .handler_manager
             .write()
-            .unwrap()
             .remove_handler(id)
     }
     pub fn update(
@@ -64,7 +62,7 @@ impl MinecraftGpu3dSystem {
         projection_buffer: &[f64],
         model_buffer: &[f64],
     ) {
-        let mut matrixes = MINECRAFT_GPU_3D_SYSTEM.matrixes.write().unwrap();
+        let mut matrixes = MINECRAFT_GPU_3D_SYSTEM.matrixes.write();
 
         // デフォルトの空配列
         let empty = [0f64; 16];
@@ -82,8 +80,8 @@ impl MinecraftGpu3dSystem {
     }
     pub fn process() -> Vec<u8> {
         let instance = &MINECRAFT_GPU_3D_SYSTEM;
-        let matrixes = instance.matrixes.read().unwrap();
-        let manager = instance.handler_manager.read().unwrap();
+        let matrixes = instance.matrixes.read();
+        let manager = instance.handler_manager.read();
         let mgpu3d = MinecraftGpu3D::new(&matrixes);
         manager.render_all(mgpu3d)
     }

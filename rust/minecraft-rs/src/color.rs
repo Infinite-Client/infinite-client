@@ -34,6 +34,11 @@ impl From<Color> for i32 {
 impl From<i32> for Color {
     fn from(int: i32) -> Self {
         let bytes = u32::from_ne_bytes(int.to_ne_bytes());
+        bytes.into()
+    }
+}
+impl From<u32> for Color {
+    fn from(bytes: u32) -> Self {
         let a = (bytes >> 24) as u8; // 最上位8ビット
         let r = (bytes >> 16) as u8; // 次の8ビット
         let g = (bytes >> 8) as u8; // 次の8ビット
@@ -41,7 +46,6 @@ impl From<i32> for Color {
         Self { a, r, g, b }
     }
 }
-
 impl Color {
     pub fn new(a: u8, r: u8, g: u8, b: u8) -> Self {
         Color { a, r, g, b }

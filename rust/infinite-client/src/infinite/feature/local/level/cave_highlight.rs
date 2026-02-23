@@ -2,6 +2,7 @@ use crate::infinite::INFINITE_CLIENT;
 use xross_core::XrossClass;
 
 #[derive(XrossClass)]
+#[xross_package("features.local.level.highlight")]
 pub struct CaveHighlightFeature {}
 impl Default for CaveHighlightFeature {
     fn default() -> Self {

@@ -53,7 +53,8 @@ jobs:
           key: ${{ runner.os }}-cargo-full-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-full-
-
+      - name: Install Dependencies
+        run: bash ./scripts/action_prepare.sh
       - name: Install Build Tools (Cached)
         run: |
           if ! command -v cargo-zigbuild &> /dev/null; then

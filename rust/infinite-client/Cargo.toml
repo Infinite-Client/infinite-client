@@ -13,3 +13,5 @@ rustc-hash = "2.1.0"
 rayon = "1.10.0"
 xross-core = { workspace = true, features = ["xross-alloc"] }
 minecraft-rs.path = "../minecraft-rs"
+atomic_enum = "0.3.0"
+parking_lot.workspace = true
