@@ -225,12 +225,13 @@ class BlockHighlightFeature : LocalFeature() {
                     // オフヒープバッファに直接書き込む
                     nativeScanBuffer.setAtIndex(ValueLayout.JAVA_INT, i.toLong(), blockId)
                 }
+                val data = nativeScanBuffer.toArray(ValueLayout.JAVA_INT)
                 // 2. Rust 側へ送信 (MemorySegment をそのまま渡す)
                 Native.pushSectionData(
                     targetX,
                     yOffset + (level.minY shr 4),
                     targetZ,
-                    nativeScanBuffer.toArray(ValueLayout.JAVA_INT),
+                    data,
                 )
             }
         }

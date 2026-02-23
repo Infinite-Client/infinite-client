@@ -73,7 +73,6 @@ impl SettingsSetter for BlockHighlightFeature {
                 color_writer.insert(item.id, item.color);
             }
         }
-
         // 3. 設定を保存
         {
             let mut writer = instance.settings.blocks_to_highlight.write();
@@ -220,16 +219,22 @@ impl BlockHighlightFeature {
         if data.len() != 4096 {
             return;
         }
-
+        let instance = Self::instance();
         let mut buf = [0u32; 4096];
         buf.copy_from_slice(data);
-
         let section = SectionData {
             data: buf,
             pos: IVec3::new(cx, cy, cz),
         };
-
-        <Self as BlockHighlightMethods>::push_section_data(Self::instance(), &section);
+        {
+            let mesh_length = instance.mesh_cache.read().len();
+            println!("mesh_len: {}", mesh_length);
+            let color_length = instance.color_cache.read().len();
+            println!("color_length: {}", color_length);
+            let render_handler_id = instance.render_handler_id.load(Ordering::Relaxed);
+            println!("render_handler_id: {}", render_handler_id);
+        }
+        <Self as BlockHighlightMethods>::push_section_data(instance, &section);
     }
     #[xross_method(critical)]
     pub fn on_enabled() {
