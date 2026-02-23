@@ -1,6 +1,7 @@
 package org.infinite.infinite.features.local.level.highlight
 
 import org.infinite.libs.core.features.feature.LocalFeature
+import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.list.BlockAndColorListProperty
 import org.infinite.libs.core.features.property.list.BlockAndColorListProperty.Companion.asNative
 import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
@@ -95,60 +96,86 @@ class BlockHighlightFeature : LocalFeature() {
     val renderRange by property(IntProperty(128, 8, 512, " blocks"))
     val renderStyle by property(EnumSelectionProperty(RenderStyle.Lines))
     val maxDrawCount by property(IntProperty(20000, 1000, 100000, " elements"))
-
     val lineWidth by property(FloatProperty(1.5f, 0.1f, 5.0f, " px"))
     val viewFocus by property(EnumSelectionProperty(ViewFocus.Balanced))
     val animation by property(EnumSelectionProperty(Animation.Pulse))
-
-    init {
-        // 0: blocksToHighlight (Vec<u64> / [u64])
-        blocksToHighlight.addListener { _, newValue ->
-            Native.updateSettingsHighlightList(newValue.asNative())
-        }
-
-        // 1: scanRange
-        scanRange.addListener { _, newValue ->
-            Native.updateSettingsB4(1.toUByte(), newValue.toUInt())
-        }
-
-        // 2: renderRange
-        renderRange.addListener { _, newValue ->
-            Native.updateSettingsB4(2.toUByte(), newValue.toUInt())
-        }
-
-        // 3: renderStyle (Enum)
-        renderStyle.addListener { _, newValue ->
-            Native.updateSettingsB4(3.toUByte(), newValue.ordinal.toUInt())
-        }
-
-        // 4: maxDrawCount
-        maxDrawCount.addListener { _, newValue ->
-            Native.updateSettingsB4(4.toUByte(), newValue.toUInt())
-        }
-
-        // 5: lineWidth (Float -> bits)
-        lineWidth.addListener { _, newValue ->
-            Native.updateSettingsB4(5.toUByte(), newValue.toRawBits().toUInt())
-        }
-
-        // 6: viewFocus (Enum)
-        viewFocus.addListener { _, newValue ->
-            Native.updateSettingsB4(6.toUByte(), newValue.ordinal.toUInt())
-        }
-
-        // 7: animation (Enum)
-        animation.addListener { _, newValue ->
-            Native.updateSettingsB4(7.toUByte(), newValue.ordinal.toUInt())
-        }
-
-        // 以降、必要に応じて追加 (max_y, check_surroundings 等)
-        // 9: check_surroundings (Boolean)
-        // ※ もしPropertyとして追加した場合は以下のように記述
-        // checkSurroundings.addListener { _, newValue ->
-        //     Native.updateSettingsB4(9, if (newValue) 1u else 0u)
-        // }
+    val maxY by property(IntProperty(64, -64, 320, " y"))
+    val checkSurroundings by property(BooleanProperty(true))
+    val skyLightThreshold by property(IntProperty(10, 0, 15, " level"))
+    val playerExclusionRadius by property(IntProperty(10, 0, 64, " blocks"))
+    private fun refreshNative() {
+        Native.updateHighlightList(blocksToHighlight.value.asNative())
+        Native.setScanRange(scanRange.value)
+        Native.setRenderRange(renderRange.value)
+        Native.setMaxDrawCount(maxDrawCount.value)
+        Native.setLineWidthBits(lineWidth.value.toRawBits().toUInt())
+        Native.setRenderStyle(renderStyle.value.ordinal.toUInt())
+        Native.setViewFocus(viewFocus.value.ordinal.toUInt())
+        Native.setAnimation(animation.value.ordinal.toUInt())
+        Native.setMaxY(maxY.value)
+        Native.setCheckSurroundings(checkSurroundings.value)
+        Native.setSkyLightThreshold(skyLightThreshold.value)
+        Native.setPlayerExclusionRadius(playerExclusionRadius.value)
     }
 
+    init {
+        // リスト更新
+        blocksToHighlight.addListener { _, newValue ->
+            Native.updateHighlightList(newValue.asNative())
+        }
+
+        // 数値・基本設定
+        scanRange.addListener { _, newValue ->
+            Native.setScanRange(newValue)
+        }
+
+        renderRange.addListener { _, newValue ->
+            Native.setRenderRange(newValue)
+        }
+
+        maxDrawCount.addListener { _, newValue ->
+            Native.setMaxDrawCount(newValue)
+        }
+
+        // Float (bitsとして送信)
+        lineWidth.addListener { _, newValue ->
+            Native.setLineWidthBits(newValue.toRawBits().toUInt())
+        }
+
+        // Enum (ordinalをUIntとして送信)
+        renderStyle.addListener { _, newValue ->
+            Native.setRenderStyle(newValue.ordinal.toUInt())
+        }
+
+        viewFocus.addListener { _, newValue ->
+            Native.setViewFocus(newValue.ordinal.toUInt())
+        }
+
+        animation.addListener { _, newValue ->
+            Native.setAnimation(newValue.ordinal.toUInt())
+        }
+
+        // 追加項目 (max_y, check_surroundings 等)
+        maxY.addListener { _, newValue ->
+            Native.setMaxY(newValue)
+        }
+
+        checkSurroundings.addListener { _, newValue ->
+            Native.setCheckSurroundings(newValue)
+        }
+
+        skyLightThreshold.addListener { _, newValue ->
+            Native.setSkyLightThreshold(newValue)
+        }
+
+        playerExclusionRadius.addListener { _, newValue ->
+            Native.setPlayerExclusionRadius(newValue)
+        }
+    }
+
+    override fun onConnected() {
+        refreshNative()
+    }
     override fun onEndTick() {
         BlockHighlightRenderer.tick(this)
     }

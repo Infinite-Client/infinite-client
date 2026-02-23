@@ -53,34 +53,48 @@ impl Default for Settings {
     }
 }
 impl Settings {
-    pub fn apply_b4_setting(&self, idx: u8, num: u32) {
-        match idx {
-            // 0: blocks_to_highlight は Vec なので別のメソッド（前述のもの）で扱うのが一般的
-            1 => self.scan_range.store(num as i32, Ordering::Relaxed),
-            2 => self.render_range.store(num as i32, Ordering::Relaxed),
-            3 => self
-                .render_style
-                .store(RenderStyle::from_u32(num), Ordering::Relaxed),
-            4 => self.max_draw_count.store(num as i32, Ordering::Relaxed),
-            5 => self
-                .line_width
-                .store(f32::from_bits(num), Ordering::Relaxed),
-            6 => self
-                .view_focus
-                .store(ViewFocus::from_u32(num), Ordering::Relaxed),
-            7 => self
-                .animation
-                .store(Animation::from_u32(num), Ordering::Relaxed),
-            8 => self.max_y.store(num as i32, Ordering::Relaxed),
-            9 => self.check_surroundings.store(num != 0, Ordering::Relaxed),
-            10 => self
-                .sky_light_threshold
-                .store(num as i32, Ordering::Relaxed),
-            11 => self
-                .player_exclusion_radius
-                .store(num as i32, Ordering::Relaxed),
-            _ => { /* 未定義のインデックス */ }
-        }
+    pub fn set_scan_range(&self, val: i32) {
+        self.scan_range.store(val, Ordering::Relaxed);
+    }
+
+    pub fn set_render_range(&self, val: i32) {
+        self.render_range.store(val, Ordering::Relaxed);
+    }
+
+    pub fn set_render_style(&self, style: RenderStyle) {
+        self.render_style.store(style, Ordering::Relaxed);
+    }
+
+    pub fn set_max_draw_count(&self, val: i32) {
+        self.max_draw_count.store(val, Ordering::Relaxed);
+    }
+
+    pub fn set_line_width(&self, val: f32) {
+        self.line_width.store(val, Ordering::Relaxed);
+    }
+
+    pub fn set_view_focus(&self, focus: ViewFocus) {
+        self.view_focus.store(focus, Ordering::Relaxed);
+    }
+
+    pub fn set_animation(&self, anim: Animation) {
+        self.animation.store(anim, Ordering::Relaxed);
+    }
+
+    pub fn set_max_y(&self, val: i32) {
+        self.max_y.store(val, Ordering::Relaxed);
+    }
+
+    pub fn set_check_surroundings(&self, enabled: bool) {
+        self.check_surroundings.store(enabled, Ordering::Relaxed);
+    }
+
+    pub fn set_sky_light_threshold(&self, val: i32) {
+        self.sky_light_threshold.store(val, Ordering::Relaxed);
+    }
+
+    pub fn set_player_exclusion_radius(&self, val: i32) {
+        self.player_exclusion_radius.store(val, Ordering::Relaxed);
     }
 }
 #[atomic_enum]
@@ -139,4 +153,26 @@ impl Animation {
             _ => Animation::default(),
         }
     }
+}
+
+pub trait SettingsSetter {
+    // リスト更新
+    fn update_highlight_list(buff: &[u64]);
+
+    // 数値・基本設定 (i32)
+    fn set_scan_range(val: i32);
+    fn set_render_range(val: i32);
+    fn set_max_draw_count(val: i32);
+    fn set_max_y(val: i32);
+    fn set_sky_light_threshold(val: i32);
+    fn set_player_exclusion_radius(val: i32);
+
+    // 論理値 (bool)
+    fn set_check_surroundings(enabled: bool);
+
+    // 型変換が必要なもの (u32経由)
+    fn set_line_width_bits(bits: u32);
+    fn set_render_style(ordinal: u32);
+    fn set_view_focus(ordinal: u32);
+    fn set_animation(ordinal: u32);
 }
