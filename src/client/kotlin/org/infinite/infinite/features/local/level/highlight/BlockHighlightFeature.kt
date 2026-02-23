@@ -1,7 +1,5 @@
 package org.infinite.infinite.features.local.level.highlight
 
-import net.minecraft.client.multiplayer.ClientLevel
-import net.minecraft.core.registries.BuiltInRegistries
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.list.BlockAndColorListProperty
@@ -10,6 +8,7 @@ import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
 import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
+import org.infinite.libs.graphics.Graphics3D
 import org.infinite.nativebind.features.local.level.highlight.BlockHighlightFeature as Native
 
 class BlockHighlightFeature : LocalFeature() {
@@ -178,64 +177,61 @@ class BlockHighlightFeature : LocalFeature() {
         refreshNative()
     }
 
-    private var currentScanIndex = 0
+//    private var currentScanIndex = 0
     override fun onEndTick() {
-        val player = player ?: return
-        val level = level ?: return
-
-        // 1. 基本情報を通知 (クリーンアップおよびプレイヤー座標の同期)
-        Native.onTick(player.x, player.y, player.z, level.minY, level.maxY)
-
-        // 2. スキャン範囲の計算
-        val scanRadius = scanRange.value
-        val side = scanRadius * 2 + 1
-        val center = player.chunkPosition()
-
-        // 3. 1ティックに指定されたチャンク数分スキャンを実行
-        // currentScanIndex は Feature 内で保持されている前提
-        repeat(16) {
-            val ox = (currentScanIndex % side) - scanRadius
-            val oz = (currentScanIndex / side) - scanRadius
-
-            scanChunk(level, center.x + ox, center.z + oz)
-
-            currentScanIndex = (currentScanIndex + 1) % (side * side)
-        }
+//        val player = player ?: return
+//        val level = level ?: return
+//
+//        // 1. 基本情報を通知 (クリーンアップおよびプレイヤー座標の同期)
+//        Native.onTick(player.x, player.y, player.z, level.minY, level.maxY)
+//
+//        // 2. スキャン範囲の計算
+//        val scanRadius = scanRange.value
+//        val side = scanRadius * 2 + 1
+//        val center = player.chunkPosition()
+//
+//        // 3. 1ティックに指定されたチャンク数分スキャンを実行
+//        // currentScanIndex は Feature 内で保持されている前提
+//        repeat(16) {
+//            val ox = (currentScanIndex % side) - scanRadius
+//            val oz = (currentScanIndex / side) - scanRadius
+//
+//            scanChunk(level, center.x + ox, center.z + oz)
+//
+//            currentScanIndex = (currentScanIndex + 1) % (side * side)
+//        }
         BlockHighlightRenderer.tick(this)
     }
 
-    // Featureのクラス内で、オフヒープバッファを保持しておく
-
-    private fun scanChunk(level: ClientLevel, targetX: Int, targetZ: Int) {
-        val chunk = level.chunkSource.getChunkNow(targetX, targetZ) ?: return
-
-        chunk.sections.forEachIndexed { yOffset, section ->
-            if (section.hasOnlyAir()) return@forEachIndexed
-
-            val states = section.states
-            val buffer = IntArray(4096)
-
-            for (y in 0 until 16) {
-                for (z in 0 until 16) {
-                    for (x in 0 until 16) {
-                        val state = states.get(x, y, z)
-                        val blockId = BuiltInRegistries.BLOCK.getId(state.block)
-                        val bufferIndex = (y shl 8) or (z shl 4) or x
-                        buffer[bufferIndex] = blockId
-                    }
-                }
-            }
-            Native.pushSectionData(
-                targetX,
-                yOffset + (level.minSectionY), // level.minY shr 4 と同等
-                targetZ,
-                buffer
-            )
-        }
-    }
-//    override fun onLevelRendering(graphics3D: Graphics3D) {
-//        BlockHighlightRenderer.render(graphics3D, this)
+    //    private fun scanChunk(level: ClientLevel, targetX: Int, targetZ: Int) {
+//        val chunk = level.chunkSource.getChunkNow(targetX, targetZ) ?: return
+//        chunk.sections.forEachIndexed { yOffset, section ->
+//            if (section.hasOnlyAir()) return@forEachIndexed
+//
+//            val states = section.states
+//            val buffer = IntArray(4096)
+//
+//            for (y in 0 until 16) {
+//                for (z in 0 until 16) {
+//                    for (x in 0 until 16) {
+//                        val state = states.get(x, y, z)
+//                        val blockId = BuiltInRegistries.BLOCK.getId(state.block)
+//                        val bufferIndex = (y shl 8) or (z shl 4) or x
+//                        buffer[bufferIndex] = blockId
+//                    }
+//                }
+//            }
+//            Native.pushSectionData(
+//                targetX,
+//                yOffset + (level.minSectionY), // level.minY shr 4 と同等
+//                targetZ,
+//                buffer
+//            )
+//        }
 //    }
+    override fun onLevelRendering(graphics3D: Graphics3D) {
+        BlockHighlightRenderer.render(graphics3D, this)
+    }
 
     override fun onEnabled() {
         Native.onEnabled()
@@ -243,6 +239,5 @@ class BlockHighlightFeature : LocalFeature() {
 
     override fun onDisabled() {
         Native.onDisabled()
-        BlockHighlightRenderer.clear()
     }
 }

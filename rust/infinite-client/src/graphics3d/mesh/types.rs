@@ -1,3 +1,4 @@
+use minecraft_rs::glam::DVec3;
 use xross_core::XrossClass;
 
 /// Minecraft coordinates (X: 26bit, Y: 12bit, Z: 26bit) packed into u64.
@@ -10,6 +11,23 @@ pub struct BlockPos {
     pub y: i32,
     #[xross_field]
     pub z: i32,
+}
+
+#[derive(Clone, Copy)]
+pub struct Quad {
+    pub v1: DVec3,
+    pub v2: DVec3,
+    pub v3: DVec3,
+    pub v4: DVec3,
+    pub color: i32,
+    pub normal: (f32, f32, f32),
+}
+
+#[derive(Clone, Copy)]
+pub struct Line {
+    pub start: DVec3,
+    pub end: DVec3,
+    pub color: i32,
 }
 
 impl BlockPos {

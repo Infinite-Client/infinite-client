@@ -1,13 +1,14 @@
 use crate::graphics3d::mesh::BlockMeshGenerator;
+use crate::graphics3d::mesh::types::{Line, Quad};
 
 #[derive(Clone, Default)]
 pub struct BlockMesh {
-    pub quads: Vec<f32>,
-    pub lines: Vec<f32>,
+    pub quads: Vec<Quad>,
+    pub lines: Vec<Line>,
 }
 
 impl BlockMesh {
-    pub fn new(quads: Vec<f32>, lines: Vec<f32>) -> Self {
+    pub fn new(quads: Vec<Quad>, lines: Vec<Line>) -> Self {
         Self { quads, lines }
     }
 
@@ -16,20 +17,6 @@ impl BlockMesh {
     }
 
     pub fn from_generator(generator: &BlockMeshGenerator) -> Self {
-        let quads = unsafe {
-            std::slice::from_raw_parts(
-                generator.get_quad_buffer_ptr(),
-                generator.get_quad_buffer_size(),
-            )
-            .to_vec()
-        };
-        let lines = unsafe {
-            std::slice::from_raw_parts(
-                generator.get_line_buffer_ptr(),
-                generator.get_line_buffer_size(),
-            )
-            .to_vec()
-        };
-        Self::new(quads, lines)
+        Self::new(generator.get_quads(), generator.get_lines())
     }
 }

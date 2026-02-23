@@ -228,14 +228,6 @@ impl BlockHighlightFeature {
             data: buf,
             pos: IVec3::new(cx, cy, cz),
         };
-        {
-            let mesh_length = instance.mesh_cache.read().len();
-            println!("mesh_len: {}", mesh_length);
-            let color_length = instance.color_cache.read().len();
-            println!("color_length: {}", color_length);
-            let render_handler_id = instance.render_handler_id.load(Ordering::Relaxed);
-            println!("render_handler_id: {}", render_handler_id);
-        }
         <Self as BlockHighlightMethods>::push_section_data(instance, &section);
     }
     #[xross_method(critical)]

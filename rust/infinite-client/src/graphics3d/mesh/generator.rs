@@ -1,17 +1,19 @@
+use crate::graphics3d::mesh::types::{Axis, AxisDirection, BlockPos, Direction, Line, Quad};
+use minecraft_rs::glam::DVec3;
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::HashSet;
 use xross_core::{XrossClass, xross_methods};
 
-use crate::graphics3d::mesh::types::{Axis, AxisDirection, BlockPos, Direction};
-
 #[derive(XrossClass, Default)]
 pub struct BlockMeshGenerator {
     blocks: FxHashMap<u64, i32>,
-    line_buffer: Vec<f32>,
-    quad_buffer: Vec<f32>,
+    lines: Vec<Line>,
+    quads: Vec<Quad>,
 }
+
 type Ung = HashSet<((i32, i32, i32), (i32, i32, i32))>;
+
 #[xross_methods]
 impl BlockMeshGenerator {
     #[xross_new(panicable)]
@@ -22,8 +24,16 @@ impl BlockMeshGenerator {
     #[xross_method(critical)]
     pub fn clear(&mut self) {
         self.blocks.clear();
-        self.line_buffer.clear();
-        self.quad_buffer.clear();
+        self.lines.clear();
+        self.quads.clear();
+    }
+
+    pub fn get_quads(&self) -> Vec<Quad> {
+        self.quads.clone()
+    }
+
+    pub fn get_lines(&self) -> Vec<Line> {
+        self.lines.clone()
     }
 
     #[xross_method(critical)]
@@ -66,8 +76,8 @@ impl BlockMeshGenerator {
 
     #[xross_method(panicable)]
     pub fn generate(&mut self) {
-        self.line_buffer.clear();
-        self.quad_buffer.clear();
+        self.lines.clear();
+        self.quads.clear();
 
         if self.blocks.is_empty() {
             return;
@@ -117,9 +127,8 @@ impl BlockMeshGenerator {
             })
             .collect();
 
-        let mut all_quads = Vec::new();
         for (quads, _) in face_results {
-            all_quads.extend(quads);
+            self.quads.extend(quads);
         }
 
         let mut raw_lines = Vec::new();
@@ -130,30 +139,7 @@ impl BlockMeshGenerator {
             self.process_edges_for_pos(&mut raw_lines, &mut unique_lines, pos, color);
         }
 
-        let combined_lines = self.combine_lines(raw_lines);
-
-        self.fill_quad_buffer(&all_quads);
-        self.fill_line_buffer(&combined_lines);
-    }
-
-    #[xross_method(critical)]
-    pub fn get_line_buffer_ptr(&self) -> *const f32 {
-        self.line_buffer.as_ptr()
-    }
-
-    #[xross_method(critical)]
-    pub fn get_line_buffer_size(&self) -> usize {
-        self.line_buffer.len()
-    }
-
-    #[xross_method(critical)]
-    pub fn get_quad_buffer_ptr(&self) -> *const f32 {
-        self.quad_buffer.as_ptr()
-    }
-
-    #[xross_method(critical)]
-    pub fn get_quad_buffer_size(&self) -> usize {
-        self.quad_buffer.len()
+        self.lines = self.combine_lines(raw_lines);
     }
 }
 
@@ -231,51 +217,51 @@ impl BlockMeshGenerator {
             Axis::X => {
                 if dir.axis_direction() == AxisDirection::Positive {
                     (
-                        (plane, v as f64, u as f64),
-                        (plane, (v + h) as f64, u as f64),
-                        (plane, (v + h) as f64, (u + w) as f64),
-                        (plane, v as f64, (u + w) as f64),
+                        DVec3::new(plane, v as f64, u as f64),
+                        DVec3::new(plane, (v + h) as f64, u as f64),
+                        DVec3::new(plane, (v + h) as f64, (u + w) as f64),
+                        DVec3::new(plane, v as f64, (u + w) as f64),
                     )
                 } else {
                     (
-                        (plane, v as f64, u as f64),
-                        (plane, v as f64, (u + w) as f64),
-                        (plane, (v + h) as f64, (u + w) as f64),
-                        (plane, (v + h) as f64, u as f64),
+                        DVec3::new(plane, v as f64, u as f64),
+                        DVec3::new(plane, v as f64, (u + w) as f64),
+                        DVec3::new(plane, (v + h) as f64, (u + w) as f64),
+                        DVec3::new(plane, (v + h) as f64, u as f64),
                     )
                 }
             }
             Axis::Y => {
                 if dir.axis_direction() == AxisDirection::Positive {
                     (
-                        (u as f64, plane, v as f64),
-                        (u as f64, plane, (v + h) as f64),
-                        ((u + w) as f64, plane, (v + h) as f64),
-                        ((u + w) as f64, plane, v as f64),
+                        DVec3::new(u as f64, plane, v as f64),
+                        DVec3::new(u as f64, plane, (v + h) as f64),
+                        DVec3::new((u + w) as f64, plane, (v + h) as f64),
+                        DVec3::new((u + w) as f64, plane, v as f64),
                     )
                 } else {
                     (
-                        (u as f64, plane, v as f64),
-                        ((u + w) as f64, plane, v as f64),
-                        ((u + w) as f64, plane, (v + h) as f64),
-                        (u as f64, plane, (v + h) as f64),
+                        DVec3::new(u as f64, plane, v as f64),
+                        DVec3::new((u + w) as f64, plane, v as f64),
+                        DVec3::new((u + w) as f64, plane, (v + h) as f64),
+                        DVec3::new(u as f64, plane, (v + h) as f64),
                     )
                 }
             }
             Axis::Z => {
                 if dir.axis_direction() == AxisDirection::Positive {
                     (
-                        (u as f64, v as f64, plane),
-                        ((u + w) as f64, v as f64, plane),
-                        ((u + w) as f64, (v + h) as f64, plane),
-                        (u as f64, (v + h) as f64, plane),
+                        DVec3::new(u as f64, v as f64, plane),
+                        DVec3::new((u + w) as f64, v as f64, plane),
+                        DVec3::new((u + w) as f64, (v + h) as f64, plane),
+                        DVec3::new(u as f64, (v + h) as f64, plane),
                     )
                 } else {
                     (
-                        (u as f64, v as f64, plane),
-                        (u as f64, (v + h) as f64, plane),
-                        ((u + w) as f64, (v + h) as f64, plane),
-                        ((u + w) as f64, v as f64, plane),
+                        DVec3::new(u as f64, v as f64, plane),
+                        DVec3::new(u as f64, (v + h) as f64, plane),
+                        DVec3::new((u + w) as f64, (v + h) as f64, plane),
+                        DVec3::new((u + w) as f64, v as f64, plane),
                     )
                 }
             }
@@ -290,7 +276,14 @@ impl BlockMeshGenerator {
             normal,
         }
     }
-    fn process_edges_for_pos(&self, ls: &mut Vec<Line>, unq: &mut Ung, pos: BlockPos, color: i32) {
+
+    fn process_edges_for_pos(
+        &self,
+        ls: &mut Vec<InternalLine>,
+        unq: &mut Ung,
+        pos: BlockPos,
+        color: i32,
+    ) {
         let x = pos.x;
         let y = pos.y;
         let z = pos.z;
@@ -326,9 +319,9 @@ impl BlockMeshGenerator {
                             color
                         };
 
-                        ls.push(Line {
-                            start: (s.0, s.1, s.2),
-                            end: (e.0, e.1, e.2),
+                        ls.push(InternalLine {
+                            start: s,
+                            end: e,
                             color: edge_color,
                         });
                     }
@@ -460,14 +453,14 @@ impl BlockMeshGenerator {
         );
     }
 
-    fn combine_lines(&self, lines: Vec<Line>) -> Vec<Line> {
+    fn combine_lines(&self, lines: Vec<InternalLine>) -> Vec<Line> {
         let mut result = Vec::new();
         if lines.is_empty() {
             return result;
         }
 
         for axis_idx in 0..3 {
-            let mut grouped: FxHashMap<(i32, i32, i32), Vec<Line>> = FxHashMap::default();
+            let mut grouped: FxHashMap<(i32, i32, i32), Vec<InternalLine>> = FxHashMap::default();
             for l in &lines {
                 let is_axis = match axis_idx {
                     0 => l.start.1 == l.end.1 && l.start.2 == l.end.2,
@@ -502,8 +495,8 @@ impl BlockMeshGenerator {
                         cur_e = l.end;
                     } else {
                         result.push(Line {
-                            start: cur_s,
-                            end: cur_e,
+                            start: DVec3::new(cur_s.0 as f64, cur_s.1 as f64, cur_s.2 as f64),
+                            end: DVec3::new(cur_e.0 as f64, cur_e.1 as f64, cur_e.2 as f64),
                             color: cur_c,
                         });
                         cur_s = l.start;
@@ -513,57 +506,18 @@ impl BlockMeshGenerator {
                 });
 
                 result.push(Line {
-                    start: cur_s,
-                    end: cur_e,
+                    start: DVec3::new(cur_s.0 as f64, cur_s.1 as f64, cur_s.2 as f64),
+                    end: DVec3::new(cur_e.0 as f64, cur_e.1 as f64, cur_e.2 as f64),
                     color: cur_c,
                 });
             }
         }
         result
     }
-
-    fn fill_quad_buffer(&mut self, quads: &[Quad]) {
-        for q in quads {
-            let vertices = [q.v1, q.v2, q.v3, q.v4];
-            for v in vertices {
-                self.quad_buffer.push(v.0 as f32);
-                self.quad_buffer.push(v.1 as f32);
-                self.quad_buffer.push(v.2 as f32);
-                self.quad_buffer.push(f32::from_bits(q.color as u32));
-                self.quad_buffer.push(q.normal.0);
-                self.quad_buffer.push(q.normal.1);
-                self.quad_buffer.push(q.normal.2);
-            }
-        }
-    }
-
-    fn fill_line_buffer(&mut self, lines: &[Line]) {
-        for l in lines {
-            self.line_buffer.push(l.start.0 as f32);
-            self.line_buffer.push(l.start.1 as f32);
-            self.line_buffer.push(l.start.2 as f32);
-            self.line_buffer.push(f32::from_bits(l.color as u32));
-
-            self.line_buffer.push(l.end.0 as f32);
-            self.line_buffer.push(l.end.1 as f32);
-            self.line_buffer.push(l.end.2 as f32);
-            self.line_buffer.push(f32::from_bits(l.color as u32));
-        }
-    }
 }
 
 #[derive(Clone, Copy)]
-struct Quad {
-    v1: (f64, f64, f64),
-    v2: (f64, f64, f64),
-    v3: (f64, f64, f64),
-    v4: (f64, f64, f64),
-    color: i32,
-    normal: (f32, f32, f32),
-}
-
-#[derive(Clone, Copy)]
-struct Line {
+struct InternalLine {
     start: (i32, i32, i32),
     end: (i32, i32, i32),
     color: i32,

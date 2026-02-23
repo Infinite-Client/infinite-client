@@ -266,8 +266,8 @@ pub fn mgpu3d_process(
         cam_z,
         window_width,
         window_height,
-        position_matrix_buffer,
-        model_matrix_buffer,
+        model_matrix_buffer,    // Projection
+        position_matrix_buffer, // ModelView
     );
     MinecraftGpu3dSystem::process()
 }

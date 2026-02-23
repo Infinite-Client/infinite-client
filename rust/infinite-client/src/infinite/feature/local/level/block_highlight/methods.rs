@@ -135,10 +135,10 @@ impl GpuHandler for BlockHighlightFeature {
         let matrixes = mgpu3d.matrixes();
         let camera_pos = matrixes.camera_position;
 
-        let look_vec = DVec3::new(
-            -matrixes.model_view.z_axis.x,
-            -matrixes.model_view.z_axis.y,
-            -matrixes.model_view.z_axis.z,
+        let look_vec = -DVec3::new(
+            matrixes.model_view.x_axis.z,
+            matrixes.model_view.y_axis.z,
+            matrixes.model_view.z_axis.z,
         );
 
         let settings = &self.settings;
@@ -164,7 +164,8 @@ impl GpuHandler for BlockHighlightFeature {
 
                 let diff = section_center - camera_pos;
                 let dist_sq = diff.length_squared();
-                if dist_sq > render_range_sq * 4.0 {
+                // 描画候補リストへの追加を render_range 基準にする
+                if dist_sq > render_range_sq {
                     continue;
                 }
 
@@ -192,7 +193,8 @@ impl GpuHandler for BlockHighlightFeature {
             }
         }
 
-        render_list.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        // 透明描画（depth_test: false）の場合、奥から手前に描画する必要があるため、昇順ソート
+        render_list.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let mut total_drawn: usize = 0; // 型を明示
         let max_count = settings.max_draw_count.load(Ordering::Relaxed);
@@ -216,23 +218,6 @@ impl GpuHandler for BlockHighlightFeature {
                     continue;
                 }
 
-                // --- 2. 距離によるハードカット (透明メッシュ防止) ---
-                // settings.render_range を超えているものは描画命令すら出さない
-                let dist_sq = {
-                    let camera_pos = mgpu3d.matrixes().camera_position;
-                    let section_center = DVec3::new(
-                        (sp.x << 4) as f64 + 8.0,
-                        (sp.y << 4) as f64 + 8.0,
-                        (sp.z << 4) as f64 + 8.0,
-                    );
-                    (section_center - camera_pos).length_squared()
-                };
-
-                if dist_sq > (render_range_sq * 1.2) {
-                    // 遊びを持たせてカット
-                    continue;
-                }
-
                 // --- 3. アニメーション/アルファの最終チェック ---
                 let alpha = self.calculate_animation_alpha(sp, now);
                 if alpha <= 0.005 {
@@ -241,29 +226,25 @@ impl GpuHandler for BlockHighlightFeature {
                 }
                 // --- Quad (Faces) 描画 ---
                 if style != RenderStyle::Lines {
-                    for q in mesh.quads.chunks_exact(28) {
-                        let v1 = DVec3::new(q[0] as f64, q[1] as f64, q[2] as f64);
-                        let v2 = DVec3::new(q[7] as f64, q[8] as f64, q[9] as f64);
-                        let v3 = DVec3::new(q[14] as f64, q[15] as f64, q[16] as f64);
-                        let v4 = DVec3::new(q[21] as f64, q[22] as f64, q[23] as f64);
-                        let color = Color::from(q[3]).alpha(alpha);
+                    for q in &mesh.quads {
+                        let color = Color::from(q.color).alpha(alpha);
                         if color.a == 0 {
                             continue;
                         }
-                        mgpu3d.quad_fill(v1, v2, v3, v4, color.into(), false);
+                        // 面の描画が不安定な場合、三角形2つに分けることも検討できますが、
+                        // 一旦 quad_fill をそのまま使い、頂点順序を generator 側で保証します。
+                        mgpu3d.quad_fill(q.v1, q.v2, q.v3, q.v4, color.into(), false);
                     }
                 }
 
                 // --- Line 描画 ---
                 if style != RenderStyle::Faces {
-                    for l in mesh.lines.chunks_exact(8) {
-                        let start = DVec3::new(l[0] as f64, l[1] as f64, l[2] as f64);
-                        let end = DVec3::new(l[4] as f64, l[5] as f64, l[6] as f64);
-                        let color = Color::from(l[3]).alpha(alpha);
+                    for l in &mesh.lines {
+                        let color = Color::from(l.color).alpha(alpha);
                         if color.a == 0 {
                             continue;
                         }
-                        mgpu3d.line(start, end, color.into(), line_width, false);
+                        mgpu3d.line(l.start, l.end, color.into(), line_width, false);
                     }
                 }
                 // usize を i32 にキャストして加算
