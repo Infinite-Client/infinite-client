@@ -1,5 +1,6 @@
 package org.infinite.infinite.features.local.level.highlight
 
+import net.minecraft.client.multiplayer.ClientLevel
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.list.BlockAndColorListProperty
@@ -176,15 +177,80 @@ class BlockHighlightFeature : LocalFeature() {
     override fun onConnected() {
         refreshNative()
     }
+
+    private val scanBuffer = IntArray(4096)
+    private var currentScanIndex = 0
     override fun onEndTick() {
+        val player = player ?: return
+        val level = level ?: return
+
+        // 1. 基本情報を通知 (クリーンアップおよびプレイヤー座標の同期)
+        Native.onTick(player.x, player.y, player.z, level.minY, level.maxY)
+
+        // 2. スキャン範囲の計算
+        val scanRadius = scanRange.value
+        val side = scanRadius * 2 + 1
+        val center = player.chunkPosition()
+
+        // 3. 1ティックに指定されたチャンク数分スキャンを実行
+        // currentScanIndex は Feature 内で保持されている前提
+        repeat(16) {
+            val ox = (currentScanIndex % side) - scanRadius
+            val oz = (currentScanIndex / side) - scanRadius
+
+            scanChunk(level, center.x + ox, center.z + oz)
+
+            currentScanIndex = (currentScanIndex + 1) % (side * side)
+        }
         BlockHighlightRenderer.tick(this)
+    }
+
+    private fun scanChunk(level: ClientLevel, targetX: Int, targetZ: Int) {
+        val chunk = level.chunkSource.getChunkNow(targetX, targetZ) ?: return
+
+        chunk.sections.forEachIndexed { yOffset, section ->
+            // 空気のみのセクションはスキップ
+            if (!section.hasOnlyAir()) {
+                val container = section.states
+                val data = container.data
+                val palette = data.palette
+                val storage = data.storage
+
+                // 1. パレット変換テーブルの作成 (ループ回数を最小化)
+                val paletteSize = palette.size
+                val idMapping = IntArray(paletteSize)
+                for (i in 0 until paletteSize) {
+                    idMapping[i] = net.minecraft.world.level.block.Block.getId(palette.valueFor(i))
+                }
+
+                // 2. パッキングを一括解除 (インデックスが scanBuffer に入る)
+                storage.unpack(scanBuffer)
+
+                // 3. マッピングテーブルを適用して Block ID へ置換
+                for (i in 0 until 4096) {
+                    scanBuffer[i] = idMapping[scanBuffer[i]]
+                }
+
+                // 4. Rust 側へ一括送信
+                Native.pushSectionData(
+                    targetX,
+                    yOffset + (level.minY shr 4), // 絶対セクションY座標
+                    targetZ,
+                    scanBuffer,
+                )
+            }
+        }
     }
 
     override fun onLevelRendering(graphics3D: Graphics3D) {
         BlockHighlightRenderer.render(graphics3D, this)
     }
 
+    override fun onEnabled() {
+        Native.onEnabled()
+    }
     override fun onDisabled() {
+        Native.onDisabled()
         BlockHighlightRenderer.clear()
     }
 }

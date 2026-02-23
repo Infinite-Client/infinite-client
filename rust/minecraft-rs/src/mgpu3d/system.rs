@@ -41,6 +41,7 @@ static MINECRAFT_GPU_3D_SYSTEM: LazyLock<MinecraftGpu3dSystem> =
     LazyLock::new(MinecraftGpu3dSystem::default);
 
 impl MinecraftGpu3dSystem {
+    pub const INVALID_HANDLER_ID: usize = usize::MAX;
     pub fn add_handler(handler: Box<dyn GpuHandler>) -> usize {
         MINECRAFT_GPU_3D_SYSTEM
             .handler_manager

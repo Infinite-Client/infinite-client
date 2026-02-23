@@ -61,3 +61,6 @@ extendable method net/minecraft/client/gui/render/state/GuiItemRenderState calcu
 mutable field net/minecraft/client/gui/Font splitter Lnet/minecraft/client/StringSplitter;
 mutable field net/minecraft/client/gui/components/ChatComponent allMessages Ljava/util/List;
 accessible method net/minecraft/client/renderer/GameRenderer getFov (Lnet/minecraft/client/Camera;FZ)F
+accessible field net/minecraft/world/level/chunk/PalettedContainer data Lnet/minecraft/world/level/chunk/PalettedContainer$Data;
+accessible field net/minecraft/world/level/chunk/PalettedContainer$Data storage Lnet/minecraft/util/BitStorage;
+accessible field net/minecraft/world/level/chunk/PalettedContainer$Data palette Lnet/minecraft/world/level/chunk/Palette;
