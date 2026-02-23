@@ -25,9 +25,14 @@ impl BlockHighlightMethods for BlockHighlightFeature {
         let color_map = self.color_cache.read();
         let mut found_blocks: FxHashMap<IVec3, i32> = FxHashMap::default();
 
+        // 1. スキャンとフィルタリング
         for i in 0..4096 {
             let block_id = section.data[i];
-            if let Some(color) = color_map.get(&block_id) {
+
+            // color_map に存在し、かつ Alpha が 0 でない場合のみ抽出
+            if let Some(color) = color_map.get(&block_id)
+                && color.a > 0
+            {
                 let x = (i & 0xF) as i32;
                 let z = ((i >> 4) & 0xF) as i32;
                 let y = ((i >> 8) & 0xF) as i32;
@@ -37,60 +42,74 @@ impl BlockHighlightMethods for BlockHighlightFeature {
                     (section.pos.y << 4) + y,
                     (section.pos.z << 4) + z,
                 );
+                // メッシュ生成時に透明度計算をやり直すため、
+                // ここでは元の色（Alpha込）をそのまま入れる
                 found_blocks.insert(abs_pos, color.into_raw());
             }
         }
 
-        let mut pos_writer = self.block_positions.write();
-        let current_entry = pos_writer.get(&section.pos);
-
-        // --- ここで変更判定とメッシュ生成 ---
-        if current_entry != Some(&found_blocks) {
-            if found_blocks.is_empty() {
-                pos_writer.remove(&section.pos);
-                self.mesh_cache.write().remove(&section.pos);
-                self.section_first_seen.write().remove(&section.pos);
-            } else {
-                // 1. 新しいブロックデータを保存
-                pos_writer.insert(section.pos, found_blocks.clone());
-
-                // 2. その場でメッシュを生成
-                // found_blocks をそのまま generator に渡す
-                let mesh = self.generate_mesh_from_map(&found_blocks);
-
-                // 3. メッシュキャッシュを更新
-                self.mesh_cache.write().insert(section.pos, mesh);
-
-                // 4. アニメーション開始時刻のセット
-                self.section_first_seen
-                    .write()
-                    .entry(section.pos)
-                    .or_insert_with(Instant::now);
-            }
-        }
-    }
-    fn on_tick(&self, player_pos: IVec3, _min_y: i32, _max_y: i32) {
-        // 1. クリーニング判定 (一定間隔、または距離)
-        // プレイヤーから離れすぎたキャッシュを削除してメモリを解放する
-        let scan_range = self.settings.scan_range.load(Ordering::Relaxed);
-        let player_chunk = IVec3::new(player_pos.x >> 4, 0, player_pos.z >> 4);
-
-        // scan_range + アルファ (余裕分) を超えたデータを消す
-        let threshold = scan_range + 2;
-
-        // 書き込みロックを取得して一括クリーニング
+        // 2. キャッシュの更新判定
         let mut pos_writer = self.block_positions.write();
         let mut mesh_writer = self.mesh_cache.write();
         let mut seen_writer = self.section_first_seen.write();
 
-        // プレイヤーから遠いセクションを特定して削除
-        pos_writer.retain(|sp, _| {
-            let dist_x = (sp.x - player_chunk.x).abs();
-            let dist_z = (sp.z - player_chunk.z).abs();
+        if found_blocks.is_empty() {
+            // 有効なブロックが一つもなければ、当該セクションのキャッシュをすべて破棄
+            if pos_writer.remove(&section.pos).is_some() {
+                mesh_writer.remove(&section.pos);
+                seen_writer.remove(&section.pos);
+            }
+            return;
+        }
 
-            let keep = dist_x <= threshold && dist_z <= threshold;
+        // 前回のデータと比較して変更がある場合のみ、重い処理（メッシュ生成）を行う
+        let is_changed = match pos_writer.get(&section.pos) {
+            Some(old) => old != &found_blocks,
+            None => true,
+        };
+
+        if is_changed {
+            // メッシュ生成の前にデータを確定させる
+            pos_writer.insert(section.pos, found_blocks.clone());
+
+            // メッシュ生成（Alpha > 0 のブロックのみが含まれるため、透明な線は生成されない）
+            let mesh = self.generate_mesh_from_map(&found_blocks);
+
+            if mesh.is_empty() {
+                mesh_writer.remove(&section.pos);
+            } else {
+                mesh_writer.insert(section.pos, mesh);
+                // 新規発見時のみアニメーション時刻を記録
+                seen_writer.entry(section.pos).or_insert_with(Instant::now);
+            }
+        }
+    }
+    fn on_tick(&self, player_pos: IVec3, _min_y: i32, _max_y: i32) {
+        // 削除の閾値は scan_range ではなく、render_range を基準にするのが安全です
+        let render_range = self.settings.render_range.load(Ordering::Relaxed);
+        // セクション単位の距離に変換 (1セクション=16ブロック)
+        let threshold = (render_range / 16) + 2;
+
+        // プレイヤーの現在セクション座標 (X, Y, Z すべて取得)
+        let px = player_pos.x >> 4;
+        let py = player_pos.y >> 4;
+        let pz = player_pos.z >> 4;
+
+        let mut pos_writer = self.block_positions.write();
+        let mut mesh_writer = self.mesh_cache.write();
+        let mut seen_writer = self.section_first_seen.write();
+
+        // 削除対象のキーを一旦収集（借用の競合を避けるため）
+        pos_writer.retain(|sp, _| {
+            let dist_x = (sp.x - px).abs();
+            let dist_y = (sp.y - py).abs(); // Y軸の差も計算に含める
+            let dist_z = (sp.z - pz).abs();
+
+            // X, Y, Z すべてにおいて範囲内にあるものだけ残す
+            let keep = dist_x <= threshold && dist_y <= threshold && dist_z <= threshold;
 
             if !keep {
+                // 範囲外なら関連するキャッシュをすべて削除
                 mesh_writer.remove(sp);
                 seen_writer.remove(sp);
             }
@@ -175,27 +194,51 @@ impl GpuHandler for BlockHighlightFeature {
 
         render_list.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-        let mut total_drawn: i32 = 0; // 型を明示
+        let mut total_drawn: usize = 0; // 型を明示
         let max_count = settings.max_draw_count.load(Ordering::Relaxed);
         let line_width = settings.line_width.load(Ordering::Relaxed);
 
-                {
-                    let block_positions = self.block_positions.read();
-                    let mesh_cache = self.mesh_cache.read();
-        
-                    for (sp, _) in render_list {                if total_drawn > max_count {
+        {
+            let block_positions = self.block_positions.read();
+            let mesh_cache = self.mesh_cache.read();
+
+            for (sp, _) in render_list {
+                if total_drawn > max_count as usize {
                     break;
                 }
-
+                // --- 1. キャッシュの存在確認 (on_tick で消された直後の対策) ---
+                // ここで read lock を取得し、確実に存在する場合のみ続行
                 let Some(mesh) = mesh_cache.get(&sp) else {
                     continue;
                 };
+
                 if mesh.is_empty() {
                     continue;
                 }
 
-                let alpha = self.calculate_animation_alpha(sp, now);
+                // --- 2. 距離によるハードカット (透明メッシュ防止) ---
+                // settings.render_range を超えているものは描画命令すら出さない
+                let dist_sq = {
+                    let camera_pos = mgpu3d.matrixes().camera_position;
+                    let section_center = DVec3::new(
+                        (sp.x << 4) as f64 + 8.0,
+                        (sp.y << 4) as f64 + 8.0,
+                        (sp.z << 4) as f64 + 8.0,
+                    );
+                    (section_center - camera_pos).length_squared()
+                };
 
+                if dist_sq > (render_range_sq * 1.2) {
+                    // 遊びを持たせてカット
+                    continue;
+                }
+
+                // --- 3. アニメーション/アルファの最終チェック ---
+                let alpha = self.calculate_animation_alpha(sp, now);
+                if alpha <= 0.005 {
+                    // ほぼ透明ならスキップ
+                    continue;
+                }
                 // --- Quad (Faces) 描画 ---
                 if style != RenderStyle::Lines {
                     for q in mesh.quads.chunks_exact(28) {
@@ -203,10 +246,11 @@ impl GpuHandler for BlockHighlightFeature {
                         let v2 = DVec3::new(q[7] as f64, q[8] as f64, q[9] as f64);
                         let v3 = DVec3::new(q[14] as f64, q[15] as f64, q[16] as f64);
                         let v4 = DVec3::new(q[21] as f64, q[22] as f64, q[23] as f64);
-
-                        // q[3] (f32) -> u32 (bits) -> Color -> 修正Color -> u32
-                        let color = Self::apply_alpha_to_color_bits(q[3].to_bits(), alpha);
-                        mgpu3d.quad_fill(v1, v2, v3, v4, color, true);
+                        let color = Color::from(q[3]).alpha(alpha);
+                        if color.a == 0 {
+                            continue;
+                        }
+                        mgpu3d.quad_fill(v1, v2, v3, v4, color.into(), false);
                     }
                 }
 
@@ -215,26 +259,18 @@ impl GpuHandler for BlockHighlightFeature {
                     for l in mesh.lines.chunks_exact(8) {
                         let start = DVec3::new(l[0] as f64, l[1] as f64, l[2] as f64);
                         let end = DVec3::new(l[4] as f64, l[5] as f64, l[6] as f64);
-
-                        let color = Self::apply_alpha_to_color_bits(l[3].to_bits(), alpha);
-                        mgpu3d.line(start, end, color, line_width, true);
+                        let color = Color::from(l[3]).alpha(alpha);
+                        if color.a == 0 {
+                            continue;
+                        }
+                        mgpu3d.line(start, end, color.into(), line_width, false);
                     }
                 }
-
                 // usize を i32 にキャストして加算
                 if let Some(blocks) = block_positions.get(&sp) {
-                    total_drawn += blocks.len() as i32;
+                    total_drawn += blocks.len();
                 }
             }
         }
-    }
-}
-
-impl BlockHighlightFeature {
-    /// u32(bits)の色情報にアルファ倍率を適用して u32 で返す
-    fn apply_alpha_to_color_bits(color_bits: u32, alpha_multiplier: f32) -> u32 {
-        let mut color = Color::from(color_bits);
-        color.a = ((color.a as f32) * alpha_multiplier).round() as u8;
-        color.into() // Color -> u32 (From実装を利用)
     }
 }

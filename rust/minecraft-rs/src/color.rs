@@ -1,5 +1,6 @@
 use xross_core::XrossClass;
 
+#[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, XrossClass)]
 #[xross_package("color")]
 pub struct Color {
@@ -28,21 +29,25 @@ impl From<Color> for u32 {
 impl From<Color> for i32 {
     fn from(color: Color) -> i32 {
         let unsigned: u32 = color.into();
-        i32::from_ne_bytes(unsigned.to_ne_bytes())
+        unsigned as i32
     }
 }
 impl From<i32> for Color {
     fn from(int: i32) -> Self {
-        let bytes = u32::from_ne_bytes(int.to_ne_bytes());
-        bytes.into()
+        (int as u32).into()
+    }
+}
+impl From<f32> for Color{
+    fn from(float: f32) -> Self {
+        float.to_bits().into()
     }
 }
 impl From<u32> for Color {
     fn from(bytes: u32) -> Self {
-        let a = (bytes >> 24) as u8; // 最上位8ビット
-        let r = (bytes >> 16) as u8; // 次の8ビット
-        let g = (bytes >> 8) as u8; // 次の8ビット
-        let b = (bytes & 0xFF) as u8; // 最下位8ビット
+        let a = (bytes >> 24) as u8;
+        let r = (bytes >> 16) as u8;
+        let g = (bytes >> 8) as u8;
+        let b = (bytes & 0xFF) as u8;
         Self { a, r, g, b }
     }
 }
@@ -82,5 +87,13 @@ impl Color {
             b: lerp(self.b, other.b, t),
             a: lerp(self.a, other.a, t),
         }
+    }
+    pub fn alpha(&self, alpha: f32) -> Self {
+        let a = 255.0 * alpha.clamp(0.0, 1.0);
+        let a = a as u8;
+        let r = self.r;
+        let g = self.g;
+        let b = self.b;
+        Self::new(a, r, g, b)
     }
 }

@@ -38,6 +38,12 @@ class RenderSystem3D(
     private val bufferSource = minecraft.renderBuffers().bufferSource()
     private val quadRenderer = QuadRenderer(bufferSource)
     private val texturedRenderer = TexturedRenderer(bufferSource)
+    private val usedRenderTypes = LinkedHashSet<RenderType>()
+
+    private fun use(renderType: RenderType): RenderType {
+        usedRenderTypes.add(renderType)
+        return renderType
+    }
 
     /**
      * レンダリングスレッドから計算スレッドへ渡すための安全なスナップショット
@@ -81,7 +87,6 @@ class RenderSystem3D(
     }
 
     fun render(commands: List<RenderCommand3D>) {
-        val usedRenderTypes = LinkedHashSet<RenderType>()
         commands.forEach { c ->
             when (c) {
                 is RenderCommand3D.Line -> drawLine(c.from, c.to, c.color, c.size, c.depthTest)
@@ -91,10 +96,7 @@ class RenderSystem3D(
                 is RenderCommand3D.QuadFill -> drawQuadFill(c.a, c.b, c.c, c.d, c.color, c.depthTest)
 
                 is RenderCommand3D.QuadFillGradient -> {
-                    val renderType = RenderLayers.quads(c.depthTest)
-                    quadRenderer.drawQuad(
-                        renderType,
-                        Matrix4f(), // Unit matrix
+                    drawQuadFill(
                         c.a,
                         c.b,
                         c.c,
@@ -103,23 +105,16 @@ class RenderSystem3D(
                         c.colorB,
                         c.colorC,
                         c.colorD,
+                        c.depthTest,
                     )
-                    usedRenderTypes.add(renderType)
                 }
 
                 is RenderCommand3D.QuadTextured -> {
-                    val renderType = RenderTypes.entityTranslucent(c.texture)
-                    texturedRenderer.drawQuad(
-                        renderType,
-                        Matrix4f(), // Unit matrix
-                        c.a,
-                        c.b,
-                        c.c,
-                        c.d,
-                        OverlayTexture.NO_OVERLAY,
-                        LightTexture.FULL_BRIGHT,
+                    drawQuadTextured(
+                        c.a, c.b, c.c, c.d,
+                        c.texture,
+                        c.depthTest,
                     )
-                    usedRenderTypes.add(renderType)
                 }
 
                 is RenderCommand3D.Triangle -> drawTriangle(c.a, c.b, c.c, c.color, c.depthTest)
@@ -127,39 +122,30 @@ class RenderSystem3D(
                 is RenderCommand3D.TriangleFill -> drawTriangleFill(c.a, c.b, c.c, c.color, c.depthTest)
 
                 is RenderCommand3D.TriangleFillGradient -> {
-                    val renderType = RenderLayers.quads(c.depthTest)
-                    quadRenderer.drawTriangle(
-                        renderType,
-                        Matrix4f(), // Unit matrix
+                    drawTriangleFill(
                         c.a,
                         c.b,
                         c.c,
                         c.colorA,
                         c.colorB,
                         c.colorC,
+                        c.depthTest,
                     )
-                    usedRenderTypes.add(renderType)
                 }
 
                 is RenderCommand3D.TriangleTextured -> {
-                    val renderType = RenderTypes.entityTranslucent(c.texture)
-                    texturedRenderer.drawTriangle(
-                        renderType,
-                        Matrix4f(), // Unit matrix
-                        c.a,
-                        c.b,
-                        c.c,
-                        OverlayTexture.NO_OVERLAY,
-                        LightTexture.FULL_BRIGHT,
+                    drawTriangleTextured(
+                        c.a, c.b, c.c,
+                        c.texture,
+                        c.depthTest,
                     )
-                    usedRenderTypes.add(renderType)
                 }
 
                 is RenderCommand3D.MeshBuffer -> {
                     val modelViewMatrix = c.matrix
                     // 1. Lines Rendering
                     c.lineBuffer?.let { buffer ->
-                        val renderType = RenderLayers.lines(false)
+                        val renderType = use(RenderLayers.lines(false))
                         val consumer = bufferSource.getBuffer(renderType)
                         var cursor = 0L
                         while (cursor < c.lineBufferSize) {
@@ -182,12 +168,11 @@ class RenderSystem3D(
                                 .setLineWidth(2.0f)
                             cursor += 7
                         }
-                        usedRenderTypes.add(renderType)
                     }
 
                     // 2. Quads Rendering
                     c.quadBuffer?.let { buffer ->
-                        val renderType = RenderLayers.quads(false)
+                        val renderType = use(RenderLayers.quads(false))
                         val consumer = bufferSource.getBuffer(renderType)
                         var cursor = 0L
                         while (cursor < c.quadBufferSize) {
@@ -216,15 +201,18 @@ class RenderSystem3D(
                             consumer.addVertex(modelViewMatrix, x4, y4, z4).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
                             cursor += 13
                         }
-                        usedRenderTypes.add(renderType)
                     }
                 }
             }
         }
+    }
+
+    fun finish() {
         if (usedRenderTypes.isNotEmpty()) {
             for (renderType in usedRenderTypes) {
                 bufferSource.endBatch(renderType)
             }
+            usedRenderTypes.clear()
         }
     }
 
@@ -239,13 +227,31 @@ class RenderSystem3D(
         }
     }
 
-    fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) = drawTriangle(a, b, c, color, color, color, depthTest)
+    fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) =
+        drawTriangle(a, b, c, color, color, color, depthTest)
 
     fun drawTriangleFill(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
         val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addTriangleFan(arrayOf(a, b, c), color) }
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
+    }
+
+    fun drawTriangleFill(
+        a: Vec3,
+        b: Vec3,
+        c: Vec3,
+        colorA: Int,
+        colorB: Int,
+        colorC: Int,
+        depthTest: Boolean = true,
+    ) {
+        val renderType = use(RenderLayers.quads(depthTest))
+        quadRenderer.drawTriangle(
+            renderType,
+            positionMatrix,
+            a, b, c, colorA, colorB, colorC,
+        )
     }
 
     fun drawQuad(
@@ -269,10 +275,10 @@ class RenderSystem3D(
         identifier: Identifier,
         depthTest: Boolean = true,
     ) {
-        val renderType = RenderTypes.entityTranslucent(identifier)
+        val renderType = use(RenderTypes.entityTranslucent(identifier))
         texturedRenderer.drawTriangle(
             renderType,
-            Matrix4f(), // 単位行列（頂点データが絶対座標の場合）
+            positionMatrix, // 単位行列（頂点データが絶対座標の場合）
             va,
             vb,
             vc,
@@ -292,10 +298,10 @@ class RenderSystem3D(
         colorD: Int,
         depthTest: Boolean = true,
     ) {
-        val renderType = RenderLayers.quads(depthTest)
+        val renderType = use(RenderLayers.quads(depthTest))
         quadRenderer.drawQuad(
             renderType,
-            Matrix4f(),
+            positionMatrix,
             a, b, c, d, colorA, colorB, colorC, colorD,
         )
     }
@@ -317,10 +323,10 @@ class RenderSystem3D(
         identifier: Identifier,
         depthTest: Boolean,
     ) {
-        val renderType = RenderTypes.entityTranslucent(identifier)
+        val renderType = use(RenderTypes.entityTranslucent(identifier))
         texturedRenderer.drawQuad(
             renderType,
-            Matrix4f(),
+            positionMatrix,
             va,
             vb,
             vc,

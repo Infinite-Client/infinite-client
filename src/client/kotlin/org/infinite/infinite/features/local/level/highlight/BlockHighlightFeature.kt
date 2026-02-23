@@ -1,6 +1,7 @@
 package org.infinite.infinite.features.local.level.highlight
 
 import net.minecraft.client.multiplayer.ClientLevel
+import net.minecraft.core.registries.BuiltInRegistries
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.list.BlockAndColorListProperty
@@ -9,8 +10,6 @@ import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
 import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
-import java.lang.foreign.Arena
-import java.lang.foreign.ValueLayout
 import org.infinite.nativebind.features.local.level.highlight.BlockHighlightFeature as Native
 
 class BlockHighlightFeature : LocalFeature() {
@@ -206,34 +205,32 @@ class BlockHighlightFeature : LocalFeature() {
     }
 
     // Featureのクラス内で、オフヒープバッファを保持しておく
-    private val arena = Arena.ofAuto()
-    private val nativeScanBuffer = arena.allocate(ValueLayout.JAVA_INT, 4096)
 
     private fun scanChunk(level: ClientLevel, targetX: Int, targetZ: Int) {
         val chunk = level.chunkSource.getChunkNow(targetX, targetZ) ?: return
 
         chunk.sections.forEachIndexed { yOffset, section ->
-            if (!section.hasOnlyAir()) {
-                val container = section.states
-                // 1. 安全に 4096 個の BlockState インデックスを取得
-                // PalettedContainer.getAll(consumer) または手動展開を使用
-                for (i in 0 until 4096) {
-                    // (i & 15, (i shr 8) & 15, (i shr 4) & 15) は一般的な YZX 配列順
-                    val state = container.get(i and 15, (i shr 8) and 15, (i shr 4) and 15)
-                    val blockId = net.minecraft.world.level.block.Block.getId(state)
+            if (section.hasOnlyAir()) return@forEachIndexed
 
-                    // オフヒープバッファに直接書き込む
-                    nativeScanBuffer.setAtIndex(ValueLayout.JAVA_INT, i.toLong(), blockId)
+            val states = section.states
+            val buffer = IntArray(4096)
+
+            for (y in 0 until 16) {
+                for (z in 0 until 16) {
+                    for (x in 0 until 16) {
+                        val state = states.get(x, y, z)
+                        val blockId = BuiltInRegistries.BLOCK.getId(state.block)
+                        val bufferIndex = (y shl 8) or (z shl 4) or x
+                        buffer[bufferIndex] = blockId
+                    }
                 }
-                val data = nativeScanBuffer.toArray(ValueLayout.JAVA_INT)
-                // 2. Rust 側へ送信 (MemorySegment をそのまま渡す)
-                Native.pushSectionData(
-                    targetX,
-                    yOffset + (level.minY shr 4),
-                    targetZ,
-                    data,
-                )
             }
+            Native.pushSectionData(
+                targetX,
+                yOffset + (level.minSectionY), // level.minY shr 4 と同等
+                targetZ,
+                buffer
+            )
         }
     }
 //    override fun onLevelRendering(graphics3D: Graphics3D) {

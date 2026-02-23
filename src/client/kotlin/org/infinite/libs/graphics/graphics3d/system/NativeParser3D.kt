@@ -80,7 +80,7 @@ class NativeParser3D(private val buffer: XrossByteArrayView) {
         val colorB = readInt()
         val colorC = readInt()
         val depthTest = readBoolean()
-        system3D.drawTriangle(a, b, c, colorA, colorB, colorC, depthTest)
+        system3D.drawTriangleFill(a, b, c, colorA, colorB, colorC, depthTest)
     }
 
     private fun parseQuad(system3D: RenderSystem3D, fill: Boolean) {
