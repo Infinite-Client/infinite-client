@@ -12,7 +12,6 @@ import org.infinite.libs.graphics.graphics3d.RenderSystem3D
 import org.infinite.libs.graphics.graphics3d.system.NativeParser3D
 import org.infinite.libs.graphics.system.ProjectionData
 import org.infinite.libs.interfaces.MinecraftInterface
-import org.infinite.libs.log.LogSystem
 import org.infinite.libs.minecraft.aim.AimSystem
 import org.joml.Matrix4d
 import org.joml.Matrix4f
@@ -152,7 +151,6 @@ object RenderTicks : MinecraftInterface() {
             posArrayShared,
             projArrayShared,
         ) { buffer ->
-            LogSystem.log("${buffer.size}")
             val parser = NativeParser3D(buffer)
             parser.process(renderSystem3D)
         }

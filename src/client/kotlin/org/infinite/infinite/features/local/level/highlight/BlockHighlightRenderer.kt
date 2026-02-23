@@ -23,7 +23,7 @@ object BlockHighlightRenderer {
     private var lastSettingsHash = 0
     private val colorCache = mutableMapOf<String, Int>()
 
-    private fun getColorForBlock(id: Identifier, feature: BlockHighlightFeature): Int? = colorCache[id.toString()]
+    private fun getColorForBlock(id: Identifier): Int? = colorCache[id.toString()]
 
     fun tick(feature: BlockHighlightFeature) {
         val mc = Minecraft.getInstance()
@@ -47,7 +47,7 @@ object BlockHighlightRenderer {
         repeat(chunksToScanPerTick) {
             val ox = (currentScanIndex % side) - scanRadius
             val oz = (currentScanIndex / side) - scanRadius
-            scanChunk(world, center.x + ox, center.z + oz, feature)
+            scanChunk(world, center.x + ox, center.z + oz)
             currentScanIndex = (currentScanIndex + 1) % (side * side)
         }
 
@@ -61,7 +61,7 @@ object BlockHighlightRenderer {
         }
     }
 
-    private fun scanChunk(world: Level, cx: Int, cz: Int, feature: BlockHighlightFeature) {
+    private fun scanChunk(world: Level, cx: Int, cz: Int) {
         if (!world.chunkSource.hasChunk(cx, cz)) return
         val chunk = world.getChunk(cx, cz)
 
@@ -75,7 +75,7 @@ object BlockHighlightRenderer {
                     for (x in 0..15) {
                         val state = section.getBlockState(x, y, z)
                         if (state.isAir) continue
-                        val color = getColorForBlock(BuiltInRegistries.BLOCK.getKey(state.block), feature) ?: continue
+                        val color = getColorForBlock(BuiltInRegistries.BLOCK.getKey(state.block)) ?: continue
                         newBlocks[BlockPos((cx shl 4) + x, minY + y, (cz shl 4) + z)] = color
                     }
                 }
@@ -177,5 +177,6 @@ object BlockHighlightRenderer {
         meshCache.clear()
         sectionFirstSeen.clear()
         currentScanIndex = 0
+        colorCache.clear()
     }
 }
