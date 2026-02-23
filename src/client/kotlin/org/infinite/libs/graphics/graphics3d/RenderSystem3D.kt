@@ -111,7 +111,10 @@ class RenderSystem3D(
 
                 is RenderCommand3D.QuadTextured -> {
                     drawQuadTextured(
-                        c.a, c.b, c.c, c.d,
+                        c.a,
+                        c.b,
+                        c.c,
+                        c.d,
                         c.texture,
                         c.depthTest,
                     )
@@ -135,7 +138,9 @@ class RenderSystem3D(
 
                 is RenderCommand3D.TriangleTextured -> {
                     drawTriangleTextured(
-                        c.a, c.b, c.c,
+                        c.a,
+                        c.b,
+                        c.c,
                         c.texture,
                         c.depthTest,
                     )
@@ -227,8 +232,7 @@ class RenderSystem3D(
         }
     }
 
-    fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) =
-        drawTriangle(a, b, c, color, color, color, depthTest)
+    fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) = drawTriangle(a, b, c, color, color, color, depthTest)
 
     fun drawTriangleFill(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
         val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addTriangleFan(arrayOf(a, b, c), color) }
@@ -250,7 +254,12 @@ class RenderSystem3D(
         quadRenderer.drawTriangle(
             renderType,
             positionMatrix,
-            a, b, c, colorA, colorB, colorC,
+            a,
+            b,
+            c,
+            colorA,
+            colorB,
+            colorC,
         )
     }
 

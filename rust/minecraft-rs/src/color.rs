@@ -37,7 +37,7 @@ impl From<i32> for Color {
         (int as u32).into()
     }
 }
-impl From<f32> for Color{
+impl From<f32> for Color {
     fn from(float: f32) -> Self {
         float.to_bits().into()
     }
