@@ -179,49 +179,52 @@ impl GpuHandler for BlockHighlightFeature {
         let max_count = settings.max_draw_count.load(Ordering::Relaxed);
         let line_width = settings.line_width.load(Ordering::Relaxed);
 
-        for (sp, _) in render_list {
-            if total_drawn > max_count {
-                break;
-            }
-
-            let mesh_cache = self.mesh_cache.read();
-            let Some(mesh) = mesh_cache.get(&sp) else {
-                continue;
-            };
-            if mesh.is_empty() {
-                continue;
-            }
-
-            let alpha = self.calculate_animation_alpha(sp, now);
-
-            // --- Quad (Faces) 描画 ---
-            if style != RenderStyle::Lines {
-                for q in mesh.quads.chunks_exact(28) {
-                    let v1 = DVec3::new(q[0] as f64, q[1] as f64, q[2] as f64);
-                    let v2 = DVec3::new(q[7] as f64, q[8] as f64, q[9] as f64);
-                    let v3 = DVec3::new(q[14] as f64, q[15] as f64, q[16] as f64);
-                    let v4 = DVec3::new(q[21] as f64, q[22] as f64, q[23] as f64);
-
-                    // q[3] (f32) -> u32 (bits) -> Color -> 修正Color -> u32
-                    let color = Self::apply_alpha_to_color_bits(q[3].to_bits(), alpha);
-                    mgpu3d.quad_fill(v1, v2, v3, v4, color, true);
+                {
+                    let block_positions = self.block_positions.read();
+                    let mesh_cache = self.mesh_cache.read();
+        
+                    for (sp, _) in render_list {                if total_drawn > max_count {
+                    break;
                 }
-            }
 
-            // --- Line 描画 ---
-            if style != RenderStyle::Faces {
-                for l in mesh.lines.chunks_exact(8) {
-                    let start = DVec3::new(l[0] as f64, l[1] as f64, l[2] as f64);
-                    let end = DVec3::new(l[4] as f64, l[5] as f64, l[6] as f64);
-
-                    let color = Self::apply_alpha_to_color_bits(l[3].to_bits(), alpha);
-                    mgpu3d.line(start, end, color, line_width, true);
+                let Some(mesh) = mesh_cache.get(&sp) else {
+                    continue;
+                };
+                if mesh.is_empty() {
+                    continue;
                 }
-            }
 
-            // usize を i32 にキャストして加算
-            if let Some(blocks) = self.block_positions.read().get(&sp) {
-                total_drawn += blocks.len() as i32;
+                let alpha = self.calculate_animation_alpha(sp, now);
+
+                // --- Quad (Faces) 描画 ---
+                if style != RenderStyle::Lines {
+                    for q in mesh.quads.chunks_exact(28) {
+                        let v1 = DVec3::new(q[0] as f64, q[1] as f64, q[2] as f64);
+                        let v2 = DVec3::new(q[7] as f64, q[8] as f64, q[9] as f64);
+                        let v3 = DVec3::new(q[14] as f64, q[15] as f64, q[16] as f64);
+                        let v4 = DVec3::new(q[21] as f64, q[22] as f64, q[23] as f64);
+
+                        // q[3] (f32) -> u32 (bits) -> Color -> 修正Color -> u32
+                        let color = Self::apply_alpha_to_color_bits(q[3].to_bits(), alpha);
+                        mgpu3d.quad_fill(v1, v2, v3, v4, color, true);
+                    }
+                }
+
+                // --- Line 描画 ---
+                if style != RenderStyle::Faces {
+                    for l in mesh.lines.chunks_exact(8) {
+                        let start = DVec3::new(l[0] as f64, l[1] as f64, l[2] as f64);
+                        let end = DVec3::new(l[4] as f64, l[5] as f64, l[6] as f64);
+
+                        let color = Self::apply_alpha_to_color_bits(l[3].to_bits(), alpha);
+                        mgpu3d.line(start, end, color, line_width, true);
+                    }
+                }
+
+                // usize を i32 にキャストして加算
+                if let Some(blocks) = block_positions.get(&sp) {
+                    total_drawn += blocks.len() as i32;
+                }
             }
         }
     }

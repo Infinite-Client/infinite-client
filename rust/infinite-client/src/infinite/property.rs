@@ -12,8 +12,8 @@ impl From<(u32, u32)> for BlockAndColor {
 }
 impl From<u64> for BlockAndColor {
     fn from(combined: u64) -> Self {
-        let id = (combined >> 32) as u32;
-        let color_val = (combined & 0xFFFFFFFF) as u32;
+        let color_val = (combined >> 32) as u32;
+        let id = (combined & 0xFFFFFFFF) as u32;
         Self::new(id, color_val.into())
     }
 }

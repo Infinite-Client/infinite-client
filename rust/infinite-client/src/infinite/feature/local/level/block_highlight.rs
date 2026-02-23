@@ -198,6 +198,8 @@ impl BlockHighlightFeature {
     }
     fn clear_render_cache(&self) {
         self.mesh_cache.write().clear();
+        self.block_positions.write().clear();
+        self.section_first_seen.write().clear();
     }
 
     #[xross_method(critical)]
