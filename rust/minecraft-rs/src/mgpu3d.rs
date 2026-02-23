@@ -15,7 +15,7 @@ pub struct MinecraftGpu3D<'a> {
     buffer: Vec<Command3D>,
     size: usize,
     /// 読み取り専用の参照。システム全体の行列（Projection/View）
-    matrixes: &'a MinecraftMatrixes,
+    pub matrixes: &'a MinecraftMatrixes,
     /// モデル行列のスタック (Kotlin の modelMatrixStack に相当)
     model_matrix_stack: VecDeque<DMat4>,
 }

@@ -10,7 +10,7 @@ use xross_core::{XrossClass, xross_methods};
 mod methods;
 mod settings;
 
-use crate::graphics3d::mesh::BlockMesh;
+use crate::graphics3d::mesh::{BlockMesh, BlockMeshGenerator};
 use crate::infinite::property::BlockAndColor;
 use methods::BlockHighlightHandlerWrapper;
 use methods::{BlockHighlightMethods, SectionData};
@@ -21,7 +21,7 @@ use settings::Settings;
 use settings::SettingsSetter;
 use settings::ViewFocus;
 
-#[derive(XrossClass, Default)]
+#[derive(XrossClass)]
 #[xross_package("features.local.level.highlight")]
 pub struct BlockHighlightFeature {
     pub settings: Settings,
@@ -40,6 +40,21 @@ pub struct BlockHighlightFeature {
     // 6. カラー検索の高速化 (String引くより高速)
     pub color_cache: RwLock<FxHashMap<u32, Color>>,
     pub render_handler_id: AtomicUsize,
+}
+impl Default for BlockHighlightFeature {
+    fn default() -> Self {
+        Self {
+            settings: Settings::default(),
+            block_positions: RwLock::new(FxHashMap::default()),
+            mesh_cache: RwLock::new(FxHashMap::default()),
+            section_first_seen: RwLock::new(FxHashMap::default()),
+            current_scan_index: AtomicUsize::new(0),
+            last_settings_hash: AtomicUsize::new(0),
+            color_cache: RwLock::new(FxHashMap::default()),
+            // ここで明確に INVALID_HANDLER_ID を指定
+            render_handler_id: AtomicUsize::new(MinecraftGpu3dSystem::INVALID_HANDLER_ID),
+        }
+    }
 }
 // ロジックの実体はすべてこちらに集約する
 impl SettingsSetter for BlockHighlightFeature {
@@ -244,5 +259,62 @@ impl BlockHighlightFeature {
         if id != MinecraftGpu3dSystem::INVALID_HANDLER_ID {
             MinecraftGpu3dSystem::del_handler(id);
         }
+    }
+    fn generate_mesh_from_map(&self, blocks: &FxHashMap<IVec3, i32>) -> BlockMesh {
+        let mut generator = BlockMeshGenerator::new();
+
+        // FxHashMap の中身を generator に登録
+        for (pos, &color) in blocks {
+            generator.add_block(pos.x, pos.y, pos.z, color);
+        }
+
+        // Greedy Meshing 等の重い計算を実行
+        generator.generate();
+
+        // 出来上がったバッファを BlockMesh に変換して返す
+        BlockMesh::from_generator(&generator)
+    }
+    /// アニメーション設定に基づき、現在のアルファ倍率を 0.0 ~ 1.0 で計算する
+    pub fn calculate_animation_alpha(&self, sp: IVec3, now: Instant) -> f32 {
+        let animation_type = self.settings.animation.load(Ordering::Relaxed);
+
+        // 1. FadeIn アニメーションの計算
+        let fade_multiplier = if animation_type == Animation::FadeIn {
+            let seen_reader = self.section_first_seen.read();
+            if let Some(&first_seen) = seen_reader.get(&sp) {
+                // 0.6秒 (600ms) で完全にフェードイン
+                let elapsed = now.duration_since(first_seen).as_secs_f32();
+                (elapsed / 0.6).min(1.0)
+            } else {
+                1.0
+            }
+        } else {
+            1.0
+        };
+
+        // 2. Pulse アニメーションの計算
+        let pulse_multiplier = if animation_type == Animation::Pulse {
+            // Instant から経過秒数を取得してサイン波を作る
+            // Minecraft の起動時間やエポック秒の代わりに now を使用
+            // Kotlin版: (sin(time * 4.0) * 0.5 + 0.5) * 0.4 + 0.6
+            // ※ Rust の f32::sin はラジアン。周期を調整
+            let time = self.get_animation_time(now);
+            ((time * 4.0).sin() * 0.5 + 0.5) * 0.4 + 0.6
+        } else {
+            1.0
+        };
+
+        // 両方の効果を掛け合わせる (FadeIn 中に Pulse させることも可能)
+        fade_multiplier * pulse_multiplier
+    }
+    /// アニメーション用の基準時間 (秒) を取得
+    /// 単純に Instant::now() を使うと各セクションでズレるため、
+    /// render の冒頭で取得した共通の now を使用することを推奨
+    fn get_animation_time(&self, now: Instant) -> f32 {
+        // プログラム起動時からの経過時間などを利用して一貫したサイン波を作る
+        // Staticな基準点がない場合は、適当な大きな数からの差分でもOK
+        static START_TIME: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+        let start = START_TIME.get_or_init(Instant::now);
+        now.duration_since(*start).as_secs_f32()
     }
 }

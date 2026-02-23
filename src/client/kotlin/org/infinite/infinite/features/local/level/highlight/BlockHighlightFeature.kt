@@ -9,7 +9,8 @@ import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
 import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
-import org.infinite.libs.graphics.Graphics3D
+import java.lang.foreign.Arena
+import java.lang.foreign.ValueLayout
 import org.infinite.nativebind.features.local.level.highlight.BlockHighlightFeature as Native
 
 class BlockHighlightFeature : LocalFeature() {
@@ -178,7 +179,6 @@ class BlockHighlightFeature : LocalFeature() {
         refreshNative()
     }
 
-    private val scanBuffer = IntArray(4096)
     private var currentScanIndex = 0
     override fun onEndTick() {
         val player = player ?: return
@@ -205,50 +205,44 @@ class BlockHighlightFeature : LocalFeature() {
         BlockHighlightRenderer.tick(this)
     }
 
+    // Featureのクラス内で、オフヒープバッファを保持しておく
+    private val arena = Arena.ofAuto()
+    private val nativeScanBuffer = arena.allocate(ValueLayout.JAVA_INT, 4096)
+
     private fun scanChunk(level: ClientLevel, targetX: Int, targetZ: Int) {
         val chunk = level.chunkSource.getChunkNow(targetX, targetZ) ?: return
 
         chunk.sections.forEachIndexed { yOffset, section ->
-            // 空気のみのセクションはスキップ
             if (!section.hasOnlyAir()) {
                 val container = section.states
-                val data = container.data
-                val palette = data.palette
-                val storage = data.storage
-
-                // 1. パレット変換テーブルの作成 (ループ回数を最小化)
-                val paletteSize = palette.size
-                val idMapping = IntArray(paletteSize)
-                for (i in 0 until paletteSize) {
-                    idMapping[i] = net.minecraft.world.level.block.Block.getId(palette.valueFor(i))
-                }
-
-                // 2. パッキングを一括解除 (インデックスが scanBuffer に入る)
-                storage.unpack(scanBuffer)
-
-                // 3. マッピングテーブルを適用して Block ID へ置換
+                // 1. 安全に 4096 個の BlockState インデックスを取得
+                // PalettedContainer.getAll(consumer) または手動展開を使用
                 for (i in 0 until 4096) {
-                    scanBuffer[i] = idMapping[scanBuffer[i]]
-                }
+                    // (i & 15, (i shr 8) & 15, (i shr 4) & 15) は一般的な YZX 配列順
+                    val state = container.get(i and 15, (i shr 8) and 15, (i shr 4) and 15)
+                    val blockId = net.minecraft.world.level.block.Block.getId(state)
 
-                // 4. Rust 側へ一括送信
+                    // オフヒープバッファに直接書き込む
+                    nativeScanBuffer.setAtIndex(ValueLayout.JAVA_INT, i.toLong(), blockId)
+                }
+                // 2. Rust 側へ送信 (MemorySegment をそのまま渡す)
                 Native.pushSectionData(
                     targetX,
-                    yOffset + (level.minY shr 4), // 絶対セクションY座標
+                    yOffset + (level.minY shr 4),
                     targetZ,
-                    scanBuffer,
+                    nativeScanBuffer.toArray(ValueLayout.JAVA_INT),
                 )
             }
         }
     }
-
-    override fun onLevelRendering(graphics3D: Graphics3D) {
-        BlockHighlightRenderer.render(graphics3D, this)
-    }
+//    override fun onLevelRendering(graphics3D: Graphics3D) {
+//        BlockHighlightRenderer.render(graphics3D, this)
+//    }
 
     override fun onEnabled() {
         Native.onEnabled()
     }
+
     override fun onDisabled() {
         Native.onDisabled()
         BlockHighlightRenderer.clear()
