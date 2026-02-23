@@ -20,7 +20,8 @@ jobs:
       - name: Force update submodules
         # もし特定のコミットが見つからない場合、リモートの最新ブランチから取得を試みる
         run: |
-          git submodule update --init --recursive --remote || git submodule update --init --recursive
+          git submodule init
+          git submodule update
         shell: bash
 
       - name: Setup JDK 25
