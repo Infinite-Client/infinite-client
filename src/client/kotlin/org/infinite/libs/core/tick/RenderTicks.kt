@@ -9,7 +9,6 @@ import net.minecraft.client.gui.GuiGraphics
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.graphics2d.RenderSystem2D
 import org.infinite.libs.graphics.graphics3d.RenderSystem3D
-import org.infinite.libs.graphics.graphics3d.system.NativeParser3D
 import org.infinite.libs.graphics.system.ProjectionData
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.minecraft.aim.AimSystem
@@ -122,7 +121,6 @@ object RenderTicks : MinecraftInterface() {
             projectionMatrix,
             renderSystem3D,
         )
-        renderSystem3D.finish()
     }
 
     private val posArrayShared = DoubleArray(16)
@@ -151,8 +149,7 @@ object RenderTicks : MinecraftInterface() {
             posArrayShared,
             projArrayShared,
         ) { buffer ->
-            val parser = NativeParser3D(buffer)
-            parser.process(renderSystem3D)
+            renderSystem3D.processNative(buffer)
         }
     }
 }

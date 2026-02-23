@@ -1,15 +1,12 @@
 package org.infinite.infinite.features.local.level.highlight
 
 import org.infinite.libs.core.features.feature.LocalFeature
-import org.infinite.libs.core.features.property.BooleanProperty
 import org.infinite.libs.core.features.property.list.BlockAndColorListProperty
-import org.infinite.libs.core.features.property.list.BlockAndColorListProperty.Companion.asNative
 import org.infinite.libs.core.features.property.list.serializer.BlockAndColor
 import org.infinite.libs.core.features.property.number.FloatProperty
 import org.infinite.libs.core.features.property.number.IntProperty
 import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.graphics.Graphics3D
-import org.infinite.nativebind.features.local.level.highlight.BlockHighlightFeature as Native
 
 class BlockHighlightFeature : LocalFeature() {
     override val featureType = FeatureLevel.Utils
@@ -96,148 +93,20 @@ class BlockHighlightFeature : LocalFeature() {
     val renderRange by property(IntProperty(128, 8, 512, " blocks"))
     val renderStyle by property(EnumSelectionProperty(RenderStyle.Lines))
     val maxDrawCount by property(IntProperty(20000, 1000, 100000, " elements"))
+
     val lineWidth by property(FloatProperty(1.5f, 0.1f, 5.0f, " px"))
     val viewFocus by property(EnumSelectionProperty(ViewFocus.Balanced))
     val animation by property(EnumSelectionProperty(Animation.Pulse))
-    val maxY by property(IntProperty(64, -64, 320, " y"))
-    val checkSurroundings by property(BooleanProperty(true))
-    val skyLightThreshold by property(IntProperty(10, 0, 15, " level"))
-    val playerExclusionRadius by property(IntProperty(10, 0, 64, " blocks"))
-    private fun refreshNative() {
-        Native.updateHighlightList(blocksToHighlight.value.asNative())
-        Native.setScanRange(scanRange.value)
-        Native.setRenderRange(renderRange.value)
-        Native.setMaxDrawCount(maxDrawCount.value)
-        Native.setLineWidthBits(lineWidth.value.toRawBits().toUInt())
-        Native.setRenderStyle(renderStyle.value.ordinal.toUInt())
-        Native.setViewFocus(viewFocus.value.ordinal.toUInt())
-        Native.setAnimation(animation.value.ordinal.toUInt())
-        Native.setMaxY(maxY.value)
-        Native.setCheckSurroundings(checkSurroundings.value)
-        Native.setSkyLightThreshold(skyLightThreshold.value)
-        Native.setPlayerExclusionRadius(playerExclusionRadius.value)
-    }
 
-    init {
-        // リスト更新
-        blocksToHighlight.addListener { _, newValue ->
-            Native.updateHighlightList(newValue.asNative())
-        }
-
-        // 数値・基本設定
-        scanRange.addListener { _, newValue ->
-            Native.setScanRange(newValue)
-        }
-
-        renderRange.addListener { _, newValue ->
-            Native.setRenderRange(newValue)
-        }
-
-        maxDrawCount.addListener { _, newValue ->
-            Native.setMaxDrawCount(newValue)
-        }
-
-        // Float (bitsとして送信)
-        lineWidth.addListener { _, newValue ->
-            Native.setLineWidthBits(newValue.toRawBits().toUInt())
-        }
-
-        // Enum (ordinalをUIntとして送信)
-        renderStyle.addListener { _, newValue ->
-            Native.setRenderStyle(newValue.ordinal.toUInt())
-        }
-
-        viewFocus.addListener { _, newValue ->
-            Native.setViewFocus(newValue.ordinal.toUInt())
-        }
-
-        animation.addListener { _, newValue ->
-            Native.setAnimation(newValue.ordinal.toUInt())
-        }
-
-        // 追加項目 (max_y, check_surroundings 等)
-        maxY.addListener { _, newValue ->
-            Native.setMaxY(newValue)
-        }
-
-        checkSurroundings.addListener { _, newValue ->
-            Native.setCheckSurroundings(newValue)
-        }
-
-        skyLightThreshold.addListener { _, newValue ->
-            Native.setSkyLightThreshold(newValue)
-        }
-
-        playerExclusionRadius.addListener { _, newValue ->
-            Native.setPlayerExclusionRadius(newValue)
-        }
-    }
-
-    override fun onConnected() {
-        refreshNative()
-    }
-
-//    private var currentScanIndex = 0
     override fun onEndTick() {
-//        val player = player ?: return
-//        val level = level ?: return
-//
-//        // 1. 基本情報を通知 (クリーンアップおよびプレイヤー座標の同期)
-//        Native.onTick(player.x, player.y, player.z, level.minY, level.maxY)
-//
-//        // 2. スキャン範囲の計算
-//        val scanRadius = scanRange.value
-//        val side = scanRadius * 2 + 1
-//        val center = player.chunkPosition()
-//
-//        // 3. 1ティックに指定されたチャンク数分スキャンを実行
-//        // currentScanIndex は Feature 内で保持されている前提
-//        repeat(16) {
-//            val ox = (currentScanIndex % side) - scanRadius
-//            val oz = (currentScanIndex / side) - scanRadius
-//
-//            scanChunk(level, center.x + ox, center.z + oz)
-//
-//            currentScanIndex = (currentScanIndex + 1) % (side * side)
-//        }
         BlockHighlightRenderer.tick(this)
     }
 
-    //    private fun scanChunk(level: ClientLevel, targetX: Int, targetZ: Int) {
-//        val chunk = level.chunkSource.getChunkNow(targetX, targetZ) ?: return
-//        chunk.sections.forEachIndexed { yOffset, section ->
-//            if (section.hasOnlyAir()) return@forEachIndexed
-//
-//            val states = section.states
-//            val buffer = IntArray(4096)
-//
-//            for (y in 0 until 16) {
-//                for (z in 0 until 16) {
-//                    for (x in 0 until 16) {
-//                        val state = states.get(x, y, z)
-//                        val blockId = BuiltInRegistries.BLOCK.getId(state.block)
-//                        val bufferIndex = (y shl 8) or (z shl 4) or x
-//                        buffer[bufferIndex] = blockId
-//                    }
-//                }
-//            }
-//            Native.pushSectionData(
-//                targetX,
-//                yOffset + (level.minSectionY), // level.minY shr 4 と同等
-//                targetZ,
-//                buffer
-//            )
-//        }
-//    }
     override fun onLevelRendering(graphics3D: Graphics3D) {
         BlockHighlightRenderer.render(graphics3D, this)
     }
 
-    override fun onEnabled() {
-        Native.onEnabled()
-    }
-
     override fun onDisabled() {
-        Native.onDisabled()
+        BlockHighlightRenderer.clear()
     }
 }

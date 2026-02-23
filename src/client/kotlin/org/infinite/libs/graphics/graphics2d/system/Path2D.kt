@@ -111,7 +111,7 @@ class Path2D : AutoCloseable {
         if (sizeVal <= 0L) return
 
         val bufferPtr = native.getBufferPtr()
-        val segment = bufferPtr.reinterpret(sizeVal * 4L)
+        val segment = bufferPtr.reinterpret(sizeVal * 4)
 
         var cursorIdx = 0L
         while (cursorIdx < sizeVal) {
