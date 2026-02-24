@@ -1,5 +1,5 @@
-use crate::graphics3d::mesh::types::{Axis, AxisDirection, BlockPos, Direction, Line, Quad};
-use minecraft_rs::glam::DVec3;
+use super::types::{Axis, AxisDirection, BlockPos, Direction, Line, Quad};
+use glam::DVec3;
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::HashSet;

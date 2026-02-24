@@ -115,41 +115,5 @@ object RenderTicks : MinecraftInterface() {
                 return@runBlocking InfiniteClient.localFeatures.onLevelRendering()
             }
         renderSystem3D.render(commands)
-        processNativeLevelRendering(
-            camera,
-            positionMatrix,
-            projectionMatrix,
-            renderSystem3D,
-        )
-    }
-
-    private val posArrayShared = DoubleArray(16)
-    private val projArrayShared = DoubleArray(16)
-
-    // Matrix4dも使い回してアロケーションを避ける
-    private val tempMatrix4d = Matrix4d()
-    private fun processNativeLevelRendering(
-        camera: Camera,
-        positionMatrix: Matrix4f,
-        projectionMatrix: Matrix4f,
-        renderSystem3D: RenderSystem3D,
-    ) {
-        val camPos = camera.position()
-
-        // すでに存在するインスタンスに値をセット
-        tempMatrix4d.set(positionMatrix).get(posArrayShared)
-        tempMatrix4d.set(projectionMatrix).get(projArrayShared)
-
-        org.infinite.nativebind.mgpu3d.Mgpu3dProcess.withMgpu3dProcess(
-            camPos.x,
-            camPos.y,
-            camPos.z,
-            minecraft.window.guiScaledWidth.toUInt(),
-            minecraft.window.guiScaledHeight.toUInt(),
-            posArrayShared,
-            projArrayShared,
-        ) { buffer ->
-            renderSystem3D.processNative(buffer)
-        }
     }
 }

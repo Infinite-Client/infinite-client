@@ -15,3 +15,4 @@ xross-core = { workspace = true, features = ["xross-alloc"] }
 minecraft-rs.path = "../minecraft-rs"
 atomic_enum = "0.3.0"
 parking_lot.workspace = true
+glam = "0.32.0"

@@ -1,4 +1,4 @@
-use minecraft_rs::glam::DVec3;
+use glam::DVec3;
 use xross_core::XrossClass;
 
 /// Minecraft coordinates (X: 26bit, Y: 12bit, Z: 26bit) packed into u64.

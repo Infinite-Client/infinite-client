@@ -326,6 +326,7 @@ name = "infinite-client"
 version = "2.3.0"
 dependencies = [
  "atomic_enum",
+ "glam",
  "lyon",
  "minecraft-rs",
  "parking_lot",
@@ -474,7 +475,6 @@ dependencies = [
 name = "minecraft-rs"
 version = "2.3.0"
 dependencies = [
- "glam",
  "parking_lot",
  "rayon",
  "xross-core",
