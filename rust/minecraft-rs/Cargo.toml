@@ -9,3 +9,5 @@ license.workspace = true
 xross-core.workspace = true
 rayon = "1.11.0"
 parking_lot.workspace = true
+wgpu = "28.0.0"
+pollster = "0.4.0"
