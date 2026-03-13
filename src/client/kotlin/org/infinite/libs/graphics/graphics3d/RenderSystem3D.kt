@@ -8,8 +8,6 @@ import net.minecraft.client.renderer.LightTexture
 import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
-import net.minecraft.gizmos.Gizmo
-import net.minecraft.gizmos.GizmoPrimitives
 import net.minecraft.gizmos.GizmoStyle
 import net.minecraft.gizmos.Gizmos
 import net.minecraft.world.phys.Vec3
@@ -18,9 +16,11 @@ import org.infinite.libs.graphics.graphics3d.system.QuadRenderer
 import org.infinite.libs.graphics.graphics3d.system.TexturedRenderer
 import org.infinite.libs.graphics.graphics3d.system.resource.RenderLayers
 import org.infinite.libs.interfaces.MinecraftInterface
+import org.infinite.nativebind.xross.runtime.XrossByteArrayView
 import org.joml.Matrix4f
 import org.joml.Vector4f
-import java.util.ArrayDeque
+import java.lang.foreign.ValueLayout
+import java.util.*
 
 @Suppress("unused")
 class RenderSystem3D(
@@ -35,7 +35,6 @@ class RenderSystem3D(
     private val vector4f: Vector4f,
     private val bl2: Boolean,
 ) : MinecraftInterface() {
-    private val modelMatrixStack = ArrayDeque<Matrix4f>().apply { add(Matrix4f()) }
     private val bufferSource = minecraft.renderBuffers().bufferSource()
     private val quadRenderer = QuadRenderer(bufferSource)
     private val texturedRenderer = TexturedRenderer(bufferSource)
@@ -55,6 +54,7 @@ class RenderSystem3D(
 
     fun snapShot(): RenderSnapshot {
         val window = minecraft.window
+
         return RenderSnapshot(
             posMatrix = Matrix4f(positionMatrix),
             projMatrix = Matrix4f(projectionMatrix),
@@ -73,13 +73,8 @@ class RenderSystem3D(
         drawLine(start, end, 0xFFFF0000.toInt(), 2f, false)
     }
 
-//    private val cameraPos: Vec3
-//        get() = camera.position()
-
     fun drawLine(start: Vec3, end: Vec3, color: Int, lineWidth: Float, depthTest: Boolean = true) {
-        val from = transform(start)
-        val to = transform(end)
-        val props = Gizmos.line(from, to, color, lineWidth)
+        val props = Gizmos.line(start, end, color, lineWidth)
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
@@ -87,13 +82,9 @@ class RenderSystem3D(
 
     fun render(commands: List<RenderCommand3D>) {
         val usedRenderTypes = LinkedHashSet<RenderType>()
-        for (i in 0 until commands.size) {
-            when (val c = commands[i]) {
+        commands.forEach { c ->
+            when (c) {
                 is RenderCommand3D.Line -> drawLine(c.from, c.to, c.color, c.size, c.depthTest)
-
-                RenderCommand3D.PopMatrix -> popMatrix()
-
-                RenderCommand3D.PushMatrix -> pushMatrix()
 
                 is RenderCommand3D.Quad -> drawQuad(c.a, c.b, c.c, c.d, c.color, c.depthTest)
 
@@ -103,7 +94,7 @@ class RenderSystem3D(
                     val renderType = RenderLayers.quads(c.depthTest)
                     quadRenderer.drawQuad(
                         renderType,
-                        currentMatrix(),
+                        Matrix4f(), // Unit matrix
                         c.a,
                         c.b,
                         c.c,
@@ -120,7 +111,7 @@ class RenderSystem3D(
                     val renderType = RenderTypes.entityTranslucent(c.texture)
                     texturedRenderer.drawQuad(
                         renderType,
-                        currentMatrix(),
+                        Matrix4f(), // Unit matrix
                         c.a,
                         c.b,
                         c.c,
@@ -131,8 +122,6 @@ class RenderSystem3D(
                     usedRenderTypes.add(renderType)
                 }
 
-                is RenderCommand3D.SetMatrix -> setMatrix(c.matrix)
-
                 is RenderCommand3D.Triangle -> drawTriangle(c.a, c.b, c.c, c.color, c.depthTest)
 
                 is RenderCommand3D.TriangleFill -> drawTriangleFill(c.a, c.b, c.c, c.color, c.depthTest)
@@ -141,7 +130,7 @@ class RenderSystem3D(
                     val renderType = RenderLayers.quads(c.depthTest)
                     quadRenderer.drawTriangle(
                         renderType,
-                        currentMatrix(),
+                        Matrix4f(), // Unit matrix
                         c.a,
                         c.b,
                         c.c,
@@ -156,7 +145,7 @@ class RenderSystem3D(
                     val renderType = RenderTypes.entityTranslucent(c.texture)
                     texturedRenderer.drawTriangle(
                         renderType,
-                        currentMatrix(),
+                        Matrix4f(), // Unit matrix
                         c.a,
                         c.b,
                         c.c,
@@ -164,6 +153,71 @@ class RenderSystem3D(
                         LightTexture.FULL_BRIGHT,
                     )
                     usedRenderTypes.add(renderType)
+                }
+
+                is RenderCommand3D.MeshBuffer -> {
+                    val modelViewMatrix = c.matrix
+                    // 1. Lines Rendering
+                    c.lineBuffer?.let { buffer ->
+                        val renderType = RenderLayers.lines(false)
+                        val consumer = bufferSource.getBuffer(renderType)
+                        var cursor = 0L
+                        while (cursor < c.lineBufferSize) {
+                            val x1 = buffer.get(ValueLayout.JAVA_FLOAT, cursor * 4)
+                            val y1 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 1) * 4)
+                            val z1 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 2) * 4)
+                            val x2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 3) * 4)
+                            val y2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 4) * 4)
+                            val z2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 5) * 4)
+                            val color = buffer.get(ValueLayout.JAVA_INT, (cursor + 6) * 4)
+
+                            val a = (color ushr 24) and 0xFF
+                            val r = (color shr 16) and 0xFF
+                            val g = (color shr 8) and 0xFF
+                            val b = color and 0xFF
+
+                            consumer.addVertex(modelViewMatrix, x1, y1, z1).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                                .setLineWidth(2.0f)
+                            consumer.addVertex(modelViewMatrix, x2, y2, z2).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                                .setLineWidth(2.0f)
+                            cursor += 7
+                        }
+                        usedRenderTypes.add(renderType)
+                    }
+
+                    // 2. Quads Rendering
+                    c.quadBuffer?.let { buffer ->
+                        val renderType = RenderLayers.quads(false)
+                        val consumer = bufferSource.getBuffer(renderType)
+                        var cursor = 0L
+                        while (cursor < c.quadBufferSize) {
+                            val x1 = buffer.get(ValueLayout.JAVA_FLOAT, cursor * 4)
+                            val y1 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 1) * 4)
+                            val z1 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 2) * 4)
+                            val x2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 3) * 4)
+                            val y2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 4) * 4)
+                            val z2 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 5) * 4)
+                            val x3 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 6) * 4)
+                            val y3 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 7) * 4)
+                            val z3 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 8) * 4)
+                            val x4 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 9) * 4)
+                            val y4 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 10) * 4)
+                            val z4 = buffer.get(ValueLayout.JAVA_FLOAT, (cursor + 11) * 4)
+                            val color = buffer.get(ValueLayout.JAVA_INT, (cursor + 12) * 4)
+
+                            val a = (color ushr 24) and 0xFF
+                            val r = (color shr 16) and 0xFF
+                            val g = (color shr 8) and 0xFF
+                            val b = color and 0xFF
+
+                            consumer.addVertex(modelViewMatrix, x1, y1, z1).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                            consumer.addVertex(modelViewMatrix, x2, y2, z2).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                            consumer.addVertex(modelViewMatrix, x3, y3, z3).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                            consumer.addVertex(modelViewMatrix, x4, y4, z4).setColor(r, g, b, a).setNormal(0f, 1f, 0f)
+                            cursor += 13
+                        }
+                        usedRenderTypes.add(renderType)
+                    }
                 }
             }
         }
@@ -175,12 +229,9 @@ class RenderSystem3D(
     }
 
     private fun drawTriangle(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
-        val p0 = transform(a)
-        val p1 = transform(b)
-        val p2 = transform(c)
-        val props0 = Gizmos.line(p0, p1, color, 2.0f)
-        val props1 = Gizmos.line(p1, p2, color, 2.0f)
-        val props2 = Gizmos.line(p2, p0, color, 2.0f)
+        val props0 = Gizmos.line(a, b, color, 2.0f)
+        val props1 = Gizmos.line(b, c, color, 2.0f)
+        val props2 = Gizmos.line(c, a, color, 2.0f)
         if (!depthTest) {
             props0.setAlwaysOnTop()
             props1.setAlwaysOnTop()
@@ -189,10 +240,7 @@ class RenderSystem3D(
     }
 
     private fun drawTriangleFill(a: Vec3, b: Vec3, c: Vec3, color: Int, depthTest: Boolean = true) {
-        val p0 = transform(a)
-        val p1 = transform(b)
-        val p2 = transform(c)
-        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addTriangleFan(arrayOf(p0, p1, p2), color) }
+        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addTriangleFan(arrayOf(a, b, c), color) }
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
@@ -206,11 +254,7 @@ class RenderSystem3D(
         color: Int,
         depthTest: Boolean = true,
     ) {
-        val p0 = transform(a)
-        val p1 = transform(b)
-        val p2 = transform(c)
-        val p3 = transform(d)
-        val props = Gizmos.rect(p0, p1, p2, p3, GizmoStyle.stroke(color, 2.0f))
+        val props = Gizmos.rect(a, b, c, d, GizmoStyle.stroke(color, 2.0f))
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
@@ -224,47 +268,12 @@ class RenderSystem3D(
         color: Int,
         depthTest: Boolean = true,
     ) {
-        val p0 = transform(a)
-        val p1 = transform(b)
-        val p2 = transform(c)
-        val p3 = transform(d)
-        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addQuad(p0, p1, p2, p3, color) }
+        val props = Gizmos.addGizmo { primitives, partialTick -> primitives.addQuad(a, b, c, d, color) }
         if (!depthTest) {
             props.setAlwaysOnTop()
         }
     }
 
-    private fun transform(position: Vec3): Vec3 {
-        val model = modelMatrixStack.peekLast() ?: Matrix4f()
-        val vec = Vector4f(
-            position.x.toFloat(),
-            position.y.toFloat(),
-            position.z.toFloat(),
-            1.0f,
-        ).mul(model)
-        return Vec3(vec.x.toDouble(), vec.y.toDouble(), vec.z.toDouble())
-    }
-
-    private fun pushMatrix() {
-        val current = modelMatrixStack.peekLast() ?: Matrix4f()
-        modelMatrixStack.add(Matrix4f(current))
-    }
-
-    private fun popMatrix() {
-        if (modelMatrixStack.size > 1) {
-            modelMatrixStack.removeLast()
-        }
-    }
-
-    private fun setMatrix(matrix: Matrix4f) {
-        if (modelMatrixStack.isNotEmpty()) {
-            modelMatrixStack.removeLast()
-        }
-        modelMatrixStack.add(Matrix4f(matrix))
-    }
-
-    private fun currentMatrix(): Matrix4f {
-        val model = modelMatrixStack.peekLast() ?: Matrix4f()
-        return Matrix4f(positionMatrix).mul(model)
+    fun processNative(buffer: XrossByteArrayView) {
     }
 }

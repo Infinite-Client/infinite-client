@@ -27,25 +27,7 @@ open class EnumSelectionProperty<T : Enum<T>>(
             return
         }
 
-        // 2. 文字列から逆引き (ConfigManager経由はここを通る)
-        if (anyValue is String) {
-            // name() との一致を確認
-            val found = options.find { it.name.equals(anyValue, ignoreCase = true) }
-                // もし見つからなければ、propertyString (表示名) との一致を確認
-                ?: options.find { propertyString(it).equals(anyValue, ignoreCase = true) }
-
-            if (found != null) {
-                this.value = found
-                return
-            }
-        }
-
-        // 3. 数値（ordinal）からの逆引き
-        if (anyValue is Number) {
-            val ordinal = anyValue.toInt()
-            if (ordinal in options.indices) {
-                this.value = options[ordinal]
-            }
-        }
+        // それ以外（JsonPrimitive, String, Numberなど）は親クラスのロジックに任せる
+        super.tryApply(anyValue)
     }
 }

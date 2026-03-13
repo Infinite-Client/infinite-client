@@ -29,13 +29,16 @@ abstract class FeatureCategories<
      * Categoryを定義するための委譲プロバイダー
      */
     @Suppress("UNCHECKED_CAST")
-    protected fun <T : V> category(category: T): CategoryDelegate<T> {
-        // T::class をキーにしてマップに登録
-        _categories[category::class as K] = category
-        return CategoryDelegate(category)
-    }
+    protected fun <T : V> category(category: T): CategoryDelegate<T> = CategoryDelegate(category)
 
     protected inner class CategoryDelegate<T : V>(val category: T) {
+        operator fun provideDelegate(thisRef: FeatureCategories<CK, CV, K, V>, prop: KProperty<*>): CategoryDelegate<T> {
+            // T::class をキーにしてマップに登録
+            @Suppress("UNCHECKED_CAST")
+            _categories[category::class as K] = category
+            return this
+        }
+
         operator fun getValue(thisRef: FeatureCategories<CK, CV, K, V>, prop: KProperty<*>): T = category
     }
 

@@ -15,6 +15,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
+
+      - name: Force update submodules
+        # もし特定のコミットが見つからない場合、リモートの最新ブランチから取得を試みる
+        run: |
+          git submodule init
+          git submodule update
+        shell: bash
 
       - name: Setup JDK 25
         uses: actions/setup-java@v4
@@ -23,33 +31,17 @@ jobs:
           distribution: 'microsoft'
           cache: 'gradle'
 
-      - name: Cache jextract
-        id: cache-jextract
-        uses: actions/cache@v4
-        with:
-          path: build/jextract-25
-          # 権限エラーを避けるため、プロジェクト構造が変わった際に確実に更新されるようキーを調整
-          key: ${{ runner.os }}-jextract-25-${{ hashFiles('build.gradle.kts') }}
-          restore-keys: |
-            ${{ runner.os }}-jextract-25-
-
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.13.0
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust (Nightly)
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          targets: >-
-            x86_64-unknown-linux-gnu,
-            aarch64-unknown-linux-gnu,
-            x86_64-pc-windows-gnu,
-            aarch64-pc-windows-gnullvm,
-            x86_64-apple-darwin,
-            aarch64-apple-darwin
+          toolchain: nightly
+          components: rust-src, rustfmt, clippy
 
-      # 2. Rust/Cargo 関連の統合キャッシュ (バイナリとビルド成果物)
       - name: Cache Cargo and Rust targets
         uses: actions/cache@v4
         with:
@@ -59,27 +51,84 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/infinite-client/target/
-          # Cargo.lock の変更、またはOSが変わった時に再生成
           key: ${{ runner.os }}-cargo-full-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-full-
-
+      - name: Install Dependencies
+        run: bash ./scripts/action_prepare.sh
       - name: Install Build Tools (Cached)
         run: |
-          # インストール済みかチェックして時間を節約
           if ! command -v cargo-zigbuild &> /dev/null; then
-            cargo install cargo-zigbuild
+            curl -L https://github.com/rust-cross/cargo-zigbuild/releases/latest/download/cargo-zigbuild-x86_64-unknown-linux-musl.tar.gz | tar xz -C ~/.cargo/bin
           fi
-          if ! command -v cbindgen &> /dev/null; then
-            cargo install cbindgen
-          fi
+          # Create enhanced wrappers for Zig to fix target triple issues
+          mkdir -p ~/.cargo/bin/wrappers
+          
+          cat <<'EOF' > ~/.cargo/bin/wrappers/zig-cc
+          #!/bin/bash
+          args=()
+          for arg in "$@"; do
+            case "$arg" in
+              --target=arm64-apple-macosx*)
+                args+=("-target" "aarch64-macos")
+                ;;
+              --target=x86_64-apple-macosx*)
+                args+=("-target" "x86_64-macos")
+                ;;
+              *)
+                args+=("$arg")
+                ;;
+            esac
+          done
+          exec zig cc "${args[@]}"
+          EOF
+          
+          cat <<'EOF' > ~/.cargo/bin/wrappers/zig-cpp
+          #!/bin/bash
+          args=()
+          for arg in "$@"; do
+            case "$arg" in
+              --target=arm64-apple-macosx*)
+                args+=("-target" "aarch64-macos")
+                ;;
+              --target=x86_64-apple-macosx*)
+                args+=("-target" "x86_64-macos")
+                ;;
+              *)
+                args+=("$arg")
+                ;;
+            esac
+          done
+          exec zig c++ "${args[@]}"
+          EOF
+
+          echo '#!/bin/bash' > ~/.cargo/bin/wrappers/zig-ar
+          echo 'exec zig ar "$@"' >> ~/.cargo/bin/wrappers/zig-ar
+          chmod +x ~/.cargo/bin/wrappers/zig-*
 
       - name: Build with Gradle
+        env:
+          # C関連の依存関係（mimalloc, jemalloc）のビルドエラーを避けるための設定
+          AR_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-ar
+          CC_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cc
+          CXX_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cpp
+          
+          AR_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-ar
+          CC_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cc
+          CXX_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cpp
+          
+          # jemalloc 等の configure 時に SDK チェックでコケるのを防ぐ
+          SDKROOT: ""
         run: |
           chmod +x ./gradlew
-          # 権限エラーを防ぐため、念のため実行前に build/jextract-25 の権限を付与する
-          if [ -d "build/jextract-25" ]; then chmod -R +rw build/jextract-25; fi
-          ./gradlew build -x test --parallel --build-cache
+          # project-xross/xross-plugin が存在するか確認
+          if [ ! -d "project-xross/xross-plugin" ]; then
+            echo "Error: project-xross/xross-plugin not found!"
+            ls -R project-xross || true
+            exit 1
+          fi
+          ./gradlew refreshNative
+          ./gradlew build -x test --parallel --build-cache -PbuildRustAllTargets=true
         shell: bash
       - name: Prepare Artifacts
         shell: bash

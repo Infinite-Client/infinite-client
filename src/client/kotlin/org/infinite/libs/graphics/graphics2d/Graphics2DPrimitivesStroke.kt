@@ -2,20 +2,13 @@ package org.infinite.libs.graphics.graphics2d
 
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2DProvider
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
-import org.infinite.libs.graphics.graphics2d.system.Path2D
 import org.infinite.libs.graphics.graphics2d.system.PointPair
-import kotlin.math.sqrt
 
 class Graphics2DPrimitivesStroke(
     private val provider: RenderCommand2DProvider,
     private val getStrokeStyle: () -> StrokeStyle?,
-    private val enablePathGradient: () -> Boolean,
 ) {
     private val strokeStyle: StrokeStyle? get() = getStrokeStyle()
-    private val isPathGradientEnabled: Boolean get() = enablePathGradient()
-
-    // --- Alloc回避用バッファ ---
-    private val miteredPairsBuffer = ArrayList<PointPair>(128)
 
     fun strokeRect(x: Float, y: Float, width: Float, height: Float) {
         val style = strokeStyle ?: return
@@ -80,7 +73,7 @@ class Graphics2DPrimitivesStroke(
         drawColoredEdge(p3, p0, q.c3, q.c0, inner[3], inner[0])
     }
 
-    private fun drawColoredEdge(start: PointPair, end: PointPair, outSCol: Int, outECol: Int, inSCol: Int, inECol: Int) {
+    fun drawColoredEdge(start: PointPair, end: PointPair, outSCol: Int, outECol: Int, inSCol: Int, inECol: Int) {
         // provider.getFillQuad().set() を使用
         provider.getFillQuad().set(
             start.ox, start.oy,
@@ -91,12 +84,6 @@ class Graphics2DPrimitivesStroke(
         )
     }
 
-    fun strokePath(path: Path2D) {
-        for (subPath in path.getSubPaths()) {
-            if (subPath.points.size < 2) continue
-            renderSubPath(subPath)
-        }
-    }
     fun strokeTriangle(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float) {
         val style = strokeStyle ?: return
         strokeTriangle(x0, y0, x1, y1, x2, y2, style.color, style.color, style.color)
@@ -130,56 +117,5 @@ class Graphics2DPrimitivesStroke(
         drawColoredEdge(p0, p1, col0, col1, inCol0, inCol1)
         drawColoredEdge(p1, p2, col1, col2, inCol1, inCol2)
         drawColoredEdge(p2, p0, col2, col0, inCol2, inCol0)
-    }
-    private fun renderSubPath(subPath: Path2D.Segments) {
-        val points = subPath.points
-        val isClosed = subPath.isClosed
-
-        miteredPairsBuffer.clear()
-
-        // 1. ジョイント計算
-        for (i in points.indices) {
-            val curr = points[i]
-            val hw = curr.style.width / 2f
-
-            val pair = if (isClosed) {
-                val prevIdx = if (i == 0) points.size - 2 else i - 1
-                val nextIdx = if (i == points.size - 1) 1 else i + 1
-                PointPair.calculateForMiter(curr.x, curr.y, points[prevIdx].x, points[prevIdx].y, points[nextIdx].x, points[nextIdx].y, hw)
-            } else {
-                when (i) {
-                    0 -> calculateCap(curr, points[1], true)
-                    points.size - 1 -> calculateCap(curr, points[i - 1], false)
-                    else -> PointPair.calculateForMiter(curr.x, curr.y, points[i - 1].x, points[i - 1].y, points[i + 1].x, points[i + 1].y, hw)
-                }
-            }
-            miteredPairsBuffer.add(pair)
-        }
-
-        // 2. 描画
-        for (i in 0 until points.size - 1) {
-            val startPair = miteredPairsBuffer[i]
-            val endPair = miteredPairsBuffer[i + 1]
-
-            val startCol = points[i].style.color
-            val endCol = if (isPathGradientEnabled) points[i + 1].style.color else startCol
-
-            drawColoredEdge(startPair, endPair, startCol, endCol, startCol, endCol)
-        }
-    }
-
-    private fun calculateCap(curr: Path2D.PathPoint, adj: Path2D.PathPoint, isStart: Boolean): PointPair {
-        val dx = adj.x - curr.x
-        val dy = adj.y - curr.y
-        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(0.001f)
-        val nx = -dy / len
-        val ny = dx / len
-        val hw = curr.style.width / 2f
-
-        return if (isStart) {
-            PointPair(curr.x - nx * hw, curr.y - ny * hw, curr.x + nx * hw, curr.y + ny * hw)
-        } else {
-            PointPair(curr.x + nx * hw, curr.y + ny * hw, curr.x - nx * hw, curr.y - ny * hw)
-        }
     }
 }

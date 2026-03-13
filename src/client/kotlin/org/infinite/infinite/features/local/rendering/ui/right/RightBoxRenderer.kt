@@ -97,7 +97,7 @@ class RightBoxRenderer :
             )
         }
 
-        draw(cH, animatedFood, actualFood, 30f, 60f)
+        draw(cH, animatedFood, actualFood, 45f, 75f)
         draw(cH, animatedSaturation, actualSaturation, 60f, 90f)
         if (actualVehicle > 0 || animatedVehicle > 0) draw(cH * 0.6f, animatedVehicle, actualVehicle, 30f, 90f)
         if (actualAir < 1f || animatedAir > 0.01f) {

@@ -251,7 +251,7 @@ class HelloFeature : LocalFeature() {
             false,
         )
 
-        val texture = Identifier.parse("minecraft:textures/block/stone.png")
+        val texture = Identifier.parse("minecraft:textures/blockbreak/stone.png")
         val texA = TexturedVertex(base.add(-0.25, -0.25, 1.1), 0f, 0f, 0xFFFFFFFF.toInt())
         val texB = TexturedVertex(base.add(0.25, -0.25, 1.1), 1f, 0f, 0xFFFFFFFF.toInt())
         val texC = TexturedVertex(base.add(0.25, 0.25, 1.1), 1f, 1f, 0xFFFFFFFF.toInt())

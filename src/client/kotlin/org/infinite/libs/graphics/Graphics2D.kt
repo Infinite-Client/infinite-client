@@ -16,12 +16,12 @@ import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import kotlin.math.PI
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
  * 座標指定を Float に統一し、Number 型を受け取ることで直感的なコーディングを可能にしています。
  */
-@Suppress("Unused")
 open class Graphics2D : MinecraftInterface() {
     private val deltaTracker: DeltaTracker by lazy { Minecraft.getInstance().deltaTracker }
     val gameDelta: Float get() = deltaTracker.gameTimeDeltaTicks
@@ -49,8 +49,8 @@ open class Graphics2D : MinecraftInterface() {
     // --- Provider & Operations ---
     private val provider = RenderCommand2DProvider()
     private val transformations = Graphics2DTransformations(provider)
-    private val fillOperations = Graphics2DPrimitivesFill(provider, { fillStyle }, { fillRule })
-    private val strokeOperations = Graphics2DPrimitivesStroke(provider, { strokeStyle }, { enablePathGradient })
+    private val fillOperations = Graphics2DPrimitivesFill(provider) { fillStyle }
+    private val strokeOperations = Graphics2DPrimitivesStroke(provider) { strokeStyle }
     private val textureOperations = Graphics2DPrimitivesTexture(provider) { textStyle }
     private val path2D = Path2D()
 
@@ -172,6 +172,23 @@ open class Graphics2D : MinecraftInterface() {
         y3.toFloat(),
     )
 
+    /**
+     * 現在のパスに2次ベジェ曲線を追加します。
+     * @param cpx 制御点のX座標
+     * @param cpy 制御点のY座標
+     * @param x 終点のX座標
+     * @param y 終点のY座標
+     */
+    fun quadraticCurveTo(cpx: Number, cpy: Number, x: Number, y: Number) {
+        path2D.quadraticCurveTo(
+            cpx.toFloat(),
+            cpy.toFloat(),
+            x.toFloat(),
+            y.toFloat(),
+            strokeStyle,
+        )
+    }
+
     fun strokeQuad(
         x0: Number,
         y0: Number,
@@ -232,67 +249,45 @@ open class Graphics2D : MinecraftInterface() {
     )
 
     // --- Path API ---
-    fun beginPath() = path2D.beginPath()
-    fun moveTo(x: Number, y: Number) = path2D.moveTo(x.toFloat(), y.toFloat())
-    fun lineTo(x: Number, y: Number) = path2D.lineTo(x.toFloat(), y.toFloat(), strokeStyle)
-    fun closePath() = path2D.closePath(strokeStyle)
-    fun strokePath() {
-        strokeOperations.strokePath(path2D)
-        path2D.clearSegments()
-    }
 
-    fun fillPath() {
-        fillOperations.fillPath(path2D)
-        path2D.clearSegments()
-    }
+    fun fillRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) {
+        val xf = x.toFloat()
+        val yf = y.toFloat()
+        val wf = w.toFloat()
+        val hf = h.toFloat()
+        val rf = min(r.toFloat(), min(wf / 2f, hf / 2f))
 
-    fun arc(x: Number, y: Number, r: Number, s: Number, e: Number, ccw: Boolean = false) = path2D.arc(x.toFloat(), y.toFloat(), r.toFloat(), s.toFloat(), e.toFloat(), ccw, strokeStyle)
+        if (rf <= 1e-3f) {
+            fillRect(xf, yf, wf, hf)
+            return
+        }
 
-    fun arcTo(x1: Number, y1: Number, x2: Number, y2: Number, r: Number) = path2D.arcTo(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), r.toFloat(), strokeStyle)
-
-    fun bezierCurveTo(cp1x: Number, cp1y: Number, cp2x: Number, cp2y: Number, x: Number, y: Number) = path2D.bezierCurveTo(
-        cp1x.toFloat(),
-        cp1y.toFloat(),
-        cp2x.toFloat(),
-        cp2y.toFloat(),
-        x.toFloat(),
-        y.toFloat(),
-        strokeStyle,
-    )
-
-    fun fillRoundedRect(x: Float, y: Float, width: Float, height: Float, radius: Float) {
-        withTemporaryPath {
-            val ss = strokeStyle.color
-            strokeStyle.color = fillStyle
-            roundedRectPath(x, y, width, height, radius)
+        path {
+            moveTo(xf + rf, yf)
+            lineTo(xf + wf - rf, yf)
+            arc(xf + wf - rf, yf + rf, rf, -PI.toFloat() / 2f, 0f, false)
+            lineTo(xf + wf, yf + hf - rf)
+            arc(xf + wf - rf, yf + hf - rf, rf, 0f, PI.toFloat() / 2f, false)
+            lineTo(xf + rf, yf + hf)
+            arc(xf + rf, yf + hf - rf, rf, PI.toFloat() / 2f, PI.toFloat(), false)
+            lineTo(xf, yf + rf)
+            arc(xf + rf, yf + rf, rf, PI.toFloat(), -PI.toFloat() / 2f, false)
+            closePath()
             fillPath()
-            strokeStyle.color = ss
         }
     }
 
-    fun strokeRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) = withTemporaryPath {
-        roundedRectPath(
-            x.toFloat(),
-            y.toFloat(),
-            w.toFloat(),
-            h.toFloat(),
-            r.toFloat(),
-        )
-        strokePath()
-    }
+    fun fillCircle(cx: Number, cy: Number, radius: Number) {
+        val x = cx.toFloat()
+        val y = cy.toFloat()
+        val r = radius.toFloat()
+        if (r <= 0f) return
 
-    fun fillCircle(cx: Number, cy: Number, radius: Number) = withTemporaryPath {
-        val ss = strokeStyle.color
-        strokeStyle.color = fillStyle
-        arc(cx, cy, radius, 0, PI * 2)
-        fillPath()
-        fillPath()
-        strokeStyle.color = ss
-    }
-
-    fun strokeCircle(cx: Number, cy: Number, radius: Number) = withTemporaryPath {
-        arc(cx, cy, radius, 0, PI * 2)
-        strokePath()
+        path {
+            arc(x, y, r, 0f, 2 * PI.toFloat(), false)
+            closePath()
+            fillPath()
+        }
     }
 
     // --- Text ---
@@ -365,31 +360,135 @@ open class Graphics2D : MinecraftInterface() {
         return x to y
     }
 
-    // --- Private Helpers ---
-    private fun roundedRectPath(x: Float, y: Float, w: Float, h: Float, r: Float) {
-        val radius = min(r, min(w / 2f, h / 2f))
-        moveTo(x + radius, y)
-        lineTo(x + w - radius, y)
-        arcTo(x + w, y, x + w, y + radius, radius)
-        lineTo(x + w, y + h - radius)
-        arcTo(x + w, y + h, x + w - radius, y + h, radius)
-        lineTo(x + radius, y + h)
-        arcTo(x, y + h, x, y + h - radius, radius)
-        lineTo(x, y + radius)
-        arcTo(x, y, x + radius, y, radius)
-        closePath()
-    }
-
-    private inline fun withTemporaryPath(block: () -> Unit) {
-        val snapshot = path2D.snapshot()
-        val last = path2D.lastPointData
-        val first = path2D.firstPointData
-        path2D.beginPath()
-        block()
-        path2D.restore(snapshot, last, first)
-    }
-
     // --- System ---
     fun clear() = provider.clear()
     open fun commands(): List<RenderCommand2D> = provider.commands()
+
+    // --- Companion ---
+    companion object {
+        // Graphics2D.kt 内で参照できるように移動、または Path2D から参照
+        fun getQualityScale(): Float {
+            val fps = RenderTicks.fps
+            return when {
+                fps >= 50f -> 1.0f
+                fps <= 5f -> 0.5f
+                else -> (fps / 60f).coerceIn(0.5f, 1.0f)
+            }
+        }
+    }
+
+    /**
+     * パス描画のためのDSLスコープ。
+     * 自動的に beginPath() を呼び出し、スコープ終了時の状態管理を容易にします。
+     */
+    inline fun path(block: Graphics2D.() -> Unit) {
+        this.beginPath()
+        this.block()
+        // パス自体は保持し、ユーザーが明示的に fillPath() や strokePath() を呼ぶのを待つ
+    }
+
+    // --- Path API ---
+    fun beginPath() = path2D.beginPath()
+    fun moveTo(x: Number, y: Number) = path2D.moveTo(x.toFloat(), y.toFloat(), strokeStyle)
+
+    // lineTo などの構築コマンドでは、現在の Graphics2D の状態 (strokeStyle 等) を反映させる
+    fun lineTo(x: Number, y: Number) {
+        path2D.lineTo(x.toFloat(), y.toFloat(), strokeStyle)
+    }
+
+    fun closePath() = path2D.closePath()
+
+    fun arc(x: Number, y: Number, r: Number, s: Number, e: Number, ccw: Boolean = false) {
+        path2D.arc(x.toFloat(), y.toFloat(), r.toFloat(), s.toFloat(), e.toFloat(), ccw, strokeStyle)
+    }
+
+    // 既存のメソッドを Rust 側の新しい FFI に紐付け
+    fun arcTo(x1: Number, y1: Number, x2: Number, y2: Number, r: Number) {
+        path2D.arcTo(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), r.toFloat(), strokeStyle)
+    }
+
+    fun bezierCurveTo(cp1x: Number, cp1y: Number, cp2x: Number, cp2y: Number, x: Number, y: Number) {
+        path2D.bezierCurveTo(
+            cp1x.toFloat(),
+            cp1y.toFloat(),
+            cp2x.toFloat(),
+            cp2y.toFloat(),
+            x.toFloat(),
+            y.toFloat(),
+            strokeStyle,
+        )
+    }
+
+    /**
+     * 現在構築されているパスに外郭線を描画します。
+     */
+    fun strokePath() {
+        // 現在の Graphics2D の状態を Path2D に同期させてテッセレーションを実行
+        path2D.strokePath(
+            style = strokeStyle,
+        ) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+            // テッセレーションされた Quad を描画コマンドとして送出
+            this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+        }
+    }
+
+    /**
+     * 現在構築されているパスを塗りつぶします。
+     */
+    fun fillPath() {
+        // 現在の fillStyle を同期してテッセレーションを実行
+        path2D.fillPath(
+            fillRule = this.fillRule,
+            color = this.fillStyle,
+            fillTriangle = { x0, y0, x1, y1, x2, y2, c0, c1, c2 ->
+                this.fillTriangle(x0, y0, x1, y1, x2, y2, c0, c1, c2)
+            },
+            fillQuad = { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+                this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+            },
+        )
+        // Canvas API の仕様に基づき、描画後はパスをクリアしないのが一般的ですが、
+        // 現在の実装に合わせて必要なら beginPath() を呼ぶ
+        // path2D.beginPath()
+    }
+
+    // 内部計算用の strokeCircle / strokeRoundedRect の修正
+    private val internalPath2D = Path2D()
+
+    private inline fun withInternalPath(block: Path2D.() -> Unit) {
+        internalPath2D.beginPath()
+        internalPath2D.block()
+
+        // 内部パスのテッセレーション実行
+        internalPath2D.strokePath(
+            style = strokeStyle,
+        ) { x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3 ->
+            this.fillQuad(x0, y0, x1, y1, x2, y2, x3, y3, c0, c1, c2, c3)
+        }
+    }
+
+    fun strokeCircle(cx: Number, cy: Number, radius: Number) = withInternalPath {
+        moveTo(cx, cy)
+        arc(cx.toFloat(), cy.toFloat(), radius.toFloat(), 0f, PI.toFloat(), true, strokeStyle)
+        arc(cx.toFloat(), cy.toFloat(), radius.toFloat(), PI.toFloat(), (2 * PI).toFloat(), true, strokeStyle)
+        closePath()
+    }
+
+    fun strokeRoundedRect(x: Number, y: Number, w: Number, h: Number, r: Number) = withInternalPath {
+        val xf = x.toFloat()
+        val yf = y.toFloat()
+        val wf = w.toFloat()
+        val hf = h.toFloat()
+        val rf = min(r.toFloat(), min(wf / 2f, hf / 2f))
+
+        val halfPi = (PI / 2.0).toFloat()
+        val pi = PI.toFloat()
+
+        moveTo(xf + wf - rf, yf)
+        arc(xf + wf - rf, yf + rf, rf, -halfPi, 0f, false, strokeStyle)
+        arc(xf + wf - rf, yf + hf - rf, rf, 0f, halfPi, false, strokeStyle)
+        arc(xf + rf, yf + hf - rf, rf, halfPi, pi, false, strokeStyle)
+        arc(xf + rf, yf + rf, rf, pi, pi + halfPi, false, strokeStyle)
+        closePath()
+    }
 }

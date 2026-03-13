@@ -25,13 +25,16 @@ abstract class Category<K : KClass<out Feature>, V : Feature> {
      * Featureを定義するための委譲プロバイダー
      */
     @Suppress("UNCHECKED_CAST")
-    protected fun <T : V> feature(feature: T): FeatureDelegate<T> {
-        // マップへの登録 (KClassをキーにする)
-        _features[feature::class as K] = feature
-        return FeatureDelegate(feature)
-    }
+    protected fun <T : V> feature(feature: T): FeatureDelegate<T> = FeatureDelegate(feature)
 
     protected inner class FeatureDelegate<T : V>(val feature: T) {
+        operator fun provideDelegate(thisRef: Category<K, V>, prop: KProperty<*>): FeatureDelegate<T> {
+            // マップへの登録 (KClassをキーにする)
+            @Suppress("UNCHECKED_CAST")
+            _features[feature::class as K] = feature
+            return this
+        }
+
         operator fun getValue(thisRef: Category<K, V>, prop: KProperty<*>): T = feature
     }
 

@@ -9,4 +9,10 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface MinecraftAccessor {
   @Accessor("fontManager")
   FontManager getFontManager();
+
+  @Accessor("rightClickDelay")
+  void setRightClickDelay(int delay);
+
+  @Accessor("rightClickDelay")
+  int getRightClickDelay();
 }

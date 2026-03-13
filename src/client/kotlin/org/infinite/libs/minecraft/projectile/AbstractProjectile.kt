@@ -21,6 +21,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
         val hitPos: Vec3,
         val travelTicks: Int,
         val isHighArc: Boolean,
+        val power: Double,
     )
 
     abstract val gravity: Double
@@ -57,12 +58,12 @@ abstract class AbstractProjectile : MinecraftInterface() {
             // 低角の検証
             val lowRes = verifyPath(basePower, res.lowP.toDouble(), res.yaw.toDouble(), res.predictedPos, startPos)
             if (lowRes.status == PathStatus.Clear) {
-                finalAnalysis = TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Clear, res.predictedPos, res.ticks, false)
+                finalAnalysis = TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Clear, res.predictedPos, res.ticks, false, basePower)
             } else {
                 // 高角の検証
                 val highRes = verifyPath(basePower, res.highP.toDouble(), res.yaw.toDouble(), res.predictedPos, startPos)
                 if (highRes.status == PathStatus.Clear) {
-                    finalAnalysis = TrajectoryAnalysis(res.highP.toDouble(), res.yaw.toDouble(), PathStatus.Clear, res.predictedPos, res.ticks, true)
+                    finalAnalysis = TrajectoryAnalysis(res.highP.toDouble(), res.yaw.toDouble(), PathStatus.Clear, res.predictedPos, res.ticks, true, basePower)
                 }
             }
         }
@@ -78,7 +79,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
                 analysisStaticPos(basePower, fallbackTarget, startPos)
             } else {
                 // フォールバック先すら見つからない場合は、仕方なく元の「Obstructed」な結果を返す
-                TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Obstructed, res.predictedPos, res.ticks, false)
+                TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Obstructed, res.predictedPos, res.ticks, false, basePower)
             }
         }
 
@@ -106,13 +107,13 @@ abstract class AbstractProjectile : MinecraftInterface() {
 
         // 射程外チェック
         if (horizontalDist > res.maxDist) {
-            return TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Unreachable, targetPos, maxStep, false)
+            return TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Unreachable, targetPos, maxStep, false, basePower)
         }
 
         // 障害物判定
         val lowRes = verifyPath(basePower, res.lowP.toDouble(), res.yaw.toDouble(), targetPos, startPos)
         if (lowRes.status == PathStatus.Clear) {
-            return TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Clear, targetPos, res.ticks, false)
+            return TrajectoryAnalysis(res.lowP.toDouble(), res.yaw.toDouble(), PathStatus.Clear, targetPos, res.ticks, false, basePower)
         }
 
         val highRes = verifyPath(basePower, res.highP.toDouble(), res.yaw.toDouble(), targetPos, startPos)
@@ -123,6 +124,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
             targetPos,
             res.ticks,
             true,
+            basePower,
         )
     }
 
@@ -189,6 +191,9 @@ abstract class AbstractProjectile : MinecraftInterface() {
 
         val baseRadius = (distance.toFloat() * 0.15f / graphics2D.fovFactor).coerceIn(3f, 100f)
 
+        // Draw the path
+        drawTrajectoryPath(graphics2D, analysis, accentColor)
+
         graphics2D.beginPath()
         graphics2D.strokeStyle.width = if (analysis.isHighArc) 1.0f else 2.0f
         graphics2D.strokeStyle.color = when (analysis.status) {
@@ -238,6 +243,84 @@ abstract class AbstractProjectile : MinecraftInterface() {
         graphics2D.textCentered(statusText, centerX, infoY + 11f)
 
         return graphics2D
+    }
+
+    private fun drawTrajectoryPath(graphics2D: Graphics2D, analysis: TrajectoryAnalysis, color: Int) {
+        val player = player ?: return
+        val startPos = player.getEyePosition(1.0f)
+        val isHit = analysis.status == PathStatus.Clear || analysis.status == PathStatus.Obstructed
+
+        // --- 1. 軌道線の描画 ---
+        graphics2D.beginPath()
+        graphics2D.strokeStyle.enabledGradient = true // strokeStyleに直接設定
+        graphics2D.strokeStyle.width = 1.5f
+
+        val f = Math.toRadians(analysis.yRot)
+        val g = Math.toRadians(analysis.xRot)
+        val hz = cos(g)
+        val vx = -sin(f) * hz
+        val vy = -sin(g)
+        val vz = cos(f) * hz
+
+        var velVec = Vec3(vx, vy, vz).normalize().scale(analysis.power)
+        var currentPos = startPos
+
+        val totalTicks = analysis.travelTicks
+        val fadeTicks = 10
+
+        for (tick in 0..totalTicks) {
+            val screenPos = graphics2D.projectWorldToScreen(currentPos)
+            var alphaMultiplier = 1.0f
+            if (tick < fadeTicks) {
+                alphaMultiplier = tick.toFloat() / fadeTicks
+            } else if (!isHit && tick > totalTicks - fadeTicks) {
+                alphaMultiplier = (totalTicks - tick).toFloat() / fadeTicks
+            }
+
+            // グラデーション有効時は一画ごとに色が設定される
+            graphics2D.strokeStyle.color = color.alpha((120 * alphaMultiplier).toInt())
+
+            if (screenPos != null) {
+                if (tick == 0) {
+                    graphics2D.moveTo(screenPos.first, screenPos.second)
+                } else {
+                    graphics2D.lineTo(screenPos.first, screenPos.second)
+                }
+            }
+
+            currentPos = currentPos.add(velVec)
+            velVec = velVec.scale(drag).subtract(0.0, gravity, 0.0)
+        }
+        graphics2D.strokePath()
+        graphics2D.strokeStyle.enabledGradient = false
+
+        // --- 2. 着弾地点の誤差円の描画 ---
+        if (isHit) {
+            val hitScreenPos = graphics2D.projectWorldToScreen(analysis.hitPos)
+            if (hitScreenPos != null) {
+                val distance = player.eyePosition.distanceTo(analysis.hitPos).coerceAtLeast(1.0)
+
+                // 半径の計算: 0.5m の範囲を画面上に投影
+                // fovFactor は FOVの変化に応じたスケール。基本は 1.0
+                val errorRadiusWorld = 0.5f
+                val scaleFactor = (graphics2D.height / 2.0f) / tan(Math.toRadians(graphics2D.fovFactor.toDouble() * 35.0)).toFloat()
+                val errorRadiusScreen = (errorRadiusWorld * scaleFactor / distance.toFloat())
+
+                graphics2D.beginPath() // 軌道線のパスをクリア
+                graphics2D.strokeStyle.color = color.alpha(180)
+                graphics2D.strokeStyle.width = 1.2f
+                graphics2D.strokeStyle.enabledGradient = false // 円は単色
+
+                graphics2D.arc(
+                    hitScreenPos.first,
+                    hitScreenPos.second,
+                    errorRadiusScreen.coerceIn(4f, 200f),
+                    0f,
+                    (PI * 2).toFloat(),
+                )
+                graphics2D.strokePath()
+            }
+        }
     }
     protected fun getTargetPos(reach: Double): Vec3? {
         val p = player ?: return null

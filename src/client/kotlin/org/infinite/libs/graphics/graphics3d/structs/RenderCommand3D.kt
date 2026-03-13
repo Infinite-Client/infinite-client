@@ -89,8 +89,11 @@ sealed interface RenderCommand3D {
         val depthTest: Boolean,
     ) : RenderCommand3D
 
-    data class SetMatrix(val matrix: Matrix4f) : RenderCommand3D
-
-    object PushMatrix : RenderCommand3D
-    object PopMatrix : RenderCommand3D
+    data class MeshBuffer(
+        val lineBuffer: java.lang.foreign.MemorySegment?,
+        val lineBufferSize: Long,
+        val quadBuffer: java.lang.foreign.MemorySegment?,
+        val quadBufferSize: Long,
+        val matrix: Matrix4f,
+    ) : RenderCommand3D
 }

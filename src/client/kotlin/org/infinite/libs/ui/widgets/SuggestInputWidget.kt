@@ -28,46 +28,84 @@ open class SuggestInputWidget(
     init {
         this.value = initialValue
         this.setResponder { updateSuggestions(it) }
-        this.setBordered(false)
+        this.isBordered = false
         this.isFocused = true
     }
 
     private fun updateSuggestions(input: String) {
-        val all = suggestions()
-        filteredSuggestions = if (input.isEmpty()) {
+        val allSuggestions = suggestions()
+
+        filteredSuggestions = if (input.isBlank()) {
             mutableListOf()
         } else {
-            all.filter { it.contains(input, ignoreCase = true) }.take(5).toMutableList()
+            allSuggestions
+                .filter { suggestion ->
+                    suggestion.startsWith(input, ignoreCase = true) ||
+                        suggestion.contains(input, ignoreCase = true)
+                }
+                .sortedBy { !it.startsWith(input, ignoreCase = true) } // 前方一致を先頭に
+                .toMutableList()
         }
+
+        // 入力が変わったら選択状態をリセット（Googleライク）
         selectedIndex = -1
     }
 
     override fun keyPressed(keyEvent: KeyEvent): Boolean {
         val keyCode = keyEvent.key
+        val modifiers = keyEvent.modifiers
 
+        // Tab / Shift+Tab で候補を循環選択
         if (keyCode == GLFW.GLFW_KEY_TAB && filteredSuggestions.isNotEmpty()) {
-            val isShiftDown = keyEvent.modifiers and GLFW.GLFW_MOD_SHIFT != 0
+            val isShiftDown = (modifiers and GLFW.GLFW_MOD_SHIFT) != 0
+
+            // 循環処理
             if (isShiftDown) {
                 selectedIndex--
-                if (selectedIndex < -1) selectedIndex = filteredSuggestions.size - 1
+                if (selectedIndex < -1) {
+                    selectedIndex = filteredSuggestions.size - 1
+                }
             } else {
                 selectedIndex++
-                if (selectedIndex >= filteredSuggestions.size) selectedIndex = -1
+                if (selectedIndex >= filteredSuggestions.size) {
+                    selectedIndex = -1
+                }
+            }
+
+            if (selectedIndex >= 0) {
+                this.value = filteredSuggestions[selectedIndex]
+                this.cursorPosition = this.value.length
+                selectedIndex = -1 // ← これを追加すると補完後は選択解除
+            } else {
+                // 選択解除（-1）のときは現在の入力値を維持（ユーザーが自分で入力したまま）
+                // 特に何もしないのが自然
+            }
+
+            return true
+        }
+
+        // Enter で確定
+        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+            val finalValue = when {
+                selectedIndex >= 0 -> filteredSuggestions[selectedIndex]
+                else -> this.value.trim()
+            }
+
+            if (finalValue.isNotBlank()) {
+                onComplete(finalValue)
+            } else {
+                onComplete(null) // 空ならキャンセル扱いでも良い（好み）
             }
             return true
         }
 
-        if (keyCode == GLFW.GLFW_KEY_ENTER) {
-            val finalValue = if (selectedIndex != -1) filteredSuggestions[selectedIndex] else this.value
-            if (finalValue.isNotBlank()) onComplete(finalValue)
-            return true
-        }
-
+        // Esc でキャンセル
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             onComplete(null)
             return true
         }
 
+        // その他のキー（文字入力、Backspace、矢印など）は通常処理へ
         return super.keyPressed(keyEvent)
     }
 
