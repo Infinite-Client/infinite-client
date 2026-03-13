@@ -73,6 +73,7 @@ dependencies {
 
 xross {
     rustProjectDir = project.file("rust/infinite-client").absolutePath
+    metadataDir = "target/xross"
     packageName = "org.infinite.nativebind"
     useUnsignedTypes = true
 }
@@ -111,7 +112,7 @@ val hostRustTargetId = when {
 }
 
 // デフォルトで全ターゲットビルドを有効にする (ユーザーの要望)
-val buildAllRustTargets = providers.gradleProperty("buildRustAllTargets").getOrElse("true") == "true"
+val buildAllRustTargets = providers.gradleProperty("buildRustAllTargets").getOrElse("false") == "true"
 
 rustTargets.forEach { (id, targetTriple) ->
     tasks.register<Exec>("rustBuild_$id") {
@@ -123,10 +124,6 @@ rustTargets.forEach { (id, targetTriple) ->
 
         // メタデータの競合を避けるため、buildディレクトリ内にターゲットごとのディレクトリを作成
         val targetMetadataDir = project.layout.buildDirectory.dir("xross-metadata/$id").get().asFile
-        doFirst {
-            targetMetadataDir.deleteRecursively()
-            targetMetadataDir.mkdirs()
-        }
         environment("XROSS_METADATA_DIR", targetMetadataDir.absolutePath)
 
         if (useZigbuild) {
@@ -161,8 +158,7 @@ val mergeXrossMetadata = tasks.register("mergeXrossMetadata") {
     dependsOn(buildRustAll)
     doLast {
         val mergedDir = project.file("rust/infinite-client/target/xross")
-        mergedDir.deleteRecursively()
-        mergedDir.mkdirs()
+        if (!mergedDir.exists()) mergedDir.mkdirs()
 
         val targetIds = if (buildAllRustTargets) rustTargets.keys else listOf(hostRustTargetId)
         targetIds.forEach { id ->
@@ -217,6 +213,8 @@ sourceSets {
     main {
         kotlin.srcDir(layout.buildDirectory.dir("generated/xross/kotlin"))
     }
+    val client = findByName("client")
+    client?.kotlin?.srcDir(layout.buildDirectory.dir("generated/xross/kotlin"))
 }
 
 tasks {
