@@ -16,7 +16,7 @@ import org.infinite.libs.graphics.graphics3d.system.QuadRenderer
 import org.infinite.libs.graphics.graphics3d.system.TexturedRenderer
 import org.infinite.libs.graphics.graphics3d.system.resource.RenderLayers
 import org.infinite.libs.interfaces.MinecraftInterface
-import org.infinite.nativebind.xross.runtime.XrossByteArrayView
+import org.infinite.native.xross.runtime.XrossByteArrayView
 import org.joml.Matrix4f
 import org.joml.Vector4f
 import java.lang.foreign.ValueLayout

@@ -1,7 +1,7 @@
 package org.infinite.libs.rust.projectile
 
 import net.minecraft.world.phys.Vec3
-import org.infinite.nativebind.AdvancedResult as NativeAdvancedResult
+import org.infinite.native.AdvancedResult as NativeAdvancedResult
 
 object ProjectileEmulator {
 
