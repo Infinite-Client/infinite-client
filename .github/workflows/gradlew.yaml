@@ -60,7 +60,7 @@ jobs:
         run: |
           if ! command -v cargo zigbuild &> /dev/null; then
             cargo install cargo-zigbuild            
-          ifi
+          fi
           # Create enhanced wrappers for Zig to fix target triple issues
           mkdir -p ~/.cargo/bin/wrappers
           
