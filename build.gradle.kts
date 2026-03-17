@@ -160,7 +160,7 @@ val rustFmt = tasks.register<Exec>("rustFmt") {
 val rustFmtCheck = tasks.register<Exec>("rustFmtCheck") {
     group = "verification"
     description = "Checks Rust code formatting using cargo fmt --check"
-    commandLine("cargo", "fmt", "--all", "--", "--check")
+    commandLine("cargo", "fmt", "--manifest-path", "infinite-client/Cargo.toml", "--all", "--", "--check")
 }
 
 tasks.named("spotlessApply") {
