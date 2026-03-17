@@ -58,8 +58,13 @@ jobs:
         run: bash ./scripts/action_prepare.sh
       - name: Install Build Tools (Cached)
         run: |
-          if ! command -v cargo zigbuild &> /dev/null; then
-            cargo install cargo-zigbuild            
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.cargo/bin:$PATH"
+          if ! command -v cargo-zigbuild &> /dev/null; then
+            echo "cargo-zigbuild not found, installing..."
+            cargo install cargo-zigbuild
+          else
+            echo "cargo-zigbuild is already installed."
           fi
           # Create enhanced wrappers for Zig to fix target triple issues
           mkdir -p ~/.cargo/bin/wrappers
