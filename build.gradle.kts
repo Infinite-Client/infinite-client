@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("jvm")
-    id("fabric-loom")
+    id("net.fabricmc.fabric-loom")
     id("maven-publish")
     id("eclipse")
     id("org.jetbrains.kotlin.plugin.serialization")
@@ -48,18 +48,12 @@ tasks.named<JavaCompile>("compileJava") {
 
 dependencies {
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
-    @Suppress("UnstableApiUsage")
-    mappings(
-        loom.layered {
-            officialMojangMappings()
-        },
-    )
-    modImplementation("net.fabricmc:fabric-loader:${property("loader_version")}")
-    modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_version")}")
-    modImplementation("maven.modrinth:modmenu:${property("mod_menu_version")}")
+    compileOnly("net.fabricmc:fabric-loader:${property("loader_version")}")
+    compileOnly("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
+    compileOnly("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
+    compileOnly("maven.modrinth:modmenu:${property("mod_menu_version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${property("kotlinx_serialization_json_version")}")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:${property("kotlin_version")}")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:${property("kotlinVersion")}")
     implementation("dev.babbaj:nether-pathfinder:${property("nether_pathfinder_version")}")
     implementation("com.squareup.okhttp3:okhttp:${property("ok_http_version")}")
     implementation("org.apache.maven:maven-artifact:${property("maven_artifact_version")}")
