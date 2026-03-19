@@ -73,27 +73,23 @@ class CarouselFeatureScreen<T : Feature>(
         container.render(guiGraphics, mouseX, mouseY, delta)
     }
 
-    override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean = container.mouseClicked(mouseButtonEvent, bl)
+    override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean = container.mouseClicked(mouseButtonEvent, bl) || super.mouseClicked(mouseButtonEvent, bl)
 
-    override fun mouseDragged(mouseButtonEvent: MouseButtonEvent, d: Double, e: Double): Boolean = container.mouseDragged(mouseButtonEvent, d, e)
+    override fun mouseDragged(mouseButtonEvent: MouseButtonEvent, d: Double, e: Double): Boolean = container.mouseDragged(mouseButtonEvent, d, e) || super.mouseDragged(mouseButtonEvent, d, e)
 
-    override fun mouseMoved(d: Double, e: Double) {
-        container.mouseMoved(d, e)
-    }
+    override fun mouseReleased(mouseButtonEvent: MouseButtonEvent): Boolean = container.mouseReleased(mouseButtonEvent) || super.mouseReleased(mouseButtonEvent)
 
-    override fun mouseReleased(mouseButtonEvent: MouseButtonEvent): Boolean = container.mouseReleased(mouseButtonEvent)
-
-    override fun mouseScrolled(d: Double, e: Double, f: Double, g: Double): Boolean = container.mouseScrolled(d, e, f, g)
+    override fun mouseScrolled(d: Double, e: Double, f: Double, g: Double): Boolean = container.mouseScrolled(d, e, f, g) || super.mouseScrolled(d, e, f, g)
 
     override fun keyPressed(keyEvent: KeyEvent): Boolean {
         if (keyEvent.key == GLFW.GLFW_KEY_ESCAPE) {
             minecraft.setScreen(parent)
             return true
         }
-        return container.keyPressed(keyEvent)
+        return container.keyPressed(keyEvent) || super.keyPressed(keyEvent)
     }
 
-    override fun charTyped(characterEvent: CharacterEvent): Boolean = container.charTyped(characterEvent)
+    override fun charTyped(characterEvent: CharacterEvent): Boolean = container.charTyped(characterEvent) || super.charTyped(characterEvent)
 
     override fun children(): List<GuiEventListener> = listOf(container)
 

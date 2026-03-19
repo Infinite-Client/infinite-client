@@ -404,10 +404,9 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
         val my = toUiY(mouseButtonEvent.y).toInt()
 
         if (searchBox.isMouseOver(mx.toDouble(), my.toDouble())) {
-            searchBox.isFocused = true
+            this.setFocused(searchBox)
             return searchBox.mouseClicked(mouseButtonEvent, bl)
         }
-        searchBox.isFocused = false
 
         if (mx.toFloat() in padding..(padding + sidebarWidth)) {
             val index = rowIndexFromMouse(

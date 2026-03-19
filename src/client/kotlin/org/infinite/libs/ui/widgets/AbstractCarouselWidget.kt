@@ -112,7 +112,10 @@ abstract class AbstractCarouselWidget<T>(
 
         // 子要素への伝播 (any判定)
         for (child in children()) {
-            if (child.mouseClicked(transformedEvent, bl)) return true
+            if (child.mouseClicked(transformedEvent, bl)) {
+                this.setFocused(child)
+                return true
+            }
         }
 
         // 自身のクリック判定 (onClickのトリガー)

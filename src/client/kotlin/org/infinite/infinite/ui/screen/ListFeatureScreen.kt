@@ -125,10 +125,6 @@ class ListFeatureScreen<T : Feature>(
 
     override fun mouseDragged(mouseButtonEvent: MouseButtonEvent, d: Double, e: Double): Boolean = container.mouseDragged(mouseButtonEvent, d, e) || super.mouseDragged(mouseButtonEvent, d, e)
 
-    override fun mouseMoved(d: Double, e: Double) {
-        container.mouseMoved(d, e)
-    }
-
     override fun mouseReleased(mouseButtonEvent: MouseButtonEvent): Boolean = container.mouseReleased(mouseButtonEvent) || super.mouseReleased(mouseButtonEvent)
 
     override fun mouseScrolled(d: Double, e: Double, f: Double, g: Double): Boolean = container.mouseScrolled(d, e, f, g) || super.mouseScrolled(d, e, f, g)
