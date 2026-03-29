@@ -37,7 +37,7 @@
     "infinite.features.local.level.xray.ModelBlockRendererMixin",
     "infinite.features.local.level.xray.OptionsMixin",
     "infinite.features.local.rendering.brightsight.GameRendererMixin",
-    "infinite.features.local.rendering.brightsight.LightTextureMixin",
+    "infinite.features.local.rendering.brightsight.LightmapMixin",
     "infinite.features.local.rendering.brightsight.LivingEntityMixin",
     "infinite.features.local.rendering.brightsight.ModelBlockRendererMixin",
     "infinite.features.local.rendering.clearsight.AbstractClientPlayerMixin",

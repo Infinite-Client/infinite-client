@@ -2,7 +2,7 @@ package org.infinite.mixin.infinite.features.local.rendering.ui;
 
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.player.Player;
 import org.infinite.InfiniteClient;
 import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature;
@@ -20,17 +20,18 @@ public class GuiMixin {
   }
 
   // クロスヘア
-  @Inject(method = "renderCrosshair", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "extractCrosshair", at = @At("HEAD"), cancellable = true)
   private void onRenderCrosshair(
-      GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+      GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getCrosshairUi().getValue()) {
       ci.cancel();
     }
   }
 
   // ホットバー (アイテムスロットの並び)
-  @Inject(method = "renderItemHotbar", at = @At("HEAD"), cancellable = true)
-  private void onRenderHotbar(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+  @Inject(method = "extractItemHotbar", at = @At("HEAD"), cancellable = true)
+  private void onRenderHotbar(
+      GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getHotbarUi().getValue()) {
       ci.cancel();
     }
@@ -38,43 +39,40 @@ public class GuiMixin {
 
   // 経験値レベルの数字描画をキャンセル
   @Inject(
-      method =
-          "renderHotbarAndDecorations(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V",
+      method = "extractHotbarAndDecorations",
       at =
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;renderExperienceLevel(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/gui/Font;I)V"),
+                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;extractExperienceLevel(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/gui/Font;I)V"),
       cancellable = true)
-  private void onRenderExperienceLevel(CallbackInfo ci) {
+  private void onExtractExperienceLevel(CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getTopBoxUi().getValue()) {
       ci.cancel();
     }
   }
 
   @Inject(
-      method =
-          "renderHotbarAndDecorations(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V",
+      method = "extractHotbarAndDecorations",
       at =
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;renderBackground(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V"),
+                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;extractExperienceLevel(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/gui/Font;I)V"),
       cancellable = true)
-  private void onRenderExperienceBarBackgroudn(CallbackInfo ci) {
+  private void onRenderExperienceBarBackground(CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getTopBoxUi().getValue()) {
       ci.cancel(); // 厳密にはInvokeのキャンセルは複雑なため、HEADで判定するか下記の方法をとります
     }
   }
 
   @Inject(
-      method =
-          "renderHotbarAndDecorations(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V",
+      method = "extractHotbarAndDecorations",
       at =
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V"),
+                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;extractExperienceLevel(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/gui/Font;I)V"),
       cancellable = true)
   private void onRenderExperienceBar(CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getTopBoxUi().getValue()) {
@@ -83,40 +81,47 @@ public class GuiMixin {
   }
 
   /** 左側要素（体力・防御力）の描画を制御 */
-  @Inject(method = "renderPlayerHealth", at = @At("HEAD"), cancellable = true)
-  private void onRenderHealthBar(GuiGraphics guiGraphics, CallbackInfo ci) {
+  @Inject(method = "extractPlayerHealth", at = @At("HEAD"), cancellable = true)
+  private void onRenderHealthBar(GuiGraphicsExtractor guiGraphics, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getLeftBoxUi().getValue()) {
       ci.cancel();
     }
   }
 
-  @Inject(method = "renderArmor", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "extractArmor", at = @At("HEAD"), cancellable = true)
   private static void onRenderArmor(
-      GuiGraphics guiGraphics, Player player, int i, int j, int k, int l, CallbackInfo ci) {
+      GuiGraphicsExtractor guiGraphics,
+      Player player,
+      int i,
+      int j,
+      int k,
+      int l,
+      CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getLeftBoxUi().getValue()) {
       ci.cancel();
     }
   }
 
   /** 右側要素（満腹度）の描画を制御 */
-  @Inject(method = "renderFood", at = @At("HEAD"), cancellable = true)
-  private void onRenderFood(GuiGraphics guiGraphics, Player player, int i, int j, CallbackInfo ci) {
+  @Inject(method = "extractFood", at = @At("HEAD"), cancellable = true)
+  private void onRenderFood(
+      GuiGraphicsExtractor guiGraphics, Player player, int i, int j, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getRightBoxUi().getValue()) {
       ci.cancel();
     }
   }
 
   /** 右側要素（空気量/水中呼吸）の描画を制御 */
-  @Inject(method = "renderAirBubbles", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "extractAirBubbles", at = @At("HEAD"), cancellable = true)
   private void onRenderAir(
-      GuiGraphics guiGraphics, Player player, int i, int j, int k, CallbackInfo ci) {
+      GuiGraphicsExtractor guiGraphics, Player player, int i, int j, int k, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getRightBoxUi().getValue()) {
       ci.cancel();
     }
   }
 
-  @Inject(method = "renderVehicleHealth", at = @At("HEAD"), cancellable = true)
-  private void onRenderVehicleHealth(GuiGraphics guiGraphics, CallbackInfo ci) {
+  @Inject(method = "extractVehicleHealth", at = @At("HEAD"), cancellable = true)
+  private void onRenderVehicleHealth(GuiGraphicsExtractor guiGraphics, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getRightBoxUi().getValue()) {
       ci.cancel();
     }

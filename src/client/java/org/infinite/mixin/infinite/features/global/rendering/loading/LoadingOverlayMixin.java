@@ -1,7 +1,6 @@
 package org.infinite.mixin.infinite.features.global.rendering.loading;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.LoadingOverlay;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
@@ -23,13 +22,9 @@ public abstract class LoadingOverlayMixin {
   @Shadow private long fadeInStart;
   @Shadow private long fadeOutStart;
 
-  @Shadow @Final private Minecraft minecraft;
-
-  @Inject(
-      method = "render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V",
-      at = @At("TAIL"),
-      cancellable = true)
-  private void onRender(GuiGraphics guiGraphics, int i, int j, float f, CallbackInfo ci) {
+  @Inject(method = "extractRenderState", at = @At("TAIL"), cancellable = true)
+  private void onRender(
+      GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a, CallbackInfo ci) {
     InfiniteLoadingFeature feature =
         InfiniteClient.INSTANCE.getGlobalFeatures().getRendering().getInfiniteLoadingFeature();
 
@@ -38,19 +33,19 @@ public abstract class LoadingOverlayMixin {
       float opacity = getOpacity();
 
       // 座標計算 (ソースコードの n, p, q, r を再現)
-      int centerX = (int) ((double) guiGraphics.guiWidth() * 0.5D);
-      int centerY = (int) ((double) guiGraphics.guiHeight() * 0.5D);
-      double d = Math.min((double) guiGraphics.guiWidth() * 0.75D, guiGraphics.guiHeight()) * 0.25D;
+      int centerX = (int) ((double) graphics.guiWidth() * 0.5D);
+      int centerY = (int) ((double) graphics.guiHeight() * 0.5D);
+      double d = Math.min((double) graphics.guiWidth() * 0.75D, graphics.guiHeight()) * 0.25D;
       int logoHeightHalf = (int) (d * 0.5D);
       double e = d * 4.0D;
       int logoWidthHalf = (int) (e * 0.5D);
       // コンテキストの作成
       InfiniteLoadingFeature.LoadingRenderContext context =
           new InfiniteLoadingFeature.LoadingRenderContext(
-              guiGraphics,
-              i,
-              j,
-              f,
+              graphics,
+              mouseX,
+              mouseY,
+              a,
               opacity,
               this.currentProgress,
               centerX,
