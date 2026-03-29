@@ -99,25 +99,25 @@ abstract class LocalFeatureCategories :
         finalCommands
     }
 
-    lateinit var keybindingPairs: List<LocalFeature.BindingPair>
+    lateinit var keyMappingPairs: List<LocalFeature.MappingPair>
     fun registerAllActions() {
-        val result = mutableListOf<LocalFeature.BindingPair>()
+        val result = mutableListOf<LocalFeature.MappingPair>()
         categories.values.forEach {
             result.addAll(it.registerAllActions())
         }
         result.add(
-            InfiniteClient.gameScreenBindingPair,
+            InfiniteClient.gameScreenMappingPair,
         )
         result.forEach { TranslationChecker.add(it.mapping.name) }
-        keybindingPairs = result.toList()
+        keyMappingPairs = result.toList()
     }
 
-    fun keyBindingActions() {
-        if (!::keybindingPairs.isInitialized) {
+    fun keyMappingActions() {
+        if (!::keyMappingPairs.isInitialized) {
             return
         }
-        if (keybindingPairs.isEmpty()) return
-        keybindingPairs.forEach { pair ->
+        if (keyMappingPairs.isEmpty()) return
+        keyMappingPairs.forEach { pair ->
             while (pair.mapping.consumeClick()) {
                 pair.action()
             }

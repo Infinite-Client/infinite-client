@@ -2,8 +2,8 @@ package org.infinite.libs.ui.widgets
 
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
-import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.AbstractContainerWidget
+import net.minecraft.client.gui.components.AbstractScrollArea
 import net.minecraft.client.gui.components.Renderable
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.gui.narration.NarrationElementOutput
@@ -23,7 +23,7 @@ open class PropertyWidget<T : Property<*>>(
     width: Int,
     height: Int = DEFAULT_WIDGET_HEIGHT,
     protected val property: T,
-) : AbstractContainerWidget(x, y, width, height, Component.literal("")),
+) : AbstractContainerWidget(x, y, width, height, Component.literal(""), AbstractScrollArea.ScrollbarSettings),
     Renderable {
 
     companion object {

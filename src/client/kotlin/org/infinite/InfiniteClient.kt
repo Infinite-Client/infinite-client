@@ -3,11 +3,10 @@ package org.infinite
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.gui.screens.Screen
-import org.infinite.InfiniteClient.feature
 import org.infinite.infinite.command.InfiniteCommand
 import org.infinite.infinite.features.global.InfiniteGlobalFeatures
 import org.infinite.infinite.features.local.InfiniteLocalFeatures
@@ -41,9 +40,9 @@ import kotlin.reflect.KClass
 object InfiniteClient : MinecraftInterface(), ClientModInitializer {
     val globalFeatures = InfiniteGlobalFeatures()
     val localFeatures = InfiniteLocalFeatures()
-    val gameScreenBindingPair: LocalFeature.BindingPair by lazy {
-        LocalFeature.BindingPair(
-            KeyBindingHelper.registerKeyBinding(
+    val gameScreenMappingPair: LocalFeature.MappingPair by lazy {
+        LocalFeature.MappingPair(
+            KeyMappingHelper.registerKeyMapping(
                 KeyMapping(
                     "key.infinite.game_options",
                     GLFW.GLFW_KEY_RIGHT_SHIFT,

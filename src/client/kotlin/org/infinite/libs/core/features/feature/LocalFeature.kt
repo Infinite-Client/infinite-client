@@ -1,6 +1,6 @@
 package org.infinite.libs.core.features.feature
 
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
 import net.minecraft.client.KeyMapping
 import org.infinite.libs.core.TickInterface
 import org.infinite.libs.core.features.Feature
@@ -27,7 +27,7 @@ open class LocalFeature :
         val action: () -> Unit, // 実行される処理
     )
 
-    data class BindingPair(
+    data class MappingPair(
         val mapping: KeyMapping,
         val action: () -> Unit,
     )
@@ -35,9 +35,9 @@ open class LocalFeature :
     private val registeredActions = mutableListOf<KeyAction>()
 
     // LocalFeature.kt 修正案
-    fun registerAllActions(): List<BindingPair> {
+    fun registerAllActions(): List<MappingPair> {
         val parent = "key.${translation()}"
-        val mappings = mutableListOf<BindingPair>()
+        val mappings = mutableListOf<MappingPair>()
 
         // 1. 個別アクションの登録
         registeredActions.forEach { action ->
@@ -46,12 +46,12 @@ open class LocalFeature :
                 action.defaultKey,
                 action.category,
             )
-            // registerKeyBinding は 1回だけ呼ぶ
-            KeyBindingHelper.registerKeyBinding(mapping)
+            // registerKeyMapping は 1回だけ呼ぶ
+            KeyMappingHelper.registerKeyMapping(mapping)
             val wrappedAction = {
                 if (this.isEnabled()) action.action()
             }
-            mappings.add(BindingPair(mapping, wrappedAction))
+            mappings.add(MappingPair(mapping, wrappedAction))
         }
 
         // 2. デフォルトのトグルキーの登録
@@ -60,8 +60,8 @@ open class LocalFeature :
             defaultToggleKey,
             KeyMapping.Category.GAMEPLAY,
         )
-        KeyBindingHelper.registerKeyBinding(toggleMapping)
-        mappings.add(BindingPair(toggleMapping) { toggle() })
+        KeyMappingHelper.registerKeyMapping(toggleMapping)
+        mappings.add(MappingPair(toggleMapping) { toggle() })
 
         return mappings.toList()
     }
