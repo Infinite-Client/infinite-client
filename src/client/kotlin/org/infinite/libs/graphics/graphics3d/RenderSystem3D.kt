@@ -4,7 +4,6 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator
 import net.minecraft.client.Camera
 import net.minecraft.client.DeltaTracker
-import net.minecraft.client.renderer.LightTexture
 import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
@@ -117,7 +116,7 @@ class RenderSystem3D(
                         c.c,
                         c.d,
                         OverlayTexture.NO_OVERLAY,
-                        LightTexture.FULL_BRIGHT,
+                        15,
                     )
                     usedRenderTypes.add(renderType)
                 }
@@ -150,7 +149,7 @@ class RenderSystem3D(
                         c.b,
                         c.c,
                         OverlayTexture.NO_OVERLAY,
-                        LightTexture.FULL_BRIGHT,
+                        15,
                     )
                     usedRenderTypes.add(renderType)
                 }

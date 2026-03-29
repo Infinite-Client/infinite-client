@@ -24,7 +24,7 @@ class ModernTextRenderer(
 ) : ActiveTextCollector,
     Consumer<Style> {
     private var params: ActiveTextCollector.Parameters = createDefaultTextParameters(alpha)
-    private fun createDefaultTextParameters(f: Float): ActiveTextCollector.Parameters = ActiveTextCollector.Parameters(Matrix3x2f(graphics.pose()), f, graphics.scissorStack)
+    private fun createDefaultTextParameters(f: Float): ActiveTextCollector.Parameters = ActiveTextCollector.Parameters(Matrix3x2f(graphics.pose()), f, null)
 
     private val minecraft: Minecraft = Minecraft.getInstance()
 

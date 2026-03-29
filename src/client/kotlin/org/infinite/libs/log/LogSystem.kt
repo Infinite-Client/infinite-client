@@ -121,7 +121,7 @@ object LogSystem : MinecraftInterface() {
 
             repeat(MESSAGES_PER_TICK) {
                 val message = messageQueue.poll() ?: return@repeat
-                player.displayClientMessage(message, false)
+                player.sendSystemMessage(message)
             }
         }
     }

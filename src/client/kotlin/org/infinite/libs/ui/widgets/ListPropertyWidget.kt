@@ -1,6 +1,6 @@
 package org.infinite.libs.ui.widgets
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.input.CharacterEvent
@@ -107,10 +107,9 @@ class ListPropertyWidget<T : Any>(
         return false
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         // 1. 背景とタイトルの描画 (PropertyWidget の基本描画)
-        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
-
+        super.extractWidgetRenderState(guiGraphics, mouseX, mouseY, delta)
         val g2d = Graphics2DRenderer(guiGraphics)
         val theme = InfiniteClient.theme
 
@@ -153,7 +152,7 @@ class ListPropertyWidget<T : Any>(
 
         // 3. アクティブな入力ウィジェットを最前面に描画 (Scissor 外)
         g2d.flush()
-        activeInputWidget?.render(guiGraphics, mouseX, mouseY, delta)
+        activeInputWidget?.extractRenderState(guiGraphics, mouseX, mouseY, delta)
     }
 
     private fun renderScrollbar(g2d: Graphics2DRenderer) {

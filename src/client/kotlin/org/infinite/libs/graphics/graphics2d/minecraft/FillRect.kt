@@ -1,12 +1,12 @@
 package org.infinite.libs.graphics.graphics2d.minecraft
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.render.TextureSetup
 import net.minecraft.client.renderer.RenderPipelines
 import org.infinite.libs.graphics.graphics2d.elements.ColoredRectangleRenderState
 import org.joml.Matrix3x2f
 
-fun GuiGraphics.fill(
+fun GuiGraphicsExtractor.fill(
     x: Float,
     y: Float,
     width: Float,
@@ -16,7 +16,7 @@ fun GuiGraphics.fill(
     this.fill(x, y, width, height, color, color, color, color)
 }
 
-fun GuiGraphics.fill(
+fun GuiGraphicsExtractor.fill(
     x: Float,
     y: Float,
     width: Float,
@@ -28,7 +28,7 @@ fun GuiGraphics.fill(
 ) {
     val renderPipeline = RenderPipelines.GUI
     val textureSetup = TextureSetup.noTexture()
-    this.guiRenderState.submitGuiElement(
+    this.guiRenderState.addGuiElement(
         ColoredRectangleRenderState(
             renderPipeline,
             textureSetup,

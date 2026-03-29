@@ -1,7 +1,7 @@
 package org.infinite.libs.ui.layout
 
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Renderable
 import net.minecraft.client.gui.components.ScrollableLayout
 import net.minecraft.client.gui.components.events.GuiEventListener
@@ -23,9 +23,9 @@ class ScrollableLayoutContainer(
 
     private var focusedChild: GuiEventListener? = null
 
-    override fun render(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
+    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
         visitWidgets { widget ->
-            widget.render(guiGraphics, i, j, f)
+            widget.extractRenderState(graphics, mouseX, mouseY, a)
         }
     }
 
@@ -35,20 +35,18 @@ class ScrollableLayoutContainer(
     override fun setFocused(bl: Boolean) {
         focused = bl
         if (!bl) {
-            focusedChild?.setFocused(false)
+            focusedChild?.isFocused = false
             focusedChild = null
         }
     }
 
     override fun isFocused(): Boolean = focused
 
-    fun getFocused(): GuiEventListener? = focusedChild
-
     fun setFocused(listener: GuiEventListener?) {
         if (focusedChild != listener) {
-            focusedChild?.setFocused(false)
+            focusedChild?.isFocused = false
             focusedChild = listener
-            listener?.setFocused(true)
+            listener?.isFocused = true
         }
     }
 

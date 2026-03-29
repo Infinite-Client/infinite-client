@@ -1,7 +1,7 @@
 package org.infinite.libs.ui.widgets
 
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.events.GuiEventListener
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.property.NumberProperty
@@ -61,9 +61,9 @@ class NumberPropertyWidget<T>(
         propertySliderWidget.y = y + height - propertySliderWidget.height
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
-        propertySliderWidget.render(guiGraphics, mouseX, mouseY, delta)
+    override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
+        super.extractWidgetRenderState(guiGraphics, mouseX, mouseY, delta)
+        propertySliderWidget.extractRenderState(guiGraphics, mouseX, mouseY, delta)
         val colorScheme = InfiniteClient.theme.colorScheme
         val displayText = property.display()
         val g2d = Graphics2DRenderer(guiGraphics)

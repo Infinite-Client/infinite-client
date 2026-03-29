@@ -67,3 +67,8 @@ accessible class net/minecraft/client/gui/GuiGraphicsExtractor$ScissorStack
 accessible field net/minecraft/client/Minecraft blockModelResolver Lnet/minecraft/client/renderer/block/BlockModelResolver;
 accessible field net/minecraft/client/renderer/block/BlockModelResolver modelManager Lnet/minecraft/client/resources/model/ModelManager;
 accessible field net/minecraft/client/resources/model/ModelManager blockModelSet Lnet/minecraft/client/renderer/block/BlockModelSet;
+accessible method net/minecraft/client/renderer/rendertype/RenderType create (Ljava/lang/String;Lnet/minecraft/client/renderer/rendertype/RenderSetup;)Lnet/minecraft/client/renderer/rendertype/RenderType;
+accessible field net/minecraft/client/renderer/RenderPipelines GLOBALS_SNIPPET Lcom/mojang/blaze3d/pipeline/RenderPipeline$Snippet;
+accessible field net/minecraft/client/renderer/RenderPipelines FOG_SNIPPET Lcom/mojang/blaze3d/pipeline/RenderPipeline$Snippet;
+accessible method net/minecraft/client/renderer/RenderPipelines register (Lcom/mojang/blaze3d/pipeline/RenderPipeline;)Lcom/mojang/blaze3d/pipeline/RenderPipeline;
+accessible field net/minecraft/client/renderer/RenderPipelines DEBUG_FILLED_SNIPPET Lcom/mojang/blaze3d/pipeline/RenderPipeline$Snippet;
