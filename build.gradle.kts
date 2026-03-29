@@ -48,9 +48,9 @@ tasks.named<JavaCompile>("compileJava") {
 
 dependencies {
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
-    compileOnly("net.fabricmc:fabric-loader:${property("loader_version")}")
-    compileOnly("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
-    compileOnly("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
+    implementation("net.fabricmc:fabric-loader:${property("loader_version")}")
+    implementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
+    implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
     compileOnly("maven.modrinth:modmenu:${property("mod_menu_version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${property("kotlinx_serialization_json_version")}")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${property("kotlinVersion")}")

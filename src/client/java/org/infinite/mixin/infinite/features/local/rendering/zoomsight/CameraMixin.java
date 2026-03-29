@@ -1,9 +1,9 @@
 package org.infinite.mixin.infinite.features.local.rendering.zoomsight;
 
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.entity.Entity;
 import org.infinite.InfiniteClient;
 import org.infinite.infinite.features.local.rendering.zoomsight.ZoomSightFeature;
@@ -14,13 +14,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(GameRenderer.class)
-public class GameRendererMixin {
-  @Shadow private float fovModifier;
-
-  @Shadow private float oldFovModifier;
+@Mixin(Camera.class)
+public class CameraMixin {
 
   @Shadow @Final private Minecraft minecraft;
+
+  @Shadow
+  private float oldFovModifier;
+
+  @Shadow
+  private float fovModifier;
 
   @Inject(method = "tickFov", at = @At("HEAD"), cancellable = true)
   private void onTickFov(CallbackInfo ci) {

@@ -16,7 +16,7 @@ public class FogRendererMixin {
   /** FogRenderer 内で霧のデータバッファを更新する直前に介入します。 start と end の距離を極端に大きくすることで、実質的に霧を無効化します。 */
   @WrapOperation(
       method =
-          "setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lorg/joml/Vector4f;",
+          "updateBuffer(Lnet/minecraft/client/renderer/fog/FogData;)V",
       at =
           @At(
               value = "INVOKE",

@@ -29,7 +29,7 @@ public abstract class CameraMixin {
   }
 
   /** setupの最後で実行されるmove(カメラの後退処理)を上書き、 またはgetMaxZoomの挙動を書き換えます。 */
-  @Inject(method = "setup", at = @At("RETURN"))
+  @Inject(method ="reset", at = @At("RETURN"))
   public void onSetupReturn(
       Level level, Entity entity, boolean bl, boolean bl2, float f, CallbackInfo ci) {
     if (stableSightFeature().isEnabled() && this.detached) {

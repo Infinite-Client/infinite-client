@@ -49,7 +49,7 @@
     "infinite.features.local.rendering.toughsight.OptionInstanceMixin",
     "infinite.features.local.rendering.ui.GuiMixin",
     "infinite.features.local.rendering.zoomsight.AbstractClientPlayerMixin",
-    "infinite.features.local.rendering.zoomsight.GameRendererMixin",
+    "infinite.features.local.rendering.zoomsight.CameraMixin",
     "infinite.features.local.rendering.zoomsight.MouseHandlerMixin",
     "infinite.features.local.rendering.zoomsight.OptionsMixin",
     "ui.OptionsScreenMixin"
