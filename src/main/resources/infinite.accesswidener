@@ -1,6 +1,5 @@
 accessWidener v2 official
 accessible field net/minecraft/server/MinecraftServer storageSource Lnet/minecraft/world/level/storage/LevelStorageSource$LevelStorageAccess;
-accessible method net/minecraft/client/gui/render/state/GuiRenderState findAppropriateNode (Lnet/minecraft/client/gui/render/state/ScreenArea;)Z
 accessible class net/minecraft/client/gui/components/ScrollableLayout
 accessible class net/minecraft/client/gui/components/ScrollableLayout$Container
 accessible class net/minecraft/client/gui/font/FontManager$CachedFontProvider
@@ -40,27 +39,19 @@ accessible field net/minecraft/world/level/block/entity/BrewingStandBlockEntity 
 accessible field net/minecraft/world/level/block/entity/HopperBlockEntity cooldownTime I
 accessible field net/minecraft/world/level/block/state/BlockBehaviour$BlockStateBase mapColor Lnet/minecraft/world/level/material/MapColor;
 accessible method net/minecraft/client/gui/components/AbstractScrollArea isOverScrollbar (DD)Z
-accessible method net/minecraft/client/gui/components/AbstractScrollArea renderScrollbar (Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V
 accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarX ()I
 accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarY ()I
-accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollbarVisible ()Z
 accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollerHeight ()I
 accessible method net/minecraft/client/gui/components/ChatComponent refreshTrimmedMessages ()V
 accessible method net/minecraft/client/gui/components/EditBox applyFormat (Ljava/lang/String;I)Lnet/minecraft/util/FormattedCharSequence;
 accessible method net/minecraft/client/gui/components/EditBox isEditable ()Z
 accessible method net/minecraft/client/gui/font/FontManager getFontSetRaw (Lnet/minecraft/resources/Identifier;)Lnet/minecraft/client/gui/font/FontSet;
-accessible method net/minecraft/client/gui/render/state/GuiItemRenderState calculateBounds (Lnet/minecraft/client/gui/navigation/ScreenRectangle;)Lnet/minecraft/client/gui/navigation/ScreenRectangle;
-accessible method net/minecraft/client/gui/render/state/GuiItemRenderState calculateOversizedItemBounds ()Lnet/minecraft/client/gui/navigation/ScreenRectangle;
 accessible method net/minecraft/client/multiplayer/MultiPlayerGameMode performUseItemOn (Lnet/minecraft/client/player/LocalPlayer;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;
 accessible method net/minecraft/world/entity/Mob <init> (Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/level/Level;)V
-extendable class net/minecraft/client/gui/render/state/GuiItemRenderState
-extendable class net/minecraft/client/gui/render/state/GuiTextRenderState
 extendable method net/minecraft/client/gui/Font getGlyph (ILnet/minecraft/network/chat/Style;)Lnet/minecraft/client/gui/font/glyphs/BakedGlyph;
 extendable method net/minecraft/client/gui/Font getGlyphSource (Lnet/minecraft/network/chat/FontDescription;)Lnet/minecraft/client/gui/GlyphSource;
-extendable method net/minecraft/client/gui/render/state/GuiItemRenderState calculateBounds (Lnet/minecraft/client/gui/navigation/ScreenRectangle;)Lnet/minecraft/client/gui/navigation/ScreenRectangle;
 mutable field net/minecraft/client/gui/Font splitter Lnet/minecraft/client/StringSplitter;
 mutable field net/minecraft/client/gui/components/ChatComponent allMessages Ljava/util/List;
-accessible method net/minecraft/client/renderer/GameRenderer getFov (Lnet/minecraft/client/Camera;FZ)F
 accessible field net/minecraft/client/gui/GuiGraphicsExtractor scissorStack Lnet/minecraft/client/gui/GuiGraphicsExtractor$ScissorStack;
 accessible field net/minecraft/client/gui/GuiGraphicsExtractor guiRenderState Lnet/minecraft/client/renderer/state/gui/GuiRenderState;
 accessible class net/minecraft/client/gui/GuiGraphicsExtractor$ScissorStack
