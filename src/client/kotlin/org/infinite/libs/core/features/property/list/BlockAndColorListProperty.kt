@@ -3,7 +3,7 @@ package org.infinite.libs.core.features.property.list
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.narration.NarrationElementOutput
@@ -186,9 +186,9 @@ class BlockAndColorListProperty(default: List<BlockAndColor>) : ListProperty<Blo
             return blockClicked || colorClicked || super.mouseClicked(mouseButtonEvent, bl)
         }
 
-        override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
-            blockInput.render(guiGraphics, mouseX, mouseY, partialTick)
-            colorInput.render(guiGraphics, mouseX, mouseY, partialTick)
+        override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
+            blockInput.extractRenderState(guiGraphics, mouseX, mouseY, partialTick)
+            colorInput.extractWidgetRenderState(guiGraphics, mouseX, mouseY, partialTick)
         }
 
         override fun updateWidgetNarration(narrationElementOutput: NarrationElementOutput) {

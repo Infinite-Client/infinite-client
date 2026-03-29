@@ -1,6 +1,6 @@
 package org.infinite.infinite.ui.screen
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.gui.layouts.LinearLayout
 import net.minecraft.client.gui.screens.Screen
@@ -46,8 +46,8 @@ class CarouselFeatureScreen<T : Feature>(
         this.addRenderableWidget(container)
     }
 
-    override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        super.render(guiGraphics, mouseX, mouseY, delta)
+    override fun extractRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, delta)
         val g2d = Graphics2DRenderer(guiGraphics)
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme

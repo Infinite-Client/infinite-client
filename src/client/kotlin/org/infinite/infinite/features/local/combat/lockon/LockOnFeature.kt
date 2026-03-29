@@ -388,9 +388,8 @@ class LockOnFeature : LocalFeature() {
 
         // 1. 距離（射程）のチェック
         // プレイヤーのリーチ（通常 3.0ブロック、クリエイティブ 4.5~5.0）
-        val maxRange = player.entityAttackRange().maxRange
-        val minRange = player.entityAttackRange().minRange
-        if (player.distanceTo(target) !in minRange..maxRange) return
+        val range = player.entityInteractionRange()
+        if (player.distanceTo(target) > range) return
 
         // 2. 攻撃クールダウン（インターバル）のチェック
         // getAttackStrengthScale(0.5f) が 1.0 ならフルチャージ状態

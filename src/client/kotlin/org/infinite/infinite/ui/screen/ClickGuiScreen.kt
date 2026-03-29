@@ -1,6 +1,6 @@
 package org.infinite.infinite.ui.screen
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.MouseButtonEvent
@@ -101,7 +101,7 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
         addRenderableWidget(searchBox)
     }
 
-    override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun extractRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         val g2d = Graphics2DRenderer(guiGraphics)
 
         // アニメーション計算
@@ -187,7 +187,7 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
         g2d.flush() // 最後にまとめてレンダリング
 
         // Widget (EditBox) の描画は最後に
-        super.render(guiGraphics, uiMouseX, uiMouseY, delta)
+        super.extractRenderState(guiGraphics, uiMouseX, uiMouseY, delta)
     }
 
     private fun renderCategoryRows(g2d: Graphics2DRenderer, mx: Int, my: Int, y: Float, h: Float) {
@@ -404,7 +404,7 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
         val my = toUiY(mouseButtonEvent.y).toInt()
 
         if (searchBox.isMouseOver(mx.toDouble(), my.toDouble())) {
-            this.setFocused(searchBox)
+            this.focused = searchBox
             return searchBox.mouseClicked(mouseButtonEvent, bl)
         }
 

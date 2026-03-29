@@ -1,6 +1,6 @@
 package org.infinite.infinite.ui.screen
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.gui.layouts.LinearLayout
 import net.minecraft.client.gui.screens.Screen
@@ -72,14 +72,14 @@ class ListFeatureScreen<T : Feature>(
         addRenderableWidget(container)
     }
 
-    override fun renderBackground(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        super.renderBackground(guiGraphics, mouseX, mouseY, delta)
+    override fun extractBackground(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
+        super.extractBackground(guiGraphics, mouseX, mouseY, delta)
         val g2d = Graphics2DRenderer(guiGraphics)
         InfiniteClient.theme.renderBackGround(0f, 0f, width.toFloat(), height.toFloat(), g2d, 0.1f)
         g2d.flush()
     }
 
-    override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun extractRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         val g2d = Graphics2DRenderer(guiGraphics)
 
         // 1. パネル本体の描画
@@ -106,17 +106,17 @@ class ListFeatureScreen<T : Feature>(
         val titleY = panelY + 10
 
         // タイトル
-        guiGraphics.drawString(font, feature.name, titleX, titleY, themeScheme.foregroundColor, false)
+        guiGraphics.text(font, feature.name, titleX, titleY, themeScheme.foregroundColor, false)
 
         // 説明文（存在する場合）
         val descriptionKey = feature.translation()
         val description = Component.translatable(descriptionKey).string
         if (description != descriptionKey && description != feature.name) {
             val descY = titleY + font.lineHeight + 2
-            guiGraphics.drawString(font, description, titleX, descY, themeScheme.secondaryColor, false)
+            guiGraphics.text(font, description, titleX, descY, themeScheme.secondaryColor, false)
         }
 
-        super.render(guiGraphics, mouseX, mouseY, delta)
+        super.extractRenderState(guiGraphics, mouseX, mouseY, delta)
     }
 
     // --- インターフェース・イベントのブリッジ ---

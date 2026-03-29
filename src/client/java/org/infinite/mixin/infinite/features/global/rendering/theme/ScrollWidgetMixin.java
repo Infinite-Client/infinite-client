@@ -1,7 +1,7 @@
 // ScrollWidgetMixin.java
 package org.infinite.mixin.infinite.features.global.rendering.theme;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractScrollArea;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
@@ -19,8 +19,9 @@ public abstract class ScrollWidgetMixin extends AbstractWidget {
     super(i, j, k, l, component);
   }
 
-  @Inject(method = "renderScrollbar", at = @At("HEAD"), cancellable = true)
-  private void onRenderScrollBar(GuiGraphics guiGraphics, int mouseX, int mouseY, CallbackInfo ci) {
+  @Inject(method = "extractScrollbar", at = @At("HEAD"), cancellable = true)
+  private void onRenderScrollBar(
+      GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, CallbackInfo ci) {
     ThemeFeature theme =
         InfiniteClient.INSTANCE.getGlobalFeatures().getRendering().getThemeFeature();
 
@@ -28,7 +29,7 @@ public abstract class ScrollWidgetMixin extends AbstractWidget {
       // AbstractScrollArea 用の専用メソッドを呼び出す
       theme
           .getScrollWidgetRenderer()
-          .renderScrollbar((AbstractScrollArea) (Object) this, guiGraphics, mouseX, mouseY);
+          .extractScrollbar((AbstractScrollArea) (Object) this, guiGraphics, mouseX, mouseY);
       ci.cancel();
     }
   }

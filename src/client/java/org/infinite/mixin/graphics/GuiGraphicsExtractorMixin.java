@@ -1,14 +1,13 @@
 package org.infinite.mixin.graphics;
 
-import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ActiveTextCollector;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.font.FontSet;
-import net.minecraft.client.gui.render.state.GuiRenderState;
-import net.minecraft.client.gui.render.state.GuiTextRenderState;
+import net.minecraft.client.renderer.state.gui.GuiRenderState;
+import net.minecraft.client.renderer.state.gui.GuiTextRenderState;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
@@ -19,7 +18,6 @@ import org.infinite.libs.graphics.text.ModernTextRenderer;
 import org.infinite.libs.graphics.text.font.StyleExtractor;
 import org.joml.Matrix3x2f;
 import org.joml.Matrix3x2fStack;
-import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -29,29 +27,24 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(GuiGraphics.class)
-public class GuiGraphicsMixin {
+@Mixin(GuiGraphicsExtractor.class)
+public class GuiGraphicsExtractorMixin {
   @Shadow @Final Minecraft minecraft;
   @Shadow @Final public GuiRenderState guiRenderState;
-  @Shadow @Final public GuiGraphics.ScissorStack scissorStack;
   @Shadow @Final private Matrix3x2fStack pose;
 
   @Unique
   @SuppressWarnings("DataFlowIssue")
-  private GuiGraphics self() {
-    return (GuiGraphics) (Object) this;
+  private GuiGraphicsExtractor self() {
+    return (GuiGraphicsExtractor) (Object) this;
   }
 
   // 1. 標準の textRenderer: 常に不透明 (1.0F)
   @Inject(
-      method =
-          "textRenderer(Lnet/minecraft/client/gui/GuiGraphics$HoveredTextEffects;Ljava/util/function/Consumer;)Lnet/minecraft/client/gui/ActiveTextCollector;",
+      method = "textRenderer()Lnet/minecraft/client/gui/ActiveTextCollector;",
       at = @At("HEAD"),
       cancellable = true)
-  public void onTextRenderer(
-      GuiGraphics.HoveredTextEffects hoveredTextEffects,
-      @Nullable Consumer<Style> consumer,
-      CallbackInfoReturnable<ActiveTextCollector> cir) {
+  public void onTextRenderer(CallbackInfoReturnable<ActiveTextCollector> cir) {
 
     cir.setReturnValue(new ModernTextRenderer(self(), hoveredTextEffects, 1.0F, consumer));
   }
@@ -75,19 +68,11 @@ public class GuiGraphicsMixin {
 
   // 3. 直接描画用 (以前のロジックを維持)
   @Inject(
-      method =
-          "drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/util/FormattedCharSequence;IIIZ)V",
+      method = "text(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)V",
       at = @At("HEAD"),
       cancellable = true)
-  public void onDrawString(
-      Font font,
-      FormattedCharSequence formattedCharSequence,
-      int i,
-      int j,
-      int k,
-      boolean bl,
-      CallbackInfo ci) {
-    if (ARGB.alpha(k) == 0) return;
+  public void onDrawString(Font font, String str, int x, int y, int color, CallbackInfo ci) {
+    if (ARGB.alpha(color) == 0) return;
 
     if (InfiniteClient.INSTANCE
         .getGlobalFeatures()
@@ -102,14 +87,14 @@ public class GuiGraphicsMixin {
 
       FormattedCharSequence noBoldSequence = stripBold(formattedCharSequence);
 
-      this.guiRenderState.submitText(
+      this.guiRenderState.addText(
           new GuiTextRenderState(
               modernFont,
               noBoldSequence,
               new Matrix3x2f(this.pose),
-              i,
-              j,
-              k,
+              x,
+              y,
+              color,
               0,
               bl,
               false,

@@ -1,6 +1,6 @@
 package org.infinite.libs.ui.widgets
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.events.GuiEventListener
 import org.infinite.libs.core.features.property.BooleanProperty
 
@@ -39,8 +39,8 @@ class BooleanPropertyWidget(
             }
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
-        propertyToggleButton.render(guiGraphics, mouseX, mouseY, delta)
+    override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
+        super.extractWidgetRenderState(guiGraphics, mouseX, mouseY, delta)
+        propertyToggleButton.extractRenderState(guiGraphics, mouseX, mouseY, delta)
     }
 }

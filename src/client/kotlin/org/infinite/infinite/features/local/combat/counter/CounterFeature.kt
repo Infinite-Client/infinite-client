@@ -35,7 +35,7 @@ class CounterFeature : LocalFeature() {
             return
         }
         target?.distanceTo(player)?.let {
-            if (it > player.entityAttackRange().maxRange) {
+            if (it > player.entityInteractionRange()) {
                 target = null
             }
         }

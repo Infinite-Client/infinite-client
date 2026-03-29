@@ -5,14 +5,13 @@ import com.mojang.blaze3d.resource.GraphicsResourceAllocator
 import kotlinx.coroutines.runBlocking
 import net.minecraft.client.Camera
 import net.minecraft.client.DeltaTracker
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.graphics2d.RenderSystem2D
 import org.infinite.libs.graphics.graphics3d.RenderSystem3D
 import org.infinite.libs.graphics.system.ProjectionData
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.minecraft.aim.AimSystem
-import org.joml.Matrix4d
 import org.joml.Matrix4f
 import org.joml.Vector4f
 
@@ -35,7 +34,7 @@ object RenderTicks : MinecraftInterface() {
     }
 
     fun onStartUiRendering(
-        guiGraphics: GuiGraphics,
+        guiGraphics: GuiGraphicsExtractor,
         deltaTracker: DeltaTracker,
     ) {
         updateFps()
@@ -55,7 +54,7 @@ object RenderTicks : MinecraftInterface() {
     }
 
     fun onEndUiRendering(
-        guiGraphics: GuiGraphics,
+        guiGraphics: GuiGraphicsExtractor,
         deltaTracker: DeltaTracker,
     ) {
         val commands =

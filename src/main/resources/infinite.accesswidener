@@ -40,7 +40,7 @@ accessible field net/minecraft/world/level/block/entity/BrewingStandBlockEntity 
 accessible field net/minecraft/world/level/block/entity/HopperBlockEntity cooldownTime I
 accessible field net/minecraft/world/level/block/state/BlockBehaviour$BlockStateBase mapColor Lnet/minecraft/world/level/material/MapColor;
 accessible method net/minecraft/client/gui/components/AbstractScrollArea isOverScrollbar (DD)Z
-accessible method net/minecraft/client/gui/components/AbstractScrollArea renderScrollbar (Lnet/minecraft/client/gui/GuiGraphics;II)V
+accessible method net/minecraft/client/gui/components/AbstractScrollArea renderScrollbar (Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V
 accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarX ()I
 accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarY ()I
 accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollbarVisible ()Z
@@ -61,3 +61,9 @@ extendable method net/minecraft/client/gui/render/state/GuiItemRenderState calcu
 mutable field net/minecraft/client/gui/Font splitter Lnet/minecraft/client/StringSplitter;
 mutable field net/minecraft/client/gui/components/ChatComponent allMessages Ljava/util/List;
 accessible method net/minecraft/client/renderer/GameRenderer getFov (Lnet/minecraft/client/Camera;FZ)F
+accessible field net/minecraft/client/gui/GuiGraphicsExtractor scissorStack Lnet/minecraft/client/gui/GuiGraphicsExtractor$ScissorStack;
+accessible field net/minecraft/client/gui/GuiGraphicsExtractor guiRenderState Lnet/minecraft/client/renderer/state/gui/GuiRenderState;
+accessible class net/minecraft/client/gui/GuiGraphicsExtractor$ScissorStack
+accessible field net/minecraft/client/Minecraft blockModelResolver Lnet/minecraft/client/renderer/block/BlockModelResolver;
+accessible field net/minecraft/client/renderer/block/BlockModelResolver modelManager Lnet/minecraft/client/resources/model/ModelManager;
+accessible field net/minecraft/client/resources/model/ModelManager blockModelSet Lnet/minecraft/client/renderer/block/BlockModelSet;

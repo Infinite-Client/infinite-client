@@ -1,7 +1,7 @@
 package org.infinite.libs.ui.widgets
 
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractContainerWidget
 import net.minecraft.client.gui.components.Renderable
 import net.minecraft.client.gui.components.events.GuiEventListener
@@ -19,7 +19,7 @@ abstract class AbstractCarouselWidget<T>(
     val parent: AbstractCarouselScreen<T>,
     val thisIndex: Int,
     title: Component,
-) : AbstractContainerWidget(x, y, width, height, title) {
+) : AbstractContainerWidget(x, y, width, height, title, defaultSettings(10)) {
     var widgetFrameData: AbstractCarouselScreen.WidgetFrameData? = null
     protected val children = mutableListOf<Renderable>()
     override fun children(): List<GuiEventListener> = children.filterIsInstance<GuiEventListener>()
@@ -27,7 +27,7 @@ abstract class AbstractCarouselWidget<T>(
     /**
      * 描画時の行列変換
      */
-    private fun GuiGraphics.carouselTransform() {
+    private fun GuiGraphicsExtractor.carouselTransform() {
         val frame = widgetFrameData ?: return
         val minecraft = Minecraft.getInstance()
         val screenWidth = minecraft.window.guiScaledWidth
@@ -87,12 +87,12 @@ abstract class AbstractCarouselWidget<T>(
         return MouseButtonEvent(tx, ty, this.buttonInfo)
     }
 
-    public final override fun renderWidget(guiGraphics: GuiGraphics, x: Int, y: Int, delta: Float) {
+    public final override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, x: Int, y: Int, delta: Float) {
         guiGraphics.carouselTransform()
 
         // 内部ウィジェットの描画（既に座標系がズレているので(x,y)は0,0基準で渡すのが一般的）
         for (child in children) {
-            child.render(guiGraphics, x, y, delta)
+            child.extractRenderState(guiGraphics, x, y, delta)
         }
 
         guiGraphics.pose().popMatrix()

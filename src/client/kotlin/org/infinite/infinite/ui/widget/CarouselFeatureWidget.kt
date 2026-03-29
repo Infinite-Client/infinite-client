@@ -1,6 +1,6 @@
 package org.infinite.infinite.ui.widget
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractContainerWidget
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.gui.narration.NarrationElementOutput
@@ -18,7 +18,7 @@ abstract class CarouselFeatureWidget<T : Feature>(
     width: Int,
     height: Int = FONT_SIZE + PADDING * 2,
     protected val feature: T,
-) : AbstractContainerWidget(x, y, width, height, Component.literal(feature.name)) {
+) : AbstractContainerWidget(x, y, width, height, Component.literal(feature.name), defaultSettings(10)) {
 
     companion object {
         const val PADDING = 4
@@ -98,7 +98,7 @@ abstract class CarouselFeatureWidget<T : Feature>(
         relocateChildren()
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, i: Int, j: Int, f: Float) {
+    override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, i: Int, j: Int, f: Float) {
         val theme = InfiniteClient.theme
         val graphics2DRenderer = Graphics2DRenderer(guiGraphics)
         val colorScheme = theme.colorScheme

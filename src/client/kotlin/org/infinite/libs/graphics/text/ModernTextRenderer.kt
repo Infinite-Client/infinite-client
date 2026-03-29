@@ -2,9 +2,9 @@ package org.infinite.libs.graphics.text
 
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.ActiveTextCollector
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.TextAlignment
-import net.minecraft.client.gui.render.state.GuiTextRenderState
+import net.minecraft.client.renderer.state.gui.GuiTextRenderState
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
 import net.minecraft.util.ARGB
@@ -17,14 +17,14 @@ import org.joml.Matrix3x2f
 import java.util.function.Consumer
 
 class ModernTextRenderer(
-    private val graphics: GuiGraphics,
-    private val hoveredTextEffects: GuiGraphics.HoveredTextEffects,
+    private val graphics: GuiGraphicsExtractor,
+    private val hoveredTextEffects: GuiGraphicsExtractor.HoveredTextEffects,
     alpha: Float = 1.0f, // 透過度を追加（デフォルト1.0）
     private val additionalConsumer: Consumer<Style>? = null,
 ) : ActiveTextCollector,
     Consumer<Style> {
     private var params: ActiveTextCollector.Parameters = createDefaultTextParameters(alpha)
-    private fun createDefaultTextParameters(f: Float): ActiveTextCollector.Parameters = ActiveTextCollector.Parameters(Matrix3x2f(graphics.pose()), f, graphics.scissorStack.peek())
+    private fun createDefaultTextParameters(f: Float): ActiveTextCollector.Parameters = ActiveTextCollector.Parameters(Matrix3x2f(graphics.pose()), f, graphics.scissorStack)
 
     private val minecraft: Minecraft = Minecraft.getInstance()
 
@@ -111,7 +111,7 @@ class ModernTextRenderer(
         )
 
         if (ARGB.as8BitChannel(parameters.opacity()) != 0) {
-            guiRenderState.submitText(renderState)
+            guiRenderState.addText(renderState)
         }
         if (hasEffects) {
             ActiveTextCollector.findElementUnderCursor(
@@ -163,7 +163,7 @@ class ModernTextRenderer(
             parameters.scissor(),
         )
         if (ARGB.as8BitChannel(parameters.opacity()) != 0) {
-            graphics.guiRenderState.submitText(guiTextRenderState)
+            graphics.guiRenderState.addText(guiTextRenderState)
         }
 
         if (bl) {

@@ -3,7 +3,6 @@ package org.infinite.infinite.features.local.level.xray
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.world.level.BlockAndTintGetter
 import net.minecraft.world.level.BlockGetter
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.material.FluidState
@@ -197,9 +196,6 @@ class XRayFeature : LocalFeature() {
      */
     fun atLiquid(
         fluidState: FluidState, // 現在の流体
-        blockState: BlockState, // 現在のブロック
-        direction: Direction, // 描画しようとしている面
-        neighborFluid: FluidState, // 隣接する流体
         original: Boolean, // バニラの描画判定結果
     ): Boolean {
         if (!isEnabled()) return original
@@ -214,9 +210,7 @@ class XRayFeature : LocalFeature() {
     }
 
     fun atModelBlockRenderer(
-        blockAndTintGetter: BlockAndTintGetter,
         blockState: BlockState,
-        bl: Boolean,
         direction: Direction,
         blockPos: BlockPos,
         original: Boolean,

@@ -1,7 +1,7 @@
 package org.infinite.infinite.ui.widget
 
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
@@ -35,8 +35,8 @@ class FeatureResetButton(x: Int, y: Int, width: Int, height: Int, feature: Featu
     private var clickAnimStartTime: Long = -1L
     private val clickAnimDuration = 500.0 // 0.5秒で1回転
 
-    override fun renderContents(
-        guiGraphics: GuiGraphics,
+    override fun extractContents(
+        guiGraphics: GuiGraphicsExtractor,
         i: Int,
         j: Int,
         f: Float,
