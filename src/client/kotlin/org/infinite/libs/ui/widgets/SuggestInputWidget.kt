@@ -1,7 +1,7 @@
 package org.infinite.libs.ui.widgets
 
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.Component
@@ -109,10 +109,8 @@ open class SuggestInputWidget(
         return super.keyPressed(keyEvent)
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        // 本体の入力ボックスを描画 (Minecraft標準の描画を維持)
-        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
-
+    override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
+        super.extractWidgetRenderState(guiGraphics, mouseX, mouseY, delta)
         if (isFocused && filteredSuggestions.isNotEmpty()) {
             val theme = InfiniteClient.theme
             val colorScheme = theme.colorScheme

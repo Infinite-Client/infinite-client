@@ -1,7 +1,7 @@
 package org.infinite.libs.ui.widgets
 
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.narration.NarrationElementOutput
 import net.minecraft.client.input.MouseButtonEvent
@@ -47,7 +47,7 @@ class SelectionPropertyWidget<T : Any>(
             }
         }
 
-        override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+        override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
             val g2d = Graphics2DRenderer(guiGraphics)
             val alphaMult = if (active) 1.0f else 0.5f
             val radius = (height / 2f).coerceAtLeast(4f)
@@ -104,7 +104,6 @@ class SelectionPropertyWidget<T : Any>(
         val twoLineLimit = 220 // 少し厳しめに設定
         val padding = 8
         val font = Minecraft.getInstance().font
-
         // 選択肢の中で最大の幅を持つ文字列に合わせてボタン幅を調整
         val maxOptionWidth = property.propertyString(property.value).let { font.width(it) }
         cycleButton.height = (DEFAULT_WIDGET_HEIGHT * 0.9f).toInt()
@@ -121,9 +120,9 @@ class SelectionPropertyWidget<T : Any>(
         }
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         // PropertyWidgetのラベル描画を呼び出す
-        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
-        cycleButton.render(guiGraphics, mouseX, mouseY, delta)
+        super.extractWidgetRenderState(guiGraphics, mouseX, mouseY, delta)
+        cycleButton.extractRenderState(guiGraphics, mouseX, mouseY, delta)
     }
 }

@@ -10,15 +10,11 @@ import net.minecraft.world.phys.HitResult
  * ターゲットを正確に捉えているかを判定する。
  */
 fun Player.isLookingAtEntity(target: Entity): Boolean {
-    // 1.21.1+ の属性から射程を取得
-    val attackRange = this.entityAttackRange()
-    val maxRange = attackRange.maxRange // 槍などの最長到達距離
-    val minRange = attackRange.minRange // 最短（近接）の有効距離
+    val attackRange = this.entityInteractionRange()
 
     val eyePos = this.eyePosition
     val viewVec = this.getViewVector(1.0f)
-    // 最大射程まで視線を伸ばす
-    val endPos = eyePos.add(viewVec.x * maxRange, viewVec.y * maxRange, viewVec.z * maxRange)
+    val endPos = eyePos.add(viewVec.multiply(attackRange, attackRange, attackRange))
 
     // ターゲットのBounding Box（当たり判定）を取得。pickRadiusで微調整。
     val collisionBox = target.boundingBox.inflate(target.pickRadius.toDouble())
@@ -30,10 +26,8 @@ fun Player.isLookingAtEntity(target: Entity): Boolean {
     val entityHitPos = hitResultOptional.get()
     val distanceToEntity = eyePos.distanceTo(entityHitPos)
 
-    // 2. 距離チェック (maxRange以内、かつ武器の特性的に有効な距離か)
-    // 基本的には maxRange 以内であれば「視線は合っている」とみなせますが、
-    // 攻撃の有効判定として使うなら distanceToEntity >= minRange も考慮すべき場合があります。
-    if (distanceToEntity !in minRange..maxRange) return false
+    // 2. 距離チェック
+    if (distanceToEntity > attackRange) return false
 
     // 3. 壁越し判定 (Raytrace)
     val blockHit = this.level().clip(

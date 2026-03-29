@@ -144,7 +144,7 @@ abstract class ListCategoryWidget<T : Category<*, out Feature>>(
 
         // 内部コンテナ（スクロールエリア）の描画
         // 注意: container 内部でも Graphics2DRenderer を使っている場合は、そこでも flush() が必要です
-        container.render(guiGraphics, mouseX, mouseY, delta)
+        container.extractRenderState(guiGraphics, mouseX, mouseY, delta)
     }
 
     private fun categoryDescription(): String {

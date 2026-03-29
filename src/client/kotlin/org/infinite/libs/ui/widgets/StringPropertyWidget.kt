@@ -1,7 +1,7 @@
 package org.infinite.libs.ui.widgets
 
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.input.CharacterEvent
@@ -52,12 +52,9 @@ class StringPropertyWidget(
         // 高さやその他のスタイル調整が必要な場合はここで行う
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        // PropertyWidget の基本描画（タイトル/ラベル）
-        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
-
-        // テキストボックスの描画
-        editBox.render(guiGraphics, mouseX, mouseY, delta)
+    override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
+        super.extractWidgetRenderState(guiGraphics, mouseX, mouseY, delta)
+        editBox.extractRenderState(guiGraphics, mouseX, mouseY, delta)
     }
 
     override fun charTyped(characterEvent: CharacterEvent): Boolean = editBox.charTyped(characterEvent) || super.charTyped(characterEvent)

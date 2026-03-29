@@ -70,7 +70,7 @@ class CarouselFeatureScreen<T : Feature>(
         val description = Component.translatable(feature.translation()).string
         g2d.textCentered(description, centerX, 2f * size)
         g2d.flush()
-        container.render(guiGraphics, mouseX, mouseY, delta)
+        container.extractRenderState(guiGraphics, mouseX, mouseY, delta)
     }
 
     override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean = container.mouseClicked(mouseButtonEvent, bl) || super.mouseClicked(mouseButtonEvent, bl)
