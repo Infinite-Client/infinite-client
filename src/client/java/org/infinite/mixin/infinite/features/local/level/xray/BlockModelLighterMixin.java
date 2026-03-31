@@ -28,8 +28,7 @@ public class BlockModelLighterMixin {
       BlockAndTintGetter level,
       BlockPos relativePos,
       CallbackInfoReturnable<Integer> cir) {
-    if (feature().isEnabled() && !feature().shouldIsolate(state)) {
-      // 15728880 (0x00F000F0) を返して計算を中断させる
+    if (feature().shouldApply(state)) {
       cir.setReturnValue(15728880);
     }
   }
@@ -42,9 +41,7 @@ public class BlockModelLighterMixin {
       BakedQuad quad,
       QuadInstance outputInstance,
       CallbackInfo ci) {
-    if (feature().isEnabled() && !feature().shouldIsolate(state)) {
-      outputInstance.scaleColor(1.0f);
-      outputInstance.setLightCoords(15728880);
-    }
+    if (feature().shouldApply(state)) outputInstance.scaleColor(1.0f);
+    outputInstance.setLightCoords(15728880);
   }
 }

@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Lightmap.class)
-public class LightTextureMixin {
+public class LightmapMixin {
 
   @Inject(method = "getBrightness", at = @At("RETURN"), cancellable = true)
   private static void onGetBrightness(

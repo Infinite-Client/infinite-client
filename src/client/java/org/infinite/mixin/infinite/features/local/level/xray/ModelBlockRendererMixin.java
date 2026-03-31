@@ -40,28 +40,30 @@ public class ModelBlockRendererMixin {
       BakedQuad bakedQuad,
       QuadInstance quadInstance,
       Operation<Void> original,
-      @Local(argsOnly = true) BlockState state) {
+      @Local(argsOnly = true, name = "state") BlockState state) {
+
     XRayFeature xRay = xRayFeature();
 
     if (xRay.isEnabled()) {
       boolean isOre = xRay.getTargetBlocks().getValue().contains(xRay.getBlockId(state));
 
       if (isOre) {
-        // 鉱石はそのまま（不透明）
+        // 先に元の処理を呼び出す（ここで本来の暗いライトマップがセットされる）
         original.call(instance, x, y, z, bakedQuad, quadInstance);
-      } else {
-        // 透過設定を取得 (0.0f ~ 1.0f)
-        float alpha = xRay.getTransparency().getValue();
 
-        // QuadInstanceの色にアルファ値を乗算する
-        // ARGB形式で指定する場合 (Alphaは最上位バイト)
-        // 例: 0xFFFFFF に alpha を適用した整数を作成
+        // --- 呼び出し直後に最大輝度で上書き ---
+        // 15728880 は 0xF000F0 (Full Bright) です
+        quadInstance.setLightCoords(15728880);
+
+        // もし色の乗算(シェーディング)で暗くなっている場合は、色も白(-1)にリセット
+        quadInstance.setColor(-1);
+      } else {
+        // 透過設定
+        float alpha = xRay.getTransparency().getValue();
         int alphaInt = (int) (alpha * 255.0F) << 24;
         int colorMask = 0x00FFFFFF | alphaInt;
 
-        // QuadInstance に色を適用（メソッド名は環境により multiplyColor や setColor の場合があります）
         quadInstance.multiplyColor(colorMask);
-
         original.call(instance, x, y, z, bakedQuad, quadInstance);
       }
     } else {
@@ -69,7 +71,6 @@ public class ModelBlockRendererMixin {
     }
   }
 
-  /** shouldRenderFace へのフック（既存のままで概ね良好ですが、neighborPosとしてキャプチャを修正） */
   @WrapOperation(
       method = "shouldRenderFace",
       at =
@@ -82,7 +83,7 @@ public class ModelBlockRendererMixin {
       BlockState neighborState,
       Direction side,
       Operation<Boolean> original,
-      @Local(argsOnly = true) BlockPos neighborPos // 引数名は neighborPos
+      @Local(argsOnly = true, name = "neighborPos") BlockPos neighborPos // 引数名は neighborPos
       ) {
     XRayFeature xRay = xRayFeature();
     if (!xRay.isEnabled()) {

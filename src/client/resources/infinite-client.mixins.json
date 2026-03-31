@@ -33,7 +33,7 @@
     "infinite.features.local.level.esp.EntityMixin",
     "infinite.features.local.level.esp.EntityRendererMixin",
     "infinite.features.local.level.xray.ItemBlockRenderTypesMixin",
-    "infinite.features.local.level.xray.LightTextureMixin",
+    "infinite.features.local.level.xray.LightmapMixin",
     "infinite.features.local.level.xray.ModelBlockRendererMixin",
     "infinite.features.local.level.xray.OptionsMixin",
     "infinite.features.local.rendering.brightsight.GameRendererMixin",
@@ -58,6 +58,7 @@
     "defaultRequire": 1
   },
   "mixins": [
-    "infinite.features.local.level.xray.BlockModelLighterMixin"
+    "infinite.features.local.level.xray.BlockModelLighterMixin",
+    "infinite.features.local.level.xray.BlockStateBaseMixin"
   ]
 }
