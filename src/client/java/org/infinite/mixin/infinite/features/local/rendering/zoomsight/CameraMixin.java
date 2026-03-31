@@ -19,11 +19,9 @@ public class CameraMixin {
 
   @Shadow @Final private Minecraft minecraft;
 
-  @Shadow
-  private float oldFovModifier;
+  @Shadow private float oldFovModifier;
 
-  @Shadow
-  private float fovModifier;
+  @Shadow private float fovModifier;
 
   @Inject(method = "tickFov", at = @At("HEAD"), cancellable = true)
   private void onTickFov(CallbackInfo ci) {

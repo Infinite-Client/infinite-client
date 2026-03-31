@@ -3,9 +3,10 @@ package org.infinite.libs.core.tick
 import com.mojang.blaze3d.buffers.GpuBufferSlice
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator
 import kotlinx.coroutines.runBlocking
-import net.minecraft.client.Camera
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.renderer.chunk.ChunkSectionsToRender
+import net.minecraft.client.renderer.state.level.CameraRenderState
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.graphics2d.RenderSystem2D
 import org.infinite.libs.graphics.graphics3d.RenderSystem3D
@@ -13,6 +14,7 @@ import org.infinite.libs.graphics.system.ProjectionData
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.infinite.libs.minecraft.aim.AimSystem
 import org.joml.Matrix4f
+import org.joml.Matrix4fc
 import org.joml.Vector4f
 
 object RenderTicks : MinecraftInterface() {
@@ -66,53 +68,53 @@ object RenderTicks : MinecraftInterface() {
     }
 
     private fun updateProjectionData(
-        camera: Camera,
-        positionMatrix: Matrix4f,
-        projectionMatrix: Matrix4f,
+        camera: CameraRenderState,
+        modelViewMatrix4fc: Matrix4fc,
     ) {
+        val modelViewMatrix = Matrix4f(modelViewMatrix4fc)
         val client = net.minecraft.client.Minecraft.getInstance()
         _latestProjectionData = ProjectionData(
-            cameraPos = camera.position(),
-            modelViewMatrix = Matrix4f(positionMatrix),
-            projectionMatrix = Matrix4f(projectionMatrix),
+            cameraPos = camera.pos,
+            modelViewMatrix = modelViewMatrix,
+            projectionMatrix = camera.projectionMatrix,
             scaledWidth = client.window.guiScaledWidth,
             scaledHeight = client.window.guiScaledHeight,
         )
     }
-
     fun onLevelRendering(
-        graphicsResourceAllocator: GraphicsResourceAllocator,
+        resourceAllocator: GraphicsResourceAllocator,
         deltaTracker: DeltaTracker,
-        renderBlockOutline: Boolean,
-        camera: Camera,
-        positionMatrix: Matrix4f,
-        projectionMatrix: Matrix4f,
-        frustumMatrix: Matrix4f,
-        gpuBufferSlice: GpuBufferSlice,
-        vector4f: Vector4f,
-        bl2: Boolean,
+        renderOutline: Boolean,
+        cameraState: CameraRenderState, // 新しいステート
+        modelViewMatrix: Matrix4fc, // Matrix4fcに変更
+        terrainFog: GpuBufferSlice,
+        fogColor: Vector4f,
+        shouldRenderSky: Boolean,
+        chunkSectionsToRender: ChunkSectionsToRender,
     ) {
-        updateProjectionData(
-            camera,
-            positionMatrix,
-            projectionMatrix,
-        )
+        updateProjectionData(cameraState, modelViewMatrix)
+        // 4. RenderSystem3Dの初期化
+        // ※RenderSystem3Dのコンストラクタもこれに合わせて修正が必要です
         val renderSystem3D = RenderSystem3D(
-            graphicsResourceAllocator,
+            resourceAllocator,
             deltaTracker,
-            renderBlockOutline,
-            camera,
-            positionMatrix,
-            projectionMatrix,
-            frustumMatrix,
-            gpuBufferSlice,
-            vector4f, bl2,
+            renderOutline,
+            cameraState,
+            latestProjectionData!!.modelViewMatrix,
+            latestProjectionData!!.projectionMatrix,
+            terrainFog,
+            fogColor,
+            shouldRenderSky,
+            chunkSectionsToRender,
         )
+
         _renderSnapShot = renderSystem3D.snapShot()
-        val commands =
-            runBlocking {
-                return@runBlocking InfiniteClient.localFeatures.onLevelRendering()
-            }
+
+        // 5. 特徴量（Features）の実行
+        val commands = runBlocking {
+            return@runBlocking InfiniteClient.localFeatures.onLevelRendering()
+        }
+
         renderSystem3D.render(commands)
     }
 }

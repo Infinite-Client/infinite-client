@@ -1,8 +1,6 @@
 package org.infinite.mixin.infinite.features.local.rendering.stablesight;
 
 import net.minecraft.client.Camera;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
 import org.infinite.InfiniteClient;
 import org.infinite.infinite.features.local.rendering.stablesight.StableSightFeature;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,8 +17,6 @@ public abstract class CameraMixin {
   @Shadow
   protected abstract void move(float f, float g, float h);
 
-  @Shadow private float xRot;
-  @Shadow private float yRot;
   @Shadow private boolean detached;
 
   @Unique
@@ -29,9 +25,8 @@ public abstract class CameraMixin {
   }
 
   /** setupの最後で実行されるmove(カメラの後退処理)を上書き、 またはgetMaxZoomの挙動を書き換えます。 */
-  @Inject(method ="reset", at = @At("RETURN"))
-  public void onSetupReturn(
-      Level level, Entity entity, boolean bl, boolean bl2, float f, CallbackInfo ci) {
+  @Inject(method = "reset", at = @At("RETURN"))
+  public void onSetupReturn(CallbackInfo ci) {
     if (stableSightFeature().isEnabled() && this.detached) {
       // 1. 標準の挙動で移動してしまった分を一旦リセット（moveは相対移動のため）
       // 既存のsetup内で getMaxZoom に基づいて move(-dist, 0, 0) が呼ばれている。

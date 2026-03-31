@@ -34,7 +34,7 @@ class RightBoxRenderer :
         val actualSaturation = (player.foodData.saturationLevel / 20f).coerceIn(0f, 1f)
         val vehicle = player.vehicle
         val actualVehicle = if (vehicle is LivingEntity) (vehicle.health / vehicle.maxHealth).coerceIn(0f, 1f) else 0f
-        val actualAir = (player.airSupply.toFloat() / player.maxAirSupply.toFloat()).coerceIn(0f, 1f)
+        val actualAir = (player.airSupply / player.maxAirSupply.toFloat()).coerceIn(0f, 1f)
         val animateSpeed = 0.2f
         animatedFood += (actualFood - animatedFood) * animateSpeed
         animatedSaturation += (actualSaturation - animatedSaturation) * animateSpeed

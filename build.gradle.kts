@@ -222,6 +222,9 @@ tasks {
                 vmArg("-Dforeign.restricted=permit")
                 vmArg("-XX:+UnlockDiagnosticVMOptions")
                 vmArg("-XX:+AlwaysCompileLoopMethods")
+                vmArg("-Dmixin.debug.strict=true")
+                vmArg("-Dmixin.debug.verbose=true")
+                vmArg("-Dmixin.debug.countInjections=true")
             }
         }
         splitEnvironmentSourceSets()

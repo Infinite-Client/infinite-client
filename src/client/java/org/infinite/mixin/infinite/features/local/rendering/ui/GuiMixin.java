@@ -22,7 +22,7 @@ public class GuiMixin {
   // クロスヘア
   @Inject(method = "extractCrosshair", at = @At("HEAD"), cancellable = true)
   private void onRenderCrosshair(
-      GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+      GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getCrosshairUi().getValue()) {
       ci.cancel();
     }
@@ -31,7 +31,7 @@ public class GuiMixin {
   // ホットバー (アイテムスロットの並び)
   @Inject(method = "extractItemHotbar", at = @At("HEAD"), cancellable = true)
   private void onRenderHotbar(
-      GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+      GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getHotbarUi().getValue()) {
       ci.cancel();
     }
@@ -58,7 +58,7 @@ public class GuiMixin {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;extractExperienceLevel(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/gui/Font;I)V"),
+                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;extractBackground(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V"),
       cancellable = true)
   private void onRenderExperienceBarBackground(CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getTopBoxUi().getValue()) {
@@ -72,7 +72,7 @@ public class GuiMixin {
           @At(
               value = "INVOKE",
               target =
-                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;extractExperienceLevel(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/gui/Font;I)V"),
+                  "Lnet/minecraft/client/gui/contextualbar/ContextualBarRenderer;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V"),
       cancellable = true)
   private void onRenderExperienceBar(CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getTopBoxUi().getValue()) {
@@ -90,12 +90,12 @@ public class GuiMixin {
 
   @Inject(method = "extractArmor", at = @At("HEAD"), cancellable = true)
   private static void onRenderArmor(
-      GuiGraphicsExtractor guiGraphics,
+      GuiGraphicsExtractor graphics,
       Player player,
       int i,
-      int j,
-      int k,
-      int l,
+      int numHealthRows,
+      int healthRowHeight,
+      int xLeft,
       CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getLeftBoxUi().getValue()) {
       ci.cancel();
@@ -105,7 +105,7 @@ public class GuiMixin {
   /** 右側要素（満腹度）の描画を制御 */
   @Inject(method = "extractFood", at = @At("HEAD"), cancellable = true)
   private void onRenderFood(
-      GuiGraphicsExtractor guiGraphics, Player player, int i, int j, CallbackInfo ci) {
+      GuiGraphicsExtractor graphics, Player player, int yLineBase, int xRight, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getRightBoxUi().getValue()) {
       ci.cancel();
     }
@@ -114,14 +114,19 @@ public class GuiMixin {
   /** 右側要素（空気量/水中呼吸）の描画を制御 */
   @Inject(method = "extractAirBubbles", at = @At("HEAD"), cancellable = true)
   private void onRenderAir(
-      GuiGraphicsExtractor guiGraphics, Player player, int i, int j, int k, CallbackInfo ci) {
+      GuiGraphicsExtractor graphics,
+      Player player,
+      int vehicleHearts,
+      int yLineAir,
+      int xRight,
+      CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getRightBoxUi().getValue()) {
       ci.cancel();
     }
   }
 
   @Inject(method = "extractVehicleHealth", at = @At("HEAD"), cancellable = true)
-  private void onRenderVehicleHealth(GuiGraphicsExtractor guiGraphics, CallbackInfo ci) {
+  private void onRenderVehicleHealth(GuiGraphicsExtractor graphics, CallbackInfo ci) {
     if (ultraUiFeature().isEnabled() && ultraUiFeature().getRightBoxUi().getValue()) {
       ci.cancel();
     }
