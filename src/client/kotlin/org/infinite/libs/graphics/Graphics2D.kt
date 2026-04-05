@@ -23,9 +23,7 @@ import kotlin.math.min
  */
 open class Graphics2D : MinecraftInterface() {
     private val deltaTracker: DeltaTracker by lazy { Minecraft.getInstance().deltaTracker }
-    val gameDelta: Float get() = deltaTracker.gameTimeDeltaTicks
-    val realDelta: Float get() = deltaTracker.realtimeDeltaTicks
-
+    val delta: Float get() = deltaTracker.getGameTimeDeltaPartialTick(false)
     open val width: Int get() = minecraft.window.guiScaledWidth
     open val height: Int get() = minecraft.window.guiScaledHeight
 

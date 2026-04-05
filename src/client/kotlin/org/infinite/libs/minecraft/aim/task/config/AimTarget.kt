@@ -1,9 +1,7 @@
 package org.infinite.libs.minecraft.aim.task.config
 
-import net.minecraft.commands.arguments.EntityAnchorArgument
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.Entity
-import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.phys.Vec3
 import org.infinite.libs.graphics.graphics3d.structs.CameraRoll
 import org.infinite.libs.interfaces.MinecraftInterface
@@ -42,7 +40,6 @@ sealed class AimTarget : MinecraftInterface() {
         val blockPos: BlockPos,
         val face: BlockFace = BlockFace.Center, // デフォルトを中央 (CENTER) に設定
     ) : AimTarget() {
-        constructor(b: BlockEntity, face: BlockFace = BlockFace.Center) : this(b.blockPos, face)
 
         fun pos(offset: Double = 0.5): Vec3 {
             val center = blockPos.center
@@ -81,18 +78,13 @@ sealed class AimTarget : MinecraftInterface() {
         open val roll = r
     }
 
-    fun lookAt() {
-        val pos = pos() ?: return
-        player?.lookAt(EntityAnchorArgument.Anchor.EYES, pos)
-    }
-
     /**
      * AimTargetのワールド内位置を計算して返します。
      * RollTargetなど、位置を持たない場合は null を返します。
      */
     fun pos(): Vec3? = when (this) { // when式の対象を 'this' に変更し、スマートキャストを有効化
         is EntityTarget -> {
-            val basePos = this.entity.getPosition(minecraft.deltaTracker.gameTimeDeltaTicks)
+            val basePos = this.entity.getPosition(minecraft.deltaTracker.getGameTimeDeltaPartialTick(false))
             val height = this.entity.bbHeight
 
             val yOffset = when (this.anchor) {

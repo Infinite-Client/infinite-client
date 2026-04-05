@@ -43,7 +43,7 @@ class CrosshairRenderer :
         } else {
             // 三人称視点：レイキャストで衝突地点を計算
             val pickRange = 100.0 // レイキャストの最大距離
-            val hitResult = player.pick(pickRange, graphics2D.gameDelta, false)
+            val hitResult = player.pick(pickRange, graphics2D.delta, false)
             val worldPos = hitResult.location
 
             // ワールド座標をスクリーン座標に投影
@@ -64,7 +64,7 @@ class CrosshairRenderer :
         val shadowColor = colorScheme.backgroundColor
         val mainColor = colorScheme.foregroundColor
         val alphaValue = ultraUiFeature.alpha.value
-        val partialTicks = graphics2D.gameDelta
+        val partialTicks = graphics2D.delta
 
         // 1. ターゲット解析
         val hit = minecraft.hitResult
@@ -129,7 +129,7 @@ class CrosshairRenderer :
             // 残り数の平方根に比例した速度で回転
             val baseSpeed = 120f
             val countFactor = sqrt(totalCount.toDouble()).toFloat()
-            smoothBreakRotation -= baseSpeed * countFactor * graphics2D.realDelta
+            smoothBreakRotation -= baseSpeed * countFactor * graphics2D.delta
         } else {
             // 破壊が終わったら、最も近い90度の倍数（0, 90, 180, 270...）にスナップさせる
             val target = (smoothBreakRotation / 90f).roundToInt() * 90f
@@ -137,7 +137,7 @@ class CrosshairRenderer :
 
             // なめらかに目標角度へ近づける (Lerp)
             val snapSpeed = 10f // スナップの速さ
-            smoothBreakRotation += diff * (1f - 0.1.pow((graphics2D.realDelta * snapSpeed).toDouble()).toFloat())
+            smoothBreakRotation += diff * (1f - 0.1.pow((graphics2D.delta * snapSpeed).toDouble()).toFloat())
 
             // 誤差が十分に小さくなったら完全に固定し、値を0-360の範囲に正規化
             if (abs(diff) < 0.05f) {

@@ -282,7 +282,7 @@ class LockOnFeature : LocalFeature() {
     }
 
     private fun renderTargetInfo(graphics2D: Graphics2D, target: LivingEntity, current: Int, total: Int) {
-        val pos = target.getPosition(graphics2D.gameDelta).add(0.0, target.eyeHeight.toDouble(), 0.0)
+        val pos = target.getPosition(graphics2D.delta).add(0.0, target.eyeHeight.toDouble(), 0.0)
         val screenPos = graphics2D.projectWorldToScreen(pos) ?: return
 
         val x = screenPos.first
@@ -297,7 +297,7 @@ class LockOnFeature : LocalFeature() {
 
     private fun renderTargetMark(graphics2D: Graphics2D, target: LivingEntity, active: Boolean, paused: Boolean) {
         // ターゲットの描画位置（目の高さ）
-        val targetPos = target.getPosition(graphics2D.gameDelta).add(0.0, target.eyeHeight.toDouble(), 0.0)
+        val targetPos = target.getPosition(graphics2D.delta).add(0.0, target.eyeHeight.toDouble(), 0.0)
         val screenPos = graphics2D.projectWorldToScreen(targetPos) ?: return
 
         val x = screenPos.first

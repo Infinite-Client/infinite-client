@@ -29,7 +29,7 @@ class TopBoxRenderer :
         val theme = InfiniteClient.theme
 
         // --- 1. アニメーション更新 ---
-        renderTime += graphics2D.gameDelta * 0.05f
+        renderTime += graphics2D.delta * 0.05f
         val actualExp = player.experienceProgress.coerceIn(0f, 1f)
         animatedExp += (actualExp - animatedExp) * 0.1f
 

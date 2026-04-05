@@ -174,7 +174,7 @@ class HelloFeature : LocalFeature() {
         graphics2D.text("Hello World", 10f, graphics2D.height - 20f)
 
         // --- 8. ワールド座標の投影 ---
-        val pos = player.getPosition(graphics2D.gameDelta)
+        val pos = player.getPosition(graphics2D.delta)
         graphics2D.projectWorldToScreen(pos)?.let { (screenX, screenY) ->
             graphics2D.push()
             graphics2D.fillStyle = 0xFF00FF00.toInt()

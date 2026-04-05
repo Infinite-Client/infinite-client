@@ -96,7 +96,7 @@ class CounterFeature : LocalFeature() {
     }
 
     override fun onStartUiRendering(graphics2D: Graphics2D) {
-        val target = target?.getPosition(graphics2D.gameDelta) ?: return
+        val target = target?.getPosition(graphics2D.delta) ?: return
         val pos2d = graphics2D.projectWorldToScreen(target) ?: return
         val pos2f = pos2d.first to pos2d.second
         graphics2D.beginPath()
