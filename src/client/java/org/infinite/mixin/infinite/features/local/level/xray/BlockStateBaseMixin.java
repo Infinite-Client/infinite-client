@@ -17,7 +17,7 @@ public abstract class BlockStateBaseMixin {
    */
   @Inject(method = "getShadeBrightness", at = @At("RETURN"), cancellable = true)
   private void onGetShadeBrightness(
-      BlockGetter blockGetter, BlockPos blockPos, CallbackInfoReturnable<Float> cir) {
+      BlockGetter level, BlockPos pos, CallbackInfoReturnable<Float> cir) {
     if (InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getXRayFeature().isEnabled()) {
       // 影をなくし、フラットな明るさにする
       cir.setReturnValue(1.0F);

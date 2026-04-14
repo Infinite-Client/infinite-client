@@ -24,7 +24,6 @@ public class ModelBlockRendererMixin {
     return InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getXRayFeature();
   }
 
-  /** putQuadWithTint 内の BlockQuadOutput.put へのフック */
   @WrapOperation(
       method = "putQuadWithTint",
       at =
@@ -48,27 +47,31 @@ public class ModelBlockRendererMixin {
       boolean isOre = xRay.getTargetBlocks().getValue().contains(xRay.getBlockId(state));
 
       if (isOre) {
-        // 先に元の処理を呼び出す（ここで本来の暗いライトマップがセットされる）
-        original.call(instance, x, y, z, bakedQuad, quadInstance);
-
-        // --- 呼び出し直後に最大輝度で上書き ---
-        // 15728880 は 0xF000F0 (Full Bright) です
+        // --- original.call の「前」に設定する ---
+        // ライトマップを最大に固定（暗い場所でも光る）
         quadInstance.setLightCoords(15728880);
 
-        // もし色の乗算(シェーディング)で暗くなっている場合は、色も白(-1)にリセット
-        quadInstance.setColor(-1);
+        // シェーディング（影）を無効化したい場合は白に設定
+        // ただし quadInstance.setColor(i, color) をループで回す方が確実な場合がある
+        for (int i = 0; i < 4; i++) {
+          quadInstance.setColor(i, -1);
+        }
       } else {
-        // 透過設定
+        // 透過設定（石など）
         float alpha = xRay.getTransparency().getValue();
-        int alphaInt = (int) (alpha * 255.0F) << 24;
-        int colorMask = 0x00FFFFFF | alphaInt;
+        int a = (int) (alpha * 255.0F);
 
-        quadInstance.multiplyColor(colorMask);
-        original.call(instance, x, y, z, bakedQuad, quadInstance);
+        for (int i = 0; i < 4; i++) {
+          int oldColor = quadInstance.getColor(i);
+          // 元のRGBを維持しつつ、A（アルファ）だけを書き換える
+          int newColor = (a << 24) | (oldColor & 0x00FFFFFF);
+          quadInstance.setColor(i, newColor);
+        }
       }
-    } else {
-      original.call(instance, x, y, z, bakedQuad, quadInstance);
     }
+
+    // 最後に一回だけ呼び出す
+    original.call(instance, x, y, z, bakedQuad, quadInstance);
   }
 
   @WrapOperation(
@@ -81,15 +84,15 @@ public class ModelBlockRendererMixin {
   private boolean onShouldRenderFace(
       BlockState state,
       BlockState neighborState,
-      Direction side,
+      Direction direction,
       Operation<Boolean> original,
       @Local(argsOnly = true, name = "neighborPos") BlockPos neighborPos // 引数名は neighborPos
       ) {
     XRayFeature xRay = xRayFeature();
     if (!xRay.isEnabled()) {
-      return original.call(state, neighborState, side);
+      return original.call(state, neighborState, direction);
     }
     return xRay.atModelBlockRenderer(
-        state, side, neighborPos, original.call(state, neighborState, side));
+        state, direction, neighborPos, original.call(state, neighborState, direction));
   }
 }
