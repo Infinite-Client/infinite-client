@@ -354,3 +354,11 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
         )
     }
 }
+
+tasks.register<JavaExec>("genDocs") {
+    description = "Generate Document templates"
+    group = "application"
+    classpath = sourceSets["client"].runtimeClasspath
+    mainClass.set("org.infinite.utils.Document")
+    args(project.rootDir.absolutePath)
+}

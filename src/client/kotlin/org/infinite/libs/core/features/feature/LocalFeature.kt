@@ -34,6 +34,16 @@ open class LocalFeature :
 
     private val registeredActions = mutableListOf<KeyAction>()
 
+    fun getActionTranslationKeys(): List<String> {
+        val parent = "key.${translation()}"
+        val keys = mutableListOf<String>()
+        registeredActions.forEach { action ->
+            keys.add("$parent.${action.name}")
+        }
+        keys.add("$parent.toggle")
+        return keys
+    }
+
     // LocalFeature.kt 修正案
     fun registerAllActions(): List<MappingPair> {
         val parent = "key.${translation()}"
