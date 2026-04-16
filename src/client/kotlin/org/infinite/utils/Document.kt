@@ -196,58 +196,57 @@ class Document(
                 val setting = settingData.setting
                 featureContent.append("### ${settingData.name.escapeMdx()}\n")
                 featureContent.append("${translate(settingData.key, langCode).escapeMdx()}\n\n")
-                featureContent.append("#### ${translate("doc.infinite.property_info_title", langCode).escapeMdx()}\n\n")
+
+                // Table header
+                featureContent.append("| ${translate("doc.infinite.property_type", langCode).escapeMdx()} | ${translate("doc.infinite.property_default", langCode).escapeMdx()} | ${translate("doc.infinite.property_info_title", langCode).escapeMdx()} |\n")
+                featureContent.append("| :--- | :--- | :--- |\n")
 
                 val shortTypeName = setting::class.simpleName?.removeSuffix("Property") ?: "Unknown"
-
-                featureContent.append("* **${translate("doc.infinite.property_type", langCode).escapeMdx()}**: `$shortTypeName`\n")
-                featureContent.append("* **${translate("doc.infinite.property_default", langCode).escapeMdx()}**: `${setting.default}`\n")
+                val defaultValue = "`${setting.default}`"
+                val details = StringBuilder()
 
                 when (setting) {
                     is IntProperty -> {
-                        featureContent.append("* **${translate("doc.infinite.property_min", langCode).escapeMdx()}**: `${setting.min}`\n")
-                        featureContent.append("* **${translate("doc.infinite.property_max", langCode).escapeMdx()}**: `${setting.max}`\n")
+                        details.append("${translate("doc.infinite.property_min", langCode).escapeMdx()}: `${setting.min}`, ${translate("doc.infinite.property_max", langCode).escapeMdx()}: `${setting.max}`")
                     }
 
                     is FloatProperty -> {
-                        featureContent.append("* **${translate("doc.infinite.property_min", langCode).escapeMdx()}**: `${setting.min}`\n")
-                        featureContent.append("* **${translate("doc.infinite.property_max", langCode).escapeMdx()}**: `${setting.max}`\n")
+                        details.append("${translate("doc.infinite.property_min", langCode).escapeMdx()}: `${setting.min}`, ${translate("doc.infinite.property_max", langCode).escapeMdx()}: `${setting.max}`")
                     }
 
                     is DoubleProperty -> {
-                        featureContent.append("* **${translate("doc.infinite.property_min", langCode).escapeMdx()}**: `${setting.min}`\n")
-                        featureContent.append("* **${translate("doc.infinite.property_max", langCode).escapeMdx()}**: `${setting.max}`\n")
+                        details.append("${translate("doc.infinite.property_min", langCode).escapeMdx()}: `${setting.min}`, ${translate("doc.infinite.property_max", langCode).escapeMdx()}: `${setting.max}`")
                     }
 
                     is LongProperty -> {
-                        featureContent.append("* **${translate("doc.infinite.property_min", langCode).escapeMdx()}**: `${setting.min}`\n")
-                        featureContent.append("* **${translate("doc.infinite.property_max", langCode).escapeMdx()}**: `${setting.max}`\n")
+                        details.append("${translate("doc.infinite.property_min", langCode).escapeMdx()}: `${setting.min}`, ${translate("doc.infinite.property_max", langCode).escapeMdx()}: `${setting.max}`")
                     }
 
                     is StringListProperty -> {
-                        featureContent.append("* **${translate("doc.infinite.property_options", langCode).escapeMdx()}**: ${setting.default.joinToString(", ") { "`$it`" }}\n")
+                        details.append("${translate("doc.infinite.property_options", langCode).escapeMdx()}: ${setting.default.joinToString(", ") { "`$it`" }}")
                     }
 
                     is SelectionProperty<*> -> {
-                        featureContent.append("* **${translate("doc.infinite.property_options", langCode).escapeMdx()}**: ${setting.options.joinToString(", ") { "`$it`" }}\n")
+                        details.append("${translate("doc.infinite.property_options", langCode).escapeMdx()}: ${setting.options.joinToString(", ") { "`$it`" }}")
                     }
 
                     is BlockListProperty -> {
-                        featureContent.append("* **${translate("doc.infinite.property_list_count", langCode).escapeMdx()}**: ${setting.default.size}\n")
-                        featureContent.append("* **${translate("doc.infinite.property_list_type", langCode).escapeMdx()}**: Block IDs\n")
+                        details.append("${translate("doc.infinite.property_list_count", langCode).escapeMdx()}: ${setting.default.size} (Block IDs)")
                     }
 
                     is ItemListProperty -> {
-                        featureContent.append("* **${translate("doc.infinite.property_list_count", langCode).escapeMdx()}**: ${setting.default.size}\n")
-                        featureContent.append("* **${translate("doc.infinite.property_list_type", langCode).escapeMdx()}**: Item IDs\n")
+                        details.append("${translate("doc.infinite.property_list_count", langCode).escapeMdx()}: ${setting.default.size} (Item IDs)")
                     }
 
                     is BlockAndColorListProperty -> {
-                        featureContent.append("* **${translate("doc.infinite.property_list_count", langCode).escapeMdx()}**: ${setting.default.size}\n")
-                        featureContent.append("* **${translate("doc.infinite.property_list_type", langCode).escapeMdx()}**: Block IDs to Color Map\n")
+                        details.append("${translate("doc.infinite.property_list_count", langCode).escapeMdx()}: ${setting.default.size} (Block-Color Map)")
                     }
+
+                    else -> details.append("-")
                 }
-                featureContent.append("\n---\n\n")
+
+                featureContent.append("| `$shortTypeName` | $defaultValue | $details |\n\n")
+                featureContent.append("---\n\n")
             }
         }
         featurePath.writeText(featureContent.toString(), StandardCharsets.UTF_8)
