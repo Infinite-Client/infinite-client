@@ -26,6 +26,7 @@ Minecraft Anarchy サーバー向けの次世代ユーティリティ mod。
 JDK 25 のセットアップやランチャーの設定（特に macOS ユーザー向け）に関する詳細な手順は、[INSTALLATION.md](./INSTALLATION.md) を参照してください。
 
 ### クイックスタート
+
 1. **JDK 25** (Early Access) をインストール。
 2. **Fabric Loader 1.21.11** をインストール。
 3. `infinite-client.jar`, `fabric-api.jar`, `fabric-language-kotlin.jar` を `mods` フォルダに配置。

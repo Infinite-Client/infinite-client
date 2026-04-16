@@ -41,12 +41,9 @@ class MyAwesomeAddon : InfiniteAddon {
 ```json
 {
   "entrypoints": {
-    "infinite_addon": [
-      "com.example.addon.MyAwesomeAddon"
-    ]
+    "infinite_addon": ["com.example.addon.MyAwesomeAddon"]
   }
 }
-
 ```
 
 ## 3. 主要な拡張方法
@@ -113,17 +110,16 @@ InfiniteClientは以下の順序で初期化されます：
 
 ## 5. APIリファレンス (主要クラス)
 
-| クラス名 | 説明 |
-| --- | --- |
-| `InfiniteClient` | MODの心臓部。各マネージャーへのアクセスを提供します。 |
-| `LocalFeature` | サーバー/ワールドごとに設定を保持する機能の基底クラス。 |
-| `GlobalFeature` | クライアント全体で共通の設定を保持する機能の基底クラス。 |
-| `ThemeManager` | UIのテーマを管理。`register()` で新テーマを追加可能。 |
+| クラス名         | 説明                                                     |
+| ---------------- | -------------------------------------------------------- |
+| `InfiniteClient` | MODの心臓部。各マネージャーへのアクセスを提供します。    |
+| `LocalFeature`   | サーバー/ワールドごとに設定を保持する機能の基底クラス。  |
+| `GlobalFeature`  | クライアント全体で共通の設定を保持する機能の基底クラス。 |
+| `ThemeManager`   | UIのテーマを管理。`register()` で新テーマを追加可能。    |
 
 ---
 
 **アドオン開発者へのヒント:**
 
-* `Feature` クラス内で `Property`（BooleanPropertyなど）を定義すると、自動的にGUIに設定項目が表示されます。
-* 翻訳ファイル（`en_us.json`など）に `infinite.features.<scope>.<category>.<feature>` の形式でキーを追加することを忘れないでください。
-
+- `Feature` クラス内で `Property`（BooleanPropertyなど）を定義すると、自動的にGUIに設定項目が表示されます。
+- 翻訳ファイル（`en_us.json`など）に `infinite.features.<scope>.<category>.<feature>` の形式でキーを追加することを忘れないでください。

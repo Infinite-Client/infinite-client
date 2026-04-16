@@ -43,6 +43,7 @@ brew install --cask openjdk@25
 ```
 
 After installation via Homebrew, create a symlink:
+
 ```bash
 sudo ln -sfn /opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-25.jdk
 ```
@@ -54,6 +55,7 @@ sudo ln -sfn /opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk /Library/Java/Java
 ```
 
 You should see output like:
+
 ```
 openjdk 25-ea ...
 ```
@@ -101,20 +103,23 @@ Infinite Client requires **Fabric API** and **Fabric Language Kotlin**:
 3. Find the **fabric-loader-1.21.11** installation and click the **⋯** (three dots) → **Edit**
 4. Click **More Options** to expand advanced settings
 5. In the **Java Executable** field, enter the path to JDK 25:
+
    ```
    /Library/Java/JavaVirtualMachines/jdk-25.jdk/Contents/Home/bin/java
    ```
-   
+
    > **Note**: If you installed via Homebrew, use:
+   >
    > ```
    > /Library/Java/JavaVirtualMachines/openjdk-25.jdk/Contents/Home/bin/java
    > ```
 
 6. In the **JVM Arguments** field, add these flags (required for native access):
+
    ```
    -Xmx4G --enable-native-access=ALL-UNNAMED -Dforeign.restricted=permit
    ```
-   
+
    > Adjust `-Xmx4G` based on your available RAM (4GB minimum recommended)
 
 7. Click **Save**
@@ -132,14 +137,17 @@ Infinite Client requires **Fabric API** and **Fabric Language Kotlin**:
 ## Troubleshooting
 
 ### "Wrong Java Version" Error
+
 - Ensure you've set the correct Java Executable path in the launcher
 - Verify JDK 25 is installed: run `/Library/Java/JavaVirtualMachines/jdk-25.jdk/Contents/Home/bin/java --version`
 
 ### "Access Denied" or Native Library Errors
+
 - Make sure `--enable-native-access=ALL-UNNAMED` is in your JVM arguments
 - Add `-Dforeign.restricted=permit` if not already present
 
 ### Mod Not Loading
+
 - Ensure all dependencies (Fabric API, Fabric Language Kotlin) are in the `mods` folder
 - Check the Minecraft version matches (1.21.11)
 - Check Fabric Loader version is 0.18.2 or later
@@ -147,11 +155,13 @@ Infinite Client requires **Fabric API** and **Fabric Language Kotlin**:
 ### Finding Your Java Path
 
 To list all installed Java versions:
+
 ```bash
 /usr/libexec/java_home -V
 ```
 
 To get the path to a specific version:
+
 ```bash
 /usr/libexec/java_home -v 25
 ```
@@ -160,12 +170,12 @@ To get the path to a specific version:
 
 ## File Locations Reference
 
-| Item | Location |
-|------|----------|
-| Minecraft Folder | `~/Library/Application Support/minecraft` |
-| Mods Folder | `~/Library/Application Support/minecraft/mods` |
-| JDK 25 (Manual Install) | `/Library/Java/JavaVirtualMachines/jdk-25.jdk` |
-| JDK 25 (Homebrew) | `/Library/Java/JavaVirtualMachines/openjdk-25.jdk` |
+| Item                    | Location                                           |
+| ----------------------- | -------------------------------------------------- |
+| Minecraft Folder        | `~/Library/Application Support/minecraft`          |
+| Mods Folder             | `~/Library/Application Support/minecraft/mods`     |
+| JDK 25 (Manual Install) | `/Library/Java/JavaVirtualMachines/jdk-25.jdk`     |
+| JDK 25 (Homebrew)       | `/Library/Java/JavaVirtualMachines/openjdk-25.jdk` |
 
 ---
 

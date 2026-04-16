@@ -4,10 +4,7 @@
   "version": "${version}",
   "name": "Infinite Client",
   "description": "An Utility mod made for Anarchy Servers",
-  "authors": [
-    "The Infinitys",
-    "noobyetpro"
-  ],
+  "authors": ["The Infinitys", "noobyetpro"],
   "contact": {
     "homepage": "https://fabricmc.net/",
     "sources": "https://github.com/FabricMC/fabric-example-mod"
