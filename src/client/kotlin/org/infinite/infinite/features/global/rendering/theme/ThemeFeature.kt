@@ -12,6 +12,15 @@ import org.infinite.libs.core.features.property.selection.EnumSelectionProperty
 import org.infinite.libs.ui.style.UiStyle
 
 class ThemeFeature : GlobalFeature() {
+    enum class ClickGuiScaleMode(private val label: String) {
+        Auto("Auto"),
+        Compact("Compact"),
+        Normal("Normal"),
+        ;
+
+        override fun toString(): String = label
+    }
+
     val sliderButtonRenderer = SliderButtonRenderer()
     val scrollWidgetRenderer = ScrollWidgetRenderer()
     val plainButtonRenderer = PlainButtonRenderer()
@@ -32,4 +41,5 @@ class ThemeFeature : GlobalFeature() {
 
     val currentTheme by property(ThemeSelectionProperty())
     val style by property(EnumSelectionProperty(UiStyle.Simple))
+    val clickGuiScaleMode by property(EnumSelectionProperty(ClickGuiScaleMode.Auto))
 }

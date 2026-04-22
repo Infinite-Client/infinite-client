@@ -83,6 +83,7 @@ class UltraUiFeature : LocalFeature() {
     }
 
     fun openEditor(parent: Screen? = null) {
+        minecraft.mouseHandler.releaseMouse()
         minecraft.setScreen(UltraHudEditorScreen(parent))
     }
 
