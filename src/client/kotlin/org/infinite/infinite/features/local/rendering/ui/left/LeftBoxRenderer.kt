@@ -56,11 +56,12 @@ class LeftBoxRenderer :
 
         val bH = ultraUiFeature.barHeight.value.toFloat()
         val sM = ultraUiFeature.sideMargin.toFloat() * animatedWidthFactor
-        val bottomY = graphics2D.height.toFloat()
+        val (startX, startY) = ultraUiFeature.leftBoxOrigin(graphics2D)
+        val bottomY = startY + bH
         val (actualHealth, actualArmor, actualToughness) = updateAnimation()
 
         val alphaInt = (alphaValue * 255).toInt()
-        graphics2D.renderUltraBar(0f, bottomY - bH, sM, bH, 1f, 1f, colorScheme.backgroundColor.alpha(alphaInt))
+        graphics2D.renderUltraBar(startX, bottomY - bH, sM, bH, 1f, 1f, colorScheme.backgroundColor.alpha(alphaInt))
 
         val innerPadding = ultraUiFeature.padding.value.toFloat()
         val cH = bH - innerPadding
@@ -73,7 +74,7 @@ class LeftBoxRenderer :
             val finalAlphaInt = (255 * alphaValue).toInt()
 
             graphics2D.renderLayeredBar(
-                0f, bottomY - h, cW, h, cur, tar,
+                startX, bottomY - h, cW, h, cur, tar,
                 colorScheme.color(sH, sat, bri).alpha(finalAlphaInt),
                 colorScheme.color(eH, sat, bri).alpha(finalAlphaInt),
                 alphaValue, false, colorScheme.whiteColor, colorScheme.blackColor,

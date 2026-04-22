@@ -36,8 +36,7 @@ class HotbarRenderer :
         val isLeftHanded = player.mainArm == HumanoidArm.LEFT
 
         // メインホットバーのX基準位置 (中央)
-        val mainStartX = (graphics2D.width - totalWidth) / 2f
-        val startY = graphics2D.height - totalHeight
+        val (mainStartX, startY) = ultraUiFeature.hotbarOrigin(graphics2D)
 
         // 3. アニメーション計算 (選択中のスロット座標)
         val targetSelectedX = mainStartX + 1f + (player.inventory.selectedSlot * slotSize)

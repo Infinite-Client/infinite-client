@@ -38,20 +38,16 @@ class CrosshairRenderer :
 
         // 1. 描画座標の決定
         val (renderX, renderY) = if (options.cameraType.isFirstPerson) {
-            // 一人称視点：画面中央
-            graphics2D.width / 2f to graphics2D.height / 2f
+            ultraUiFeature.crosshairCenter(graphics2D)
         } else {
-            // 三人称視点：レイキャストで衝突地点を計算
             val pickRange = 100.0 // レイキャストの最大距離
             val hitResult = player.pick(pickRange, graphics2D.delta, false)
             val worldPos = hitResult.location
 
-            // ワールド座標をスクリーン座標に投影
             val screenPos = graphics2D.projectWorldToScreen(worldPos) ?: return
-            screenPos.first to screenPos.second
+            screenPos.first + ultraUiFeature.crosshairOffsetX.value to screenPos.second + ultraUiFeature.crosshairOffsetY.value
         }
 
-        // 2. メインの描画処理を呼び出し
         renderCrosshair(graphics2D, renderX, renderY)
     }
 

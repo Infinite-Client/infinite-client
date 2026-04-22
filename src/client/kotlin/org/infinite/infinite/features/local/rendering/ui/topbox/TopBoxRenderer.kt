@@ -36,25 +36,19 @@ class TopBoxRenderer :
         // --- 2. レイアウト計算 ---
         val barWidth = 182f
         val barHeight = 4f
-        val x = (graphics2D.width - barWidth) / 2f
+        val (x, y) = ultraUiFeature.topBoxOrigin(graphics2D)
         val padding = ultraUiFeature.padding.value.toFloat()
-
-        // 経験値バーのY座標を、枠がある時だけさらに上に避ける
-        // 経験値バーを枠のさらに 4px 上に配置
-        val yOffset = if (containerUtil.isEnabled() && containerUtil.hotbarRotate.value) 64f else 0f
-        val y = graphics2D.height - 20f - padding - barHeight - 4f - yOffset
         // --- 3. ContainerUtil 用のプレビュー枠描画 ---
         if (containerUtil.isEnabled() && containerUtil.hotbarRotate.value) {
             val slotSize = 20f
             val hotbarWidth = 182f
 
-            // 底辺の基準 (ContainerUtilFeature の baseY と同じ)
-            val baseY = graphics2D.height - 22f - barHeight
+            val baseY = y + 40f + padding
 
             // アイテムは最大で 3段分 (row=2, distance≒3) 上に描画されるため
             // 20px * 3段 = 60px 分の高さが必要。
             val frameHeight = 60f
-            val frameX = (graphics2D.width - hotbarWidth) / 2f
+            val frameX = x
 
             // frameY は「底辺から高さを引いた位置」にする
             val frameY = baseY - frameHeight

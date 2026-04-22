@@ -1,6 +1,7 @@
 package org.infinite.infinite.ui.screen
 
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.gui.layouts.LinearLayout
 import net.minecraft.client.gui.screens.Screen
@@ -9,6 +10,7 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
+import org.infinite.infinite.features.local.rendering.ui.UltraUiFeature
 import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.libs.ui.layout.ScrollableLayoutContainer
@@ -21,10 +23,11 @@ class ListFeatureScreen<T : Feature>(
 ) : Screen(Component.literal(feature.name)) {
 
     private lateinit var container: ScrollableLayoutContainer
+    private var hudEditorButton: Button? = null
 
     // レイアウト定数
     private val panelRadius = 12f
-    private val headerHeight = 36 // 少し広めに調整
+    private val headerHeight = 40
     private val panelPadding = 16
     private val screenPadding = 24
     private val scrollbarWidth = 20
@@ -51,6 +54,22 @@ class ListFeatureScreen<T : Feature>(
         panelH = (height * 0.82f).toInt().coerceIn(minPanelH, maxPanelH)
         panelX = (width - panelW) / 2
         panelY = (height - panelH) / 2
+
+        hudEditorButton = if (feature is UltraUiFeature) {
+            Button.builder(
+                Component.literal("Open HUD"),
+                {
+                    (feature as UltraUiFeature).openEditor(this)
+                },
+            ).bounds(
+                panelX + panelW - panelPadding - 110,
+                panelY + 8,
+                110,
+                20,
+            ).build().also { addRenderableWidget(it) }
+        } else {
+            null
+        }
 
         val availableWidth = panelW - panelPadding * 2
         val innerWidth = (availableWidth - scrollbarWidth).coerceAtLeast(120)
@@ -139,7 +158,10 @@ class ListFeatureScreen<T : Feature>(
 
     override fun charTyped(characterEvent: CharacterEvent): Boolean = container.charTyped(characterEvent) || super.charTyped(characterEvent)
 
-    override fun children(): List<GuiEventListener> = listOf(container)
+    override fun children(): List<GuiEventListener> = buildList {
+        hudEditorButton?.let { add(it) }
+        add(container)
+    }
 
     override fun onClose() {
         minecraft.setScreen(parent)
