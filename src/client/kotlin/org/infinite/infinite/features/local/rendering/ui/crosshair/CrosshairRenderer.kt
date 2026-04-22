@@ -35,8 +35,8 @@ class CrosshairRenderer :
         val player = player ?: return
         val mc = minecraft
         val options = mc.options
+        val uiScale = ultraUiFeature.effectiveUiScale(graphics2D)
 
-        // 1. 描画座標の決定
         val (renderX, renderY) = if (options.cameraType.isFirstPerson) {
             ultraUiFeature.crosshairCenter(graphics2D)
         } else {
@@ -48,13 +48,13 @@ class CrosshairRenderer :
             screenPos.first + ultraUiFeature.crosshairOffsetX.value to screenPos.second + ultraUiFeature.crosshairOffsetY.value
         }
 
-        renderCrosshair(graphics2D, renderX, renderY)
+        renderCrosshair(graphics2D, renderX, renderY, uiScale)
     }
 
     /**
      * 指定した座標にクロスヘアを描画する
      */
-    fun renderCrosshair(graphics2D: Graphics2D, x: Float, y: Float) {
+    fun renderCrosshair(graphics2D: Graphics2D, x: Float, y: Float, uiScale: Float = 1f) {
         val player = player ?: return
         val colorScheme = InfiniteClient.theme.colorScheme
         val shadowColor = colorScheme.backgroundColor
@@ -62,7 +62,6 @@ class CrosshairRenderer :
         val alphaValue = ultraUiFeature.alpha.value
         val partialTicks = graphics2D.delta
 
-        // 1. ターゲット解析
         val hit = minecraft.hitResult
         val isEntity = hit?.type == HitResult.Type.ENTITY && (hit as? EntityHitResult)?.entity is LivingEntity
         val isBlock = hit?.type == HitResult.Type.BLOCK
@@ -100,11 +99,11 @@ class CrosshairRenderer :
         }
         val breakProgress = minecraft.gameMode?.let {
             if (it.isDestroying) it.destroyProgress else 0f
-        } ?: 0f // 描画開始
+        } ?: 0f
         graphics2D.push()
-        graphics2D.translate(x, y) // 指定された座標へ移動
+        graphics2D.translate(x, y)
+        graphics2D.scale(uiScale, uiScale)
 
-        // 全体のアニメーション
         val finalScale = 1.0f + (smoothEntityFactor * 0.1f)
         graphics2D.scale(finalScale, finalScale)
 

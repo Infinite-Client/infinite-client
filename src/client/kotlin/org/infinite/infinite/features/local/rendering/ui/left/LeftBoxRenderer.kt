@@ -53,15 +53,19 @@ class LeftBoxRenderer :
     override fun render(graphics2D: Graphics2D) {
         val colorScheme = InfiniteClient.theme.colorScheme
         val alphaValue = ultraUiFeature.alpha.value
+        val uiScale = ultraUiFeature.effectiveUiScale(graphics2D)
 
         val bH = ultraUiFeature.barHeight.value.toFloat()
         val sM = ultraUiFeature.sideMargin.toFloat() * animatedWidthFactor
         val (startX, startY) = ultraUiFeature.leftBoxOrigin(graphics2D)
-        val bottomY = startY + bH
         val (actualHealth, actualArmor, actualToughness) = updateAnimation()
 
+        graphics2D.push()
+        graphics2D.translate(startX, startY)
+        graphics2D.scale(uiScale, uiScale)
+
         val alphaInt = (alphaValue * 255).toInt()
-        graphics2D.renderUltraBar(startX, bottomY - bH, sM, bH, 1f, 1f, colorScheme.backgroundColor.alpha(alphaInt))
+        graphics2D.renderUltraBar(0f, 0f, sM, bH, 1f, 1f, colorScheme.backgroundColor.alpha(alphaInt))
 
         val innerPadding = ultraUiFeature.padding.value.toFloat()
         val cH = bH - innerPadding
@@ -74,7 +78,7 @@ class LeftBoxRenderer :
             val finalAlphaInt = (255 * alphaValue).toInt()
 
             graphics2D.renderLayeredBar(
-                startX, bottomY - h, cW, h, cur, tar,
+                0f, bH - h, cW, h, cur, tar,
                 colorScheme.color(sH, sat, bri).alpha(finalAlphaInt),
                 colorScheme.color(eH, sat, bri).alpha(finalAlphaInt),
                 alphaValue, false, colorScheme.whiteColor, colorScheme.blackColor,
@@ -85,5 +89,7 @@ class LeftBoxRenderer :
         draw(cH, animatedHealth, actualHealth, 0f, 60f)
         draw(cH * 0.4f, animatedArmor, actualArmor, 120f, 180f)
         draw(cH * 0.4f, animatedToughness, actualToughness, 210f, 270f)
+
+        graphics2D.pop()
     }
 }

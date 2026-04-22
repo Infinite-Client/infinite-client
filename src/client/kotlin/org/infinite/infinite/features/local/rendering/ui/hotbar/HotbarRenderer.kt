@@ -25,69 +25,62 @@ class HotbarRenderer :
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme
         val alphaValue = ultraUiFeature.alpha.value
+        val uiScale = ultraUiFeature.effectiveUiScale(graphics2D)
 
-        // 1. レイアウト定数
         val slotSize = 20f
         val totalWidth = 182f
         val totalHeight = 22f
-        val offhandGap = 4f // オフハンドとメインバーの隙間
+        val offhandGap = 4f
 
-        // 2. 利き手（MainHand）の判定
         val isLeftHanded = player.mainArm == HumanoidArm.LEFT
 
-        // メインホットバーのX基準位置 (中央)
         val (mainStartX, startY) = ultraUiFeature.hotbarOrigin(graphics2D)
 
-        // 3. アニメーション計算 (選択中のスロット座標)
-        val targetSelectedX = mainStartX + 1f + (player.inventory.selectedSlot * slotSize)
+        val targetSelectedX = 1f + (player.inventory.selectedSlot * slotSize)
         if (animatedSelectedX == -1f) animatedSelectedX = targetSelectedX
-        animatedSelectedX += (targetSelectedX - animatedSelectedX) * 0.5f // 追従スピード
+        animatedSelectedX += (targetSelectedX - animatedSelectedX) * 0.5f
 
-        // --- A. メインホットバー描画 ---
-        theme.renderBackGround(mainStartX, startY, totalWidth, totalHeight, graphics2D, alphaValue)
+        graphics2D.push()
+        graphics2D.translate(mainStartX, startY)
+        graphics2D.scale(uiScale, uiScale)
 
-        // 外枠
+        theme.renderBackGround(0f, 0f, totalWidth, totalHeight, graphics2D, alphaValue)
+
         graphics2D.strokeStyle.width = 1f
         graphics2D.fillStyle = colorScheme.accentColor.alpha((255 * alphaValue).toInt())
-        graphics2D.strokeRect(mainStartX, startY, totalWidth, totalHeight)
-        // selected Item
+        graphics2D.strokeRect(0f, 0f, totalWidth, totalHeight)
         graphics2D.fillStyle = colorScheme.accentColor.alpha((100 * alphaValue).toInt())
-        graphics2D.fillRect(animatedSelectedX + 0.5f, startY + 1.5f, 19f, 19f)
+        graphics2D.fillRect(animatedSelectedX + 0.5f, 1.5f, 19f, 19f)
 
-        // スロットとアイテム
         for (i in 0 until 9) {
-            val slotX = mainStartX + 1 + (i * slotSize)
-            val slotY = startY + 1
+            val slotX = 1f + (i * slotSize)
+            val slotY = 1f
 
-            // 区切り線 (accentColorの薄い線)
             if (i < 8) {
                 graphics2D.fillStyle = colorScheme.accentColor.alpha((60 * alphaValue).toInt())
-                graphics2D.fillRect(slotX + slotSize - 1f, startY + 4f, 1f, totalHeight - 8f)
+                graphics2D.fillRect(slotX + slotSize - 1f, 4f, 1f, totalHeight - 8f)
             }
 
-            // アイテム描画 (Graphics2DPrimitivesTexture側で個数や耐久値が処理される)
             val stack = InventorySystem.getItem(InventoryIndex.Hotbar(i))
             if (!stack.isEmpty) {
                 graphics2D.itemCentered(stack, slotX + 10f, slotY + 10f, 16f)
             }
         }
 
-        // --- B. オフハンドスロット描画 ---
         val offhandStack = player.offhandItem
         if (!offhandStack.isEmpty) {
-            // 利き手が右なら左側に、左なら右側にオフハンドを配置
             val offhandX = if (isLeftHanded) {
-                mainStartX + totalWidth + offhandGap
+                totalWidth + offhandGap
             } else {
-                mainStartX - slotSize - 2f - offhandGap
+                -slotSize - 2f - offhandGap
             }
 
-            // オフハンドの背景と枠
-            theme.renderBackGround(offhandX, startY, slotSize + 2f, totalHeight, graphics2D, alphaValue)
-            graphics2D.strokeRect(offhandX, startY, slotSize + 2f, totalHeight)
+            theme.renderBackGround(offhandX, 0f, slotSize + 2f, totalHeight, graphics2D, alphaValue)
+            graphics2D.strokeRect(offhandX, 0f, slotSize + 2f, totalHeight)
 
-            // オフハンドアイテム
-            graphics2D.itemCentered(offhandStack, offhandX + 11f, startY + 11f, 16f)
+            graphics2D.itemCentered(offhandStack, offhandX + 11f, 11f, 16f)
         }
+
+        graphics2D.pop()
     }
 }

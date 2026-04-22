@@ -14,6 +14,7 @@ import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.utils.alpha
 import org.infinite.utils.mix
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -38,7 +39,6 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
     private val panelRadius = 10f
     private val settingsWidth = 44f
     private val resetBtnWidth = 32f
-    private val uiScale = 1.0f
 
     private var selectedCategory: T? = null
     protected var searchQuery: String = ""
@@ -83,10 +83,10 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
     private fun buildSearchBox() {
         searchBox = EditBox(
             minecraft.font,
-            padding.toInt(),
-            padding.toInt(),
-            (width - padding.toInt() * 2).coerceAtLeast(140),
-            searchHeight.toInt(),
+            uiToScreenX(padding).roundToInt(),
+            uiToScreenY(padding).roundToInt(),
+            uiToScreenW(width - padding * 2).roundToInt().coerceAtLeast(140),
+            uiToScreenH(searchHeight).roundToInt(),
             Component.literal("Search"),
         ).apply {
             setMaxLength(60)
@@ -101,8 +101,16 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
         addRenderableWidget(searchBox)
     }
 
+    private fun layoutSearchBox() {
+        searchBox.x = uiToScreenX(padding).roundToInt()
+        searchBox.y = uiToScreenY(padding).roundToInt()
+        searchBox.width = uiToScreenW(width - padding * 2).roundToInt().coerceAtLeast(140)
+        searchBox.height = uiToScreenH(searchHeight).roundToInt().coerceAtLeast(14)
+    }
+
     override fun extractRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         val g2d = Graphics2DRenderer(guiGraphics)
+        layoutSearchBox()
 
         // アニメーション計算
         openProgress = ((System.currentTimeMillis() - openTime) / 220f).coerceIn(0f, 1f)
@@ -112,7 +120,7 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
         // UI座標変換 (Graphics2DのTransformを使用)
         g2d.push()
         g2d.translate(uiOffsetX(), uiOffsetY())
-        g2d.scale(uiScale, uiScale)
+        g2d.scale(uiScale(), uiScale())
 
         val uiMouseX = toUiX(mouseX.toDouble()).toInt()
         val uiMouseY = toUiY(mouseY.toDouble()).toInt()
@@ -163,14 +171,24 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
         // --- カテゴリリスト (Scissor適用) ---
         val catListY = panelTop + headerHeight + padding / 2
         val catListH = panelH - headerHeight - padding
-        g2d.enableScissor(padding.toInt(), catListY.toInt(), sidebarWidth.toInt(), catListH.toInt())
+        g2d.enableScissor(
+            uiToScreenX(padding).roundToInt(),
+            uiToScreenY(catListY).roundToInt(),
+            uiToScreenW(sidebarWidth).roundToInt(),
+            uiToScreenH(catListH).roundToInt(),
+        )
         renderCategoryRows(g2d, uiMouseX, uiMouseY, catListY, catListH)
         g2d.disableScissor()
 
         // --- フィーチャーリスト (Scissor適用) ---
         val featListY = panelTop + headerHeight
         val featListH = panelH - headerHeight - padding
-        g2d.enableScissor(contentX.toInt(), featListY.toInt(), contentW.toInt(), featListH.toInt())
+        g2d.enableScissor(
+            uiToScreenX(contentX).roundToInt(),
+            uiToScreenY(featListY).roundToInt(),
+            uiToScreenW(contentW).roundToInt(),
+            uiToScreenH(featListH).roundToInt(),
+        )
         renderFeatureRows(
             g2d,
             uiMouseX,
@@ -350,23 +368,27 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
         val focusTarget = if (searchBox.isFocused) 1f else 0f
         searchFocus += (focusTarget - searchFocus) * 0.25f
         val alpha = (255 * openEase).toInt()
+        val searchX = padding
+        val searchY = padding
+        val searchW = width - padding * 2
+        val searchH = searchHeight
 
         g2d.fillStyle = themeScheme.surfaceColor.alpha(alpha)
         g2d.fillRoundedRect(
-            searchBox.x.toFloat(),
-            searchBox.y.toFloat(),
-            searchBox.width.toFloat(),
-            searchBox.height.toFloat(),
+            searchX,
+            searchY,
+            searchW,
+            searchH,
             9f,
         )
 
         if (searchFocus > 0.01f) {
             g2d.strokeStyle.color = themeScheme.accentColor.alpha((100 * searchFocus * openEase).toInt())
             g2d.strokeRoundedRect(
-                searchBox.x - 1.5f,
-                searchBox.y - 1.5f,
-                searchBox.width + 3f,
-                searchBox.height + 3f,
+                searchX - 1.5f,
+                searchY - 1.5f,
+                searchW + 3f,
+                searchH + 3f,
                 10f,
             )
         }
@@ -471,8 +493,18 @@ abstract class ClickGuiScreen<T : Category<*, out Feature>>(
     private fun clamp(value: Double, max: Double): Double = value.coerceIn(0.0, max)
     private fun rowIndexFromMouse(mouseY: Double, listY: Int, listH: Int, scroll: Double): Int = if (mouseY < listY || mouseY > listY + listH) -1 else ((mouseY - listY + scroll) / (rowHeight + rowGap)).toInt()
 
-    private fun uiOffsetX(): Float = (width - width * uiScale) / 2f
-    private fun uiOffsetY(): Float = (height - height * uiScale) / 2f
-    private fun toUiX(x: Double): Double = (x - uiOffsetX()) / uiScale
-    private fun toUiY(y: Double): Double = (y - uiOffsetY()) / uiScale
+    private fun uiScale(): Float {
+        val widthScale = width / 980f
+        val heightScale = height / 640f
+        return min(1f, max(0.78f, min(widthScale, heightScale)))
+    }
+
+    private fun uiOffsetX(): Float = (width - width * uiScale()) / 2f
+    private fun uiOffsetY(): Float = (height - height * uiScale()) / 2f
+    private fun toUiX(x: Double): Double = (x - uiOffsetX()) / uiScale()
+    private fun toUiY(y: Double): Double = (y - uiOffsetY()) / uiScale()
+    private fun uiToScreenX(x: Float): Float = uiOffsetX() + x * uiScale()
+    private fun uiToScreenY(y: Float): Float = uiOffsetY() + y * uiScale()
+    private fun uiToScreenW(w: Float): Float = w * uiScale()
+    private fun uiToScreenH(h: Float): Float = h * uiScale()
 }

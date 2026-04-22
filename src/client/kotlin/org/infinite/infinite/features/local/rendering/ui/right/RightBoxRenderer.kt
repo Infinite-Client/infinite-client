@@ -52,19 +52,25 @@ class RightBoxRenderer :
     override fun render(graphics2D: Graphics2D) {
         val colorScheme = InfiniteClient.theme.colorScheme
         val alphaValue = ultraUiFeature.alpha.value
+        val uiScale = ultraUiFeature.effectiveUiScale(graphics2D)
 
         val bH = ultraUiFeature.barHeight.value.toFloat()
         val sM = ultraUiFeature.sideMargin.toFloat() * animatedWidthFactor
         val (startX, startY) = ultraUiFeature.rightBoxOrigin(graphics2D)
-        val bottomY = startY + bH
+        val bottomY = bH
 
         val (actualFood, actualSaturation, actualVehicle, actualAir) = updateAnimation()
         val baseColor =
             colorScheme.backgroundColor.mix(colorScheme.accentColor, 0.1f)
         val baseAlpha = ultraUiFeature.alpha.value
+
+        graphics2D.push()
+        graphics2D.translate(startX, startY)
+        graphics2D.scale(uiScale, uiScale)
+
         graphics2D.renderUltraBar(
-            startX + sM,
-            bottomY - bH,
+            sM,
+            0f,
             sM,
             bH,
             1f,
@@ -81,7 +87,7 @@ class RightBoxRenderer :
 
         fun draw(h: Float, cur: Float, tar: Float, sH: Float, eH: Float) {
             graphics2D.renderLayeredBar(
-                startX + cW,
+                cW,
                 bottomY - h,
                 cW,
                 h,
@@ -110,10 +116,12 @@ class RightBoxRenderer :
             val endColor = colorScheme.color(240f, sat, bri).alpha((255 * dynamicAlpha).toInt())
 
             graphics2D.renderLayeredBar(
-                startX + cW, bottomY - (cH * 0.3f), cW, cH * 0.3f, animatedAir, actualAir,
+                cW, bottomY - (cH * 0.3f), cW, cH * 0.3f, animatedAir, actualAir,
                 startColor, endColor,
                 dynamicAlpha, true, colorScheme.whiteColor, colorScheme.blackColor,
             )
         }
+
+        graphics2D.pop()
     }
 }

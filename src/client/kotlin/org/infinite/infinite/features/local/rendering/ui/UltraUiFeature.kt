@@ -144,27 +144,37 @@ class UltraUiFeature : LocalFeature() {
         }
     }
 
+    fun effectiveUiScale(graphics2D: Graphics2D): Float {
+        val widthScale = graphics2D.width / 420f
+        val heightScale = graphics2D.height / 260f
+        return min(1f, max(0.7f, min(widthScale, heightScale)))
+    }
+
     fun hotbarOrigin(graphics2D: Graphics2D): Pair<Float, Float> {
-        val x = (graphics2D.width - hotbarWidth) / 2f + hotbarOffsetX.value
-        val y = graphics2D.height - 22f + hotbarOffsetY.value
+        val scale = effectiveUiScale(graphics2D)
+        val x = (graphics2D.width - hotbarWidth * scale) / 2f + hotbarOffsetX.value
+        val y = graphics2D.height - 22f * scale + hotbarOffsetY.value
         return x to y
     }
 
     fun topBoxOrigin(graphics2D: Graphics2D): Pair<Float, Float> {
-        val barHeight = 4f
-        val x = (graphics2D.width - hotbarWidth) / 2f + topBoxOffsetX.value
-        val yOffset = if (containerUtilPreviewVisible()) 64f else 0f
-        val y = graphics2D.height - 20f - padding.value.toFloat() - barHeight - 4f - yOffset + topBoxOffsetY.value
+        val scale = effectiveUiScale(graphics2D)
+        val barHeight = 4f * scale
+        val padding = padding.value.toFloat() * scale
+        val x = (graphics2D.width - hotbarWidth * scale) / 2f + topBoxOffsetX.value
+        val yOffset = if (containerUtilPreviewVisible()) 64f * scale else 0f
+        val y = graphics2D.height - 20f * scale - padding - barHeight - 4f * scale - yOffset + topBoxOffsetY.value
         return x to y
     }
 
     fun leftBoxOrigin(graphics2D: Graphics2D): Pair<Float, Float> =
-        leftBoxOffsetX.value.toFloat() to graphics2D.height.toFloat() - barHeight.value + leftBoxOffsetY.value
+        leftBoxOffsetX.value.toFloat() to graphics2D.height.toFloat() - barHeight.value * effectiveUiScale(graphics2D) + leftBoxOffsetY.value
 
     fun rightBoxOrigin(graphics2D: Graphics2D): Pair<Float, Float> {
-        val width = sideMargin.toFloat() * rightWidthFactor()
+        val scale = effectiveUiScale(graphics2D)
+        val width = sideMargin.toFloat() * rightWidthFactor() * scale
         val x = graphics2D.width.toFloat() - width + rightBoxOffsetX.value
-        val y = graphics2D.height.toFloat() - barHeight.value + rightBoxOffsetY.value
+        val y = graphics2D.height.toFloat() - barHeight.value * scale + rightBoxOffsetY.value
         return x to y
     }
 
@@ -184,33 +194,38 @@ class UltraUiFeature : LocalFeature() {
     }
 
     private fun hotbarRect(graphics2D: Graphics2D): HudRect {
+        val scale = effectiveUiScale(graphics2D)
         val (x, y) = hotbarOrigin(graphics2D)
         val player = player
-        val offhandExtra = if (player != null && !player.offhandItem.isEmpty) 26f else 0f
-        return HudRect(x - offhandExtra, y, hotbarWidth.toFloat() + offhandExtra * 2, 22f)
+        val offhandExtra = if (player != null && !player.offhandItem.isEmpty) 26f * scale else 0f
+        return HudRect(x - offhandExtra, y, hotbarWidth.toFloat() * scale + offhandExtra * 2, 22f * scale)
     }
 
     private fun topBoxRect(graphics2D: Graphics2D): HudRect {
+        val scale = effectiveUiScale(graphics2D)
         val (x, y) = topBoxOrigin(graphics2D)
-        val height = if (containerUtilPreviewVisible()) 64f else 16f
-        return HudRect(x, y - (height - 4f), hotbarWidth.toFloat(), height)
+        val height = if (containerUtilPreviewVisible()) 64f * scale else 16f * scale
+        return HudRect(x, y - (height - 4f * scale), hotbarWidth.toFloat() * scale, height)
     }
 
     private fun leftBoxRect(graphics2D: Graphics2D): HudRect {
-        val width = sideMargin.toFloat() * leftWidthFactor()
+        val scale = effectiveUiScale(graphics2D)
+        val width = sideMargin.toFloat() * leftWidthFactor() * scale
         val (x, y) = leftBoxOrigin(graphics2D)
-        return HudRect(x, y, width, barHeight.value.toFloat())
+        return HudRect(x, y, width, barHeight.value.toFloat() * scale)
     }
 
     private fun rightBoxRect(graphics2D: Graphics2D): HudRect {
-        val width = sideMargin.toFloat() * rightWidthFactor()
+        val scale = effectiveUiScale(graphics2D)
+        val width = sideMargin.toFloat() * rightWidthFactor() * scale
         val (x, y) = rightBoxOrigin(graphics2D)
-        return HudRect(x, y, width, barHeight.value.toFloat())
+        return HudRect(x, y, width, barHeight.value.toFloat() * scale)
     }
 
     private fun crosshairRect(graphics2D: Graphics2D): HudRect {
+        val scale = effectiveUiScale(graphics2D)
         val (cx, cy) = crosshairCenter(graphics2D)
-        return HudRect(cx - 14f, cy - 14f, 28f, 28f)
+        return HudRect(cx - 14f * scale, cy - 14f * scale, 28f * scale, 28f * scale)
     }
 
     private fun containerUtilPreviewVisible(): Boolean {

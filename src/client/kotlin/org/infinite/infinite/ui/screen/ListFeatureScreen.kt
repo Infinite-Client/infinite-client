@@ -16,6 +16,8 @@ import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.libs.ui.layout.ScrollableLayoutContainer
 import org.infinite.utils.alpha
 import org.lwjgl.glfw.GLFW
+import kotlin.math.max
+import kotlin.math.min
 
 class ListFeatureScreen<T : Feature>(
     private val feature: T,
@@ -31,6 +33,10 @@ class ListFeatureScreen<T : Feature>(
     private val panelPadding = 16
     private val screenPadding = 24
     private val scrollbarWidth = 20
+    private var scaledHeaderHeight = headerHeight
+    private var scaledPanelPadding = panelPadding
+    private var scaledScreenPadding = screenPadding
+    private var scaledScrollbarWidth = scrollbarWidth
 
     private var panelX = 0
     private var panelY = 0
@@ -43,15 +49,20 @@ class ListFeatureScreen<T : Feature>(
     override fun init() {
         clearWidgets()
         feature.ensureAllPropertiesRegistered()
+        val uiScale = uiScale()
+        scaledHeaderHeight = (headerHeight * uiScale).toInt().coerceAtLeast(28)
+        scaledPanelPadding = (panelPadding * uiScale).toInt().coerceAtLeast(10)
+        scaledScreenPadding = (screenPadding * uiScale).toInt().coerceAtLeast(14)
+        scaledScrollbarWidth = (scrollbarWidth * uiScale).toInt().coerceAtLeast(14)
 
         // パネルサイズの動的計算
-        val maxPanelW = (width - screenPadding * 2).coerceAtLeast(200)
-        val maxPanelH = (height - screenPadding * 2).coerceAtLeast(180)
+        val maxPanelW = (width - scaledScreenPadding * 2).coerceAtLeast(200)
+        val maxPanelH = (height - scaledScreenPadding * 2).coerceAtLeast(180)
         val minPanelW = minOf(320, maxPanelW)
         val minPanelH = minOf(240, maxPanelH)
 
-        panelW = (width * 0.75f).toInt().coerceIn(minPanelW, maxPanelW)
-        panelH = (height * 0.82f).toInt().coerceIn(minPanelH, maxPanelH)
+        panelW = (width * (0.75f * uiScale + 0.1f)).toInt().coerceIn(minPanelW, maxPanelW)
+        panelH = (height * (0.82f * uiScale + 0.08f)).toInt().coerceIn(minPanelH, maxPanelH)
         panelX = (width - panelW) / 2
         panelY = (height - panelH) / 2
 
@@ -62,18 +73,18 @@ class ListFeatureScreen<T : Feature>(
                     (feature as UltraUiFeature).openEditor(this)
                 },
             ).bounds(
-                panelX + panelW - panelPadding - 110,
-                panelY + 8,
-                110,
-                20,
+                panelX + panelW - scaledPanelPadding - (110 * uiScale).toInt().coerceAtLeast(90),
+                panelY + (8 * uiScale).toInt().coerceAtLeast(6),
+                (110 * uiScale).toInt().coerceAtLeast(90),
+                (20 * uiScale).toInt().coerceAtLeast(18),
             ).build().also { addRenderableWidget(it) }
         } else {
             null
         }
 
-        val availableWidth = panelW - panelPadding * 2
-        val innerWidth = (availableWidth - scrollbarWidth).coerceAtLeast(120)
-        val innerLayout = LinearLayout.vertical().spacing(10) // 間隔を少し広げて視認性向上
+        val availableWidth = panelW - scaledPanelPadding * 2
+        val innerWidth = (availableWidth - scaledScrollbarWidth).coerceAtLeast(120)
+        val innerLayout = LinearLayout.vertical().spacing((10 * uiScale).toInt().coerceAtLeast(6))
 
         // プロパティウィジェットの構築
         feature.properties.forEach { (_, property) ->
@@ -83,10 +94,10 @@ class ListFeatureScreen<T : Feature>(
         innerLayout.arrangeElements()
 
         container = ScrollableLayoutContainer(innerLayout, innerWidth).apply {
-            x = panelX + panelPadding
-            y = panelY + headerHeight + 8 // ヘッダーとの間に少し余白
+            x = panelX + scaledPanelPadding
+            y = panelY + scaledHeaderHeight + (8 * uiScale).toInt().coerceAtLeast(6)
             setMinWidth(availableWidth)
-            setMaxHeight(panelH - headerHeight - panelPadding - 12)
+            setMaxHeight(panelH - scaledHeaderHeight - scaledPanelPadding - (12 * uiScale).toInt().coerceAtLeast(8))
         }
         addRenderableWidget(container)
     }
@@ -109,20 +120,20 @@ class ListFeatureScreen<T : Feature>(
         val headerColor = themeScheme.getHoverColor(themeScheme.surfaceColor)
         g2d.fillStyle = headerColor
         // 上部だけ角丸にするためにパネル上部に重ねて描画
-        g2d.fillRoundedRect(panelX.toFloat(), panelY.toFloat(), panelW.toFloat(), headerHeight.toFloat(), panelRadius)
+        g2d.fillRoundedRect(panelX.toFloat(), panelY.toFloat(), panelW.toFloat(), scaledHeaderHeight.toFloat(), panelRadius)
         // 下側の角を消すための補完
-        g2d.fillRect(panelX.toFloat(), panelY.toFloat() + headerHeight - panelRadius, panelW.toFloat(), panelRadius)
+        g2d.fillRect(panelX.toFloat(), panelY.toFloat() + scaledHeaderHeight - panelRadius, panelW.toFloat(), panelRadius)
 
         // 3. アクセントライン（ヘッダーとコンテンツの境界）
         g2d.fillStyle = themeScheme.accentColor.alpha(120)
-        g2d.fillRect(panelX.toFloat(), panelY.toFloat() + headerHeight, panelW.toFloat(), 1.5f)
+        g2d.fillRect(panelX.toFloat(), panelY.toFloat() + scaledHeaderHeight, panelW.toFloat(), 1.5f)
 
         g2d.flush()
 
         // テキスト描画
         val font = minecraft.font
-        val titleX = panelX + panelPadding
-        val titleY = panelY + 10
+        val titleX = panelX + scaledPanelPadding
+        val titleY = panelY + max(8, (10 * uiScale()).toInt())
 
         // タイトル
         guiGraphics.text(font, feature.name, titleX, titleY, themeScheme.foregroundColor, false)
@@ -165,5 +176,11 @@ class ListFeatureScreen<T : Feature>(
 
     override fun onClose() {
         minecraft.setScreen(parent)
+    }
+
+    private fun uiScale(): Float {
+        val widthScale = width / 900f
+        val heightScale = height / 620f
+        return min(1f, max(0.8f, min(widthScale, heightScale)))
     }
 }

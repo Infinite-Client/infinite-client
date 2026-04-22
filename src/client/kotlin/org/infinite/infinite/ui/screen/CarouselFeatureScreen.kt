@@ -13,6 +13,8 @@ import org.infinite.libs.core.features.Feature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.libs.ui.layout.ScrollableLayoutContainer
 import org.lwjgl.glfw.GLFW
+import kotlin.math.max
+import kotlin.math.min
 
 class CarouselFeatureScreen<T : Feature>(
     private val feature: T,
@@ -24,24 +26,29 @@ class CarouselFeatureScreen<T : Feature>(
     // レイアウト定数
     private val headerHeight = 60
     private val margin = 10
+    private var scaledHeaderHeight = headerHeight
+    private var scaledMargin = margin
 
     override fun init() {
         feature.ensureAllPropertiesRegistered()
-        val innerWidth = width - (margin * 2)
+        val uiScale = uiScale()
+        scaledHeaderHeight = (headerHeight * uiScale).toInt().coerceAtLeast(42)
+        scaledMargin = (margin * uiScale).toInt().coerceAtLeast(6)
+        val innerWidth = width - (scaledMargin * 2)
 
         // 内部レイアウトの構築
-        val innerLayout = LinearLayout.vertical().spacing(margin)
+        val innerLayout = LinearLayout.vertical().spacing(scaledMargin)
 
         feature.properties.forEach { (_, property) ->
-            val propertyWidget = property.widget(0, 0, innerWidth - margin * 2)
+            val propertyWidget = property.widget(0, 0, innerWidth - scaledMargin * 2)
             innerLayout.addChild(propertyWidget)
         }
         innerLayout.arrangeElements()
         container = ScrollableLayoutContainer(innerLayout, innerWidth).apply {
-            this.x = margin
-            this.y = headerHeight
+            this.x = scaledMargin
+            this.y = scaledHeaderHeight
             this.setMinWidth(innerWidth)
-            this.setMaxHeight(parent.height - headerHeight - margin)
+            this.setMaxHeight(parent.height - scaledHeaderHeight - scaledMargin)
         }
         this.addRenderableWidget(container)
     }
@@ -52,7 +59,7 @@ class CarouselFeatureScreen<T : Feature>(
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme
         val centerX = width / 2f
-        val size = 24f
+        val size = 24f * uiScale()
         theme.renderBackGround(0, 0, this.width, this.height, g2d, 0.5f)
         g2d.fillStyle = when (feature.featureType) {
             Feature.FeatureLevel.Cheat -> colorScheme.redColor
@@ -95,5 +102,11 @@ class CarouselFeatureScreen<T : Feature>(
 
     override fun onClose() {
         minecraft.setScreen(parent)
+    }
+
+    private fun uiScale(): Float {
+        val widthScale = width / 900f
+        val heightScale = height / 620f
+        return min(1f, max(0.8f, min(widthScale, heightScale)))
     }
 }
