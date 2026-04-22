@@ -3,10 +3,8 @@ package org.infinite.infinite.features.local.level.xray
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.world.level.BlockAndTintGetter
 import net.minecraft.world.level.BlockGetter
 import net.minecraft.world.level.block.state.BlockState
-import net.minecraft.world.level.material.FluidState
 import org.infinite.libs.core.features.feature.LocalFeature
 import org.infinite.libs.core.features.property.list.BlockListProperty
 import org.infinite.libs.core.features.property.number.FloatProperty
@@ -188,35 +186,24 @@ class XRayFeature : LocalFeature() {
     }
 
     /**
-     * 指定された FluidState から ID (例: "minecraft:water") を抽出します。
-     */
-    fun getFluidId(state: FluidState): String = BuiltInRegistries.FLUID.getKey(state.type).toString()
-
-    /**
      * LiquidBlockRenderer 用の X-Ray 判定ロジック
      */
-    fun atLiquid(
-        fluidState: FluidState, // 現在の流体
-        blockState: BlockState, // 現在のブロック
-        direction: Direction, // 描画しようとしている面
-        neighborFluid: FluidState, // 隣接する流体
-        original: Boolean, // バニラの描画判定結果
+    fun shouldApply(
+        blockState: BlockState, // 現在の流体
     ): Boolean {
-        if (!isEnabled()) return original
+        if (!isEnabled()) return false
 
         // 1. IDの抽出 (FluidState から取得するのが正確)
-        val currentFluidId = getFluidId(fluidState)
+        val blockId = getBlockId(blockState)
 
         // 2. リストに含まれているか判定
-        val isOre = targetBlocks.value.contains(currentFluidId)
-        val isThrough = whiteListBlock.value.contains(currentFluidId)
-        return (isOre || isThrough) && original
+        val isOre = targetBlocks.value.contains(blockId)
+        val isThrough = whiteListBlock.value.contains(blockId)
+        return (isOre || isThrough)
     }
 
     fun atModelBlockRenderer(
-        blockAndTintGetter: BlockAndTintGetter,
         blockState: BlockState,
-        bl: Boolean,
         direction: Direction,
         blockPos: BlockPos,
         original: Boolean,
@@ -248,19 +235,5 @@ class XRayFeature : LocalFeature() {
             Method.Full -> isOreCurrent || isThroughCurrent
             Method.TransparencyFull -> isOreCurrent || isThroughCurrent || original
         }
-    }
-
-    /**
-     * ItemBlockRenderTypesMixin から呼び出され、
-     * そのブロックを半透明レイヤーで描画すべきか判定します。
-     */
-    fun shouldIsolate(state: BlockState): Boolean {
-        if (!isEnabled()) return false
-
-        val id = getBlockId(state)
-
-        // targetBlocks (鉱石など) に含まれている場合は、はっきり見せたいので隔離(Isolate)しない = false
-        // それ以外のブロック（石など）は、透かしたいので隔離(Isolate)する = true
-        return !targetBlocks.value.contains(id)
     }
 }

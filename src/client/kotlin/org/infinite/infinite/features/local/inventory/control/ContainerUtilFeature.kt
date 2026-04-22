@@ -134,7 +134,7 @@ class ContainerUtilFeature : LocalFeature() {
         for (i in 0..8) {
             val anim = animations[i]
             if (anim.progress < 1.0f) {
-                anim.progress += 0.15f * graphics2D.realDelta
+                anim.progress += 0.15f * graphics2D.delta
                 if (anim.progress > 1.0f) anim.progress = 1.0f
             }
 

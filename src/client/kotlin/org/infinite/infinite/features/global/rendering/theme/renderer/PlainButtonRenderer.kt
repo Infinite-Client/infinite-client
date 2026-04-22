@@ -1,14 +1,14 @@
 package org.infinite.infinite.features.global.rendering.theme.renderer
 
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.utils.alpha
 
 class PlainButtonRenderer : WidgetRenderer<Button> {
-    override fun render(widget: Button, guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun render(widget: Button, guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme
         val g2d = Graphics2DRenderer(guiGraphics)

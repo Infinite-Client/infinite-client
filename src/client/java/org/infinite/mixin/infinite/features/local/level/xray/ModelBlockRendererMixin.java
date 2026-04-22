@@ -2,15 +2,13 @@ package org.infinite.mixin.infinite.features.local.level.xray;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local; // 重要: Localを使用
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import java.util.Arrays;
+import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.vertex.QuadInstance;
+import net.minecraft.client.renderer.block.BlockQuadOutput;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import org.infinite.InfiniteClient;
 import org.infinite.infinite.features.local.level.xray.XRayFeature;
@@ -26,52 +24,56 @@ public class ModelBlockRendererMixin {
     return InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getXRayFeature();
   }
 
-  /** putQuadData へのフック 名前によるキャプチャを廃止し、@Local を使用して型で安全に取得します。 */
   @WrapOperation(
-      method = "putQuadData",
+      method = "putQuadWithTint",
       at =
           @At(
               value = "INVOKE",
               target =
-                  "Lcom/mojang/blaze3d/vertex/VertexConsumer;putBulkData(Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/minecraft/client/renderer/block/model/BakedQuad;[FFFFF[II)V"))
-  private static void onPutQuadData(
-      VertexConsumer instance,
-      PoseStack.Pose pose,
+                  "Lnet/minecraft/client/renderer/block/BlockQuadOutput;put(FFFLnet/minecraft/client/resources/model/geometry/BakedQuad;Lcom/mojang/blaze3d/vertex/QuadInstance;)V"))
+  private void onPutQuadWithTint(
+      BlockQuadOutput instance,
+      float x,
+      float y,
+      float z,
       BakedQuad bakedQuad,
-      float[] fs,
-      float r,
-      float g,
-      float b,
-      float alpha,
-      int[] is,
-      int lightmap,
+      QuadInstance quadInstance,
       Operation<Void> original,
-      // 引数から型で取得
-      @Local(argsOnly = true) BlockState state // 引数から型で取得
-      // 引数から型で取得
-      ) {
+      @Local(argsOnly = true, name = "state") BlockState state) {
+
     XRayFeature xRay = xRayFeature();
 
     if (xRay.isEnabled()) {
       boolean isOre = xRay.getTargetBlocks().getValue().contains(xRay.getBlockId(state));
 
-      float finalAlpha = isOre ? 1.0f : xRay.getTransparency().getValue();
-      float brightR = isOre ? 1.0f : r;
-      float brightG = isOre ? 1.0f : g;
-      float brightB = isOre ? 1.0f : b;
-
       if (isOre) {
-        Arrays.fill(fs, 1.0f);
-      }
+        // --- original.call の「前」に設定する ---
+        // ライトマップを最大に固定（暗い場所でも光る）
+        quadInstance.setLightCoords(15728880);
 
-      original.call(
-          instance, pose, bakedQuad, fs, brightR, brightG, brightB, finalAlpha, is, lightmap);
-    } else {
-      original.call(instance, pose, bakedQuad, fs, r, g, b, alpha, is, lightmap);
+        // シェーディング（影）を無効化したい場合は白に設定
+        // ただし quadInstance.setColor(i, color) をループで回す方が確実な場合がある
+        for (int i = 0; i < 4; i++) {
+          quadInstance.setColor(i, -1);
+        }
+      } else {
+        // 透過設定（石など）
+        float alpha = xRay.getTransparency().getValue();
+        int a = (int) (alpha * 255.0F);
+
+        for (int i = 0; i < 4; i++) {
+          int oldColor = quadInstance.getColor(i);
+          // 元のRGBを維持しつつ、A（アルファ）だけを書き換える
+          int newColor = (a << 24) | (oldColor & 0x00FFFFFF);
+          quadInstance.setColor(i, newColor);
+        }
+      }
     }
+
+    // 最後に一回だけ呼び出す
+    original.call(instance, x, y, z, bakedQuad, quadInstance);
   }
 
-  /** shouldRenderFace へのフック */
   @WrapOperation(
       method = "shouldRenderFace",
       at =
@@ -79,21 +81,18 @@ public class ModelBlockRendererMixin {
               value = "INVOKE",
               target =
                   "Lnet/minecraft/world/level/block/Block;shouldRenderFace(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;)Z"))
-  private static boolean onShouldRenderFace(
+  private boolean onShouldRenderFace(
       BlockState state,
       BlockState neighborState,
-      Direction side,
+      Direction direction,
       Operation<Boolean> original,
-      @Local(argsOnly = true) BlockAndTintGetter world,
-      @Local(argsOnly = true) BlockPos pos,
-      @Local(ordinal = 0, argsOnly = true) boolean cull // ローカル変数のboolean(cull)を型と順序で取得
+      @Local(argsOnly = true, name = "neighborPos") BlockPos neighborPos // 引数名は neighborPos
       ) {
     XRayFeature xRay = xRayFeature();
     if (!xRay.isEnabled()) {
-      return original.call(state, neighborState, side);
+      return original.call(state, neighborState, direction);
     }
-
     return xRay.atModelBlockRenderer(
-        world, state, cull, side, pos, original.call(state, neighborState, side));
+        state, direction, neighborPos, original.call(state, neighborState, direction));
   }
 }

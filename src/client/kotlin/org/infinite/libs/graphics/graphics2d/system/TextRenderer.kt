@@ -1,14 +1,14 @@
 package org.infinite.libs.graphics.graphics2d.system
 
 import net.minecraft.client.gui.Font
-import net.minecraft.client.gui.GuiGraphics
-import net.minecraft.client.gui.render.state.GuiTextRenderState
+import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.renderer.state.gui.GuiTextRenderState
 import net.minecraft.locale.Language
 import net.minecraft.network.chat.FormattedText
 import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix3x2f
 
-class TextRenderer(private val guiGraphics: GuiGraphics) : MinecraftInterface() {
+class TextRenderer(private val guiGraphics: GuiGraphicsExtractor) : MinecraftInterface() {
     private fun font(name: String): Font = org.infinite.utils.Font(name)
 
     fun text(font: String, text: String, x: Float, y: Float, color: Int, size: Float = 8.0f, shadow: Boolean = false) {
@@ -22,7 +22,7 @@ class TextRenderer(private val guiGraphics: GuiGraphics) : MinecraftInterface() 
 
         // 描画（座標は0, 0でOK）
         val formattedCharSequence = Language.getInstance().getVisualOrder(FormattedText.of(text))
-        guiGraphics.guiRenderState.submitText(
+        guiGraphics.guiRenderState.addText(
             GuiTextRenderState(
                 font,
                 formattedCharSequence,

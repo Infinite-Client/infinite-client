@@ -1,6 +1,6 @@
 package org.infinite.libs.graphics.graphics2d.minecraft
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.render.TextureSetup
 import net.minecraft.client.renderer.RenderPipelines
 import org.infinite.libs.graphics.graphics2d.elements.ColoredTriangleRenderState
@@ -9,7 +9,7 @@ import org.joml.Matrix3x2f
 /**
  * 3つの頂点とそれぞれの色を指定して三角形を描画します。
  */
-fun GuiGraphics.fillTriangle(
+fun GuiGraphicsExtractor.fillTriangle(
     x0: Float,
     y0: Float,
     x1: Float,
@@ -23,7 +23,7 @@ fun GuiGraphics.fillTriangle(
     val renderPipeline = RenderPipelines.GUI
     val textureSetup = TextureSetup.noTexture()
 
-    this.guiRenderState.submitGuiElement(
+    this.guiRenderState.addGuiElement(
         ColoredTriangleRenderState(
             renderPipeline,
             textureSetup,

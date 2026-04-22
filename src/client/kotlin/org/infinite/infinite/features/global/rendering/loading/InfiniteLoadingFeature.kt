@@ -1,6 +1,6 @@
 package org.infinite.infinite.features.global.rendering.loading
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import org.infinite.InfiniteClient
 import org.infinite.libs.core.features.feature.GlobalFeature
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
@@ -10,7 +10,7 @@ import kotlin.math.PI
 
 class InfiniteLoadingFeature : GlobalFeature() {
     data class LoadingRenderContext(
-        val guiGraphics: GuiGraphics,
+        val guiGraphics: GuiGraphicsExtractor,
         val mouseX: Int,
         val mouseY: Int,
         val partialTick: Float,

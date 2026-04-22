@@ -1,11 +1,11 @@
 package org.infinite.libs.graphics.graphics2d
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 import org.infinite.libs.graphics.graphics2d.system.*
 
 class RenderSystem2D(
-    private val gui: GuiGraphics,
+    private val gui: GuiGraphicsExtractor,
 ) {
     private val rectRenderer = RectRenderer(gui)
     private val quadRenderer = QuadRenderer(gui)
@@ -16,9 +16,8 @@ class RenderSystem2D(
     private val blockRenderer = BlockRenderer(gui)
 
     fun render(commands: List<RenderCommand2D>) {
-        for (i in 0 until commands.size) {
-            val command = commands[i]
-            executeCommand(command)
+        for (element in commands) {
+            executeCommand(element)
         }
     }
 

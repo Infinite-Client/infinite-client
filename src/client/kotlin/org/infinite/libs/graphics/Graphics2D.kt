@@ -16,7 +16,6 @@ import org.infinite.libs.interfaces.MinecraftInterface
 import org.joml.Matrix4f
 import kotlin.math.PI
 import kotlin.math.min
-import kotlin.math.sqrt
 
 /**
  * MDN CanvasRenderingContext2D API を Minecraft GuiGraphics 上に再現するクラス。
@@ -24,9 +23,7 @@ import kotlin.math.sqrt
  */
 open class Graphics2D : MinecraftInterface() {
     private val deltaTracker: DeltaTracker by lazy { Minecraft.getInstance().deltaTracker }
-    val gameDelta: Float get() = deltaTracker.gameTimeDeltaTicks
-    val realDelta: Float get() = deltaTracker.realtimeDeltaTicks
-
+    val delta: Float get() = deltaTracker.getGameTimeDeltaPartialTick(false)
     open val width: Int get() = minecraft.window.guiScaledWidth
     open val height: Int get() = minecraft.window.guiScaledHeight
 
@@ -41,7 +38,7 @@ open class Graphics2D : MinecraftInterface() {
         get() {
             val gameRenderer = minecraft.gameRenderer
             val camera = gameRenderer.mainCamera
-            val fov = gameRenderer.getFov(camera, realDelta, true)
+            val fov = camera.fov
             val base = options.fov().get().toFloat()
             return fov / base
         }

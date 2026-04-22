@@ -1,11 +1,11 @@
 package org.infinite.libs.graphics.graphics2d.system
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import org.infinite.libs.graphics.graphics2d.minecraft.fill
 import org.infinite.libs.graphics.graphics2d.minecraft.fillQuad
 
 class RectRenderer(
-    private val guiGraphics: GuiGraphics,
+    private val guiGraphics: GuiGraphicsExtractor,
 ) {
 
     fun fillRect(x: Float, y: Float, w: Float, h: Float, color: Int) {

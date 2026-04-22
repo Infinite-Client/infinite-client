@@ -1,7 +1,7 @@
 // SliderButtonMixin.java
 package org.infinite.mixin.infinite.features.global.rendering.theme;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
@@ -19,9 +19,9 @@ public abstract class SliderButtonMixin extends AbstractWidget {
     super(i, j, k, l, component);
   }
 
-  @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
-  protected void onRenderWidget(
-      GuiGraphics guiGraphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+  @Inject(method = "extractWidgetRenderState", at = @At("HEAD"), cancellable = true)
+  protected void onExtractWidgetRenderState(
+      GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
     ThemeFeature theme =
         InfiniteClient.INSTANCE.getGlobalFeatures().getRendering().getThemeFeature();
 

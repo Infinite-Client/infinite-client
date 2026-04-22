@@ -2,11 +2,11 @@ package org.infinite.libs.graphics.graphics2d.system
 
 import org.infinite.libs.graphics.graphics2d.structs.FillRule
 import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
-import org.infinite.nativebind.XrossFillRule
-import org.infinite.nativebind.XrossLineCap
-import org.infinite.nativebind.XrossLineJoin
+import org.infinite.native.XrossFillRule
+import org.infinite.native.XrossLineCap
+import org.infinite.native.XrossLineJoin
 import java.lang.foreign.ValueLayout
-import org.infinite.nativebind.Path2D as NativePath2D
+import org.infinite.native.Path2D as NativePath2D
 
 class Path2D : AutoCloseable {
     private val native = NativePath2D()

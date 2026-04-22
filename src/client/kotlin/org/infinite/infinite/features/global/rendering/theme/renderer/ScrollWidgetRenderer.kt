@@ -1,20 +1,20 @@
 // org.infinite.infinite.features.global.rendering.theme.renderer.ScrollWidgetRenderer.kt
 package org.infinite.infinite.features.global.rendering.theme.renderer
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractScrollArea
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.utils.alpha
 
 class ScrollWidgetRenderer : WidgetRenderer<AbstractScrollArea> {
-    override fun render(widget: AbstractScrollArea, guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun render(widget: AbstractScrollArea, guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         // 注: AbstractScrollArea 自体の render はバニラに任せ、
         // Mixinからは renderScrollbar だけをここに飛ばす形にします。
     }
-
-    fun renderScrollbar(widget: AbstractScrollArea, guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int) {
-        if (!widget.scrollbarVisible()) return
+    private fun AbstractScrollArea.scrollable() = this.maxScrollAmount() > 0
+    fun extractScrollbar(widget: AbstractScrollArea, guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int) {
+        if (!widget.scrollable()) return
 
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme

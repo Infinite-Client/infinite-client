@@ -157,7 +157,7 @@ open class AimTask(
             val player = player ?: return CameraRoll.Zero
 
             // 【修正】足元ではなく目の位置(EyePos)を基準に計算する
-            val eyePos: Vec3 = player.eyePosition
+            val eyePos: Vec3 = player.getPosition(minecraft.deltaTracker.getGameTimeDeltaPartialTick(false)).add(Vec3(0.0, player.eyeHeight.toDouble(), 0.0))
 
             val d = target.x - eyePos.x
             val e = target.y - eyePos.y

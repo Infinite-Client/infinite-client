@@ -11,8 +11,13 @@ import org.infinite.libs.graphics.Graphics3D
 class BlockHighlightFeature : LocalFeature() {
     override val featureType = FeatureLevel.Utils
 
+    @Suppress("Unused")
     enum class RenderStyle { Lines, Faces, Both }
+
+    @Suppress("Unused")
     enum class ViewFocus { None, Balanced, Strict }
+
+    @Suppress("Unused")
     enum class Animation { None, Pulse, FadeIn }
 
     val blocksToHighlight by property(
@@ -92,7 +97,7 @@ class BlockHighlightFeature : LocalFeature() {
     val scanRange by property(IntProperty(12, 1, 32, " chunks"))
     val renderRange by property(IntProperty(128, 8, 512, " blocks"))
     val renderStyle by property(EnumSelectionProperty(RenderStyle.Lines))
-    val maxDrawCount by property(IntProperty(20000, 1000, 100000, " elements"))
+    val maxDrawCount by property(IntProperty(2000, 1000, 100000, " elements"))
 
     val lineWidth by property(FloatProperty(1.5f, 0.1f, 5.0f, " px"))
     val viewFocus by property(EnumSelectionProperty(ViewFocus.Balanced))

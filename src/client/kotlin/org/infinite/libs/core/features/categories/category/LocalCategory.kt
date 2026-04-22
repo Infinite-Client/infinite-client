@@ -92,7 +92,7 @@ abstract class LocalCategory : Category<KClass<out LocalFeature>, LocalFeature>(
         result
     }
 
-    fun registerAllActions(): List<LocalFeature.BindingPair> = features.values.flatMap { it.registerAllActions() }
+    fun registerAllActions(): List<LocalFeature.MappingPair> = features.values.flatMap { it.registerAllActions() }
 
     private data class InternalCommandWrapper(val priority: Int, val commands: List<RenderCommand2D>)
 }

@@ -282,7 +282,7 @@ class LockOnFeature : LocalFeature() {
     }
 
     private fun renderTargetInfo(graphics2D: Graphics2D, target: LivingEntity, current: Int, total: Int) {
-        val pos = target.getPosition(graphics2D.gameDelta).add(0.0, target.eyeHeight.toDouble(), 0.0)
+        val pos = target.getPosition(graphics2D.delta).add(0.0, target.eyeHeight.toDouble(), 0.0)
         val screenPos = graphics2D.projectWorldToScreen(pos) ?: return
 
         val x = screenPos.first
@@ -297,7 +297,7 @@ class LockOnFeature : LocalFeature() {
 
     private fun renderTargetMark(graphics2D: Graphics2D, target: LivingEntity, active: Boolean, paused: Boolean) {
         // ターゲットの描画位置（目の高さ）
-        val targetPos = target.getPosition(graphics2D.gameDelta).add(0.0, target.eyeHeight.toDouble(), 0.0)
+        val targetPos = target.getPosition(graphics2D.delta).add(0.0, target.eyeHeight.toDouble(), 0.0)
         val screenPos = graphics2D.projectWorldToScreen(targetPos) ?: return
 
         val x = screenPos.first
@@ -388,9 +388,8 @@ class LockOnFeature : LocalFeature() {
 
         // 1. 距離（射程）のチェック
         // プレイヤーのリーチ（通常 3.0ブロック、クリエイティブ 4.5~5.0）
-        val maxRange = player.entityAttackRange().maxRange
-        val minRange = player.entityAttackRange().minRange
-        if (player.distanceTo(target) !in minRange..maxRange) return
+        val range = player.entityInteractionRange()
+        if (player.distanceTo(target) > range) return
 
         // 2. 攻撃クールダウン（インターバル）のチェック
         // getAttackStrengthScale(0.5f) が 1.0 ならフルチャージ状態

@@ -1,7 +1,8 @@
 package org.infinite.libs.ui.widgets
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -30,14 +31,17 @@ class ListPropertyWidget<T : Any>(
 
     private val itemHeight = 22f
     private val headerHeight = DEFAULT_WIDGET_HEIGHT.toFloat()
+
     private val viewHeight: Float get() = height - headerHeight
 
     // コンテンツの総高さ（アイテム数 + 追加ボタン1つ分）
-    private val contentHeight: Float
+    private val listContentHeight: Float
         get() = (property.value.size + 1) * itemHeight
 
     // スクロール可能な最大値（0未満にならないようにする）
-    private fun getMaxScroll(): Double = (contentHeight - viewHeight).toDouble().coerceAtLeast(0.0)
+    private fun getMaxScroll(): Double = (listContentHeight - viewHeight).toDouble().coerceAtLeast(0.0)
+
+    override fun children(): List<GuiEventListener> = listOfNotNull(activeInputWidget)
 
     override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean {
         val mx = mouseButtonEvent.x
@@ -103,10 +107,9 @@ class ListPropertyWidget<T : Any>(
         return false
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         // 1. 背景とタイトルの描画 (PropertyWidget の基本描画)
-        super.renderWidget(guiGraphics, mouseX, mouseY, delta)
-
+        super.extractWidgetRenderState(guiGraphics, mouseX, mouseY, delta)
         val g2d = Graphics2DRenderer(guiGraphics)
         val theme = InfiniteClient.theme
 
@@ -149,7 +152,7 @@ class ListPropertyWidget<T : Any>(
 
         // 3. アクティブな入力ウィジェットを最前面に描画 (Scissor 外)
         g2d.flush()
-        activeInputWidget?.render(guiGraphics, mouseX, mouseY, delta)
+        activeInputWidget?.extractRenderState(guiGraphics, mouseX, mouseY, delta)
     }
 
     private fun renderScrollbar(g2d: Graphics2DRenderer) {
@@ -161,7 +164,7 @@ class ListPropertyWidget<T : Any>(
         val barAreaHeight = viewHeight
 
         // ノブの高さ (コンテンツ比率に応じるが、最小 20px)
-        val knobHeight = (barAreaHeight * (viewHeight / contentHeight)).coerceAtLeast(20f)
+        val knobHeight = (barAreaHeight * (viewHeight / listContentHeight)).coerceAtLeast(20f)
         val scrollPercent = (scrollAmount / max).toFloat()
         val knobY = (y + headerHeight) + (barAreaHeight - knobHeight) * scrollPercent
 

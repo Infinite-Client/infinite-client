@@ -1,6 +1,6 @@
 package org.infinite.libs.ui.screen
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -115,7 +115,7 @@ abstract class AbstractCarouselScreen<T>(title: Component, private val parent: S
         }
     }
 
-    override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun extractRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         // 1. アニメーション更新
         if (!isDragging) {
             // ドラッグ中でない時だけ pageIndex へ追従
@@ -160,7 +160,7 @@ abstract class AbstractCarouselScreen<T>(title: Component, private val parent: S
 
         for (bundle in sortedBundles) {
             renderSystem2D.render(bundle.commands)
-            bundle.widget.render(guiGraphics, mouseX, mouseY, delta)
+            bundle.widget.extractRenderState(guiGraphics, mouseX, mouseY, delta)
         }
     }
 

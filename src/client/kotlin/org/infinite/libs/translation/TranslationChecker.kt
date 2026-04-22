@@ -53,6 +53,6 @@ object TranslationChecker : SimplePreparableReloadListener<Unit>() {
      */
     fun register() {
         // v1 ResourceLoader を使用してリローダーを登録
-        ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloader(ID, this)
+        ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(ID, this)
     }
 }

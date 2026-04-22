@@ -1,6 +1,6 @@
 package org.infinite.libs.ui.widgets
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.network.chat.Component
 import org.infinite.InfiniteClient
@@ -109,7 +109,7 @@ abstract class ToggleButton(
         if (rawProgress >= 1f) animationStartTime = -1L
     }
 
-    override fun renderContents(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun extractContents(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         val graphics2DRenderer = Graphics2DRenderer(guiGraphics)
         render(graphics2DRenderer)
         graphics2DRenderer.flush()

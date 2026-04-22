@@ -9,7 +9,7 @@ object SystemTicks : TickInterface {
     }
 
     override fun onEndTick() {
-        InfiniteClient.localFeatures.keyBindingActions()
+        InfiniteClient.localFeatures.keyMappingActions()
     }
 
     fun register() {

@@ -41,12 +41,9 @@ Register your entrypoint in `fabric.mod.json`:
 ```json
 {
   "entrypoints": {
-    "infinite_addon": [
-      "com.example.addon.MyAwesomeAddon"
-    ]
+    "infinite_addon": ["com.example.addon.MyAwesomeAddon"]
   }
 }
-
 ```
 
 ## 3. Core Extension Methods
@@ -113,16 +110,16 @@ client.themeManager.register(NeonTheme())
 
 ## 5. API Reference (Core Classes)
 
-| Class Name | Description |
-| --- | --- |
-| `InfiniteClient` | The core of the MOD. Provides access to all managers. |
-| `LocalFeature` | Base class for features with per-server/world settings. |
-| `GlobalFeature` | Base class for features with global client settings. |
-| `ThemeManager` | Manages UI themes. Use `register()` to add new themes. |
+| Class Name       | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| `InfiniteClient` | The core of the MOD. Provides access to all managers.   |
+| `LocalFeature`   | Base class for features with per-server/world settings. |
+| `GlobalFeature`  | Base class for features with global client settings.    |
+| `ThemeManager`   | Manages UI themes. Use `register()` to add new themes.  |
 
 ---
 
 **Tips for Addon Developers:**
 
-* By defining a `Property` (e.g., `BooleanProperty`) within a `Feature` class, a corresponding setting item will be **automatically generated in the GUI**.
-* Don't forget to add translation keys to your `en_us.json` using the format: `infinite.features.<scope>.<category>.<feature>`.
+- By defining a `Property` (e.g., `BooleanProperty`) within a `Feature` class, a corresponding setting item will be **automatically generated in the GUI**.
+- Don't forget to add translation keys to your `en_us.json` using the format: `infinite.features.<scope>.<category>.<feature>`.

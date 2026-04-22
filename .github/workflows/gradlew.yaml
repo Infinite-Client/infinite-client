@@ -2,17 +2,17 @@ name: Gradle Build and Release (Cross-platform)
 
 on:
   push:
-    branches: [ main, 'dev/*' ]
-    tags: [ 'v*' ]
+    branches: [main, "dev/*"]
+    tags: ["v*"]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
@@ -25,11 +25,11 @@ jobs:
         shell: bash
 
       - name: Setup JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
-          java-version: '25'
-          distribution: 'microsoft'
-          cache: 'gradle'
+          java-version: "25"
+          distribution: "microsoft"
+          cache: "gradle"
 
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v2
@@ -37,13 +37,13 @@ jobs:
           version: 0.13.0
 
       - name: Setup Rust (Nightly)
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: nightly
           components: rust-src, rustfmt, clippy
 
       - name: Cache Cargo and Rust targets
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -58,12 +58,17 @@ jobs:
         run: bash ./scripts/action_prepare.sh
       - name: Install Build Tools (Cached)
         run: |
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.cargo/bin:$PATH"
           if ! command -v cargo-zigbuild &> /dev/null; then
-            curl -L https://github.com/rust-cross/cargo-zigbuild/releases/latest/download/cargo-zigbuild-x86_64-unknown-linux-musl.tar.gz | tar xz -C ~/.cargo/bin
+            echo "cargo-zigbuild not found, installing..."
+            cargo install cargo-zigbuild
+          else
+            echo "cargo-zigbuild is already installed."
           fi
           # Create enhanced wrappers for Zig to fix target triple issues
           mkdir -p ~/.cargo/bin/wrappers
-          
+
           cat <<'EOF' > ~/.cargo/bin/wrappers/zig-cc
           #!/bin/bash
           args=()
@@ -82,7 +87,7 @@ jobs:
           done
           exec zig cc "${args[@]}"
           EOF
-          
+
           cat <<'EOF' > ~/.cargo/bin/wrappers/zig-cpp
           #!/bin/bash
           args=()
@@ -112,11 +117,11 @@ jobs:
           AR_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-ar
           CC_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cc
           CXX_aarch64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cpp
-          
+
           AR_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-ar
           CC_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cc
           CXX_x86_64_apple_darwin: /home/runner/.cargo/bin/wrappers/zig-cpp
-          
+
           # jemalloc 等の configure 時に SDK チェックでコケるのを防ぐ
           SDKROOT: ""
         run: |
@@ -140,7 +145,7 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: all-in-one-jar
           path: dist/
@@ -153,7 +158,7 @@ jobs:
       contents: write
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: all-in-one-jar
           path: dist

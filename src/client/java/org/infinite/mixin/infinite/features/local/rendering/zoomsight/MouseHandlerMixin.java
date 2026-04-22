@@ -14,7 +14,7 @@ public class MouseHandlerMixin {
 
   /** マウスホイールによる倍率調整 */
   @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
-  private void onMouseScroll(long handle, double xOffset, double yOffset, CallbackInfo ci) {
+  private void onMouseScroll(long handle, double xoffset, double yoffset, CallbackInfo ci) {
     ZoomSightFeature zoom =
         InfiniteClient.INSTANCE.getLocalFeatures().getRendering().getZoomSightFeature();
 
@@ -23,20 +23,19 @@ public class MouseHandlerMixin {
       float step = zoom.getZoomStep().getValue(); // プロパティから取得
 
       float next;
-      if (yOffset > 0) {
+      if (yoffset > 0) {
         next = current * step; // 拡大
       } else {
         next = current / step; // 縮小
       }
 
-      zoom.setCurrentZoom(Math.max(1.0f, Math.min(50.0f, next)));
+      zoom.setCurrentZoom(Math.clamp(next, 1.0f, 50.0f));
       ci.cancel();
     }
   }
 
-  /** ズーム倍率に応じた感度の動的補正 変数 'f' (e * e * e) は Minecraft 1.21 における回転デルタの基数です。 */
   @ModifyVariable(method = "turnPlayer", at = @At("STORE"), ordinal = 1)
-  private double modifySensitivityMultiplier(double originalF) {
+  private double modifySensitivityMultiplier(double ss) {
     ZoomSightFeature zoom =
         InfiniteClient.INSTANCE.getLocalFeatures().getRendering().getZoomSightFeature();
 
@@ -45,11 +44,16 @@ public class MouseHandlerMixin {
       float reduction = zoom.getSensitivityReduction().getValue();
 
       if (level > 1.0f) {
-        // 感度を (1 / 倍率) に近づける補正
-        // reduction = 1.0 の時、倍率に完全反比例します
-        return originalF / (1.0 + (level - 1.0) * reduction);
+        // 三乗根（Cube Root）をとることで、高倍率でも操作性を失わない
+        // 50倍ズーム時：1/50 ≒ 0.02 (重すぎ) -> 1/7.07 (平方根) -> 1/3.68 (三乗根)
+        double visualSpeedMatch = 1.0 / Math.cbrt(level);
+
+        // reduction = 1.0 のとき、三乗根による補正がフルに効く
+        double factor = 1.0 + (visualSpeedMatch - 1.0) * reduction;
+
+        return ss * factor;
       }
     }
-    return originalF;
+    return ss;
   }
 }

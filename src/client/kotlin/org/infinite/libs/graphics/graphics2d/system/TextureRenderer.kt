@@ -1,10 +1,10 @@
 package org.infinite.libs.graphics.graphics2d.system
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.renderer.RenderPipelines
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 
-class TextureRenderer(private val gui: GuiGraphics) {
+class TextureRenderer(private val gui: GuiGraphicsExtractor) {
 
     fun drawTexture(cmd: RenderCommand2D.DrawTexture) {
         val pose = gui.pose()

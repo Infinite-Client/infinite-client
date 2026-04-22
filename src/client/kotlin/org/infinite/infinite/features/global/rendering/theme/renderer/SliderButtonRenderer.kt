@@ -1,13 +1,13 @@
 package org.infinite.infinite.features.global.rendering.theme.renderer
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractSliderButton
 import org.infinite.InfiniteClient
 import org.infinite.libs.graphics.bundle.Graphics2DRenderer
 import org.infinite.utils.alpha
 
 class SliderButtonRenderer : WidgetRenderer<AbstractSliderButton> {
-    override fun render(widget: AbstractSliderButton, guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun render(widget: AbstractSliderButton, guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         val theme = InfiniteClient.theme
         val colorScheme = theme.colorScheme
         val g2d = Graphics2DRenderer(guiGraphics)

@@ -1,10 +1,10 @@
 package org.infinite.libs.graphics.graphics2d.system
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import org.infinite.libs.graphics.graphics2d.minecraft.fillTriangle
 
 class TriangleRenderer(
-    private val guiGraphics: GuiGraphics,
+    private val guiGraphics: GuiGraphicsExtractor,
 ) {
     /**
      * 三角形を塗りつぶす（各頂点の色を指定可能）

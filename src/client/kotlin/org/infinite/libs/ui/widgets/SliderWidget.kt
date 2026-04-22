@@ -1,6 +1,6 @@
 package org.infinite.libs.ui.widgets
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.narration.NarrationElementOutput
 import net.minecraft.client.input.MouseButtonEvent
@@ -122,8 +122,8 @@ abstract class SliderWidget<T>(
         graphics2D.strokeCircle(knobX, knobY, knobRadius)
     }
 
-    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        val renderer = Graphics2DRenderer(guiGraphics)
+    override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
+        val renderer = Graphics2DRenderer(graphics)
         render(renderer)
         renderer.flush()
     }

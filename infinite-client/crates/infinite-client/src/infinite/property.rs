@@ -1,4 +1,4 @@
-use minecraft_rs::color::Color;
+use crate::utils::color::Color;
 
 #[derive(Debug, Clone)]
 pub struct BlockAndColor {

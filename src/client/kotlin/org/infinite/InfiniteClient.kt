@@ -3,11 +3,10 @@ package org.infinite
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.gui.screens.Screen
-import org.infinite.InfiniteClient.feature
 import org.infinite.infinite.command.InfiniteCommand
 import org.infinite.infinite.features.global.InfiniteGlobalFeatures
 import org.infinite.infinite.features.local.InfiniteLocalFeatures
@@ -41,9 +40,88 @@ import kotlin.reflect.KClass
 object InfiniteClient : MinecraftInterface(), ClientModInitializer {
     val globalFeatures = InfiniteGlobalFeatures()
     val localFeatures = InfiniteLocalFeatures()
-    val gameScreenBindingPair: LocalFeature.BindingPair by lazy {
-        LocalFeature.BindingPair(
-            KeyBindingHelper.registerKeyBinding(
+
+    val featureCategories get() = localFeatures
+    val globalFeatureCategories get() = globalFeatures
+
+    fun genTranslations(rootPath: String = ".") {
+        var langDir = java.io.File(rootPath, "infinite-client/src/main/resources/assets/infinite-client/lang")
+        if (!langDir.exists()) {
+            langDir = java.io.File(rootPath, "src/main/resources/assets/infinite-client/lang")
+        }
+        if (!langDir.exists()) return
+
+        val keys = mutableSetOf<String>()
+        // Collect keys from local features
+        localFeatures.categories.values.forEach { category ->
+            keys.add(category.translation())
+            category.features.values.forEach { feature ->
+                keys.add(feature.translation())
+                feature.properties.values.forEach { property ->
+                    property.translationKey()?.let { keys.add(it) }
+                }
+            }
+        }
+        // Collect keys from global features
+        globalFeatures.categories.values.forEach { category ->
+            keys.add(category.translation())
+            category.features.values.forEach { feature ->
+                keys.add(feature.translation())
+                feature.properties.values.forEach { property ->
+                    property.translationKey()?.let { keys.add(it) }
+                }
+            }
+        }
+
+        // Add standard documentation keys used in Document.kt
+        keys.add("doc.infinite.properties_section_title")
+        keys.add("doc.infinite.property_info_title")
+        keys.add("doc.infinite.property_type")
+        keys.add("doc.infinite.property_default")
+        keys.add("doc.infinite.property_min")
+        keys.add("doc.infinite.property_max")
+        keys.add("doc.infinite.property_options")
+        keys.add("doc.infinite.property_list_count")
+        keys.add("doc.infinite.property_list_type")
+
+        // Keymappings
+        localFeatures.categories.values.forEach { category ->
+            category.features.values.forEach { feature ->
+                keys.addAll(feature.getActionTranslationKeys())
+            }
+        }
+        keys.add("key.infinite.game_options")
+
+        val gson = com.google.gson.GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
+        val langFiles = langDir.listFiles { _, name -> name.endsWith(".json") } ?: return
+
+        for (file in langFiles) {
+            val type = object : com.google.gson.reflect.TypeToken<MutableMap<String, String>>() {}.type
+            val currentTranslations: MutableMap<String, String> = try {
+                gson.fromJson(file.readText(java.nio.charset.StandardCharsets.UTF_8), type) ?: mutableMapOf()
+            } catch (e: Exception) {
+                mutableMapOf()
+            }
+
+            var changed = false
+            for (key in keys) {
+                if (!currentTranslations.containsKey(key)) {
+                    currentTranslations[key] = key
+                    changed = true
+                }
+            }
+
+            if (changed) {
+                val sortedMap = currentTranslations.toSortedMap()
+                file.writeText(gson.toJson(sortedMap), java.nio.charset.StandardCharsets.UTF_8)
+                println("Updated translation file: ${file.name} with ${keys.size} keys.")
+            }
+        }
+    }
+
+    val gameScreenMappingPair: LocalFeature.MappingPair by lazy {
+        LocalFeature.MappingPair(
+            KeyMappingHelper.registerKeyMapping(
                 KeyMapping(
                     "key.infinite.game_options",
                     GLFW.GLFW_KEY_RIGHT_SHIFT,

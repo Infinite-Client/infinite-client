@@ -1,7 +1,7 @@
 // PlainButtonMixin.java
 package org.infinite.mixin.infinite.features.global.rendering.theme.button;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.PlainTextButton;
 import net.minecraft.network.chat.Component;
@@ -26,9 +26,9 @@ public abstract class PlainButtonMixin extends Button {
     super(i, j, k, l, component, onPress, createNarration);
   }
 
-  @Inject(method = "renderContents", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "extractContents", at = @At("HEAD"), cancellable = true)
   public void onRenderWidget(
-      GuiGraphics guiGraphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+      GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
     ThemeFeature theme =
         InfiniteClient.INSTANCE.getGlobalFeatures().getRendering().getThemeFeature();
 

@@ -1,12 +1,12 @@
 package org.infinite.libs.graphics.graphics2d.system
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState
 import net.minecraft.world.item.ItemDisplayContext
 import org.infinite.libs.graphics.graphics2d.structs.RenderCommand2D
 import org.infinite.libs.interfaces.MinecraftInterface
 
-class ItemRenderer(private val gui: GuiGraphics) : MinecraftInterface() {
+class ItemRenderer(private val gui: GuiGraphicsExtractor) : MinecraftInterface() {
 
 // ItemRenderer.kt
 
@@ -31,7 +31,7 @@ class ItemRenderer(private val gui: GuiGraphics) : MinecraftInterface() {
             pose.pushMatrix()
             pose.translate(x, y)
             pose.scale(cmd.scale, cmd.scale)
-            gui.renderItem(stack, 0, 0)
+            gui.item(stack, 0, 0)
             pose.popMatrix()
         } catch (throwable: Throwable) {
             throw throwable

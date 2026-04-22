@@ -1,6 +1,6 @@
 package org.infinite.infinite.ui.widget
 
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.layouts.LinearLayout
 import net.minecraft.client.gui.narration.NarrationElementOutput
@@ -33,13 +33,6 @@ abstract class ListCategoryWidget<T : Category<*, out Feature>>(
     private val scrollbarWidth = 20
 
     init {
-        rebuildContent(width)
-    }
-
-    fun setSearchQuery(query: String) {
-        val normalized = query.trim().lowercase()
-        if (normalized == searchQuery) return
-        searchQuery = normalized
         rebuildContent(width)
     }
 
@@ -95,7 +88,7 @@ abstract class ListCategoryWidget<T : Category<*, out Feature>>(
 
     abstract fun buildContent(layout: LinearLayout, width: Int, query: String)
 
-    override fun renderWidget(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun extractWidgetRenderState(guiGraphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         val colorScheme = InfiniteClient.theme.colorScheme
 
         // アニメーション計算
@@ -151,7 +144,7 @@ abstract class ListCategoryWidget<T : Category<*, out Feature>>(
 
         // 内部コンテナ（スクロールエリア）の描画
         // 注意: container 内部でも Graphics2DRenderer を使っている場合は、そこでも flush() が必要です
-        container.render(guiGraphics, mouseX, mouseY, delta)
+        container.extractRenderState(guiGraphics, mouseX, mouseY, delta)
     }
 
     private fun categoryDescription(): String {

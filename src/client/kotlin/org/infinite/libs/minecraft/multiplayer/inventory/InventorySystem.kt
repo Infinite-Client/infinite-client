@@ -1,7 +1,6 @@
 package org.infinite.libs.minecraft.multiplayer.inventory
 
 import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket
-import net.minecraft.world.inventory.ClickType
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import org.infinite.libs.interfaces.MinecraftInterface
@@ -70,14 +69,14 @@ object InventorySystem : MinecraftInterface() {
         val s2 = to.toContainerSlot()
         if (s1 == -1 || s2 == -1) return
 
-        controller.handleInventoryMouseClick(containerId, s1, 0, ClickType.PICKUP, p)
-        controller.handleInventoryMouseClick(containerId, s2, 0, ClickType.PICKUP, p)
-        controller.handleInventoryMouseClick(containerId, s1, 0, ClickType.PICKUP, p)
+        controller.handleInventoryButtonClick(containerId, s1)
+        controller.handleInventoryButtonClick(containerId, s2)
+        controller.handleInventoryButtonClick(containerId, s1)
 
         // カーソル残留チェック
         if (!p.inventoryMenu.carried.isEmpty) {
             val target = findFirstEmptyBackpack()?.toContainerSlot() ?: -999
-            controller.handleInventoryMouseClick(containerId, target, 0, ClickType.PICKUP, p)
+            controller.handleInventoryButtonClick(containerId, target)
         }
     }
 

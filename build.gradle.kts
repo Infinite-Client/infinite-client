@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("jvm")
-    id("fabric-loom")
+    id("net.fabricmc.fabric-loom")
     id("maven-publish")
     id("eclipse")
     id("org.jetbrains.kotlin.plugin.serialization")
@@ -48,18 +48,12 @@ tasks.named<JavaCompile>("compileJava") {
 
 dependencies {
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
-    @Suppress("UnstableApiUsage")
-    mappings(
-        loom.layered {
-            officialMojangMappings()
-        },
-    )
-    modImplementation("net.fabricmc:fabric-loader:${property("loader_version")}")
-    modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_version")}")
-    modImplementation("maven.modrinth:modmenu:${property("mod_menu_version")}")
+    implementation("net.fabricmc:fabric-loader:${property("loader_version")}")
+    implementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
+    implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
+    compileOnly("maven.modrinth:modmenu:${property("mod_menu_version")}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${property("kotlinx_serialization_json_version")}")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:${property("kotlin_version")}")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:${property("kotlinVersion")}")
     implementation("dev.babbaj:nether-pathfinder:${property("nether_pathfinder_version")}")
     implementation("com.squareup.okhttp3:okhttp:${property("ok_http_version")}")
     implementation("org.apache.maven:maven-artifact:${property("maven_artifact_version")}")
@@ -70,11 +64,9 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
     errorprone("com.google.errorprone:error_prone_core:2.45.0")
 }
-
 xross {
-    rustProjectDir = project.file("rust/infinite-client").absolutePath
-    metadataDir = "target/xross"
-    packageName = "org.infinite.nativebind"
+    rustProjectDir = project.file("infinite-client").absolutePath
+    packageName = "org.infinite.native"
     useUnsignedTypes = true
 }
 
@@ -84,10 +76,8 @@ val cleanNative = tasks.register("cleanNative") {
     group = "native"
     description = "Cleans Rust target directory and generated Xross bindings."
     doLast {
-        delete(project.file("rust/infinite-client/target"))
+        delete(project.file("infinite-client/target"))
         delete(layout.buildDirectory.dir("generated/xross/kotlin"))
-        // 検証エラーを避けるためにディレクトリだけ再作成しておく
-        project.file("rust/infinite-client/target/xross").mkdirs()
         println("Native build artifacts and generated code cleaned.")
     }
 }
@@ -118,13 +108,9 @@ rustTargets.forEach { (id, targetTriple) ->
     tasks.register<Exec>("rustBuild_$id") {
         group = "build"
         description = "Build Rust library for $id ($targetTriple) using zigbuild"
-        workingDir = project.file("rust/infinite-client")
+        workingDir = project.file("infinite-client")
         val useZigbuild =
             buildAllRustTargets || id != hostRustTargetId || providers.gradleProperty("useZigbuild").orNull == "true"
-
-        // メタデータの競合を避けるため、buildディレクトリ内にターゲットごとのディレクトリを作成
-        val targetMetadataDir = project.layout.buildDirectory.dir("xross-metadata/$id").get().asFile
-        environment("XROSS_METADATA_DIR", targetMetadataDir.absolutePath)
 
         if (useZigbuild) {
             commandLine("cargo", "zigbuild", "--release", "--target", targetTriple)
@@ -132,9 +118,9 @@ rustTargets.forEach { (id, targetTriple) ->
             commandLine("cargo", "build", "--release")
         }
         val outputDir = if (useZigbuild) {
-            project.file("rust/infinite-client/target/$targetTriple/release")
+            project.file("infinite-client/target/$targetTriple/release")
         } else {
-            project.file("rust/infinite-client/target/release")
+            project.file("infinite-client/target/release")
         }
         outputs.dir(outputDir)
     }
@@ -143,7 +129,7 @@ rustTargets.forEach { (id, targetTriple) ->
 val buildRustAll = tasks.register("buildRustAll") {
     group = "build"
     description = "Triggers Rust builds for all supported platforms"
-    inputs.dir(project.file("rust/infinite-client"))
+    inputs.dir(project.file("infinite-client"))
     val rustBuildTasks = if (buildAllRustTargets) {
         rustTargets.keys.map { "rustBuild_$it" }
     } else {
@@ -152,31 +138,9 @@ val buildRustAll = tasks.register("buildRustAll") {
     dependsOn(rustBuildTasks)
 }
 
-val mergeXrossMetadata = tasks.register("mergeXrossMetadata") {
-    group = "native"
-    description = "Merges Xross metadata from all build targets."
-    dependsOn(buildRustAll)
-    doLast {
-        val mergedDir = project.file("rust/infinite-client/target/xross")
-        if (!mergedDir.exists()) mergedDir.mkdirs()
-
-        val targetIds = if (buildAllRustTargets) rustTargets.keys else listOf(hostRustTargetId)
-        targetIds.forEach { id ->
-            val targetMetadataDir = project.layout.buildDirectory.dir("xross-metadata/$id").get().asFile
-            if (targetMetadataDir.exists()) {
-                targetMetadataDir.listFiles()?.forEach { file ->
-                    if (file.extension == "json") {
-                        file.copyTo(File(mergedDir, file.name), overwrite = true)
-                    }
-                }
-            }
-        }
-    }
-}
-
 // Xrossのバインディング生成はRustのビルド（メタデータ生成）に依存する
 tasks.named("generateXrossBindings") {
-    dependsOn(mergeXrossMetadata)
+    dependsOn(buildRustAll)
 }
 
 // --- Rust Formatting ---
@@ -184,13 +148,13 @@ tasks.named("generateXrossBindings") {
 val rustFmt = tasks.register<Exec>("rustFmt") {
     group = "formatting"
     description = "Formats Rust code using cargo fmt"
-    commandLine("cargo", "fmt", "--all")
+    commandLine("cargo", "fmt", "--all", "--manifest-path", "infinite-client/Cargo.toml")
 }
 
 val rustFmtCheck = tasks.register<Exec>("rustFmtCheck") {
     group = "verification"
     description = "Checks Rust code formatting using cargo fmt --check"
-    commandLine("cargo", "fmt", "--all", "--", "--check")
+    commandLine("cargo", "fmt", "--manifest-path", "infinite-client/Cargo.toml", "--all", "--", "--check")
 }
 
 tasks.named("spotlessApply") {
@@ -205,8 +169,14 @@ val refreshNative = tasks.register("refreshNative") {
     group = "native"
     description = "Performs a clean rebuild of Rust binaries and regenerates Xross bindings."
     dependsOn(cleanNative)
-    // 依存関係の連鎖により、generateXrossBindings を呼べば自動的に buildRustAll も走る
+    // buildRustAll を実行し、その後に generateXrossBindings を実行するように設定
+    dependsOn(buildRustAll)
     finalizedBy("generateXrossBindings")
+}
+
+// クリーンアップ後にビルドが走るように順序を制御
+buildRustAll.configure {
+    mustRunAfter(cleanNative)
 }
 
 sourceSets {
@@ -229,9 +199,9 @@ tasks {
         rustTargets.forEach { (id, target) ->
             val hostUsesZigbuild = buildAllRustTargets || providers.gradleProperty("useZigbuild").orNull == "true"
             val sourceDir = if (id == hostRustTargetId && !hostUsesZigbuild) {
-                "${project.rootDir}/target/release"
+                project.file("infinite-client/target/release")
             } else {
-                "${project.rootDir}/target/$target/release"
+                project.file("infinite-client/target/$target/release")
             }
             from(sourceDir) {
                 include("*.so", "*.dll", "*.dylib")
@@ -252,6 +222,9 @@ tasks {
                 vmArg("-Dforeign.restricted=permit")
                 vmArg("-XX:+UnlockDiagnosticVMOptions")
                 vmArg("-XX:+AlwaysCompileLoopMethods")
+                vmArg("-Dmixin.debug.strict=true")
+                vmArg("-Dmixin.debug.verbose=true")
+                vmArg("-Dmixin.debug.countInjections=true")
             }
         }
         splitEnvironmentSourceSets()
@@ -380,4 +353,12 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
             "-opt-in=kotlin.RequiresOptIn",
         )
     }
+}
+
+tasks.register<JavaExec>("genDocs") {
+    description = "Generate Document templates"
+    group = "application"
+    classpath = sourceSets["client"].runtimeClasspath
+    mainClass.set("org.infinite.utils.Document")
+    args(project.rootDir.absolutePath)
 }

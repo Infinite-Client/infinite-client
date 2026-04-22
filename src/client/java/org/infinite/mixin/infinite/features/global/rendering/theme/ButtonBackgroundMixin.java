@@ -1,6 +1,6 @@
 package org.infinite.mixin.infinite.features.global.rendering.theme;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import org.infinite.InfiniteClient;
@@ -20,13 +20,13 @@ public abstract class ButtonBackgroundMixin extends AbstractWidget.WithInactiveM
     super(i, j, k, l, component);
   }
 
-  @Inject(method = "renderDefaultSprite", at = @At("HEAD"), cancellable = true)
-  private void onRenderDefaultSprite(GuiGraphics guiGraphics, CallbackInfo ci) {
+  @Inject(method = "extractDefaultSprite", at = @At("HEAD"), cancellable = true)
+  private void onExtractDefaultSprite(GuiGraphicsExtractor graphics, CallbackInfo ci) {
     ThemeFeature themeFeature =
         InfiniteClient.INSTANCE.getGlobalFeatures().getRendering().getThemeFeature();
     if (!themeFeature.isEnabled()) return;
 
-    Graphics2DRenderer renderer = new Graphics2DRenderer(guiGraphics);
+    Graphics2DRenderer renderer = new Graphics2DRenderer(graphics);
 
     WidgetRenderUtils.INSTANCE.renderCustomBackground(this, renderer);
 

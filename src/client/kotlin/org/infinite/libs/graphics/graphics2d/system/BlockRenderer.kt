@@ -1,9 +1,9 @@
 package org.infinite.libs.graphics.graphics2d.system
 
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.renderer.RenderPipelines
-import net.minecraft.client.renderer.block.model.BlockModelPart
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart
 import net.minecraft.core.Direction
 import net.minecraft.util.RandomSource
 import net.minecraft.world.item.ItemStack
@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.Blocks
 import org.infinite.InfiniteClient
 
-class BlockRenderer(private val gui: GuiGraphics) {
+class BlockRenderer(private val gui: GuiGraphicsExtractor) {
     private val random = RandomSource.create()
 
     fun block(block: Block, x: Float, y: Float, size: Float) {
@@ -23,19 +23,15 @@ class BlockRenderer(private val gui: GuiGraphics) {
             pose.pushMatrix()
             pose.translate(x, y)
             pose.scale(size / 16f, size / 16f)
-            gui.renderItem(itemStack, 0, 0)
+            gui.item(itemStack, 0, 0)
             pose.popMatrix()
         } else {
-            val model = mc.blockRenderer.getBlockModel(block.defaultBlockState())
-            val parts = mutableListOf<BlockModelPart>()
+            val model = mc.blockModelResolver.modelManager.blockStateModelSet.get(block.defaultBlockState())
+            val parts = mutableListOf<BlockStateModelPart>()
             model.collectParts(random, parts)
 
-            val sprite = if (parts.isNotEmpty()) {
-                parts.first().getQuads(Direction.UP).firstOrNull()?.sprite()
-                    ?: parts.first().particleIcon()
-            } else {
-                model.particleIcon()
-            }
+            val sprite =
+                parts.first().getQuads(Direction.UP).firstOrNull()?.materialInfo?.sprite ?: return
             val color = if (block == Blocks.WATER) {
                 val aqua = 210f
                 InfiniteClient.theme.colorScheme.color(aqua, 1f, 0.5f, 1f)

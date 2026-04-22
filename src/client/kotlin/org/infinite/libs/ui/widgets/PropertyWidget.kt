@@ -2,7 +2,7 @@ package org.infinite.libs.ui.widgets
 
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractContainerWidget
 import net.minecraft.client.gui.components.Renderable
 import net.minecraft.client.gui.components.events.GuiEventListener
@@ -23,7 +23,7 @@ open class PropertyWidget<T : Property<*>>(
     width: Int,
     height: Int = DEFAULT_WIDGET_HEIGHT,
     protected val property: T,
-) : AbstractContainerWidget(x, y, width, height, Component.literal("")),
+) : AbstractContainerWidget(x, y, width, height, Component.literal(""), defaultSettings(10)),
     Renderable {
 
     companion object {
@@ -77,8 +77,8 @@ open class PropertyWidget<T : Property<*>>(
 
     protected open fun relocate() {}
 
-    override fun renderWidget(
-        guiGraphics: GuiGraphics,
+    override fun extractWidgetRenderState(
+        guiGraphics: GuiGraphicsExtractor,
         mouseX: Int,
         mouseY: Int,
         delta: Float,

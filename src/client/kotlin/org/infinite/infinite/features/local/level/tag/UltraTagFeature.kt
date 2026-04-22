@@ -53,7 +53,7 @@ class UltraTagFeature : LocalFeature() {
             }
 
             val offset = if (entity is LivingEntity) entity.bbHeight.toDouble() + 0.2 else 0.5
-            val worldPos = entity.getPosition(graphics2D.gameDelta).add(0.0, offset, 0.0)
+            val worldPos = entity.getPosition(graphics2D.delta).add(0.0, offset, 0.0)
 
             val screenPos = graphics2D.projectWorldToScreen(Vec3(worldPos.x, worldPos.y, worldPos.z))
             if (screenPos != null) {

@@ -3,7 +3,7 @@ package org.infinite.libs.graphics.text
 import net.minecraft.client.gui.font.FontManager
 import net.minecraft.client.renderer.PlayerSkinRenderCache
 import net.minecraft.client.renderer.texture.TextureManager
-import net.minecraft.client.resources.model.AtlasManager
+import net.minecraft.client.resources.model.sprite.AtlasManager
 
 class ModernFontManager(
     textureManager: TextureManager,

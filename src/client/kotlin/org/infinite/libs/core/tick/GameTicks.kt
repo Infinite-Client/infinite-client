@@ -18,7 +18,7 @@ class GameTicks(
     }
 
     fun register() {
-        ClientTickEvents.START_WORLD_TICK.register { _ -> onStartTick() }
-        ClientTickEvents.END_WORLD_TICK.register { _ -> onEndTick() }
+        ClientTickEvents.START_LEVEL_TICK.register { _ -> onStartTick() }
+        ClientTickEvents.END_LEVEL_TICK.register { _ -> onEndTick() }
     }
 }
