@@ -1,6 +1,5 @@
 package org.infinite.mixin.infinite.features.local.level.xray;
 
-import com.mojang.blaze3d.platform.Transparency;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.chunk.SectionCompiler;
 import org.infinite.InfiniteClient;
@@ -16,7 +15,7 @@ public class ItemBlockRenderTypesMixin {
     var xRay = InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getXRayFeature();
 
     if (xRay.isEnabled()) {
-      return ChunkSectionLayer.byTransparency(Transparency.TRANSPARENT_AND_TRANSLUCENT);
+      return ChunkSectionLayer.TRANSLUCENT;
     }
     return layer;
   }

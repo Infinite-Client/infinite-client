@@ -41,7 +41,9 @@ public class BlockModelLighterMixin {
       BakedQuad quad,
       QuadInstance outputInstance,
       CallbackInfo ci) {
-    if (feature().shouldApply(state)) outputInstance.scaleColor(1.0f);
-    outputInstance.setLightCoords(15728880);
+    if (feature().shouldApply(state)) {
+      outputInstance.scaleColor(1.0f);
+      outputInstance.setLightCoords(15728880);
+    }
   }
 }

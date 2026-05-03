@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.QuadInstance;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.renderer.block.BlockQuadOutput;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
@@ -15,6 +16,8 @@ import org.infinite.infinite.features.local.level.xray.XRayFeature;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = ModelBlockRenderer.class, priority = 900)
 public class ModelBlockRendererMixin {
@@ -74,25 +77,17 @@ public class ModelBlockRendererMixin {
     original.call(instance, x, y, z, bakedQuad, quadInstance);
   }
 
-  @WrapOperation(
-      method = "shouldRenderFace",
-      at =
-          @At(
-              value = "INVOKE",
-              target =
-                  "Lnet/minecraft/world/level/block/Block;shouldRenderFace(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;)Z"))
-  private boolean onShouldRenderFace(
+  @Inject(method = "shouldRenderFace", at = @At("RETURN"), cancellable = true)
+  private void onShouldRenderFace(
+      BlockAndTintGetter level,
       BlockState state,
-      BlockState neighborState,
       Direction direction,
-      Operation<Boolean> original,
-      @Local(argsOnly = true, name = "neighborPos") BlockPos neighborPos // 引数名は neighborPos
-      ) {
+      BlockPos neighborPos,
+      CallbackInfoReturnable<Boolean> cir) {
     XRayFeature xRay = xRayFeature();
-    if (!xRay.isEnabled()) {
-      return original.call(state, neighborState, direction);
+    if (xRay.isEnabled()) {
+      BlockPos pos = neighborPos.relative(direction.getOpposite());
+      cir.setReturnValue(xRay.atModelBlockRenderer(state, direction, pos, cir.getReturnValueZ()));
     }
-    return xRay.atModelBlockRenderer(
-        state, direction, neighborPos, original.call(state, neighborState, direction));
   }
 }

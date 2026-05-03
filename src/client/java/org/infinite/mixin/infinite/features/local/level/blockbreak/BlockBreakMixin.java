@@ -1,18 +1,25 @@
 package org.infinite.mixin.infinite.features.local.level.blockbreak;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import org.infinite.InfiniteClient;
+import org.infinite.infinite.features.local.level.blockbreak.FastBreakFeature;
 import org.infinite.infinite.features.local.level.blockbreak.LinearBreakFeature;
 import org.infinite.infinite.features.local.level.blockbreak.VeinBreakFeature;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(MultiPlayerGameMode.class)
 public class BlockBreakMixin {
+  @Shadow @Final private Minecraft minecraft;
+
   @Inject(method = "startDestroyBlock", at = @At("HEAD"), cancellable = true)
   private void onStartDestroyBlock(
       BlockPos pos, Direction side, CallbackInfoReturnable<Boolean> cir) {
@@ -45,6 +52,30 @@ public class BlockBreakMixin {
             .isWorking()) {
       cir.setReturnValue(false);
       cir.cancel();
+      return;
+    }
+
+    FastBreakFeature fastBreak =
+        InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getFastBreakFeature();
+    if (fastBreak.isEnabled()) {
+      MultiPlayerGameModeAccessor accessor = (MultiPlayerGameModeAccessor) this;
+      float progress = accessor.getDestroyProgress();
+      if (fastBreak.shouldFastBreak(pos, progress)) {
+        fastBreak.sendStopPacket(pos, side);
+        accessor.setIsDestroying(false);
+        accessor.setDestroyProgress(0f);
+        cir.setReturnValue(true);
+        cir.cancel();
+      }
+    }
+  }
+
+  @Inject(method = "tick", at = @At("HEAD"))
+  private void onTick(CallbackInfo ci) {
+    FastBreakFeature fastBreak =
+        InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getFastBreakFeature();
+    if (fastBreak.isEnabled()) {
+      ((MultiPlayerGameModeAccessor) this).setDestroyDelay(0);
     }
   }
 }
