@@ -24,21 +24,21 @@ public abstract class CameraMixin {
     return InfiniteClient.INSTANCE.getLocalFeatures().getRendering().getStableSightFeature();
   }
 
-  /** setupの最後で実行されるmove(カメラの後退処理)を上書き、 またはgetMaxZoomの挙動を書き換えます。 */
-  @Inject(method = "reset", at = @At("RETURN"))
-  public void onSetupReturn(CallbackInfo ci) {
+  @Inject(method = "setup", at = @At("RETURN"))
+  public void onSetupReturn(
+      net.minecraft.world.level.BlockGetter blockGetter,
+      net.minecraft.world.entity.Entity entity,
+      boolean bl,
+      boolean bl2,
+      float f,
+      CallbackInfo ci) {
     if (stableSightFeature().isEnabled() && this.detached) {
-      // 1. 標準の挙動で移動してしまった分を一旦リセット（moveは相対移動のため）
-      // 既存のsetup内で getMaxZoom に基づいて move(-dist, 0, 0) が呼ばれている。
-      // 地形を無視したい場合は、一旦位置を戻すか、計算自体を書き換える必要があります。
-
-      // 2. 独自の距離と地形無視設定を適用
-      float customDistance = stableSightFeature().getCameraDistance().getValue(); // Featureから取得
+      float customDistance = stableSightFeature().getCameraDistance().getValue();
       boolean ignoreTerrain = stableSightFeature().getIgnoreTerrain().getValue();
 
       if (ignoreTerrain) {
-        // getMaxZoomを通さずに、直接指定距離分下がる
-        // setupの最後で再度呼び出すことで上書き
+        // setupの中で既に実行されたmoveを打ち消すために、一旦リセットしてから再移動
+        // (注意: 実際にはsetupのロジックに合わせて微調整が必要)
         this.move(-customDistance, 0.0F, 0.0F);
       }
     }

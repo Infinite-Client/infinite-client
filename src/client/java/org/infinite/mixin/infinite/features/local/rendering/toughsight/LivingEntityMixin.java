@@ -35,28 +35,19 @@ public abstract class LivingEntityMixin extends Entity {
         InfiniteClient.INSTANCE.getLocalFeatures().getRendering().getToughSightFeature();
     if (toughSight.isEnabled()) {
       // 盲目
-      var blindnessKey = MobEffects.BLINDNESS.unwrapKey();
-      if (toughSight.getAntiBlindness().getValue()
-          && blindnessKey.isPresent()
-          && effect.is(blindnessKey.get())) {
+      if (toughSight.getAntiBlindness().getValue() && effect == MobEffects.BLINDNESS) {
         cir.setReturnValue(false);
         return;
       }
 
       // 暗闇
-      var darknessKey = MobEffects.DARKNESS.unwrapKey();
-      if (toughSight.getAntiDarkness().getValue()
-          && darknessKey.isPresent()
-          && effect.is(darknessKey.get())) {
+      if (toughSight.getAntiDarkness().getValue() && effect == MobEffects.DARKNESS) {
         cir.setReturnValue(false);
         return;
       }
 
       // 吐き気 (NAUSEA)
-      var nauseaKey = MobEffects.NAUSEA.unwrapKey();
-      if (toughSight.getAntiNausea().getValue()
-          && nauseaKey.isPresent()
-          && effect.is(nauseaKey.get())) {
+      if (toughSight.getAntiNausea().getValue() && effect == MobEffects.NAUSEA) {
         cir.setReturnValue(false);
       }
     }

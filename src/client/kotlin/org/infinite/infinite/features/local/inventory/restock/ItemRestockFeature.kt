@@ -15,7 +15,8 @@ class ItemRestockFeature : LocalFeature() {
     val delayProperty by property(IntProperty(3, 1, 20, "ticks"))
     val thresholdProperty by property(IntProperty(8, 1, 64, "count"))
 
-    private val lastKnownItems = arrayOfNulls<Item>(9)
+    // インデックス 0-8: Hotbar, インデックス 9: Offhand 用にサイズを10に拡張
+    private val lastKnownItems = arrayOfNulls<Item>(10)
     private var tickDelay = 0
     private var wasScreenOpen = false
 
@@ -34,46 +35,67 @@ class ItemRestockFeature : LocalFeature() {
             if (tickDelay > 0) tickDelay--
             return
         }
+
         val itemRelocateFeature = InfiniteClient.localFeatures.inventory.itemRelocateFeature
         val inv = InventorySystem
-        val selectedSlot = player?.inventory?.selectedSlot ?: 0
 
-        // 1. メインハンドを優先
-        checkAndRestock(inv, selectedSlot)
+        // 1. メインハンド（選択中のスロット）の補充
+        val selectedSlot = player?.inventory?.selectedSlot ?: 0
+        checkAndRestock(inv, InventoryIndex.Hotbar(selectedSlot), selectedSlot)
+
+        // 2. オフハンドの補充 (メインハンドで補充が発生しなかった場合のみ、または連続で判定)
+        // tickDelayが更新されていなければ実行
+        if (tickDelay <= 0) {
+            checkAndRestock(inv, InventoryIndex.OffHand, 9) // 9番目をオフハンド用として扱う
+        }
+
         itemRelocateFeature.updateHotbar()
     }
 
-    private fun checkAndRestock(inv: InventorySystem, slotIndex: Int) {
+    /**
+     * @param targetIdx インベントリ操作用のIndex
+     * @param cacheIdx lastKnownItems配列の保存先インデックス
+     */
+    private fun checkAndRestock(inv: InventorySystem, targetIdx: InventoryIndex, cacheIdx: Int) {
         val relocate = InfiniteClient.localFeatures.inventory.itemRelocateFeature
-        if (relocate.isEnabled() && relocate.targetSlots.contains(slotIndex)) {
-            return
+
+        // Hotbarのスロットの場合のみRelocateとの競合をチェック
+        if (targetIdx is InventoryIndex.Hotbar) {
+            if (relocate.isEnabled() && relocate.targetSlots.contains(targetIdx.index)) {
+                return
+            }
         }
 
-        val hotbarIdx = InventoryIndex.Hotbar(slotIndex)
-        val currentStack = inv.getItem(hotbarIdx)
-        val lastItem = lastKnownItems[slotIndex]
+        val currentStack = inv.getItem(targetIdx)
+        val lastItem = lastKnownItems[cacheIdx]
 
+        // 補充が必要な条件: 空、またはスタック可能かつ閾値以下
         if (currentStack.isEmpty || (currentStack.count <= thresholdProperty.value && currentStack.isStackable)) {
             val itemToFind = if (currentStack.isEmpty) lastItem else currentStack.item
+
             if (itemToFind != null && itemToFind != Items.AIR) {
-                val otherHotbarIdx =
-                    findItemInHotbar(inv, itemToFind, excludeSlot = slotIndex) ?: findItemInBackpack(inv, itemToFind)
-                if (otherHotbarIdx != null) {
-                    inv.swapItems(otherHotbarIdx, hotbarIdx)
+                // 1. Hotbarから探す (現在のスロットは除外)
+                // 2. なければバックパックから探す
+                val sourceIdx = findItemInHotbar(inv, itemToFind, excludeIdx = targetIdx)
+                    ?: findItemInBackpack(inv, itemToFind)
+
+                if (sourceIdx != null) {
+                    inv.swapItems(sourceIdx, targetIdx)
                     tickDelay = delayProperty.value
                 }
             }
         }
 
+        // キャッシュの更新
         if (!currentStack.isEmpty) {
-            lastKnownItems[slotIndex] = currentStack.item
+            lastKnownItems[cacheIdx] = currentStack.item
         }
     }
 
-    private fun findItemInHotbar(inv: InventorySystem, item: Item, excludeSlot: Int): InventoryIndex? {
+    private fun findItemInHotbar(inv: InventorySystem, item: Item, excludeIdx: InventoryIndex): InventoryIndex? {
         for (i in 0..8) {
-            if (i == excludeSlot) continue
             val idx = InventoryIndex.Hotbar(i)
+            if (idx == excludeIdx) continue
             if (inv.getItem(idx).`is`(item)) return idx
         }
         return null
@@ -89,9 +111,12 @@ class ItemRestockFeature : LocalFeature() {
 
     fun updateLastKnownItems() {
         val inv = InventorySystem
+        // Hotbar
         for (i in 0..8) {
             lastKnownItems[i] = inv.getItem(InventoryIndex.Hotbar(i)).item
         }
+        // Offhand
+        lastKnownItems[9] = inv.getItem(InventoryIndex.OffHand).item
     }
 
     override fun onEnabled() {
