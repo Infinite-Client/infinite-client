@@ -16,12 +16,10 @@ import org.infinite.libs.graphics.graphics2d.structs.StrokeStyle
 import org.infinite.libs.graphics.graphics2d.structs.TextStyle
 import org.infinite.libs.graphics.graphics3d.structs.TexturedVertex
 import org.infinite.libs.log.LogSystem
-import org.lwjgl.glfw.GLFW
 import kotlin.math.cos
 import kotlin.math.sin
 
 class HelloFeature : LocalFeature() {
-    override val defaultToggleKey: Int = GLFW.GLFW_KEY_F
 
     @Suppress("Unused")
     val booleanProperty by property(BooleanProperty(false))

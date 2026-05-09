@@ -15,7 +15,7 @@ class ItemRestockFeature : LocalFeature() {
     val delayProperty by property(IntProperty(3, 1, 20, "ticks"))
     val thresholdProperty by property(IntProperty(8, 1, 64, "count"))
 
-    // インデックス 0-8: Hotbar, インデックス 9: Offhand 用にサイズを10に拡張
+    // インデックス 0-8: Hotbar, インデックス 9: Offhand
     private val lastKnownItems = arrayOfNulls<Item>(10)
     private var tickDelay = 0
     private var wasScreenOpen = false
@@ -26,101 +26,107 @@ class ItemRestockFeature : LocalFeature() {
             return
         }
 
+        // 画面を閉じた直後に現在の状態を正しく同期
         if (wasScreenOpen) {
             updateLastKnownItems()
             wasScreenOpen = false
         }
 
-        if (player == null || tickDelay > 0) {
-            if (tickDelay > 0) tickDelay--
+        if (player == null) return
+
+        // ディレイ処理
+        if (tickDelay > 0) {
+            tickDelay--
             return
         }
 
-        val itemRelocateFeature = InfiniteClient.localFeatures.inventory.itemRelocateFeature
         val inv = InventorySystem
-
-        // 1. メインハンド（選択中のスロット）の補充
         val selectedSlot = player?.inventory?.selectedSlot ?: 0
-        checkAndRestock(inv, InventoryIndex.Hotbar(selectedSlot), selectedSlot)
 
-        // 2. オフハンドの補充 (メインハンドで補充が発生しなかった場合のみ、または連続で判定)
-        // tickDelayが更新されていなければ実行
-        if (tickDelay <= 0) {
-            checkAndRestock(inv, InventoryIndex.OffHand, 9) // 9番目をオフハンド用として扱う
+        // 1. メインハンドのチェック
+        val mainHandIdx = InventoryIndex.Hotbar(selectedSlot)
+        val restockedMain = checkAndRestock(inv, mainHandIdx, selectedSlot)
+
+        // 2. オフハンドのチェック (メインハンドで操作が発生しなかった場合のみ実行)
+        if (!restockedMain) {
+            checkAndRestock(inv, InventoryIndex.OffHand, 9)
         }
-
-        itemRelocateFeature.updateHotbar()
     }
 
-    /**
-     * @param targetIdx インベントリ操作用のIndex
-     * @param cacheIdx lastKnownItems配列の保存先インデックス
-     */
-    private fun checkAndRestock(inv: InventorySystem, targetIdx: InventoryIndex, cacheIdx: Int) {
+    private fun checkAndRestock(inv: InventorySystem, targetIdx: InventoryIndex, cacheIdx: Int): Boolean {
         val relocate = InfiniteClient.localFeatures.inventory.itemRelocateFeature
 
-        // Hotbarのスロットの場合のみRelocateとの競合をチェック
-        if (targetIdx is InventoryIndex.Hotbar) {
-            if (relocate.isEnabled() && relocate.targetSlots.contains(targetIdx.index)) {
-                return
-            }
+        // Relocate有効時のHotbarスロット保護
+        if (targetIdx is InventoryIndex.Hotbar && relocate.isEnabled()) {
+            if (relocate.targetSlots.contains(targetIdx.index)) return false
         }
 
         val currentStack = inv.getItem(targetIdx)
-        val lastItem = lastKnownItems[cacheIdx]
+        val currentItem = currentStack.item
+        val cachedItem = lastKnownItems[cacheIdx]
 
-        // 補充が必要な条件: 空、またはスタック可能かつ閾値以下
-        if (currentStack.isEmpty || (currentStack.count <= thresholdProperty.value && currentStack.isStackable)) {
-            val itemToFind = if (currentStack.isEmpty) lastItem else currentStack.item
+        // 補充が必要な条件判定
+        val isExpired = currentStack.isEmpty || currentItem == Items.AIR
+        val isLow = !isExpired && currentStack.isStackable && currentStack.count <= thresholdProperty.value
+
+        if (isExpired || isLow) {
+            // 使い切った場合はキャッシュを、残量がある場合は現在のアイテムを使用
+            val itemToFind = if (isExpired) cachedItem else currentItem
 
             if (itemToFind != null && itemToFind != Items.AIR) {
-                // 1. Hotbarから探す (現在のスロットは除外)
-                // 2. なければバックパックから探す
-                val sourceIdx = findItemInHotbar(inv, itemToFind, excludeIdx = targetIdx)
-                    ?: findItemInBackpack(inv, itemToFind)
+                // 検索
+                val sourceIdx = findItemInInventory(inv, itemToFind, targetIdx)
 
                 if (sourceIdx != null) {
                     inv.swapItems(sourceIdx, targetIdx)
                     tickDelay = delayProperty.value
+                    // 移動直後はキャッシュを更新せず、次のTickで新しいアイテムを検知させる
+                    return true
                 }
             }
         }
 
-        // キャッシュの更新
-        if (!currentStack.isEmpty) {
-            lastKnownItems[cacheIdx] = currentStack.item
+        // キャッシュ更新: アイテムを手に持っている時だけ更新する
+        // これにより「使い切ってAIRになった瞬間」にキャッシュが上書きされるのを防ぐ
+        if (currentItem != Items.AIR) {
+            lastKnownItems[cacheIdx] = currentItem
         }
+
+        return false
     }
 
-    private fun findItemInHotbar(inv: InventorySystem, item: Item, excludeIdx: InventoryIndex): InventoryIndex? {
+    private fun findItemInInventory(inv: InventorySystem, item: Item, excludeIdx: InventoryIndex): InventoryIndex? {
+        // 1. ホットバーを優先検索
         for (i in 0..8) {
             val idx = InventoryIndex.Hotbar(i)
-            if (idx == excludeIdx) continue
-            if (inv.getItem(idx).`is`(item)) return idx
+            if (isSameSlot(idx, excludeIdx)) continue
+            val stack = inv.getItem(idx)
+            if (!stack.isEmpty && stack.`is`(item)) return idx
+        }
+        // 2. バックパックを検索
+        for (i in 0..26) {
+            val idx = InventoryIndex.Backpack(i)
+            if (isSameSlot(idx, excludeIdx)) continue
+            val stack = inv.getItem(idx)
+            if (!stack.isEmpty && stack.`is`(item)) return idx
         }
         return null
     }
 
-    private fun findItemInBackpack(inv: InventorySystem, item: Item): InventoryIndex? {
-        for (i in 0..26) {
-            val idx = InventoryIndex.Backpack(i)
-            if (inv.getItem(idx).`is`(item)) return idx
-        }
-        return null
-    }
+    // data objectとdata classの混在でも確実にスロット番号で比較
+    private fun isSameSlot(idx1: InventoryIndex, idx2: InventoryIndex): Boolean = idx1.toContainerSlot() == idx2.toContainerSlot()
 
     fun updateLastKnownItems() {
         val inv = InventorySystem
-        // Hotbar
         for (i in 0..8) {
             lastKnownItems[i] = inv.getItem(InventoryIndex.Hotbar(i)).item
         }
-        // Offhand
         lastKnownItems[9] = inv.getItem(InventoryIndex.OffHand).item
     }
 
     override fun onEnabled() {
         updateLastKnownItems()
         wasScreenOpen = false
+        tickDelay = 0
     }
 }

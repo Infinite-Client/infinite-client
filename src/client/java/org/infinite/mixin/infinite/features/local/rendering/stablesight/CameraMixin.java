@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class CameraMixin {
 
   @Shadow
-  protected abstract void move(float f, float g, float h);
+  protected abstract void move(float forwards, float up, float right);
 
   @Shadow private boolean detached;
 
@@ -24,14 +24,9 @@ public abstract class CameraMixin {
     return InfiniteClient.INSTANCE.getLocalFeatures().getRendering().getStableSightFeature();
   }
 
-  @Inject(method = "setup", at = @At("RETURN"))
+  @Inject(method = "setupPerspective", at = @At("RETURN"))
   public void onSetupReturn(
-      net.minecraft.world.level.BlockGetter blockGetter,
-      net.minecraft.world.entity.Entity entity,
-      boolean bl,
-      boolean bl2,
-      float f,
-      CallbackInfo ci) {
+      float zNear, float zFar, float fov, float width, float height, CallbackInfo ci) {
     if (stableSightFeature().isEnabled() && this.detached) {
       float customDistance = stableSightFeature().getCameraDistance().getValue();
       boolean ignoreTerrain = stableSightFeature().getIgnoreTerrain().getValue();
@@ -46,10 +41,10 @@ public abstract class CameraMixin {
 
   /** getMaxZoom メソッド自体を Hook して、地形無視が有効な場合は 入力された距離をそのまま返す（衝突判定をスキップする） */
   @Inject(method = "getMaxZoom", at = @At("HEAD"), cancellable = true)
-  private void onGetMaxZoom(float f, CallbackInfoReturnable<Float> cir) {
+  private void onGetMaxZoom(float cameraDist, CallbackInfoReturnable<Float> cir) {
     if (stableSightFeature().isEnabled() && stableSightFeature().getIgnoreTerrain().getValue()) {
       // 地形判定を行わず、要求された距離(f)をそのまま返す
-      cir.setReturnValue(f);
+      cir.setReturnValue(cameraDist);
     }
   }
 }
