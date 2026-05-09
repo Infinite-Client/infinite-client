@@ -44,6 +44,10 @@ class ArcheryFeature : LocalFeature() {
         } else {
             ArrowProjectile.analyze()
         } ?: return sendCall(originalPacket, listener, flush)
+        if (onlyWhenHittable.value && currentAnalysis.status != AbstractProjectile.PathStatus.Clear) {
+            ci.cancel()
+            return
+        }
 
         if (onlyWhenLockOn.value && !InfiniteClient.localFeatures.combat.lockOnFeature.isEnabled()) {
             return sendCall(originalPacket, listener, flush)
@@ -110,4 +114,5 @@ class ArcheryFeature : LocalFeature() {
     val maxReach by property(IntProperty(128, 16, 256))
     val ignoreTerrain by property(BooleanProperty(false))
     val onlyWhenLockOn by property(BooleanProperty(false))
+    val onlyWhenHittable by property(BooleanProperty(false))
 }

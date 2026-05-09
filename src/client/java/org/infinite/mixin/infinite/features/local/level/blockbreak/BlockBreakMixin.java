@@ -1,6 +1,5 @@
 package org.infinite.mixin.infinite.features.local.level.blockbreak;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -8,9 +7,7 @@ import org.infinite.InfiniteClient;
 import org.infinite.infinite.features.local.level.blockbreak.FastBreakFeature;
 import org.infinite.infinite.features.local.level.blockbreak.LinearBreakFeature;
 import org.infinite.infinite.features.local.level.blockbreak.VeinBreakFeature;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -18,11 +15,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(MultiPlayerGameMode.class)
 public class BlockBreakMixin {
-  @Shadow @Final private Minecraft minecraft;
 
   @Inject(method = "startDestroyBlock", at = @At("HEAD"), cancellable = true)
   private void onStartDestroyBlock(
-      BlockPos pos, Direction side, CallbackInfoReturnable<Boolean> cir) {
+      BlockPos pos, Direction direction, CallbackInfoReturnable<Boolean> cir) {
     VeinBreakFeature veinBreak =
         InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getVeinBreakFeature();
     LinearBreakFeature linearBreak =
@@ -43,7 +39,7 @@ public class BlockBreakMixin {
 
   @Inject(method = "continueDestroyBlock", at = @At("HEAD"), cancellable = true)
   private void onContinueDestroyBlock(
-      BlockPos pos, Direction side, CallbackInfoReturnable<Boolean> cir) {
+      BlockPos pos, Direction direction, CallbackInfoReturnable<Boolean> cir) {
     if (InfiniteClient.INSTANCE.getLocalFeatures().getLevel().getVeinBreakFeature().isWorking()
         || InfiniteClient.INSTANCE
             .getLocalFeatures()
@@ -61,7 +57,7 @@ public class BlockBreakMixin {
       MultiPlayerGameModeAccessor accessor = (MultiPlayerGameModeAccessor) this;
       float progress = accessor.getDestroyProgress();
       if (fastBreak.shouldFastBreak(pos, progress)) {
-        fastBreak.sendStopPacket(pos, side);
+        fastBreak.sendStopPacket(pos, direction);
         accessor.setIsDestroying(false);
         accessor.setDestroyProgress(0f);
         cir.setReturnValue(true);

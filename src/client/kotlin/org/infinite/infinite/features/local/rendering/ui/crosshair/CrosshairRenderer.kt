@@ -127,7 +127,7 @@ class CrosshairRenderer :
 
         if (totalCount > 0) {
             // 残り数の平方根に比例した速度で回転
-            val baseSpeed = 120f
+            val baseSpeed = 20f
             val countFactor = sqrt(totalCount.toDouble()).toFloat()
             smoothBreakRotation -= baseSpeed * countFactor * graphics2D.delta
         } else {

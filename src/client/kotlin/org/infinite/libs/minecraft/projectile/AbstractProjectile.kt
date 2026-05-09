@@ -70,8 +70,7 @@ abstract class AbstractProjectile : MinecraftInterface() {
 
         // 2. どちらもダメ（射程外 or 障害物あり）な場合、目の前の対象にターゲットを変更
         if (finalAnalysis == null) {
-            // LockOn中の機能等から reach を取得するか、デフォルト値（例: 100m）を使用
-            val reach = 100.0
+            val reach = 256.0
             val fallbackTarget = getTargetPos(reach)
 
             return if (fallbackTarget != null) {
