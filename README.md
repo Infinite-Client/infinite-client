@@ -2,7 +2,7 @@
 
 Next-generation utility mod for Minecraft Anarchy Servers.
 
-**Infinite Client** is a high-performance Minecraft client mod built on the **Fabric Loader (1.21.11)**. It leverages the cutting-edge **Project Panama (Foreign Function & Memory API)** in Java 25 to bridge with **Rust** (via [Project Xross](./project-xross/)), delivering extreme performance and memory safety.
+**Infinite Client** is a high-performance Minecraft client mod built on the **Fabric Loader (26.2)**. It leverages the cutting-edge **Project Panama (Foreign Function & Memory API)** in Java 25 to bridge with **Rust** (via [Project Xross](./project-xross/)), delivering extreme performance and memory safety.
 
 ## 🚀 Key Features
 
